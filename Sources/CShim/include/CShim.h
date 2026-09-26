@@ -1,0 +1,26 @@
+#ifndef SWISH_CSHIM_H
+#define SWISH_CSHIM_H
+
+#include <sys/types.h>
+
+// The wait-status macros don't import into Swift.
+int swish_wifexited(int status);
+int swish_wexitstatus(int status);
+int swish_wifsignaled(int status);
+int swish_wtermsig(int status);
+int swish_wifstopped(int status);
+
+/// Spawns `path` with `argv` and the current environment.
+///
+/// `pgid` < 0 keeps the shell's process group, 0 starts a new group led by
+/// the child, and > 0 joins that group. `fd_in`/`fd_out` are dup'd onto
+/// stdin/stdout when >= 0, and every fd in `close_fds` is closed in the child.
+/// When `tty` >= 0 and the child leads a new group, the terminal is handed to
+/// that group before the child runs any code.
+///
+/// Returns the child's pid, or -errno on failure.
+pid_t swish_spawn(const char *path, char *const argv[], pid_t pgid,
+                  int fd_in, int fd_out,
+                  const int *close_fds, int close_count, int tty);
+
+#endif

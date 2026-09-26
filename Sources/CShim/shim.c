@@ -1,0 +1,76 @@
+#include "CShim.h"
+
+#include <signal.h>
+#include <spawn.h>
+#include <sys/wait.h>
+#include <termios.h>
+#include <unistd.h>
+
+extern char **environ;
+
+int swish_wifexited(int status) { return WIFEXITED(status); }
+int swish_wexitstatus(int status) { return WEXITSTATUS(status); }
+int swish_wifsignaled(int status) { return WIFSIGNALED(status); }
+int swish_wtermsig(int status) { return WTERMSIG(status); }
+int swish_wifstopped(int status) { return WIFSTOPPED(status); }
+
+pid_t swish_spawn(const char *path, char *const argv[], pid_t pgid,
+                  int fd_in, int fd_out,
+                  const int *close_fds, int close_count, int tty) {
+    posix_spawnattr_t attr;
+    posix_spawn_file_actions_t actions;
+    int err = posix_spawnattr_init(&attr);
+    if (err) return -err;
+    err = posix_spawn_file_actions_init(&actions);
+    if (err) {
+        posix_spawnattr_destroy(&attr);
+        return -err;
+    }
+
+    // The interactive shell ignores job-control signals; children get the
+    // defaults back and start with nothing blocked.
+    sigset_t defaults, empty;
+    sigemptyset(&defaults);
+    int reset[] = {SIGINT, SIGQUIT, SIGTSTP, SIGTTIN, SIGTTOU, SIGCHLD, SIGPIPE};
+    for (unsigned i = 0; i < sizeof reset / sizeof *reset; i++) sigaddset(&defaults, reset[i]);
+    sigemptyset(&empty);
+    posix_spawnattr_setsigdefault(&attr, &defaults);
+    posix_spawnattr_setsigmask(&attr, &empty);
+
+    short flags = POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK;
+    if (pgid >= 0) {
+        flags |= POSIX_SPAWN_SETPGROUP;
+        posix_spawnattr_setpgroup(&attr, pgid);
+    }
+
+    // The child must own the terminal before it can read from it, or it gets
+    // SIGTTIN. Traditional shells call tcsetpgrp in the child between fork and
+    // exec; with posix_spawn we start it suspended, hand over the terminal,
+    // then let it run.
+    int handoff = tty >= 0 && pgid == 0;
+#ifdef __APPLE__
+    if (handoff) flags |= POSIX_SPAWN_START_SUSPENDED;
+#endif
+    posix_spawnattr_setflags(&attr, flags);
+
+    if (fd_in >= 0) posix_spawn_file_actions_adddup2(&actions, fd_in, STDIN_FILENO);
+    if (fd_out >= 0) posix_spawn_file_actions_adddup2(&actions, fd_out, STDOUT_FILENO);
+    for (int i = 0; i < close_count; i++) posix_spawn_file_actions_addclose(&actions, close_fds[i]);
+
+    pid_t pid = 0;
+    err = posix_spawn(&pid, path, &actions, &attr, argv, environ);
+    posix_spawn_file_actions_destroy(&actions);
+    posix_spawnattr_destroy(&attr);
+    if (err) return -err;
+
+    if (handoff) {
+        tcsetpgrp(tty, pid);
+#ifdef __APPLE__
+        kill(pid, SIGCONT);
+#endif
+        // Elsewhere there's a small window where the child can touch the
+        // terminal first; glibc's posix_spawn_file_actions_addtcsetpgrp_np
+        // closes it and is the thing to use when Linux support lands.
+    }
+    return pid;
+}

@@ -1,0 +1,32 @@
+import Foundation
+
+/// Writes unbuffered, so output from the shell and its children never
+/// interleaves out of order.
+func writeAll(_ fd: Int32, _ text: String) {
+    var text = text
+    text.withUTF8 { buffer in
+        var offset = 0
+        while offset < buffer.count {
+            let written = write(fd, buffer.baseAddress! + offset, buffer.count - offset)
+            if written > 0 {
+                offset += written
+            } else if written == -1 && errno == EINTR {
+                continue
+            } else {
+                return
+            }
+        }
+    }
+}
+
+func report(_ message: String) {
+    writeAll(STDERR_FILENO, "swish: \(message)\n")
+}
+
+func errorMessage(_ code: Int32) -> String {
+    String(cString: strerror(code))
+}
+
+func env(_ name: String) -> String? {
+    getenv(name).map { String(cString: $0) }
+}

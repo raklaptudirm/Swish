@@ -1,0 +1,44 @@
+# Drives swish through a real pty to check job control and line editing.
+# Run from the repo root after `swift build`, or via scripts/test.sh.
+set timeout 5
+log_user 0
+spawn .build/debug/swish
+# The end of a success prompt: directory, then a green arrow.
+set ok {\x1b\[0m \x1b\[32m}
+set failures 0
+proc step {name pattern} {
+  expect {
+    -re $pattern { puts "ok   $name" }
+    timeout { puts "FAIL $name"; global failures; incr failures }
+  }
+}
+expect -re $ok
+send "sleep 0.3\r"
+step "fg command runs, no spurious stop" "sleep 0.3.*\\n.*$ok"
+send "cat\r"
+send "typed-into-cat\r"
+step "cat owns the terminal (no SIGTTIN)" "typed-into-cat\r\n.*typed-into-cat"
+send "\x04"
+step "cat exits on ^D" $ok
+send "sleep 30\r"
+after 300
+send "\x03"
+step "^C kills the job, not the shell" {\[130\]}
+send "sleep 30 | cat\r"
+after 300
+send "\x1a"
+step "^Z stops the pipeline" {Stopped +sleep 30 \| cat}
+send "jobs\r"
+step "jobs lists it" {\[1\]  Stopped +sleep 30 \| cat}
+send "fg\r"
+after 300
+send "\x03"
+step "fg resumes and ^C ends it" {\[130\]}
+send "echo one\r"
+send "\x1b\[A\x01\x1b\[3~\x1b\[3~\x1b\[3~\x1b\[3~X\r"
+step "history + line editing" "X: command not found"
+send "exit 7\r"
+expect eof
+lassign [wait] pid spawnid os code
+if {$code != 7} { puts "FAIL exit status: $code"; incr failures } else { puts "ok   exit status" }
+exit [expr {$failures > 0}]
