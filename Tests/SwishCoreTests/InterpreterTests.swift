@@ -111,7 +111,9 @@ private func withVariable(_ name: String, _ value: Any) -> Shell {
 @Test func forLoops() throws {
     #expect(try output("for i in 1...3 { i }") == "1\n2\n3\n")
     #expect(try output("for i in 0..<2 { i }; for x in [\"a\", \"b\"] { x }") == "0\n1\na\nb\n")
-    #expect(try output(#"for line in $(printf 'a b\nc') { echo "<\(line)>" }"#) == "<a b>\n<c>\n")
+    // Strings iterate by character, as in Swift; command output by `.lines`.
+    #expect(try output(#"for c in "héy" { c }"#) == "h\né\ny\n")
+    #expect(try output(#"for line in $(printf 'a b\nc').lines { echo "<\(line)>" }"#) == "<a b>\n<c>\n")
     #expect(try output(#"for line in "" { echo never }"#) == "")
     #expect(try output("for _ in 1...2 { echo x }") == "x\nx\n")
 }
@@ -406,9 +408,12 @@ private func fixture() throws -> String {
     #expect(try output(data + "xs | list") == "a  1\nb  x\n\na  22\nb  y\n")
 }
 
-@Test func recordsNeedConvertingForExternals() throws {
-    #expect(status(#"[["a": 1]] | cat"#) == 1)
+@Test func recordsReachProgramsAsRows() throws {
+    // As displayed, minus the header, and never cut short.
+    let long = String(repeating: "x", count: 60)
+    #expect(try output(#"[["a": 1, "b": "x y"], ["a": 22, "b": "\#(long)"]] | cat"#) == " 1  x y\n22  \(long)\n")
     #expect(try output(#"[["a": 1]] | to json | tr -d ' \n'"#) == #"{"a":1}"#)
+    #expect(status("func f() {}; [f] | cat") == 1) // functions have no text form
 }
 
 @Test func formatterFitsTheWidth() {
@@ -427,4 +432,56 @@ private func fixture() throws -> String {
     formatter.finish()
     // Even at 6 wide, three columns need 22; the last is left off.
     #expect(lines == ["alpha   bravo  …\n", "aaaaa…  bbbbb…\n"])
+}
+
+// MARK: Failing substitutions
+
+@Test func failingSubstitutionsAreErrors() throws {
+    #expect(status("let x = $(false)") == 1)
+    #expect(try output("let x = $(false); echo unreachable") == "")
+    #expect(status("echo $(sh -c 'exit 3')") == 3) // the command's own status
+    #expect(try output("let x = $(echo fine); x") == "fine\n")
+}
+
+@Test func tryQuestionMark() throws {
+    #expect(try output("let x = try? $(false); x == nil") == "true\n")
+    #expect(try output(#"(try? $(false)) ?? "fallback""#) == "fallback\n")
+    #expect(try output("try? $(grep -q nope /dev/null) != nil || echo missing") == "missing\n")
+    #expect(try output(#"if let h = try? $(echo hi) { echo "got \(h)" } else { echo none }"#) == "got hi\n")
+    #expect(try output(#"if let h = try? $(false) { h } else if let g = try? $(echo second) { g }"#) == "second\n")
+    #expect(status("if let h = try? $(false) { }; h") == 127) // h is only bound inside: here it's a command
+    // Any runtime error, not just a failed command.
+    #expect(try output("try? [1][5] == nil; try? 1 / 0 == nil") == "")
+    #expect(try output("(try? [1][5]) == nil; (try? 1 / 0) == nil") == "true\ntrue\n")
+    #expect(try output("func f() -> Int { [1][9] }; (try? f()) ?? 0") == "0\n")
+}
+
+@Test func tryCoversEverythingToItsRight() throws {
+    // As in Swift: the `??` is inside the `try?`, so a failure makes it all nil.
+    let shell = Shell()
+    #expect(try output(#"try? $(false) ?? "fallback""#, in: shell) == "")
+    #expect(shell.lastStatus == 1) // nil is a failure
+    #expect(try output("let y = try $(echo plain); y") == "plain\n")
+}
+
+@Test func tryBangStopsAScript() throws {
+    let shell = Shell()
+    let path = try output("mktemp", in: shell).trimmingCharacters(in: .newlines)
+    shell.execute(#"printf '%s\n' 'echo one' 'let a = $(false)' 'echo two' 'let b = try! $(sh -c "exit 4")' 'echo three' > \#(path)"#)
+    let script = Shell()
+    var status: Int32 = 0
+    let printed = try script.capturing { status = script.runScript(at: path) }
+    // A plain error abandons its statement; `try!` stops the script.
+    #expect(printed == "one\ntwo\n")
+    #expect(status == 4)
+    #expect(Shell().runScript(at: path + ".missing") == 127)
+}
+
+@Test func nilCoalescing() throws {
+    #expect(try output("nil ?? 1 + 2; 1 ?? 2 == 1; nil ?? nil ?? 3") == "3\ntrue\n3\n")
+    #expect(try output("func f(name: String? = nil) -> String { name ?? \"anon\" }; f; f --name x") == "anon\nx\n")
+}
+
+@Test func questionMarksAreLiteral() throws {
+    #expect(try output("echo https://example.com/?q=1 a?b") == "https://example.com/?q=1 a?b\n")
 }

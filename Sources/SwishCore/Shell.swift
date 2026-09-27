@@ -28,6 +28,8 @@ public final class Shell {
     var shellModes = termios()
     var stoppedJobs: [Job] = []
     var warnedAboutStoppedJobs = false
+    /// A `try!` failed in a script, which stops it.
+    var scriptStopped = false
 
     private let editor = LineEditor()
 
@@ -41,16 +43,17 @@ public final class Shell {
     /// Runs the read-eval loop until EOF or `exit`.
     public func runInteractive() -> Int32 {
         takeTerminal()
-        if interactive {
-            editor.history = History(path: History.defaultPath)
-            editor.continuationPrompt = "\u{1B}[90m…\u{1B}[0m "
-            editor.isComplete = { [unowned self] text in
-                if case .failure(let error) = parse(text), error.incomplete { return false }
-                return true
-            }
-            editor.highlight = { [unowned self] in highlightStyles($0) }
-            editor.complete = { [unowned self] in completions(for: $0, cursor: $1) }
+        if !interactive {
+            return runScript { Swift.readLine() }
         }
+        editor.history = History(path: History.defaultPath)
+        editor.continuationPrompt = "\u{1B}[90m…\u{1B}[0m "
+        editor.isComplete = { [unowned self] text in
+            if case .failure(let error) = parse(text), error.incomplete { return false }
+            return true
+        }
+        editor.highlight = { [unowned self] in highlightStyles($0) }
+        editor.complete = { [unowned self] in completions(for: $0, cursor: $1) }
         // Lines of a statement that isn't finished yet, like an open `if` block.
         var pending = ""
         while true {
@@ -74,6 +77,38 @@ public final class Shell {
                 pending = ""
             }
         }
+    }
+
+    /// Runs a script file. A `try!` that fails stops it; any other error
+    /// only abandons the statement it's in.
+    public func runScript(at path: String) -> Int32 {
+        guard let data = FileManager.default.contents(atPath: path) else {
+            report("\(path): \(errorMessage(errno).lowercased())")
+            return 127
+        }
+        var lines = String(decoding: data, as: UTF8.self).split(separator: "\n", omittingEmptySubsequences: false).makeIterator()
+        return runScript { lines.next().map(String.init) }
+    }
+
+    /// Runs lines as they come, grouping those of an unfinished statement.
+    private func runScript(nextLine: () -> String?) -> Int32 {
+        var pending = ""
+        while let line = nextLine() {
+            pending = pending.isEmpty ? line : pending + "\n" + line
+            switch parse(pending) {
+            case .failure(let error) where error.incomplete:
+                continue
+            case .failure(let error):
+                report("syntax error: \(error)")
+                lastStatus = 2
+            case .success(let program):
+                runReportingErrors(program)
+                if scriptStopped { return lastStatus }
+            }
+            pending = ""
+        }
+        if !pending.isEmpty { execute(pending) }
+        return lastStatus
     }
 
     @discardableResult
@@ -107,6 +142,14 @@ public final class Shell {
             lastStatus = 128 + SIGINT
         } catch is AlreadyReported {
             lastStatus = 1
+        } catch let fatal as FatalError {
+            report("error: \(fatal.error)")
+            lastStatus = fatal.error.status
+            // At the prompt, stopping would mean exiting your shell.
+            scriptStopped = !interactive
+        } catch let error as RuntimeError {
+            report("error: \(error)")
+            lastStatus = error.status
         } catch {
             report("error: \(error)")
             lastStatus = 1

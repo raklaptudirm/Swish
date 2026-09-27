@@ -218,7 +218,8 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
 @Test func braceEndsACommandInAConditionOnly() throws {
     guard case .chain(let chain) = try parse("if grep -q x f { echo yes }").statements[0],
           case .ifStatement(let node) = chain.first,
-          case .pipeline(let condition) = node.condition.first else { Issue.record(); return }
+          case .chain(let conditionChain) = node.condition,
+          case .pipeline(let condition) = conditionChain.first else { Issue.record(); return }
     #expect(condition.commands[0].words.count == 4)
     #expect(node.then.statements.count == 1)
 }
@@ -347,4 +348,50 @@ private func command(_ source: String) throws -> CommandNode? {
         [.glob("a[bc]")],
         [.literal("?")],
     ])
+}
+
+// MARK: Optionals
+
+@Test func ifLetBindsInItsBodyOnly() throws {
+    let program = try parse("if let x = try? $(cmd) { x } else { x }")
+    guard case .chain(let chain) = program.statements[0], case .ifStatement(let node) = chain.first else {
+        Issue.record()
+        return
+    }
+    guard case .binding("x", false, .attempt(.substitution, .optional)) = node.condition else {
+        Issue.record("not an optional binding: \(node.condition)")
+        return
+    }
+    // In the body `x` is the variable; in the else branch it's a command.
+    guard case .chain(let then) = node.then.statements[0], case .expression = then.first,
+          case .chain(let otherwise) = node.otherwise!.statements[0], case .pipeline = otherwise.first else {
+        Issue.record()
+        return
+    }
+}
+
+@Test func coalescingSitsBetweenComparisonAndRanges() throws {
+    // Swift's precedence: `??` binds tighter than `==` and looser than `+`.
+    let program = try parse("let v = a ?? b + 1 == c", bound: ["a", "b", "c"])
+    #expect(program.statements == [.declare(name: "v", mutable: false, value: .binary(
+        .equal,
+        .binary(.coalesce, .variable("a"), .binary(.add, .variable("b"), .literal(.int(1)))),
+        .variable("c")
+    ))])
+}
+
+@Test func substitutionStartsAnExpressionButDollarNameACommand() throws {
+    #expect(try modes("$(cmd) == \"x\"; $EDITOR notes; try? $(cmd)") == ["expression", "command", "expression"])
+}
+
+@Test func tryCoversTheRestOfTheExpression() throws {
+    let program = try parse("let a = try? $(x) ?? 1; let b = (try? $(x)) ?? 1; let c = try $(x)")
+    #expect(program.statements[0] == .declare(name: "a", mutable: false, value:
+        .attempt(.binary(.coalesce, .substitution(Program(statements: [.chain(Chain(first: .pipeline(PipelineNode(commands: [CommandNode(words: [.text([.literal("x")])])], source: "x"))))])), .literal(.int(1))), .optional)))
+    guard case .declare(_, _, .binary(.coalesce, .attempt(_, .optional), _)) = program.statements[1],
+          case .declare(_, _, .substitution) = program.statements[2] else {
+        Issue.record("\(program.statements)")
+        return
+    }
+    #expect(syntaxError("$(x)?") != nil) // the old postfix form is gone
 }

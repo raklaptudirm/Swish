@@ -44,6 +44,8 @@ final class Formatter {
     private let useViews: Bool
     private let maxWidth: Int
     private let styled: Bool
+    private let header: Bool
+    private let columnCap: Int
     private var pending: [Record] = []
     private var firstArrival: Date?
     private var columns: [Column]?
@@ -57,19 +59,30 @@ final class Formatter {
     }
 
     /// Writes to `fd`, fitting the terminal and styling the header when it
-    /// is one.
+    /// is one. A file gets every character: nothing is cut to fit.
     convenience init(fd: Int32) {
         var size = winsize()
         let isTerminal = isatty(fd) != 0
         let width = isTerminal && ioctl(fd, TIOCGWINSZ, &size) == 0 && size.ws_col > 0 ? Int(size.ws_col) : Int.max
-        self.init(maxWidth: width, styled: isTerminal) { writeAll(fd, $0) }
+        self.init(maxWidth: width, styled: isTerminal, columnCap: isTerminal ? 40 : .max) { writeAll(fd, $0) }
+    }
+
+    /// Rows for another program to read, as in `ls | grep x`: the view's
+    /// columns, no header, nothing cut short.
+    static func forProgram(fd: Int32) -> Formatter {
+        Formatter(header: false, columnCap: .max) { writeAll(fd, $0) }
     }
 
     /// `useViews: false` shows every column, as `table` does.
-    init(maxWidth: Int = .max, styled: Bool = false, useViews: Bool = true, write: @escaping (String) -> Bool) {
+    init(
+        maxWidth: Int = .max, styled: Bool = false, useViews: Bool = true, header: Bool = true,
+        columnCap: Int = 40, write: @escaping (String) -> Bool
+    ) {
         self.maxWidth = maxWidth
         self.styled = styled
         self.useViews = useViews
+        self.header = header
+        self.columnCap = columnCap
         self.write = write
     }
 
@@ -103,9 +116,11 @@ final class Formatter {
     private func flush() -> Bool {
         guard !pending.isEmpty else { return true }
         columns = layout(for: pending)
-        var header = trimmingTrailingSpaces(columns!.map { pad($0.key, $0) }.joined(separator: "  "))
-        if droppedColumns { header += "  …" }
-        guard emit(styled ? "\u{1B}[1m\(header)\u{1B}[0m" : header) else { return false }
+        if header {
+            var line = trimmingTrailingSpaces(columns!.map { pad($0.key, $0) }.joined(separator: "  "))
+            if droppedColumns { line += "  …" }
+            guard emit(styled ? "\u{1B}[1m\(line)\u{1B}[0m" : line) else { return false }
+        }
         let rows = pending
         pending = []
         return rows.allSatisfy { emit(row($0)) }
@@ -125,7 +140,7 @@ final class Formatter {
         }
 
         var widths = keys.map { key in
-            min(40, max(key.count, sample.map { Formatter.cell($0[key] ?? .nothing).count }.max() ?? 0))
+            min(columnCap, max(header ? key.count : 0, sample.map { Formatter.cell($0[key] ?? .nothing).count }.max() ?? 0))
         }
         // Shrink the widest columns until the table fits, down to 6 each;
         // if that isn't enough, leave off columns from the right, keeping

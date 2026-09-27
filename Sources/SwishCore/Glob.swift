@@ -1,8 +1,9 @@
 import Darwin
 import Foundation
 
-/// Filename patterns: `*`, `?`, `[a-z]`, and `**` for any depth of
-/// directories. A backslash makes the next character literal, which is how
+/// Filename patterns: `*`, `[a-z]`, and `**` for any depth of directories.
+/// `?` isn't a wildcard, as in fish, so `curl https://x.com/?q=1` needs no
+/// quotes; `[…]` matches a single character instead. A backslash makes the next character literal, which is how
 /// quoted and interpolated text stays literal inside a pattern.
 enum Glob {
     /// Makes every character of `text` literal in a pattern.
@@ -15,8 +16,8 @@ enum Glob {
         return result
     }
 
-    /// Whether `pattern` has an unescaped wildcard: `*`, `?`, or a `[…]`
-    /// class with its closing bracket. A lone `[`, as in `[ -f x ]`, isn't one.
+    /// Whether `pattern` has an unescaped wildcard: `*`, or a `[…]` class
+    /// with its closing bracket. A lone `[`, as in `[ -f x ]`, isn't one.
     static func hasWildcards(_ pattern: String) -> Bool {
         let characters = Array(pattern)
         var index = 0
@@ -24,7 +25,7 @@ enum Glob {
             switch characters[index] {
             case "\\":
                 index += 1
-            case "*", "?":
+            case "*":
                 return true
             case "[":
                 if let close = characters[(index + 1)...].firstIndex(of: "]"), close > index + 1 { return true }
@@ -36,8 +37,8 @@ enum Glob {
         return false
     }
 
-    /// The paths matching `pattern`, sorted. As in most shells, `*` and `?`
-    /// don't match a leading dot, and `**` doesn't enter hidden directories.
+    /// The paths matching `pattern`, sorted. As in most shells, `*` doesn't
+    /// match a leading dot, and `**` doesn't enter hidden directories.
     static func expand(_ pattern: String) -> [String] {
         let wantsDirectories = pattern.hasSuffix("/")
         let segments = pattern.split(separator: "/", omittingEmptySubsequences: true).map(String.init)

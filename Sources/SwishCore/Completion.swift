@@ -178,7 +178,7 @@ extension Shell {
     private func escaped(_ text: String) -> String {
         var result = ""
         for character in text {
-            if " \t'\"\\$|;&(){}#*?<>`".contains(character) { result.append("\\") }
+            if " \t'\"\\$|;&(){}#*[<>`".contains(character) { result.append("\\") }
             result.append(character)
         }
         return result

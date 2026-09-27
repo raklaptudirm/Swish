@@ -41,7 +41,14 @@ indirect enum Unit: Equatable, Sendable {
 }
 
 struct IfStatement: Equatable, Sendable {
-    var condition: Chain
+    enum Condition: Equatable, Sendable {
+        case chain(Chain)
+        /// `if let name = value`: runs the body with `name` bound when the
+        /// value isn't nil.
+        case binding(name: String, mutable: Bool, value: Expr)
+    }
+
+    var condition: Condition
     var then: Program
     var otherwise: Program?
 }
@@ -183,8 +190,11 @@ indirect enum Expr: Equatable, Sendable {
     case dollar(String)
     /// `$?`
     case status
-    /// `$(…)`
+    /// `$(…)`: throws if the command fails, like a call to a throwing
+    /// function whose `try` is implicit.
     case substitution(Program)
+    /// `try? expr` or `try! expr`; a plain `try` leaves no trace.
+    case attempt(Expr, TryKind)
     case list([Expr])
     case record([RecordEntry])
     case closure(ClosureLiteral)
@@ -196,6 +206,13 @@ indirect enum Expr: Equatable, Sendable {
     case index(Expr, Expr)
 }
 
+enum TryKind: Equatable, Sendable {
+    /// `try?`: nil instead of a runtime error.
+    case optional
+    /// `try!`: a runtime error stops the whole script, not just the line.
+    case forced
+}
+
 enum UnaryOperator: String, Sendable {
     case not = "!"
     case negate = "-"
@@ -203,6 +220,7 @@ enum UnaryOperator: String, Sendable {
 
 enum BinaryOperator: String, Sendable {
     case or = "||", and = "&&"
+    case coalesce = "??"
     case equal = "==", notEqual = "!="
     case lessEqual = "<=", greaterEqual = ">=", less = "<", greater = ">"
     case closedRange = "...", halfOpenRange = "..<"
@@ -256,7 +274,7 @@ struct Span: Equatable, Sendable {
 struct Parser {
     private static let keywords: Set = [
         "let", "var", "if", "else", "true", "false", "nil",
-        "for", "in", "while", "func", "return", "break", "continue",
+        "for", "in", "while", "func", "return", "break", "continue", "try",
     ]
     private static let statementKeywords: Set = ["let", "var", "func", "return", "break", "continue"]
     private static let precedence: [[BinaryOperator]] = [
@@ -264,6 +282,7 @@ struct Parser {
         [.and],
         // Two-character operators first, so `<=` isn't read as `<`.
         [.equal, .notEqual, .lessEqual, .greaterEqual, .less, .greater],
+        [.coalesce],
         [.closedRange, .halfOpenRange],
         [.add, .subtract],
         [.multiply, .divide, .remainder],
@@ -274,7 +293,7 @@ struct Parser {
         "kib": 1 << 10, "mib": 1 << 20, "gib": 1 << 30, "tib": 1 << 40,
     ]
     /// Levels whose operators can't be chained, like `a < b < c`.
-    private static let nonAssociativeLevels: Set = [2, 3]
+    private static let nonAssociativeLevels: Set = [2, 4]
 
     private let chars: [Character]
     private var pos = 0
@@ -463,21 +482,39 @@ struct Parser {
     /// a literal, a bracket, `!` or `-`, a variable, or a call.
     ///
     /// A function name without `(` starts a command (`greet Rak --loud`).
-    /// `$` starts a command, as in `$EDITOR notes.txt`, except for a closure's
-    /// `$0`; `^` always starts a command.
+    /// `$name` starts a command, as in `$EDITOR notes.txt`, but `$(…)` an
+    /// expression, as in `$(cmd)? ?? "default"`, and so does a closure's `$0`;
+    /// `^` always starts a command.
     private func startsExpression(_ c: Character) -> Bool {
         if Parser.isDigit(c) || "\"'([!-".contains(c) { return true }
+        if c == "$" && peek(1) == "(" { return true }
         if c == "$", let next = peek(1), Parser.isDigit(next), anonymousArity.last ?? nil != nil { return true }
         guard let word = identifier() else { return false }
-        if ["true", "false", "nil"].contains(word) { return true }
+        if ["true", "false", "nil", "try"].contains(word) { return true }
         return kind(of: word) == .variable || peek(word.count) == "("
     }
 
     private mutating func parseIf() throws(SyntaxError) -> IfStatement {
         keyword("if")
-        let condition = try parseCondition()
         skipSpaces()
-        let then = try parseBlock()
+        let condition: IfStatement.Condition
+        var bound: [String: NameKind] = [:]
+        if let word = identifier(), word == "let" || word == "var" {
+            keyword(word)
+            skipSpaces()
+            let nameStart = pos
+            let name = try parseName(after: "'\(word)'")
+            mark(.variable, from: nameStart)
+            skipSpaces()
+            guard peek() == "=" && peek(1) != "=" else { throw expected("'=' after '\(name)'") }
+            pos += 1
+            condition = .binding(name: name, mutable: word == "var", value: try parseExpression())
+            bound[name] = .variable
+        } else {
+            condition = .chain(try parseCondition())
+        }
+        skipSpaces()
+        let then = try parseBlock(declaring: bound)
 
         let afterBlock = (pos, spans.count)
         skipSpaces(newlines: true)
@@ -988,7 +1025,7 @@ struct Parser {
                     parts.append(.expression(try parseInterpolation()))
                 } else if next == "\n" {
                     pos += 2
-                } else if "*?[".contains(next) {
+                } else if "*[".contains(next) {
                     // An escaped wildcard is literal, even next to real ones.
                     flush()
                     parts.append(.literal(String(next)))
@@ -1006,7 +1043,7 @@ struct Parser {
                     pos += 1
                 }
             default:
-                if "*?[".contains(c) { wildcard = true }
+                if "*[".contains(c) { wildcard = true }
                 literal.append(c)
                 pos += 1
             }
@@ -1161,8 +1198,30 @@ struct Parser {
 
     /// `logical` is false for an expression that is a whole unit, so that
     /// `&&` and `||` are left to join it with commands in a chain.
+    /// `try`, `try?` and `try!` cover everything to their right, as in
+    /// Swift: `(try? $(cmd)) ?? "default"` needs its parentheses.
     private mutating func parseExpression(logical: Bool = true) throws(SyntaxError) -> Expr {
-        try parseBinary(level: logical ? 0 : Parser.comparisonLevel)
+        skipSpaces()
+        if let kind = try parseTry() {
+            let operand = try parseExpression(logical: logical)
+            return kind.map { .attempt(operand, $0) } ?? operand
+        }
+        return try parseBinary(level: logical ? 0 : Parser.comparisonLevel)
+    }
+
+    /// `try` (.some(nil)), `try?` or `try!` at the current position; nil if none.
+    private mutating func parseTry() throws(SyntaxError) -> TryKind?? {
+        guard identifier() == "try" else { return nil }
+        let start = pos
+        pos += "try".count
+        var kind: TryKind?
+        if consume("?") {
+            kind = .optional
+        } else if consume("!") {
+            kind = .forced
+        }
+        mark(.keyword, from: start)
+        return .some(kind)
     }
 
     private mutating func parseBinary(level: Int) throws(SyntaxError) -> Expr {
@@ -1188,6 +1247,10 @@ struct Parser {
         skipSpaces()
         if consume("!") { return .unary(.not, try parseUnary()) }
         if consume("-") { return .unary(.negate, try parseUnary()) }
+        // After an operator, as in `x + try? f()`, it covers the rest.
+        if identifier() == "try" {
+            return try parseExpression()
+        }
         var expr = try parsePrimary()
         // Postfix operators bind only without a space: `f(x)`, `xs[0]`.
         while true {
@@ -1261,8 +1324,8 @@ struct Parser {
             pos += 1
             return .closure(try parseClosure())
         case "$":
-            if let expr = try parseDollar() { return expr }
-            throw unexpected(c)
+            guard let expr = try parseDollar() else { throw unexpected(c) }
+            return expr
         default:
             break
         }

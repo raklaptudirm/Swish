@@ -108,9 +108,13 @@ extension Shell {
         guard let stream else { return }
         do {
             if toExternal {
+                // Records as the rows they'd display as, so `ls | grep x` works.
+                let formatter = Formatter.forProgram(fd: output)
                 while let item = try stream.next() {
-                    try writeText(item, to: output)
+                    if case .function = item { throw RuntimeError("can't send a function to an external command") }
+                    guard formatter.add(item) else { throw BrokenPipe() }
                 }
+                guard formatter.finish() else { throw BrokenPipe() }
             } else {
                 // The end of the pipeline: format for a person.
                 let formatter = Formatter(fd: output)
@@ -121,26 +125,6 @@ extension Shell {
             }
         } catch is BrokenPipe {
             // The reader has what it wanted; stop producing.
-        }
-    }
-
-    /// One line per item for an external program. Lists are written one
-    /// element per line, since a list item is what a per-item function
-    /// returns to produce several outputs. Records have no one obvious text
-    /// form, so they need an explicit conversion rather than a guess.
-    private func writeText(_ item: Value, to fd: Int32) throws {
-        switch item {
-        case .nothing:
-            return
-        case .list(let elements):
-            for element in elements { try writeText(element, to: fd) }
-        case .record(let record):
-            throw RuntimeError("can't send a \(record.typeName ?? "Record") to an external command; "
-                + "convert it with `to json` or `to text`, or pick a field with `get`")
-        case .function:
-            throw RuntimeError("can't send a function to an external command")
-        default:
-            guard writeAll(fd, item.description + "\n") else { throw BrokenPipe() }
         }
     }
 

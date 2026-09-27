@@ -13,8 +13,10 @@ let interpreter = Thread {
         exit(shell.runInteractive())
     case "-c" where arguments.count == 2:
         exit(shell.execute(arguments[1]))
+    case let path? where arguments.count == 1 && !path.hasPrefix("-"):
+        exit(shell.runScript(at: path))
     default:
-        FileHandle.standardError.write(Data("usage: swish [-c command]\n".utf8))
+        FileHandle.standardError.write(Data("usage: swish [-c command | script]\n".utf8))
         exit(2)
     }
 }

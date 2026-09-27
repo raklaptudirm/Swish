@@ -4,10 +4,18 @@ import SwishKit
 
 struct RuntimeError: Error, CustomStringConvertible {
     let description: String
+    /// The status the failure gives: a failed command's own, for `$(…)`.
+    var status: Int32 = 1
 
-    init(_ description: String) {
+    init(_ description: String, status: Int32 = 1) {
         self.description = description
+        self.status = status
     }
+}
+
+/// A runtime error under `try!`: it stops a script, not just the line.
+struct FatalError: Error {
+    let error: RuntimeError
 }
 
 /// ^C while the shell itself was running code.
@@ -232,14 +240,24 @@ extension Shell {
                 display(value)
             }
             if case .bool(let truth) = value { return truth ? 0 : 1 }
+            // nil is a failure, so `try? $(…) != nil && …` and `if try? …` work.
+            if value == .nothing { return 1 }
             if context == .condition {
                 throw RuntimeError("condition must be a Bool, not \(value.typeName)")
             }
             return 0
 
         case .ifStatement(let node):
-            if try run(node.condition, context: .condition) == 0 {
-                return try runBlock(node.then)
+            switch node.condition {
+            case .chain(let chain):
+                if try run(chain, context: .condition) == 0 {
+                    return try runBlock(node.then)
+                }
+            case .binding(let name, let mutable, let expr):
+                let value = try evaluate(expr)
+                if value != .nothing {
+                    return try runBlock(node.then, declaring: [name: Binding(value: value, mutable: mutable)])
+                }
             }
             if let otherwise = node.otherwise {
                 return try runBlock(otherwise)
@@ -275,7 +293,8 @@ extension Shell {
     }
 
     /// Iterates lists, ranges lazily (so `for i in 1...1_000_000_000` never
-    /// builds the list), and strings by line, so `for f in $(ls)` works.
+    /// builds the list), and strings by character, as in Swift; command
+    /// output is iterated with `.lines`.
     private func forEachElement(of sequence: Expr, _ body: (Value) throws -> Bool) throws {
         if case .binary(let op, let lower, let upper) = sequence, op == .closedRange || op == .halfOpenRange {
             for i in try intRange(op, try evaluate(lower), try evaluate(upper)) {
@@ -289,7 +308,7 @@ extension Shell {
         case .list(let list):
             elements = list
         case .string(let text):
-            elements = text.isEmpty ? [] : text.split(separator: "\n", omittingEmptySubsequences: false).map { .string(String($0)) }
+            elements = text.map { .string(String($0)) }
         default:
             throw RuntimeError("can't iterate over \(value.typeName)")
         }
@@ -325,7 +344,11 @@ extension Shell {
         case .status:
             return .int(Int(lastStatus))
         case .substitution(let program):
-            var output = try capturing { _ = try runBlock(program) }
+            var status: Int32 = 0
+            var output = try capturing { status = try runBlock(program) }
+            guard status == 0 else {
+                throw RuntimeError("$(…) failed with status \(status); write try? $(…) to get nil instead", status: status)
+            }
             while output.last == "\n" { output.removeLast() }
             return .string(output)
         case .list(let elements):
@@ -365,6 +388,23 @@ extension Shell {
             return .bool(try truth(lhs, for: .and) && truth(rhs, for: .and))
         case .binary(.or, let lhs, let rhs):
             return .bool(try truth(lhs, for: .or) || truth(rhs, for: .or))
+        case .attempt(let operand, .optional):
+            do {
+                return try evaluate(operand)
+            } catch is RuntimeError {
+                return .nothing
+            } catch is AlreadyReported {
+                return .nothing
+            }
+        case .attempt(let operand, .forced):
+            do {
+                return try evaluate(operand)
+            } catch let error as RuntimeError {
+                throw FatalError(error: error)
+            }
+        case .binary(.coalesce, let lhs, let rhs):
+            let value = try evaluate(lhs)
+            return value == .nothing ? try evaluate(rhs) : value
         case .binary(let op, let lhs, let rhs) where op == .closedRange || op == .halfOpenRange:
             let range = try intRange(op, try evaluate(lhs), try evaluate(rhs))
             guard range.count <= 10_000_000 else {
@@ -403,7 +443,8 @@ extension Shell {
                 pattern += Glob.escape(literal)
             case .glob(let glob):
                 text += glob
-                pattern += glob
+                // `?` isn't a wildcard in Swish, so URLs need no quoting.
+                pattern += glob.replacingOccurrences(of: "?", with: "\\?")
                 hasGlob = true
             case .expression(let expr):
                 let value = try evaluate(expr).description

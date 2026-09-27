@@ -7,6 +7,7 @@ An interactive shell with a Swift-flavored language, structured pipelines, and
 swift build
 .build/debug/swish            # interactive
 .build/debug/swish -c 'ls | wc -l'
+.build/debug/swish script.sw
 scripts/test.sh               # unit tests + pty-driven job-control and editor tests
 ```
 
@@ -30,11 +31,11 @@ scripts/test.sh               # unit tests + pty-driven job-control and editor t
 
 1. ✅ REPL, PATH lookup, pipes, process groups, `^C`/`^Z`, `fg`/`jobs`, `cd`/`pwd`/`exit`
 2. ✅ Redirections (`>`, `>>`, `<`, `2>`, `2>&1`, `>&2`, `&>`, applied in order, for Swish
-   functions too), globbing (`*`, `?`, `[…]`, `**`; no match is an error), `;`/`&&`/`||`
+   functions too), globbing (`*`, `[…]`, `**`; `?` is literal; no match is an error), `;`/`&&`/`||`
 3. Full job control: `&`, `bg`, per-job terminal modes, `SIGCHLD` notifications
 4. ✅ The language: two-mode parsing, `let`/`var`, literals and operators, lists, ranges,
-   `if`/`else`, `for`/`while`/`break`/`continue`, `func`, closures, `\(…)`, `$name`/`$?`, `$(…)`,
-   multi-line input
+   `if`/`else`, `if let`, `??`, `for`/`while`/`break`/`continue`, `func`, closures, `\(…)`,
+   `$name`/`$?`, `$(…)` (throws if the command fails), `try?`/`try!`, multi-line input
 5. ✅ Callables: command-line binding derived from signatures, `@input` streaming,
    `@flag` short flags, `--help` from doc comments, overloads, `^name` and `which`
 6. ✅ Structured data: records, file sizes and dates, `Encodable` → `Value`, views and the

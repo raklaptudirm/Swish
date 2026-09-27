@@ -63,11 +63,10 @@ programs. What flows across each boundary:
 | external → external | A raw fd pipe. Swish never touches the bytes. |
 | external → internal | A lazy stream of lines (`String`), or parsed values with `from json`. |
 | internal → internal | `Value`s, one at a time. |
-| internal → external | Strings and scalars are written one per line, and lists one line per item. Records are an **error** that suggests `to json`, `to text` or `get`, rather than a guessed rendering, so `ls \| grep x` is an error and `ls \| get name \| grep x` works. |
+| internal → external | Strings and scalars are written one per line, and lists one line per item. Records are written as the rows they'd display as (the view's columns, no header, no color, nothing cut short), so `ls \| grep x` and `ls \| wc -l` work as they do in other shells. Exact data comes out with `get` or `to json`. Functions have no text form and are an error. |
 
 Redirecting a Swish stage's output to a file (`ls > files.txt`) writes it
-as it would be displayed, without color, rather than failing like a record
-sent to a program: a file is read by a person, or by `from`. Its errors
+as it would be displayed, header included, without color. Its errors
 follow its `2>`, so `f 2>/dev/null` silences a Swish function as it would
 a program. Only the first and last Swish functions in a pipeline can
 redirect their input and output.
@@ -138,3 +137,34 @@ pipeline turns values into text, and only if nothing else consumed them.
   part of its output. Swish functions output only what they `return`.
 - **Single-item collections silently becoming scalars.**
 - **Case-insensitivity by default**, and slow startup.
+
+## Failing commands in `$(…)`
+
+`$(…)` is a call to a throwing function whose `try` is implicit, since every
+one would need it: a command that fails inside it is a runtime error, as in
+Nushell, because its output is unlikely to be what the rest of the line
+expects. The error's status is the command's own.
+
+Swift's other two forms keep their meaning, and work on any expression
+that can throw a runtime error, not just `$(…)`:
+
+- **`try?`** is nil instead of an error. nil counts as failure in `&&`,
+  `||` and `if`.
+- **`try!`** stops a script (`swish script.sw`, or input piped in) with the
+  failure's status, where any other error only abandons its statement and
+  the script carries on. At the interactive prompt it's a plain error,
+  since stopping would mean exiting your shell.
+- A bare **`try`** is accepted for readability and changes nothing.
+
+```swift
+if let head = try? $(git rev-parse HEAD) { echo "at \(head)" } else { echo "not a repo" }
+let editor = (try? $(git config core.editor)) ?? "vi"
+try? $(grep -q TODO notes.txt) != nil && echo "still things to do"
+let config = try! $(cat ~/.config/tool.json)   # a script can't go on without it
+```
+
+As in Swift, `try` covers everything to its right: `try? $(cmd) ?? "vi"` is
+nil when `cmd` fails, so a default needs the parentheses above.
+
+A line starting with `$(` is an expression, so these read naturally; `$name`
+still starts a command, as in `$EDITOR notes.txt`.
