@@ -1,6 +1,6 @@
 # Functions and commands
 
-Status: **design**.
+Status: **implemented**, except Swift-side callables (milestone 8).
 
 Swish has **one kind of callable with two call syntaxes**. A function is
 defined once, and its command-line form is derived from its Swift signature.
@@ -25,7 +25,9 @@ greet Rak --times 2 --loud         // command mode: the same function
 | `_ files: String...` | the remaining positionals |
 | default value | optional flag |
 | no default | required; missing ones are reported by name |
-| `throws` | non-zero status, which is what `&&`/`\|\|` look at |
+| `name: String? = nil` | an optional flag whose absence is `nil` |
+| a runtime error | status 1, and the rest of the input is abandoned |
+| a `Bool` result | the status: `false` is a failure, for `&&`/`\|\|` and `if` |
 | return value | output to the pipeline |
 
 `--` ends flag parsing, so `rm -- --weird-name` works.
@@ -34,20 +36,25 @@ greet Rak --times 2 --loud         // command mode: the same function
 `include: [String]`. There's no comma splitting, so values containing commas
 need no escaping, and this matches Unix tools like `grep -e` and `curl -H`.
 
-**A dash followed by a number is a value when it fits.** `calc -5` passes
-`-5` if the callable has no short flag named `5` and the next positional
-parameter is numeric. Otherwise it's a flag. Externals always receive
-their argv verbatim.
+**A dash followed by a number is a value** unless the callable has a short
+flag with that name: `calc -5` passes `-5`. Externals always receive their
+argv verbatim.
 
 Short flags and help text can't be derived from a signature:
 
 ```swift
-/// Repeats a greeting.
-/// - Parameter times: how many times to greet
+# Repeats a greeting.
+# - Parameter times: how many times to greet
 func greet(_ name: String, @flag("n") times: Int = 1) -> String
 ```
 
-The doc comment becomes `greet --help`, and the flag metadata drives tab
+`@flag("n")` gives a labeled parameter a short flag: `-n 3`, `-n3`, and
+switches bundle, as in `-lv`.
+
+The `#` comment block directly above a `func` becomes `greet --help` (or
+`-h`), along with a usage line per overload and every argument and option
+with its type and default. A function that declares its own `help` label or
+`-h` flag gets those arguments instead. The same metadata will drive tab
 completion.
 
 ## Pipeline input
@@ -63,9 +70,28 @@ func where(@input _ item: Value, _ predicate: (Value) -> Bool) -> Value?
 func sort(@input _ items: [Value], by key: KeyPath) -> [Value]
 ```
 
-A per-item function returning `nil` outputs nothing for that item. Outside a
-pipeline, the `@input` parameter is an ordinary argument:
-`where(x, { $0.size > 1.mb })`.
+A per-item function returning `nil` outputs nothing for that item, so
+filters return an optional. Outside a pipeline, the `@input` parameter is an
+ordinary argument: `where(x, { $0.size > 1.mb })` in expression mode, or a
+positional in command mode when the function starts the pipeline
+(`double 21`, `total 1 2 3`).
+
+What flows between stages:
+
+- **Between Swish functions:** values, pulled one at a time, so `… | first 5`
+  stops upstream work early. A whole-stream function's list result flows
+  out as its elements.
+- **From an external program:** its output lines, as Strings, converted to
+  the `@input` type like command-line arguments (`seq 5 | double`).
+- **To an external program, or the terminal:** one line per item, with lists
+  one line per element. When the reader exits early (`… | head -1`), the
+  function stops being called.
+- **A value can start a pipeline:** `[3, 1, 2] | sort`, `"text" | tr a-z A-Z`.
+- A function without `@input` in the middle of a pipeline ignores its input.
+
+For now, a pipeline can have only one run of consecutive Swish functions
+(`ext | f | g | ext` works, `f | ext | g` doesn't): Swish code runs on one
+thread, and two runs separated by an external would each wait on the other.
 
 ## Choosing the syntax
 
@@ -81,7 +107,8 @@ pipeline, the `@input` parameter is an ordinary argument:
 2. External programs on `PATH`
 
 `^name` forces the external, so defining `func ls` never makes `/bin/ls`
-unreachable. `which name` reports what a name resolves to.
+unreachable. `which name` reports what a name resolves to, listing every
+overload of a function.
 
 Structured builtins deliberately keep their familiar Unix names and shadow
 the tools: a bare `ls`, `ps` or `sort` gives records, so
@@ -94,10 +121,16 @@ what a name is before it runs.
 
 ## Overloads
 
-Expression mode follows Swift's overload rules. Command mode only has
-strings to go on, so it picks the overload whose labels match the flags
-given, and fails with a list of candidates if more than one fits. There is
-never a silent guess.
+Declaring a `func` whose signature (labels and types) differs from an
+existing one in the same scope adds an overload; the same signature
+replaces it, which is what redefining at the prompt should do.
+
+A call tries every overload and keeps the ones that accept the arguments.
+Among those, the most specific wins: in expression mode, the one needing
+fewest conversions (so `f(5)` prefers `Int` over `Double`); in command mode,
+the one taking fewest arguments as plain text (so `f 5` prefers `Int` over
+`String`). A tie is an error that lists the candidates; there is never a
+silent guess.
 
 ## Swift-side callables
 

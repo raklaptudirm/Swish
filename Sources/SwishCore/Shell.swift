@@ -22,7 +22,11 @@ public final class Shell {
 
     private let editor = LineEditor()
 
-    public init() {}
+    public init() {
+        // The shell writes into pipes itself now; a reader exiting early
+        // should end that write with EPIPE, not kill the shell.
+        signal(SIGPIPE, SIG_IGN)
+    }
 
     /// Runs the read-eval loop until EOF or `exit`.
     public func runInteractive() -> Int32 {

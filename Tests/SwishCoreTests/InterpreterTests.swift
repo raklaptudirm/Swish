@@ -201,3 +201,115 @@ private let greet = #"func greet(_ name: String, times: Int = 1, loud: Bool = fa
     let isBig = "func isBig(_ n: Int) -> Bool { n > 10 };"
     #expect(try output(isBig + "isBig 50 && echo big; isBig 5 || echo small") == "big\nsmall\n")
 }
+
+// MARK: Pipeline input
+
+private let streaming = """
+func double(@input _ n: Int) -> Int { n * 2 }
+func total(@input _ xs: [Int]) -> Int { var t = 0; for x in xs { t = t + x }; return t }
+func evens(@input _ n: Int) -> Int? { if n % 2 == 0 { return n }; return nil }
+var calls = 0
+func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
+
+"""
+
+@Test func perItemInput() throws {
+    #expect(try output(streaming + "seq 4 | double") == "2\n4\n6\n8\n")
+    #expect(try output(streaming + "seq 6 | evens | double") == "4\n8\n12\n")
+    #expect(try output(streaming + "[1, 2, 3] | double") == "2\n4\n6\n")
+}
+
+@Test func wholeStreamInput() throws {
+    #expect(try output(streaming + "seq 4 | double | total") == "20\n")
+    #expect(try output(streaming + "[] | total") == "0\n")
+}
+
+@Test func inputFromTheCommandLineWhenFirst() throws {
+    #expect(try output(streaming + "double 21; total 1 2 3") == "42\n6\n")
+}
+
+@Test func streamsFeedExternalCommands() throws {
+    #expect(try output(streaming + "seq 3 | double | tr 0-9 a-j") == "c\ne\ng\n")
+    #expect(try output(#""a b" | tr a-z A-Z"#) == "A B\n")
+    #expect(try output("func gen() -> [Int] { [1, 2, 3] }; gen | tail -1") == "3\n")
+}
+
+@Test func streamsAreLazy() throws {
+    // `head` exits after one line; the shell sees EPIPE and stops pulling
+    // instead of dying of SIGPIPE or looping forever.
+    #expect(try output(streaming + "yes 7 | double | head -2") == "14\n14\n")
+    #expect(try output(streaming + "for _ in 1...1 { seq 100000 | counted | head -1 }; calls < 100000") == "1\ntrue\n")
+}
+
+@Test func streamErrors() {
+    #expect(status(streaming + "printf 'x\\n' | double") == 1) // not an Int
+    #expect(status(streaming + "double | cat | double") == 1)  // two in-process runs
+}
+
+// MARK: Flags, overloads, help
+
+@Test func shortFlags() throws {
+    let f = #"func f(@flag("n") times: Int = 1, @flag("v") verbose: Bool = false, @flag("q") quiet: Bool = false) -> String { "\(times) \(verbose) \(quiet)" };"#
+    #expect(try output(f + "f -n 3; f -n3 -vq; f -qv --times=2") == "3 false false\n3 true true\n2 true true\n")
+    #expect(status(f + "f -x") == 1)
+    #expect(status(f + "f -vx") == 1)
+}
+
+@Test func negativeNumbersVersusShortFlags() throws {
+    #expect(try output(#"func f(_ x: Int, @flag("5") five: Bool = false) -> String { "\(x) \(five)" }; f -5 -3"#) == "-3 true\n")
+}
+
+@Test func overloads() throws {
+    let byType = #"func f(_ x: Int) -> String { "int" }; func f(_ x: String) -> String { "string" };"#
+    #expect(try output(byType + "f 5; f abc; f(5); f(\"a\")") == "int\nstring\nint\nstring\n")
+    let byLabel = #"func f(a: Int) -> String { "a" }; func f(b: Int) -> String { "b" };"#
+    #expect(try output(byLabel + "f --b 1; f(a: 2)") == "b\na\n")
+    #expect(try output(#"func f(_ x: Double) -> String { "double" }; func f(_ x: Int) -> String { "int" }; f(5); f(5.5)"#) == "int\ndouble\n")
+}
+
+@Test func redeclaringReplaces() throws {
+    #expect(try output("func f() -> Int { 1 }; func f() -> Int { 2 }; f()") == "2\n")
+}
+
+@Test func overloadErrors() {
+    #expect(status("func g(_ x: Int, _ y: Int) {}; func g(_ s: String) {}; g 1 2 3") == 1)
+    #expect(status("func g(a: Int) {}; func g(b: Int) {}; g(c: 1)") == 1)
+    #expect(status(#"func g(_ x: Int, y: Int = 0) -> Int { 1 }; func g(_ x: Int, z: Int = 0) -> Int { 2 }; g(1)"#) == 1) // ambiguous
+}
+
+@Test func generatedHelp() throws {
+    let source = """
+    # Greets someone.
+    # - Parameter name: who to greet
+    func greet(_ name: String, @flag("n") times: Int = 1, color: Bool = true, tags: [String]) {}
+    greet --help
+    """
+    #expect(try output(source) == """
+    Greets someone.
+
+    Usage:
+      greet [--times <Int>] [--no-color] [--tags <String>] <name>
+
+    Arguments:
+      <name>               who to greet (String)
+
+    Options:
+      -n, --times <Int>    (default: 1)
+          --[no-]color     (default: true)
+          --tags <String>  (repeatable)
+      -h, --help           Show this help
+
+    """)
+}
+
+@Test func helpCanBeClaimed() throws {
+    #expect(try output(#"func f(help: Bool = false) -> Bool { help }; f --help"#) == "true\n")
+    #expect(try output(#"func f() {}; f -- --help"#) == "")
+}
+
+@Test func which() throws {
+    let text = try output("func greet(_ name: String) {}; which greet cd ls")
+    #expect(text.hasPrefix("greet: function greet(_ name: String)\ncd: shell builtin\n/"))
+    #expect(text.hasSuffix("/ls\n"))
+    #expect(status("which surely-not-a-command") == 1)
+}

@@ -1,5 +1,6 @@
 import CShim
 import Foundation
+import SwishKit
 
 struct Job {
     /// 0 when the job has no process group of its own (non-interactive mode).
@@ -18,56 +19,72 @@ struct SpawnFailure: Error {
     let status: Int32
 }
 
-struct ResolvedCommand {
-    var argv: [String]
-    /// Skip functions and builtins (`^name`).
-    var external = false
-    /// Set when the name refers to a Swish function, which runs in-process.
-    var function: Function?
+enum Stage {
+    case external([String], skipBuiltins: Bool)
+    /// A Swish function, which runs in the shell's own process.
+    case function(OverloadSet, [String])
+    /// A value feeding the pipeline, as in `[3, 1, 2] | sort`.
+    case value(Value)
+
+    var isExternal: Bool {
+        if case .external = self { true } else { false }
+    }
 }
 
 extension Shell {
-    /// Runs a pipeline. Function stages run in the shell's own process once
-    /// the external stages have been spawned, writing into their pipe; they
-    /// don't read their input yet (that arrives with `@input`).
+    /// Runs a pipeline. External stages are spawned first; then the
+    /// in-process stages run on the shell's thread, streaming values
+    /// between themselves and text to and from their external neighbours.
     ///
     /// `display` shows the result of a lone function call, as for any statement.
-    func runPipeline(_ commands: [ResolvedCommand], source: String, display: Bool) throws -> Int32 {
-        if commands.count == 1 {
-            if let function = commands[0].function {
-                return try callCommand(function, Array(commands[0].argv.dropFirst()), display: display)
-            }
-            if !commands[0].external, let status = runBuiltin(commands[0].argv) {
-                return status
+    func runPipeline(_ stages: [Stage], source: String, display: Bool) throws -> Int32 {
+        if stages.count == 1 {
+            switch stages[0] {
+            case .function(let set, let args):
+                return try callCommand(set, args, display: display)
+            case .external(let argv, let skipBuiltins):
+                if !skipBuiltins, let status = runBuiltin(argv) { return status }
+            case .value:
+                break
             }
         }
 
+        // Only one thread runs Swish code, so a pipeline can have one run of
+        // in-process stages; two runs would each wait on the other.
+        let inProcess = stages.indices.filter { !stages[$0].isExternal }
+        if let first = inProcess.first, let last = inProcess.last, last - first + 1 != inProcess.count {
+            throw RuntimeError("a pipeline can only have one run of Swish functions for now")
+        }
+        let segment = inProcess.first.map { $0...inProcess.last! }
+
         var job = Job(commandLine: source)
-        var functionStages: [(function: Function, args: [String], output: Int32, ownsOutput: Bool)] = []
         var input: Int32 = -1
-        for (index, command) in commands.enumerated() {
-            let isLast = index == commands.count - 1
+        var segmentInput: Int32 = -1
+        var segmentOutput: Int32 = -1
+        for (index, stage) in stages.enumerated() {
+            let isLast = index == stages.count - 1
             var next: (read: Int32, write: Int32)?
-            if !isLast {
+            if !isLast, segment?.contains(index) != true || index == segment?.upperBound {
                 guard let pipe = makePipe() else {
-                    report("pipe: \(errorMessage(errno))")
                     if input >= 0 { close(input) }
-                    job.status = 1
-                    break
+                    if segmentInput >= 0 { close(segmentInput) }
+                    if segmentOutput >= 0 { close(segmentOutput) }
+                    _ = waitForeground(job)
+                    throw RuntimeError("pipe: \(errorMessage(errno))")
                 }
                 next = pipe
             }
-            let output = next?.write ?? (stdoutFD == STDOUT_FILENO ? -1 : stdoutFD)
             defer { input = next?.read ?? -1 }
 
-            if let function = command.function {
-                if input >= 0 { close(input) }
-                // Its output end stays open until the function has run.
-                functionStages.append((function, Array(command.argv.dropFirst()), output, next != nil))
+            guard case .external(let argv, _) = stage else {
+                // In-process: remember where the run reads from and writes to.
+                if index == segment?.lowerBound { segmentInput = input }
+                if index == segment?.upperBound, let next { segmentOutput = next.write }
                 continue
             }
 
-            let result = spawn(command.argv, pgid: interactive ? job.pgid : -1, input: input, output: output)
+            let output = next?.write ?? (stdoutFD == STDOUT_FILENO ? -1 : stdoutFD)
+            let result = spawn(argv, pgid: interactive ? job.pgid : -1, input: input, output: output)
             if input >= 0 { close(input) }
             if let next { close(next.write) }
 
@@ -84,26 +101,24 @@ extension Shell {
         if input >= 0 { close(input) }
 
         var failure: (any Error)?
-        for stage in functionStages {
-            if failure == nil {
-                let savedOutput = stdoutFD
-                if stage.output >= 0 { stdoutFD = stage.output }
-                do {
-                    let status = try callCommand(stage.function, stage.args, display: true)
-                    if stage.function === commands.last?.function { job.status = status }
-                } catch {
-                    failure = error
-                }
-                stdoutFD = savedOutput
+        if let segment {
+            do {
+                try runSegment(
+                    stages[segment], input: segmentInput,
+                    output: segmentOutput >= 0 ? segmentOutput : stdoutFD, toExternal: segmentOutput >= 0
+                )
+            } catch {
+                failure = error
             }
-            // Closing lets the next stage see EOF.
-            if stage.ownsOutput { close(stage.output) }
+            // Closing lets the stages on either side see EOF or SIGPIPE.
+            if segmentInput >= 0 { close(segmentInput) }
+            if segmentOutput >= 0 { close(segmentOutput) }
         }
 
-        var status = job.status
-        if !job.running.isEmpty {
-            let externalStatus = waitForeground(job)
-            if commands.last?.function == nil { status = externalStatus }
+        var status: Int32 = 0
+        if !job.running.isEmpty || stages.last?.isExternal == true {
+            let externalStatus = job.running.isEmpty ? job.status : waitForeground(job)
+            if stages.last?.isExternal == true { status = externalStatus }
         }
         if let failure { throw failure }
         return status
@@ -160,7 +175,7 @@ extension Shell {
 
     private func spawn(_ argv: [String], pgid: pid_t, input: Int32, output: Int32) -> Result<pid_t, SpawnFailure> {
         let name = argv[0]
-        guard let path = resolve(name) else {
+        guard let path = findExecutable(name) else {
             return .failure(SpawnFailure(message: "\(name): command not found", status: 127))
         }
 
@@ -175,7 +190,7 @@ extension Shell {
     }
 
     /// Finds `name` on PATH; names containing a slash are used as-is.
-    private func resolve(_ name: String) -> String? {
+    func findExecutable(_ name: String) -> String? {
         if name.contains("/") { return name }
         let searchPath = env("PATH") ?? "/usr/bin:/bin"
         for directory in searchPath.split(separator: ":", omittingEmptySubsequences: false) {

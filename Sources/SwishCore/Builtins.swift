@@ -1,6 +1,8 @@
 import Foundation
 
 extension Shell {
+    static let builtinNames: Set = ["cd", "pwd", "exit", "fg", "jobs", "which"]
+
     /// Runs `argv` as a builtin, or returns nil if it isn't one.
     func runBuiltin(_ argv: [String]) -> Int32? {
         let args = Array(argv.dropFirst())
@@ -10,6 +12,7 @@ extension Shell {
         case "exit": return exitShell(args)
         case "fg": return fg(args)
         case "jobs": return jobs(args)
+        case "which": return which(args)
         default: return nil
         }
     }
@@ -100,5 +103,26 @@ extension Shell {
             writeAll(stdoutFD, "[\(index + 1)]  Stopped    \(job.commandLine)\n")
         }
         return 0
+    }
+
+    /// What each name runs in command mode, in lookup order: functions,
+    /// builtins, then programs on PATH.
+    private func which(_ args: [String]) -> Int32 {
+        var status: Int32 = 0
+        for name in args {
+            if let functions = commandFunctions(named: name) {
+                for function in functions.candidates {
+                    writeAll(stdoutFD, "\(name): function \(function.signature)\n")
+                }
+            } else if Shell.builtinNames.contains(name) {
+                writeAll(stdoutFD, "\(name): shell builtin\n")
+            } else if let path = findExecutable(name) {
+                writeAll(stdoutFD, path + "\n")
+            } else {
+                report("which: \(name) not found")
+                status = 1
+            }
+        }
+        return status
     }
 }

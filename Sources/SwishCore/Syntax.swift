@@ -62,6 +62,14 @@ struct FunctionDecl: Equatable, Sendable {
     var parameters: [Parameter]
     var returnType: TypeAnnotation?
     var body: Program
+    var documentation: Documentation?
+}
+
+/// The `#` comment block directly above a `func`, for `--help`.
+struct Documentation: Equatable, Sendable {
+    var summary: String
+    /// From `- Parameter name: description` lines.
+    var parameters: [String: String]
 }
 
 struct ClosureLiteral: Equatable, Sendable {
@@ -78,12 +86,19 @@ struct Parameter: Equatable, Sendable {
     var type: TypeAnnotation = .any
     var variadic = false
     var defaultValue: Expr?
+    /// `@input`: receives pipeline input; per item, or the whole stream
+    /// if its type is a list.
+    var isInput = false
+    /// `@flag("n")`: a short flag in command mode.
+    var shortFlag: Character?
 }
 
 indirect enum TypeAnnotation: Equatable, Sendable, CustomStringConvertible {
     case any, bool, int, double, string
     case list(TypeAnnotation)
     case function
+    /// `T?`: a T, or nil.
+    case optional(TypeAnnotation)
 
     var description: String {
         switch self {
@@ -94,6 +109,7 @@ indirect enum TypeAnnotation: Equatable, Sendable, CustomStringConvertible {
         case .string: "String"
         case .list(let element): "[\(element)]"
         case .function: "function"
+        case .optional(let wrapped): "\(wrapped)?"
         }
     }
 }
@@ -102,6 +118,8 @@ struct PipelineNode: Equatable, Sendable {
     var commands: [CommandNode]
     /// The pipeline as typed, for job messages like "Stopped".
     var source: String
+    /// A value feeding the pipeline, as in `[3, 1, 2] | sort`.
+    var input: Expr?
 }
 
 struct CommandNode: Equatable, Sendable {
@@ -327,7 +345,13 @@ struct Parser {
             break
         }
         if startsExpression(c) {
-            return .expression(try parseExpression(logical: false))
+            let start = pos
+            let expr = try parseExpression(logical: false)
+            skipSpaces()
+            guard peek() == "|", peek(1) != "|" else { return .expression(expr) }
+            pos += 1
+            skipSpaces(newlines: true)
+            return .pipeline(try parsePipeline(from: start, input: expr))
         }
         return .pipeline(try parsePipeline())
     }
@@ -404,6 +428,7 @@ struct Parser {
     // MARK: Functions and closures
 
     private mutating func parseFunction() throws(SyntaxError) -> FunctionDecl {
+        let documentation = documentation(before: pos)
         pos += "func".count
         skipSpaces()
         let name = try parseName(after: "'func'")
@@ -421,7 +446,45 @@ struct Parser {
         // Bound before the body is parsed, so the function can call itself.
         scopes[scopes.count - 1][name] = .function
         let (body, _) = try parseFunctionBody(parameters: parameters, anonymous: false)
-        return FunctionDecl(name: name, parameters: parameters, returnType: returnType, body: body)
+        return FunctionDecl(
+            name: name, parameters: parameters, returnType: returnType, body: body, documentation: documentation
+        )
+    }
+
+    /// The `#` comment lines directly above the line starting at `index`.
+    private func documentation(before index: Int) -> Documentation? {
+        var lineStart = index
+        while lineStart > 0 && (chars[lineStart - 1] == " " || chars[lineStart - 1] == "\t") { lineStart -= 1 }
+        guard lineStart > 0 && chars[lineStart - 1] == "\n" else { return nil }
+
+        var lines: [String] = []
+        var end = lineStart - 1 // The newline ending the line above.
+        while end >= 0 {
+            var start = end
+            while start > 0 && chars[start - 1] != "\n" { start -= 1 }
+            let line = String(chars[start..<end]).trimmingCharacters(in: .whitespaces)
+            guard line.hasPrefix("#"), !line.hasPrefix("#!") else { break }
+            var text = line.dropFirst()
+            if text.first == " " { text = text.dropFirst() }
+            lines.insert(String(text), at: 0)
+            end = start - 1
+        }
+        guard !lines.isEmpty else { return nil }
+
+        var summary: [String] = []
+        var parameters: [String: String] = [:]
+        for line in lines {
+            if line.hasPrefix("- Parameter "), let colon = line.firstIndex(of: ":") {
+                let name = line[line.index(line.startIndex, offsetBy: 12)..<colon].trimmingCharacters(in: .whitespaces)
+                parameters[name] = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
+            } else {
+                summary.append(line)
+            }
+        }
+        return Documentation(
+            summary: summary.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines),
+            parameters: parameters
+        )
     }
 
     /// A closure, positioned after its opening brace: `{ x, y in … }`,
@@ -513,9 +576,34 @@ struct Parser {
     }
 
     private mutating func parseParameter(named: Bool) throws(SyntaxError) -> Parameter {
+        var isInput = false
+        var shortFlag: Character?
+        while named && consume("@") {
+            guard let attribute = identifier() else { throw expected("an attribute name after '@'") }
+            pos += attribute.count
+            switch attribute {
+            case "input":
+                isInput = true
+            case "flag":
+                skipSpaces()
+                guard consume("(") else { throw expected("'(' after '@flag'") }
+                skipSpaces()
+                guard peek() == "\"", let letter = peek(1), letter.isLetter || Parser.isDigit(letter), peek(2) == "\"" else {
+                    throw SyntaxError("@flag needs a single letter or digit, like @flag(\"n\")")
+                }
+                pos += 3
+                skipSpaces()
+                guard consume(")") else { throw expected("')'") }
+                shortFlag = letter
+            default:
+                throw SyntaxError("unknown attribute '@\(attribute)'")
+            }
+            skipSpaces()
+        }
+
         let first = try parseName(after: "'('")
         skipSpaces()
-        var parameter = Parameter(label: first == "_" ? nil : first, name: first)
+        var parameter = Parameter(label: first == "_" ? nil : first, name: first, isInput: isInput, shortFlag: shortFlag)
         if named {
             if let second = identifier() {
                 pos += second.count
@@ -546,7 +634,18 @@ struct Parser {
 
     private func validate(_ parameters: [Parameter]) throws(SyntaxError) {
         var seen: Set<String> = []
+        var shortFlags: Set<Character> = []
+        if parameters.filter(\.isInput).count > 1 {
+            throw SyntaxError("only one parameter can be @input")
+        }
         for (index, parameter) in parameters.enumerated() {
+            if parameter.isInput && parameter.variadic {
+                throw SyntaxError("an @input parameter can't be variadic; use a list type for the whole stream")
+            }
+            if let flag = parameter.shortFlag {
+                guard parameter.label != nil else { throw SyntaxError("@flag needs a labeled parameter") }
+                guard shortFlags.insert(flag).inserted else { throw SyntaxError("duplicate short flag -\(flag)") }
+            }
             if parameter.name != "_" && !seen.insert(parameter.name).inserted {
                 throw SyntaxError("duplicate parameter '\(parameter.name)'")
             }
@@ -560,6 +659,11 @@ struct Parser {
     }
 
     private mutating func parseType() throws(SyntaxError) -> TypeAnnotation {
+        let type = try parseNonOptionalType()
+        return consume("?") ? .optional(type) : type
+    }
+
+    private mutating func parseNonOptionalType() throws(SyntaxError) -> TypeAnnotation {
         skipSpaces()
         if consume("[") {
             let element = try parseType()
@@ -593,7 +697,6 @@ struct Parser {
         case "Any", "Value": type = .any
         default: throw SyntaxError("unknown type '\(name)'")
         }
-        if peek() == "?" { throw SyntaxError("optional types aren't supported yet") }
         return type
     }
 
@@ -607,8 +710,8 @@ struct Parser {
 
     // MARK: Command mode
 
-    private mutating func parsePipeline() throws(SyntaxError) -> PipelineNode {
-        let start = pos
+    private mutating func parsePipeline(from start: Int? = nil, input: Expr? = nil) throws(SyntaxError) -> PipelineNode {
+        let start = start ?? pos
         var commands = [try parseCommand()]
         var end = pos
         while true {
@@ -620,7 +723,7 @@ struct Parser {
             end = pos
         }
         let source = String(chars[start..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
-        return PipelineNode(commands: commands, source: source)
+        return PipelineNode(commands: commands, source: source, input: input)
     }
 
     private mutating func parseCommand() throws(SyntaxError) -> CommandNode {

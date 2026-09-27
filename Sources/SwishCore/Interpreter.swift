@@ -45,13 +45,28 @@ final class Function: Callable, @unchecked Sendable {
     let returnType: TypeAnnotation?
     let body: Program
     let captured: [Scope]
+    let documentation: Documentation?
 
-    init(name: String?, parameters: [Parameter], returnType: TypeAnnotation?, body: Program, captured: [Scope]) {
+    init(
+        name: String?, parameters: [Parameter], returnType: TypeAnnotation?, body: Program,
+        captured: [Scope], documentation: Documentation? = nil
+    ) {
         self.name = name
         self.parameters = parameters
         self.returnType = returnType
         self.body = body
         self.captured = captured
+        self.documentation = documentation
+    }
+
+    var inputParameter: Parameter? {
+        parameters.first(where: \.isInput)
+    }
+
+    /// Whether a new declaration would replace this one rather than overload it.
+    func hasSameSignature(as other: Function) -> Bool {
+        let signature = { (p: Parameter) in [p.label ?? "_", p.type.description, "\(p.variadic)", "\(p.isInput)"] }
+        return parameters.map(signature) == other.parameters.map(signature)
     }
 
     var description: String {
@@ -120,10 +135,18 @@ extension Shell {
             // Captures the scope it's bound in, so it can call itself.
             let function = Function(
                 name: decl.name, parameters: decl.parameters, returnType: decl.returnType,
-                body: decl.body, captured: scopes
+                body: decl.body, captured: scopes, documentation: decl.documentation
             )
-            scopes[scopes.count - 1].bindings[decl.name] = Binding(
-                value: .function(function), mutable: false, isFunction: true
+            // A second declaration with a different signature overloads the
+            // name; one with the same signature replaces the old one.
+            let scope = scopes[scopes.count - 1]
+            var candidates = [function]
+            if let existing = scope.bindings[decl.name], existing.isFunction,
+               case .function(let callable) = existing.value, let set = callable as? OverloadSet {
+                candidates = set.candidates.filter { !$0.hasSameSignature(as: function) } + candidates
+            }
+            scope.bindings[decl.name] = Binding(
+                value: .function(OverloadSet(name: decl.name, candidates: candidates)), mutable: false, isFunction: true
             )
             return 0
         case .returnStatement(let expr):
@@ -149,15 +172,19 @@ extension Shell {
     private func run(_ unit: Unit, context: UnitContext) throws -> Int32 {
         switch unit {
         case .pipeline(let node):
-            let commands = try node.commands.map { command in
-                let argv = try command.words.map { try expand($0) }
-                return ResolvedCommand(
-                    argv: argv,
-                    external: command.external,
-                    function: command.external ? nil : commandFunction(named: argv[0])
-                )
+            var stages: [Stage] = []
+            if let input = node.input {
+                stages.append(.value(try evaluate(input)))
             }
-            return try runPipeline(commands, source: node.source, display: context == .statement)
+            for command in node.commands {
+                let argv = try command.words.map { try expand($0) }
+                if !command.external, let functions = commandFunctions(named: argv[0]) {
+                    stages.append(.function(functions, Array(argv.dropFirst())))
+                } else {
+                    stages.append(.external(argv, skipBuiltins: command.external))
+                }
+            }
+            return try runPipeline(stages, source: node.source, display: context == .statement)
 
         case .expression(let expr):
             let value = try evaluate(expr)
@@ -238,7 +265,7 @@ extension Shell {
         writeAll(stdoutFD, value.description + "\n")
     }
 
-    private func checkInterrupt() throws {
+    func checkInterrupt() throws {
         if swish_take_interrupt() != 0 { throw Interrupted() }
     }
 
@@ -272,11 +299,16 @@ extension Shell {
             ))
         case .call(let callee, let arguments):
             let value = try evaluate(callee)
-            guard case .function(let callable) = value, let function = callable as? Function else {
+            let values = try arguments.map { Argument(label: $0.label, value: .literal(try evaluate($0.value))) }
+            switch value {
+            case .function(let set as OverloadSet):
+                let (function, bindings) = try resolve(set) { try self.bind(values, to: $0) }
+                return try invoke(function, with: bindings)
+            case .function(let function as Function):
+                return try invoke(function, with: try bind(values, to: function).bindings)
+            default:
                 throw RuntimeError("\(value.typeName) isn't a function")
             }
-            let values = try arguments.map { Argument(label: $0.label, value: .literal(try evaluate($0.value))) }
-            return try invoke(function, with: try bind(values, to: function))
         case .unary(let op, let operand):
             return try apply(op, try evaluate(operand))
         case .binary(.and, let lhs, let rhs):
@@ -307,18 +339,18 @@ extension Shell {
         }.joined()
     }
 
-    private func lookup(_ name: String) -> Binding? {
+    func lookup(_ name: String) -> Binding? {
         for scope in scopes.reversed() {
             if let binding = scope.bindings[name] { return binding }
         }
         return nil
     }
 
-    /// The function a command name refers to, if it was declared with `func`.
-    private func commandFunction(named name: String) -> Function? {
+    /// The functions a command name refers to, if it was declared with `func`.
+    func commandFunctions(named name: String) -> OverloadSet? {
         guard let binding = lookup(name), binding.isFunction,
               case .function(let callable) = binding.value else { return nil }
-        return callable as? Function
+        return callable as? OverloadSet
     }
 
     private func intRange(_ op: BinaryOperator, _ lower: Value, _ upper: Value) throws -> Range<Int> {
@@ -464,9 +496,18 @@ extension Shell {
 
     /// Matches expression-mode arguments to parameters by Swift's rules:
     /// in order, labels must match, defaulted parameters may be skipped.
-    private func bind(_ arguments: [Argument], to function: Function) throws -> [String: Value] {
+    ///
+    /// The penalty counts conversions and untyped parameters, so overload
+    /// resolution can prefer the most specific match.
+    private func bind(_ arguments: [Argument], to function: Function) throws -> (bindings: [String: Value], penalty: Int) {
         let name = function.name ?? "closure"
         var bound: [String: Value] = [:]
+        var penalty = 0
+        func checked(_ value: Value, for parameter: Parameter) throws -> Value {
+            let result = try self.checked(value, for: parameter, of: name)
+            if parameter.type == .any || !result.isEqual(to: value) || result.typeName != value.typeName { penalty += 1 }
+            return result
+        }
         var index = 0
         for parameter in function.parameters {
             if index < arguments.count, arguments[index].label == parameter.label {
@@ -476,9 +517,9 @@ extension Shell {
                         values.append(try evaluate(arguments[index].value))
                         index += 1
                     } while index < arguments.count && arguments[index].label == nil
-                    bound[parameter.name] = try checked(.list(values), for: parameter, of: name)
+                    bound[parameter.name] = try checked(.list(values), for: parameter)
                 } else {
-                    bound[parameter.name] = try checked(try evaluate(arguments[index].value), for: parameter, of: name)
+                    bound[parameter.name] = try checked(try evaluate(arguments[index].value), for: parameter)
                     index += 1
                 }
             } else if parameter.variadic {
@@ -494,154 +535,23 @@ extension Shell {
             let extra = arguments[index].label.map { "'\($0):'" } ?? "#\(index + 1)"
             throw RuntimeError("\(name): unexpected argument \(extra)")
         }
-        return bound
+        return (bound, penalty)
     }
 
     /// Defaults are evaluated at call time, in the scope the function was defined in.
-    private func defaultArgument(_ expr: Expr, for parameter: Parameter, of function: Function) throws -> Value {
+    func defaultArgument(_ expr: Expr, for parameter: Parameter, of function: Function) throws -> Value {
         let savedScopes = scopes
         scopes = function.captured
         defer { scopes = savedScopes }
         return try checked(try evaluate(expr), for: parameter, of: function.name ?? "closure")
     }
 
-    private func checked(_ value: Value, for parameter: Parameter, of function: String) throws -> Value {
+    func checked(_ value: Value, for parameter: Parameter, of function: String) throws -> Value {
         let type = parameter.variadic ? TypeAnnotation.list(parameter.type) : parameter.type
         guard let conforming = value.conforming(to: type) else {
             throw RuntimeError("\(function): '\(parameter.name)' must be \(type), not \(value.typeName)")
         }
         return conforming
-    }
-
-    // MARK: Command-mode calls
-
-    /// Calls a function with command-line arguments, displaying its result if
-    /// asked. The status is 1 for a false result and 0 otherwise.
-    func callCommand(_ function: Function, _ args: [String], display shouldDisplay: Bool) throws -> Int32 {
-        let result = try invoke(function, with: try bind(commandLine: args, to: function))
-        if shouldDisplay && result != .nothing {
-            writeAll(stdoutFD, result.description + "\n")
-        }
-        if case .bool(let truth) = result { return truth ? 0 : 1 }
-        return 0
-    }
-
-    /// Derives a command-line interface from the signature (see
-    /// docs/design/callables.md): unlabeled parameters are positional,
-    /// labeled ones are `--kebab-case` flags, Bools are switches.
-    private func bind(commandLine args: [String], to function: Function) throws -> [String: Value] {
-        let name = function.name ?? "closure"
-        var flags: [String: (parameter: Parameter, negated: Bool)] = [:]
-        for parameter in function.parameters {
-            guard let label = parameter.label else { continue }
-            flags[kebabCase(label)] = (parameter, false)
-            if parameter.type == .bool, case .literal(.bool(true)) = parameter.defaultValue {
-                flags["no-" + kebabCase(label)] = (parameter, true)
-            }
-        }
-
-        var bound: [String: Value] = [:]
-        var positionals: [String] = []
-        var index = 0
-        var flagsEnded = false
-        while index < args.count {
-            let arg = args[index]
-            index += 1
-            if flagsEnded || !arg.hasPrefix("-") || arg == "-" || Double(arg) != nil {
-                positionals.append(arg)
-                continue
-            }
-            if arg == "--" {
-                flagsEnded = true
-                continue
-            }
-            guard arg.hasPrefix("--") else { throw RuntimeError("\(name): unknown option \(arg)") }
-
-            let body = arg.dropFirst(2)
-            let flagName = String(body.prefix { $0 != "=" })
-            let inline = body.contains("=") ? String(body.drop { $0 != "=" }.dropFirst()) : nil
-            guard let (parameter, negated) = flags[flagName] else {
-                throw RuntimeError("\(name): unknown option --\(flagName)")
-            }
-
-            if parameter.type == .bool && (inline == nil || negated) {
-                guard inline == nil else { throw RuntimeError("\(name): --\(flagName) doesn't take a value") }
-                bound[parameter.name] = .bool(!negated)
-                continue
-            }
-            let text: String
-            if let inline {
-                text = inline
-            } else {
-                guard index < args.count else { throw RuntimeError("\(name): --\(flagName) needs a value") }
-                text = args[index]
-                index += 1
-            }
-            if case .list(let elementType) = parameter.type {
-                // Repeated flags accumulate: --include a --include b.
-                let element = try converted(text, to: elementType, for: "--\(flagName)", of: name)
-                if case .list(let existing) = bound[parameter.name] {
-                    bound[parameter.name] = .list(existing + [element])
-                } else {
-                    bound[parameter.name] = .list([element])
-                }
-            } else {
-                guard bound[parameter.name] == nil else { throw RuntimeError("\(name): --\(flagName) given twice") }
-                bound[parameter.name] = try converted(text, to: parameter.type, for: "--\(flagName)", of: name)
-            }
-        }
-
-        var remaining = positionals[...]
-        for parameter in function.parameters where parameter.label == nil {
-            let what = "<\(parameter.name)>"
-            if parameter.variadic {
-                bound[parameter.name] = .list(try remaining.map { try converted($0, to: parameter.type, for: what, of: name) })
-                remaining = []
-            } else if let text = remaining.popFirst() {
-                bound[parameter.name] = try converted(text, to: parameter.type, for: what, of: name)
-            }
-        }
-        if let extra = remaining.first {
-            throw RuntimeError("\(name): unexpected argument '\(extra)'")
-        }
-
-        for parameter in function.parameters where bound[parameter.name] == nil {
-            if let defaultValue = parameter.defaultValue {
-                bound[parameter.name] = try defaultArgument(defaultValue, for: parameter, of: function)
-            } else if parameter.type == .bool && parameter.label != nil {
-                bound[parameter.name] = .bool(false)
-            } else if case .list = parameter.type, parameter.label != nil {
-                bound[parameter.name] = .list([])
-            } else {
-                let what = parameter.label.map { "--\(kebabCase($0))" } ?? "<\(parameter.name)>"
-                throw RuntimeError("\(name): missing \(what)")
-            }
-        }
-        return bound
-    }
-
-    private func converted(_ text: String, to type: TypeAnnotation, for what: String, of function: String) throws -> Value {
-        let value: Value? = switch type {
-        case .any, .string: .string(text)
-        case .int: Int(text).map(Value.int)
-        case .double: Double(text).map(Value.double)
-        case .bool: ["true": true, "false": false][text].map(Value.bool)
-        case .list, .function: nil
-        }
-        guard let value else {
-            throw RuntimeError("\(function): \(what) must be \(type), got '\(text)'")
-        }
-        return value
-    }
-
-    private func kebabCase(_ label: String) -> String {
-        label.reduce(into: "") { result, c in
-            if c.isUppercase {
-                result += "-" + c.lowercased()
-            } else {
-                result.append(c)
-            }
-        }
     }
 
     // MARK: Capturing output
@@ -734,6 +644,10 @@ extension Value {
             return self
         case (.double, .int(let n)):
             return .double(Double(n))
+        case (.optional, .nothing):
+            return self
+        case (.optional(let wrapped), _):
+            return conforming(to: wrapped)
         case (.list(let element), .list(let values)):
             var converted: [Value] = []
             for value in values {

@@ -132,9 +132,50 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
 }
 
 @Test func invalidSignatures() {
-    for source in ["func f(x) {}", "func f(_ a: Int, _ a: Int) {}", "func f(_ a: Int..., _ b: Int) {}", "func f(_ a: Foo) {}", "func f(_ a: Int?) {}", "func (_ a: Int) {}"] {
+    for source in ["func f(x) {}", "func f(_ a: Int, _ a: Int) {}", "func f(_ a: Int..., _ b: Int) {}", "func f(_ a: Foo) {}", "func (_ a: Int) {}",
+                   "func f(@input _ a: Int, @input _ b: Int) {}", "func f(@input _ a: Int...) {}",
+                   "func f(@flag(\"n\") _ a: Int) {}", "func f(@flag(\"n\") a: Int, @flag(\"n\") b: Int) {}",
+                   "func f(@flag(\"no\") a: Int) {}", "func f(@bogus a: Int) {}", "let f = { (@input x) in x }"] {
         #expect(syntaxError(source)?.incomplete == false, "\(source)")
     }
+}
+
+@Test func parameterAttributesAndOptionals() throws {
+    let program = try parse(#"func f(@input _ item: Int?, @flag("n") times: Int = 1) {}"#)
+    guard case .function(let decl) = program.statements[0] else { Issue.record(); return }
+    #expect(decl.parameters == [
+        Parameter(label: nil, name: "item", type: .optional(.int), isInput: true),
+        Parameter(label: "times", name: "times", type: .int, defaultValue: .literal(.int(1)), shortFlag: "n"),
+    ])
+}
+
+@Test func docCommentsAboveFunctions() throws {
+    let source = """
+    echo unrelated # not documentation
+
+    # Greets someone.
+    #
+    # Politely.
+    # - Parameter name: who to greet
+      func greet(_ name: String) {}
+    # A stray comment
+    ; func other() {}
+    """
+    let functions = try parse(source).statements.compactMap { statement -> FunctionDecl? in
+        if case .function(let decl) = statement { decl } else { nil }
+    }
+    #expect(functions[0].documentation == Documentation(summary: "Greets someone.\n\nPolitely.", parameters: ["name": "who to greet"]))
+    #expect(functions[1].documentation == nil)
+}
+
+@Test func valuesCanFeedPipelines() throws {
+    guard case .chain(let chain) = try parse("[1, 2] | sort | head -1").statements[0],
+          case .pipeline(let pipeline) = chain.first else { Issue.record(); return }
+    #expect(pipeline.input == .list([.literal(.int(1)), .literal(.int(2))]))
+    #expect(pipeline.commands.map { $0.words.count } == [1, 2])
+    #expect(pipeline.source == "[1, 2] | sort | head -1")
+    #expect(try modes("false || true") == ["expression"]) // `||` is still a chain
+    #expect(syntaxError("[1] |")?.incomplete == true)
 }
 
 // MARK: Words

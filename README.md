@@ -34,10 +34,8 @@ scripts/test.sh               # unit tests + pty-driven job-control tests
 4. ✅ The language: two-mode parsing, `let`/`var`, literals and operators, lists, ranges,
    `if`/`else`, `for`/`while`/`break`/`continue`, `func`, closures, `\(…)`, `$name`/`$?`, `$(…)`,
    multi-line input
-5. Callables
-   - ✅ command-line binding derived from signatures (positionals, `--flags`, switches,
-     `--no-x`, repeated flags, variadics, `--`), lookup order and `^name`
-   - `@input` streaming, short flags, `--help`, overloads
+5. ✅ Callables: command-line binding derived from signatures, `@input` streaming,
+   `@flag` short flags, `--help` from doc comments, overloads, `^name` and `which`
 6. Structured data: records, objects, `Encodable` → `Value`, views and the display step,
    the error stream, `members`, builtins (`ls`, `ps`, `where`, `select`, `sort`, `from`/`to json`)
 7. Line editor: persistent history, completion from signatures, highlighting, multi-line wrapping
