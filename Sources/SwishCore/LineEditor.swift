@@ -3,6 +3,13 @@ import Foundation
 /// A minimal single-line editor: raw-mode input, cursor movement, and
 /// in-memory history. Falls back to plain `readLine` when stdin isn't a TTY.
 final class LineEditor {
+    enum Input {
+        case line(String)
+        /// ^C: abandon the line, and anything pending before it.
+        case interrupted
+        case eof
+    }
+
     private enum Key {
         case character(Character)
         case enter, interrupt, eof
@@ -14,8 +21,8 @@ final class LineEditor {
     private let input = STDIN_FILENO
     private var history: [String] = []
 
-    func readLine(prompt: String) -> String? {
-        guard isatty(input) != 0 else { return Swift.readLine() }
+    func readLine(prompt: String) -> Input {
+        guard isatty(input) != 0 else { return Swift.readLine().map(Input.line) ?? .eof }
 
         var original = termios()
         tcgetattr(input, &original)
@@ -35,7 +42,7 @@ final class LineEditor {
         return edit(prompt: prompt)
     }
 
-    private func edit(prompt: String) -> String? {
+    private func edit(prompt: String) -> Input {
         var buffer: [Character] = []
         var cursor = 0
         var historyIndex = history.count
@@ -69,14 +76,14 @@ final class LineEditor {
                 if !line.allSatisfy(\.isWhitespace) && line != history.last {
                     history.append(line)
                 }
-                return line
+                return .line(line)
             case .interrupt:
                 writeAll(STDOUT_FILENO, "^C\n")
-                return ""
+                return .interrupted
             case .eof:
                 if buffer.isEmpty {
                     writeAll(STDOUT_FILENO, "\n")
-                    return nil
+                    return .eof
                 }
                 if cursor < buffer.count { buffer.remove(at: cursor) }
             case .backspace:
@@ -116,7 +123,7 @@ final class LineEditor {
             }
             refresh()
         }
-        return nil
+        return .eof
     }
 
     private func readKey() -> Key? {

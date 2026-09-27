@@ -29,7 +29,7 @@ extension Shell {
                 return 1
             }
             target = previous
-            writeAll(STDOUT_FILENO, previous + "\n")
+            writeAll(stdoutFD, previous + "\n")
         case 1:
             target = args[0]
         default:
@@ -48,7 +48,7 @@ extension Shell {
     }
 
     private func pwd(_ args: [String]) -> Int32 {
-        writeAll(STDOUT_FILENO, FileManager.default.currentDirectoryPath + "\n")
+        writeAll(stdoutFD, FileManager.default.currentDirectoryPath + "\n")
         return 0
     }
 
@@ -85,7 +85,7 @@ extension Shell {
         }
 
         let job = stoppedJobs.remove(at: index)
-        writeAll(STDOUT_FILENO, job.commandLine + "\n")
+        writeAll(stdoutFD, job.commandLine + "\n")
         if job.pgid > 0 {
             tcsetpgrp(terminal, job.pgid)
             kill(-job.pgid, SIGCONT)
@@ -97,7 +97,7 @@ extension Shell {
 
     private func jobs(_ args: [String]) -> Int32 {
         for (index, job) in stoppedJobs.enumerated() {
-            writeAll(STDOUT_FILENO, "[\(index + 1)]  Stopped    \(job.commandLine)\n")
+            writeAll(stdoutFD, "[\(index + 1)]  Stopped    \(job.commandLine)\n")
         }
         return 0
     }

@@ -18,35 +18,37 @@ struct SpawnFailure: Error {
     let status: Int32
 }
 
+struct ResolvedCommand {
+    var argv: [String]
+    /// Skip builtins (`^name`).
+    var external = false
+}
+
 extension Shell {
-    func run(_ pipeline: Pipeline, source: String) -> Int32 {
-        if pipeline.commands.count == 1, let status = runBuiltin(pipeline.commands[0].argv) {
+    func runPipeline(_ commands: [ResolvedCommand], source: String) -> Int32 {
+        if commands.count == 1, !commands[0].external, let status = runBuiltin(commands[0].argv) {
             return status
         }
 
         var job = Job(commandLine: source)
         var input: Int32 = -1
-        for (index, command) in pipeline.commands.enumerated() {
-            let isLast = index == pipeline.commands.count - 1
-            var pipeFds: [Int32] = [-1, -1]
-            if !isLast, pipe(&pipeFds) != 0 {
-                report("pipe: \(errorMessage(errno))")
-                job.status = 1
-                break
+        for (index, command) in commands.enumerated() {
+            let isLast = index == commands.count - 1
+            var next: (read: Int32, write: Int32)?
+            if !isLast {
+                guard let pipe = makePipe() else {
+                    report("pipe: \(errorMessage(errno))")
+                    job.status = 1
+                    break
+                }
+                next = pipe
             }
 
-            let result = spawn(
-                command.argv,
-                pgid: interactive ? job.pgid : -1,
-                input: input,
-                output: pipeFds[1],
-                // The child keeps only its dup'd stdin/stdout, not the originals
-                // or the read end of its own output pipe.
-                closing: [input, pipeFds[0], pipeFds[1]].filter { $0 >= 0 }
-            )
+            let output = next?.write ?? (stdoutFD == STDOUT_FILENO ? -1 : stdoutFD)
+            let result = spawn(command.argv, pgid: interactive ? job.pgid : -1, input: input, output: output)
             if input >= 0 { close(input) }
-            if pipeFds[1] >= 0 { close(pipeFds[1]) }
-            input = pipeFds[0]
+            if let next { close(next.write) }
+            input = next?.read ?? -1
 
             switch result {
             case .success(let pid):
@@ -113,9 +115,7 @@ extension Shell {
         return 1
     }
 
-    private func spawn(
-        _ argv: [String], pgid: pid_t, input: Int32, output: Int32, closing fds: [Int32]
-    ) -> Result<pid_t, SpawnFailure> {
+    private func spawn(_ argv: [String], pgid: pid_t, input: Int32, output: Int32) -> Result<pid_t, SpawnFailure> {
         let name = argv[0]
         guard let path = resolve(name) else {
             return .failure(SpawnFailure(message: "\(name): command not found", status: 127))
@@ -123,13 +123,7 @@ extension Shell {
 
         let cArgs = argv.map { strdup($0) } + [nil]
         defer { cArgs.forEach { free($0) } }
-        let pid = fds.withUnsafeBufferPointer { closing in
-            swish_spawn(
-                path, cArgs, pgid, input, output,
-                closing.baseAddress, Int32(closing.count),
-                interactive ? terminal : -1
-            )
-        }
+        let pid = swish_spawn(path, cArgs, pgid, input, output, interactive ? terminal : -1)
         guard pid < 0 else { return .success(pid) }
 
         let code = -pid
@@ -152,4 +146,14 @@ extension Shell {
         }
         return nil
     }
+}
+
+/// A pipe whose ends are closed on exec, so children inherit only what's
+/// dup'd onto their stdin/stdout, never a stray end that would keep a
+/// reader from seeing EOF.
+func makePipe() -> (read: Int32, write: Int32)? {
+    var fds: [Int32] = [-1, -1]
+    guard pipe(&fds) == 0 else { return nil }
+    for fd in fds { _ = fcntl(fd, F_SETFD, FD_CLOEXEC) }
+    return (fds[0], fds[1])
 }

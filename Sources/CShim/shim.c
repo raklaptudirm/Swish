@@ -15,8 +15,7 @@ int swish_wtermsig(int status) { return WTERMSIG(status); }
 int swish_wifstopped(int status) { return WIFSTOPPED(status); }
 
 pid_t swish_spawn(const char *path, char *const argv[], pid_t pgid,
-                  int fd_in, int fd_out,
-                  const int *close_fds, int close_count, int tty) {
+                  int fd_in, int fd_out, int tty) {
     posix_spawnattr_t attr;
     posix_spawn_file_actions_t actions;
     int err = posix_spawnattr_init(&attr);
@@ -55,7 +54,6 @@ pid_t swish_spawn(const char *path, char *const argv[], pid_t pgid,
 
     if (fd_in >= 0) posix_spawn_file_actions_adddup2(&actions, fd_in, STDIN_FILENO);
     if (fd_out >= 0) posix_spawn_file_actions_adddup2(&actions, fd_out, STDOUT_FILENO);
-    for (int i = 0; i < close_count; i++) posix_spawn_file_actions_addclose(&actions, close_fds[i]);
 
     pid_t pid = 0;
     err = posix_spawn(&pid, path, &actions, &attr, argv, environ);
