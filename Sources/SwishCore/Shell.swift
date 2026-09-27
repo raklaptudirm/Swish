@@ -27,8 +27,9 @@ public final class Shell {
     var interactive = false
     var shellPgid = getpgrp()
     var shellModes = termios()
-    var stoppedJobs: [Job] = []
-    var warnedAboutStoppedJobs = false
+    /// Jobs in the background: started with `async`, or stopped with ^Z.
+    var jobs: [Job] = []
+    var warnedAboutJobs = false
     /// A `try!` failed in a script, which stops it.
     var scriptStopped = false
     /// The status the last signal-killed command gave, to tell 130 from ^C
@@ -61,6 +62,10 @@ public final class Shell {
         // Lines of a statement that isn't finished yet, like an open `if` block.
         var pending = ""
         while true {
+            // Finished and stopped background jobs, before the prompt.
+            if pending.isEmpty {
+                for notice in announceJobs() { writeAll(STDERR_FILENO, notice + "\n") }
+            }
             switch editor.readLine(prompt: pending.isEmpty ? prompt() : "\u{1B}[90m…\u{1B}[0m ") {
             case .eof:
                 if !pending.isEmpty { execute(pending) }
@@ -187,6 +192,8 @@ public final class Shell {
         } catch is Interrupted {
             writeAll(STDERR_FILENO, "\n")
             lastStatus = 128 + SIGINT
+        } catch is JobSuspended {
+            lastStatus = 128 + SIGTSTP // Already announced; the job is in `jobs`.
         } catch is AlreadyReported {
             lastStatus = 1
         } catch let fatal as FatalError {

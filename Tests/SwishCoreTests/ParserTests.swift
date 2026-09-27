@@ -491,3 +491,20 @@ private func command(_ source: String) throws -> CommandNode? {
     // An expression after `try` is still an expression.
     #expect(try modes("try $(x); try? false") == ["expression", "expression"])
 }
+
+// MARK: async and await
+
+@Test func asyncAndAwaitForms() throws {
+    let program = try parse("let j = async make -j4 | tee log; let p = async $(curl x); await j; await; try await p")
+    guard case .declare(_, _, .async(.command(let command))) = program.statements[0],
+          case .declare(_, _, .async(.capture(let capture))) = program.statements[1],
+          case .chain(let a) = program.statements[2], case .expression(.await(.variable("j"), throwing: false)) = a.first,
+          case .chain(let b) = program.statements[3], case .expression(.await(nil, throwing: false)) = b.first,
+          case .chain(let c) = program.statements[4], case .expression(.await(.variable("p"), throwing: true)) = c.first else {
+        Issue.record("\(program.statements)")
+        return
+    }
+    #expect(command.commands.count == 2)
+    #expect(capture.source == "curl x")
+    #expect(syntaxError("async $(a; b)") != nil) // one pipeline
+}

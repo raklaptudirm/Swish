@@ -18,7 +18,21 @@ public enum Value: Sendable {
     case date(Date)
     /// What `$(…)` gives: a command's output and how it exited.
     case output(CommandOutput)
+    /// A live value with members of its own: a background job, and later
+    /// bridged Swift objects.
+    case object(any SwishObject)
     case function(any Callable)
+}
+
+/// A live value that answers for its own members, properties and methods
+/// alike (a method is a function value). Objects compare by identity.
+public protocol SwishObject: AnyObject, Sendable, CustomStringConvertible {
+    /// The name `members` and error messages use, like `Job`.
+    var typeName: String { get }
+    /// Names of its members, for `members` and completion.
+    var memberNames: [String] { get }
+    /// The member called `name`, or nil if it has none.
+    func member(_ name: String) -> Value?
 }
 
 /// A command's standard output (trailing newlines trimmed) and exit status.
@@ -127,6 +141,7 @@ extension Value: Hashable {
         case (.filesize(let a), .filesize(let b)): a == b
         case (.date(let a), .date(let b)): a == b
         case (.output(let a), .output(let b)): a == b
+        case (.object(let a), .object(let b)): a === b
         case (.function(let a), .function(let b)): a === b
         default: false
         }
@@ -144,6 +159,7 @@ extension Value: Hashable {
         case .filesize(let bytes): hasher.combine(bytes)
         case .date(let date): hasher.combine(date)
         case .output(let output): hasher.combine(output)
+        case .object(let object): hasher.combine(ObjectIdentifier(object))
         case .function(let function): hasher.combine(ObjectIdentifier(function))
         }
     }
@@ -162,6 +178,7 @@ extension Value: CustomStringConvertible {
         case .filesize(let bytes): Value.formatFileSize(bytes)
         case .date(let date): Value.dateFormatter.string(from: date)
         case .output(let output): output.text
+        case .object(let object): object.description
         case .function(let function): function.description
         }
     }

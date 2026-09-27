@@ -103,6 +103,22 @@ do {
 }
 ```
 
+### Background jobs are values
+
+There's no `&`: `async` starts a job and hands it to you, and `await`
+waits for it, bringing it to the foreground as `fg` would.
+
+```swift
+let build = async swift build
+let page = async $(curl -s example.com)
+echo "meanwhile…"
+let html = await page             // its Output
+try await build                   // throws if the build failed
+
+jobs                              // background jobs, including ones you ^Z'd
+await                             // bring back the most recent: the ^Z'd vim, say
+```
+
 ### The rest of a shell, a little tidier
 
 ```swift
@@ -133,7 +149,7 @@ swift build -c release
 ```sh
 swift build
 .build/debug/swish
-scripts/test.sh     # unit tests, plus pty-driven job-control and editor tests
+scripts/test.sh     # unit tests, plus pty-driven job-control, editor and background-job tests
 ```
 
 `scripts/test.sh` works with just the Command Line Tools installed, where
@@ -165,8 +181,8 @@ scripts/test.sh     # unit tests, plus pty-driven job-control and editor tests
   `cd`/`pwd`/`exit`
 - [x] **Redirections and globbing**: `>`, `>>`, `<`, `e>`, `e>o`, `o>e`, `o+e>` applied in order
   (for Swish functions too); `*`, `[…]`, `**`; `;`, `&&`, `||`
-- [ ] **Background jobs** as `async`/`await` values, `bg`, per-job terminal modes, `SIGCHLD`
-  notifications
+- [x] **Background jobs**: `async`/`await` and `Job` values instead of `&`, `fg` and `bg`; `jobs`,
+  `resume()`, `cancel()`, per-job terminal modes, notices before the prompt
 - [x] **The language**: two-mode parsing, `let`/`var`, operators, lists, ranges, `if`/`if let`,
   `??`, loops, `func`, closures and trailing closures, `$(…)` as `Output`, `try`/`try?`/`try!`,
   `do`/`catch`, `env`, `//` comments, scripts with `args` and `main`

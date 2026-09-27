@@ -31,3 +31,17 @@ private final class Stub: Callable {
     #expect(Value.output(output).description == "a\nb")
     #expect(!CommandOutput(text: "", code: nil, signal: 15).succeeded)
 }
+
+private final class Thing: SwishObject {
+    var typeName: String { "Thing" }
+    var memberNames: [String] { ["size"] }
+    var description: String { "a thing" }
+    func member(_ name: String) -> Value? { name == "size" ? .int(3) : nil }
+}
+
+@Test func objectsCompareByIdentity() {
+    let thing = Thing()
+    #expect(Value.object(thing) == .object(thing))
+    #expect(Value.object(thing) != .object(Thing()))
+    #expect(Value.object(thing).description == "a thing")
+}

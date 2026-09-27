@@ -209,6 +209,11 @@ indirect enum Expr: Equatable, Sendable {
     case substitution(Program, throwing: Bool = false)
     /// `try? expr` or `try! expr`; a plain `try` leaves no trace.
     case attempt(Expr, TryKind)
+    /// `async swift build` or `async $(curl …)`: starts it in the background.
+    case async(AsyncTarget)
+    /// `await job`, or a bare `await` for the most recent job. Under `try`
+    /// (`throwing`), a job that failed throws.
+    case await(Expr?, throwing: Bool)
     case list([Expr])
     case record([RecordEntry])
     case closure(ClosureLiteral)
@@ -218,6 +223,12 @@ indirect enum Expr: Equatable, Sendable {
     case unary(UnaryOperator, Expr)
     case binary(BinaryOperator, Expr, Expr)
     case index(Expr, Expr)
+}
+
+indirect enum AsyncTarget: Equatable, Sendable {
+    case command(PipelineNode)
+    /// `async $(…)`: its output is kept, for `await` to give.
+    case capture(PipelineNode)
 }
 
 enum TryKind: Equatable, Sendable {
@@ -289,6 +300,7 @@ struct Parser {
     private static let keywords: Set = [
         "let", "var", "if", "else", "true", "false", "nil",
         "for", "in", "while", "func", "return", "break", "continue", "try", "do", "catch",
+        "async", "await",
     ]
     private static let statementKeywords: Set = ["let", "var", "func", "return", "break", "continue", "do", "catch"]
     private static let precedence: [[BinaryOperator]] = [
@@ -599,7 +611,7 @@ struct Parser {
         if c == "$" && peek(1) == "(" { return true }
         if c == "$", let next = peek(1), Parser.isDigit(next), anonymousArity.last ?? nil != nil { return true }
         guard let word = identifier() else { return false }
-        if ["true", "false", "nil", "try"].contains(word) { return true }
+        if ["true", "false", "nil", "try", "async", "await"].contains(word) { return true }
         return kind(of: word) == .variable || peek(word.count) == "("
     }
 
@@ -1422,6 +1434,16 @@ struct Parser {
         if identifier() == "try" {
             return try parseExpression()
         }
+        if identifier() == "async" {
+            return try parseAsync()
+        }
+        if identifier() == "await" {
+            keyword("await")
+            skipSpaces()
+            // A bare `await` brings back the most recent job.
+            let ends = peek().map { ";\n)}],".contains($0) } ?? true || startsWith("&&") || startsWith("||")
+            return .await(ends ? nil : try parseUnary(), throwing: tryDepth > 0)
+        }
         var expr = try parsePrimary()
         // Postfix operators bind only without a space: `f(x)`, `xs[0]`.
         while true {
@@ -1456,6 +1478,28 @@ struct Parser {
                 return expr
             }
         }
+    }
+
+    /// `async cmd …` or `async $(cmd …)`: a pipeline of programs to start in
+    /// the background.
+    private mutating func parseAsync() throws(SyntaxError) -> Expr {
+        keyword("async")
+        skipSpaces()
+        if peek() == "$" && peek(1) == "(" {
+            guard case .substitution(let program, _)? = try parseDollar(),
+                  program.statements.count == 1, case .chain(let chain) = program.statements[0],
+                  chain.links.isEmpty, case .pipeline(let pipeline) = chain.first else {
+                throw SyntaxError("async $(…) runs one pipeline of commands")
+            }
+            return .async(.capture(pipeline))
+        }
+        guard let c = peek() else { throw .incomplete("expected a command after 'async'") }
+        // `async false` is the command: a Bool literal can't run.
+        let boolCommand = ["true", "false"].contains(identifier() ?? "") && peek(identifier()!.count).map(isWordBoundary) ?? true
+        if startsExpression(c) && !boolCommand {
+            throw SyntaxError("async runs a command, as in `async swift build` or `async $(curl …)`")
+        }
+        return .async(.command(try parsePipeline()))
     }
 
     private mutating func parseArguments() throws(SyntaxError) -> [Argument] {

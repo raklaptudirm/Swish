@@ -1,7 +1,8 @@
 import Foundation
 
 extension Shell {
-    static let builtinNames: Set = ["cd", "pwd", "exit", "fg", "jobs", "which"]
+    /// `fg` and `bg` are only here to say what replaced them.
+    static let builtinNames: Set = ["cd", "pwd", "exit", "fg", "bg", "which"]
 
     /// Runs `argv` as a builtin, or returns nil if it isn't one.
     func runBuiltin(_ argv: [String]) -> Int32? {
@@ -10,8 +11,12 @@ extension Shell {
         case "cd": return cd(args)
         case "pwd": return pwd(args)
         case "exit": return exitShell(args)
-        case "fg": return fg(args)
-        case "jobs": return jobs(args)
+        case "fg":
+            report("fg isn't Swish: `await` brings back the most recent job, `await jobs[n]` another")
+            return 2
+        case "bg":
+            report("bg isn't Swish: `jobs.last.resume()` carries a stopped job on in the background")
+            return 2
         case "which": return which(args)
         default: return nil
         }
@@ -64,45 +69,12 @@ extension Shell {
             }
             code = parsed
         }
-        if !stoppedJobs.isEmpty && !warnedAboutStoppedJobs {
-            warnedAboutStoppedJobs = true
-            report("there are stopped jobs; exit again to leave anyway")
+        if !jobs.isEmpty && !warnedAboutJobs {
+            warnedAboutJobs = true
+            report("there are jobs in the background (see `jobs`); exit again to leave anyway")
             return 1
         }
         Foundation.exit(code)
-    }
-
-    private func fg(_ args: [String]) -> Int32 {
-        var index = stoppedJobs.count - 1
-        if let arg = args.first {
-            guard let number = Int(arg.hasPrefix("%") ? String(arg.dropFirst()) : arg),
-                  stoppedJobs.indices.contains(number - 1) else {
-                report("fg: \(arg): no such job")
-                return 1
-            }
-            index = number - 1
-        }
-        guard index >= 0 else {
-            report("fg: no current job")
-            return 1
-        }
-
-        let job = stoppedJobs.remove(at: index)
-        writeAll(stdoutFD, job.commandLine + "\n")
-        if job.pgid > 0 {
-            tcsetpgrp(terminal, job.pgid)
-            kill(-job.pgid, SIGCONT)
-        } else {
-            job.running.forEach { kill($0, SIGCONT) }
-        }
-        return waitForeground(job)
-    }
-
-    private func jobs(_ args: [String]) -> Int32 {
-        for (index, job) in stoppedJobs.enumerated() {
-            writeAll(stdoutFD, "[\(index + 1)]  Stopped    \(job.commandLine)\n")
-        }
-        return 0
     }
 
     /// What each name runs in command mode, in lookup order: functions,

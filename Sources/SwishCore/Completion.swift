@@ -116,7 +116,7 @@ extension Shell {
                 }
             }
             for name in Shell.builtinNames { described[name] = "shell builtin" }
-            for keyword in ["if", "for", "while", "let", "var", "func"] { described[keyword] = "keyword" }
+            for keyword in ["if", "for", "while", "let", "var", "func", "async", "await", "do", "try"] { described[keyword] = "keyword" }
         }
         var candidates: [String: LineEditor.Candidate] = [:]
         for name in executableNames() where name.hasPrefix(prefix) {

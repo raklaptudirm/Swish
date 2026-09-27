@@ -52,6 +52,8 @@ struct Binding {
     enum Special {
         /// `env`: the environment, as a record; `env.NAME` is nil if unset.
         case environment
+        /// `jobs`: the jobs in the background, oldest first.
+        case jobs
     }
 
     var value: Value
@@ -252,35 +254,7 @@ extension Shell {
     private func run(_ unit: Unit, context: UnitContext) throws -> Int32 {
         switch unit {
         case .pipeline(let node):
-            var stages: [Stage] = []
-            if let input = node.input {
-                stages.append(.value(try evaluate(input)))
-            }
-            for command in node.commands {
-                var arguments: [CommandArgument] = []
-                for word in command.words {
-                    switch word {
-                    case .text(let parts): arguments += try expandWord(parts).map(CommandArgument.text)
-                    case .closure(let literal): arguments.append(.value(try evaluate(.closure(literal))))
-                    }
-                }
-                guard case .text(let name) = arguments[0] else {
-                    throw RuntimeError("a closure can't be a command name")
-                }
-                let redirects = try command.redirects.map(resolve)
-                let environment = try command.environment.map { ($0.name, try expand($0.value)) }
-                if !command.external, let functions = commandFunctions(named: name) {
-                    stages.append(.function(functions, Array(arguments.dropFirst()), redirects: redirects, environment: environment))
-                } else {
-                    let argv = try arguments.map { argument -> String in
-                        guard case .text(let text) = argument else {
-                            throw RuntimeError("\(name) is an external command, so it can't take a closure")
-                        }
-                        return text
-                    }
-                    stages.append(.external(argv, skipBuiltins: command.external, redirects: redirects, environment: environment))
-                }
-            }
+            let stages = try stages(for: node)
             let status = try runPipeline(stages, source: node.source, display: context == .statement)
             // `try make`: failing throws, with the status in the error.
             if case .some(let kind) = node.throwing, status != 0 {
@@ -299,6 +273,10 @@ extension Shell {
                 display(value)
             }
             if case .bool(let truth) = value { return truth ? 0 : 1 }
+            // `await build && echo ok`: an Output's status is its command's.
+            if case .output(let output) = value, !output.succeeded {
+                return output.code.map(Int32.init) ?? 128 + Int32(output.signal ?? 0)
+            }
             // A `try?` that caught an error is a failure, so `try? $(…) != nil
             // && …` and `if try? …` work. Other nils, like a function that
             // returns nothing, aren't.
@@ -401,6 +379,9 @@ extension Shell {
             guard let binding = lookup(name) else { throw RuntimeError("no variable named '\(name)'") }
             switch binding.special {
             case .environment?: return environmentRecord()
+            case .jobs?:
+                updateJobs() // So their states are current.
+                return .list(jobs.map { .object($0) })
             case nil: return binding.value
             }
         case .dollar(let name):
@@ -471,6 +452,30 @@ extension Shell {
             } catch let error as RuntimeError {
                 throw FatalError(error: error)
             }
+        case .async(let target):
+            switch target {
+            case .command(let node):
+                return .object(try startJob(try stages(for: node), source: node.source, capture: false))
+            case .capture(let node):
+                return .object(try startJob(try stages(for: node), source: node.source, capture: true))
+            }
+        case .await(let target, let throwing):
+            let job: Job
+            if let target {
+                let value = try evaluate(target)
+                guard case .object(let object as Job) = value else {
+                    throw RuntimeError("await needs a Job, not \(value.typeName)")
+                }
+                job = object
+            } else {
+                guard let latest = jobs.last else { throw RuntimeError("there are no jobs to await") }
+                job = latest
+            }
+            let output = try awaitJob(job)
+            if throwing && !output.succeeded {
+                throw RuntimeError("\(job.source) failed with status \(job.status)", status: job.status, output: output)
+            }
+            return .output(output)
         case .binary(.coalesce, let lhs, let rhs):
             let value = try evaluate(lhs)
             return value == .nothing ? try evaluate(rhs) : value
@@ -718,8 +723,48 @@ extension Shell {
         }
     }
 
+    /// A pipeline's stages, with words expanded and redirects resolved.
+    func stages(for node: PipelineNode) throws -> [Stage] {
+        var stages: [Stage] = []
+        if let input = node.input {
+            stages.append(.value(try evaluate(input)))
+        }
+        for command in node.commands {
+            var arguments: [CommandArgument] = []
+            for word in command.words {
+                switch word {
+                case .text(let parts): arguments += try expandWord(parts).map(CommandArgument.text)
+                case .closure(let literal): arguments.append(.value(try evaluate(.closure(literal))))
+                }
+            }
+            guard case .text(let name) = arguments[0] else {
+                throw RuntimeError("a closure can't be a command name")
+            }
+            let redirects = try command.redirects.map(resolve)
+            let environment = try command.environment.map { ($0.name, try expand($0.value)) }
+            if !command.external, let functions = commandFunctions(named: name) {
+                stages.append(.function(functions, Array(arguments.dropFirst()), redirects: redirects, environment: environment))
+            } else {
+                let argv = try arguments.map { argument -> String in
+                    guard case .text(let text) = argument else {
+                        throw RuntimeError("\(name) is an external command, so it can't take a closure")
+                    }
+                    return text
+                }
+                stages.append(.external(argv, skipBuiltins: command.external, redirects: redirects, environment: environment))
+            }
+        }
+        return stages
+    }
+
     /// Record fields first, then the few members values have.
     func member(_ name: String, of value: Value) throws -> Value {
+        if case .object(let object) = value, name != "description" {
+            guard let member = object.member(name) else {
+                throw RuntimeError("\(object.typeName) has no member '\(name)'")
+            }
+            return member
+        }
         // Every value has its textual form, as a CustomStringConvertible
         // does in Swift: what interpolation shows. A record's own field of
         // that name comes first.
@@ -925,7 +970,7 @@ extension Shell {
     }
 }
 
-private final class OutputCollector: @unchecked Sendable {
+final class OutputCollector: @unchecked Sendable {
     private var bytes: [UInt8] = []
     private let done = DispatchSemaphore(value: 0)
 
@@ -966,6 +1011,7 @@ extension Value {
         case .filesize: "FileSize"
         case .date: "Date"
         case .output: "Output"
+        case .object(let object): object.typeName
         case .function: "Function"
         @unknown default: "Value"
         }

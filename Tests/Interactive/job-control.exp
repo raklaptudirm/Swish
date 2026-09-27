@@ -17,7 +17,7 @@ proc step {name pattern} {
 expect -re $ok
 send "sleep 0.3\r"
 # Input is highlighted, so match around the escapes between words.
-step "fg command runs, no spurious stop" "0\\.3.*\\n.*$ok"
+step "a foreground command runs, no spurious stop" "0\\.3.*\\n.*$ok"
 send "cat\r"
 send "typed-into-cat\r"
 step "cat owns the terminal (no SIGTTIN)" "typed-into-cat\r\n.*typed-into-cat"
@@ -30,13 +30,15 @@ step "^C kills the job, not the shell" {\[130\]}
 send "sleep 30 | cat\r"
 after 300
 send "\x1a"
-step "^Z stops the pipeline" {Stopped +sleep 30 \| cat}
+step "^Z stops the pipeline" {\[1\] stopped  sleep 30 \| cat}
+expect -re {\x1b\[0m \x1b\[31m}
 send "jobs\r"
-step "jobs lists it" {\[1\]  Stopped +sleep 30 \| cat}
-send "fg\r"
+step "jobs lists it" {\[1\] stopped  sleep 30 \| cat}
+expect -re {\x1b\[0m \x1b\[32m}
+send "await\r"
 after 300
 send "\x03"
-step "fg resumes and ^C ends it" {\[130\]}
+step "a bare await resumes it and ^C ends it" {\[130\]}
 send "echo one\r"
 send "\x1b\[A\x01\x1b\[3~\x1b\[3~\x1b\[3~\x1b\[3~X\r"
 step "history + line editing" "X: command not found"

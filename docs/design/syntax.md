@@ -1,6 +1,6 @@
 # Shell syntax
 
-Status: **implemented**, except `async`/`await` (milestone 3).
+Status: **implemented**.
 
 Swish started from POSIX shell syntax where it had no reason to differ.
 These are the places where Swift, or just clarity, won instead.
@@ -136,18 +136,46 @@ builtin has the name.
 
 ## Background jobs
 
-Planned for milestone 3. There's no `&`: background work is always a value
-you hold.
+There's no `&`: background work is always a value you hold, a `Job`.
 
 ```swift
-let build = async swift build   // starts it; `build` is the job
-try await build                 // waits; throws if it failed, like `try make`
+let build = async swift build     // starts it; `build` is the job
+build.state                       // "running", "stopped", "done" or "cancelled"
 let page = async $(curl -s example.com)
-let html = await page           // waits; gives its Output, or throws
-build.cancel()
+let html = await page             // waits; gives its Output
+try await build                   // waits; throws if it failed, like `try make`
+build.cancel()                    // SIGTERM
 ```
 
-^Z still suspends whatever is in the foreground, and `jobs`, `fg` and `bg`
-manage it. At first `async` runs external commands and pipelines only: a
-Swish function in the background needs the interpreter to run on more than
-one thread.
+`await` gives the job's `Output`, with its status (and, for `async $(…)`,
+its text), and never throws on its own; `try await` throws if the job
+failed, as `try` does for any command. An awaited job's statement fails if
+the job did, so `await build && echo ok` works.
+
+`jobs` lists the jobs in the background, oldest first: ones started with
+`async`, and ones suspended with ^Z. They're values like any other:
+
+```swift
+jobs                              // [1] running  swift build …
+await                             // the most recent job: the ^Z'd vim, say
+await jobs[0]                     // another one
+jobs.last.resume()                // carry a stopped job on in the background
+```
+
+`await` replaces `fg`: it gives the job the terminal (and the terminal
+modes it had when it stopped, so vim comes back as it was), continues it if
+it was stopped, and waits. `resume()` replaces `bg`. Both old names are
+errors that point to the new ones.
+
+When a background job finishes, or stops because it wants the terminal,
+you hear about it just before the next prompt, never in the middle of your
+typing: `[1] done  swift build`, `[2] failed (2)  make`. A finished job
+stays in `jobs`, shown as done, until then or until it's awaited. Exiting
+with jobs in the background asks you to confirm by exiting again.
+
+A job stopped mid-read of the terminal has that read cut short when it's
+continued; programs that retry, like vim, less or Python, carry on, while
+some (macOS's `cat`) give up. The same happens under bash's `fg`.
+
+`async` runs external commands and pipelines: a Swish function in the
+background needs the interpreter to run on more than one thread.

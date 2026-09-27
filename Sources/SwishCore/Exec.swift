@@ -2,18 +2,6 @@ import CShim
 import Foundation
 import SwishKit
 
-struct Job {
-    /// 0 when the job has no process group of its own (non-interactive mode).
-    var pgid: pid_t = 0
-    /// Processes not yet reaped, in pipeline order.
-    var running: [pid_t] = []
-    /// nil when the last command failed to spawn.
-    var lastPid: pid_t?
-    /// The status of the pipeline's last command.
-    var status: Int32 = 0
-    let commandLine: String
-}
-
 struct SpawnFailure: Error {
     let message: String
     let status: Int32
@@ -94,7 +82,7 @@ extension Shell {
             }
         }
 
-        var job = Job(commandLine: source)
+        let job = Job(source: source, shell: self)
         var input: Int32 = -1
         var segmentInput: Int32 = -1
         var segmentOutput: Int32 = -1
@@ -120,20 +108,9 @@ extension Shell {
                 continue
             }
 
-            var descriptors = DescriptorTable([0: input >= 0 ? input : 0, 1: next?.write ?? stdoutFD, 2: stderrFD])
-            let result: Result<pid_t, SpawnFailure>
-            do {
-                try descriptors.apply(redirects)
-                // Children inherit the environment as it is when they start.
-                result = withEnvironment(environment) {
-                    spawn(argv, pgid: interactive ? job.pgid : -1, descriptors: descriptors)
-                }
-                descriptors.closeFiles()
-            } catch {
-                // Like a command that fails to start: this stage fails, the
-                // others still run.
-                result = .failure(SpawnFailure(message: "\(error)", status: 1))
-            }
+            let result = launch(argv, redirects: redirects, environment: environment,
+                                input: input, output: next?.write ?? stdoutFD,
+                                pgid: interactive ? job.pgid : -1, foreground: true)
             if input >= 0 { close(input) }
             if let next { close(next.write) }
 
@@ -178,9 +155,29 @@ extension Shell {
         return status
     }
 
-    /// Gives `job` the terminal and waits until it finishes or stops.
+    /// Starts one program of a pipeline with its descriptors and redirects.
+    /// A redirect that can't be opened fails the stage like a missing
+    /// command: the rest of the pipeline still runs.
+    func launch(
+        _ argv: [String], redirects: [ResolvedRedirect], environment: [(String, String)],
+        input: Int32, output: Int32, pgid: pid_t, foreground: Bool
+    ) -> Result<pid_t, SpawnFailure> {
+        var descriptors = DescriptorTable([0: input >= 0 ? input : 0, 1: output, 2: stderrFD])
+        do {
+            try descriptors.apply(redirects)
+            defer { descriptors.closeFiles() }
+            // Children inherit the environment as it is when they start.
+            return withEnvironment(environment) {
+                spawn(argv, pgid: pgid, descriptors: descriptors, foreground: foreground)
+            }
+        } catch {
+            return .failure(SpawnFailure(message: "\(error)", status: 1))
+        }
+    }
+
+    /// Gives `job` the terminal and waits until it finishes or stops. A job
+    /// stopped with ^Z keeps its terminal modes and goes to `jobs`.
     func waitForeground(_ job: Job) -> Int32 {
-        var job = job
         if interactive && job.pgid > 0 {
             tcsetpgrp(terminal, job.pgid)
         }
@@ -199,19 +196,29 @@ extension Shell {
                 continue
             }
             if swish_wifstopped(raw) != 0 {
-                stoppedJobs.append(job)
-                writeAll(STDERR_FILENO, "\n[\(stoppedJobs.count)]+  Stopped    \(job.commandLine)\n")
+                if interactive {
+                    var modes = termios()
+                    tcgetattr(terminal, &modes)
+                    job.modes = modes
+                }
+                job.state = .stopped
+                job.reported = true
+                adopt(job)
+                writeAll(STDERR_FILENO, "\n\(job.description)\n")
                 return 128 + SIGTSTP
             }
             job.running.removeFirst()
             if pid == job.lastPid {
-                job.status = decode(raw)
+                job.status = decode(raw, quiet: job.cancelled)
+                job.signal = Exit(raw).signal
             }
         }
         return job.status
     }
 
-    private func decode(_ raw: Int32) -> Int32 {
+    /// A job's status from `waitpid`'s, reporting the signal that ended it,
+    /// unless `quiet` (a job you cancelled ended as you asked).
+    private func decode(_ raw: Int32, quiet: Bool = false) -> Int32 {
         if swish_wifexited(raw) != 0 {
             return swish_wexitstatus(raw)
         }
@@ -221,14 +228,14 @@ extension Shell {
             switch signal {
             case SIGINT: if interactive { writeAll(STDERR_FILENO, "\n") }
             case SIGPIPE: break
-            default: report(String(cString: strsignal(signal)))
+            default: if !quiet { report(String(cString: strsignal(signal))) }
             }
             return 128 + signal
         }
         return 1
     }
 
-    private func spawn(_ argv: [String], pgid: pid_t, descriptors: DescriptorTable) -> Result<pid_t, SpawnFailure> {
+    private func spawn(_ argv: [String], pgid: pid_t, descriptors: DescriptorTable, foreground: Bool) -> Result<pid_t, SpawnFailure> {
         let name = argv[0]
         guard let path = findExecutable(name) else {
             return .failure(SpawnFailure(message: "\(name): command not found", status: 127))
@@ -254,7 +261,7 @@ extension Shell {
 
         let cArgs = argv.map { strdup($0) } + [nil]
         defer { cArgs.forEach { free($0) } }
-        let pid = swish_spawn(path, cArgs, pgid, targets, sources, Int32(targets.count), interactive ? terminal : -1)
+        let pid = swish_spawn(path, cArgs, pgid, targets, sources, Int32(targets.count), interactive && foreground ? terminal : -1)
         guard pid < 0 else { return .success(pid) }
 
         let code = -pid

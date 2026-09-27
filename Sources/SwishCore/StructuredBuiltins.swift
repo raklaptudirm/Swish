@@ -19,6 +19,7 @@ extension Shell {
         // `with` is only called with a closure, so it isn't a command.
         scopes[0].bindings["with"] = Binding(value: .function(OverloadSet(name: "with", candidates: [with()])), mutable: false)
         scopes[0].bindings["env"] = Binding(value: .nothing, mutable: false, special: .environment)
+        scopes[0].bindings["jobs"] = Binding(value: .nothing, mutable: false, special: .jobs)
         scopes[0].bindings["args"] = Binding(value: .list([]), mutable: false)
     }
 
@@ -395,6 +396,10 @@ extension Shell {
                         for member in ["count", "isEmpty", "keys", "values"] { add(record.typeName ?? "Record", member, "member") }
                     case .function(let set as OverloadSet):
                         for candidate in set.candidates { add("Function", candidate.signature, "signature") }
+                    case .object(let object):
+                        for name in object.memberNames {
+                            add(object.typeName, name, object.member(name).map { $0.typeName } ?? "")
+                        }
                     default:
                         let members = switch item {
                         case .list: ["count", "isEmpty", "first", "last"]
@@ -494,7 +499,7 @@ extension SwishKit.Value {
         case .string, .output: 5
         case .list: 6
         case .record: 7
-        case .function: 8
+        case .object, .function: 8
         @unknown default: 9
         }
     }

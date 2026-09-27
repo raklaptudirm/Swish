@@ -16,9 +16,11 @@ enum Value {
     case filesize(Int64), date(Date)
     case list([Value])
     case record(Record)          // ordered String → Value, with an optional type name
+    case output(CommandOutput)   // what $(…) and await give: text, lines and status
+    case object(any SwishObject) // a live value with its own members: a Job, and later
+                                 // bridged Swift objects (milestone 8)
     case function(any Callable)
-    // Planned: object(SwishObject), a live bridged Swift value (milestone 8);
-    // path and duration.
+    // Planned: path and duration.
 }
 ```
 

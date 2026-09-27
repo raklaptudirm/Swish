@@ -35,6 +35,8 @@ enum JSON {
             return "{\n" + fields.joined(separator: ",\n") + "\n\(indent)}"
         case .function:
             throw RuntimeError("to json: a function has no JSON form")
+        case .object(let object):
+            throw RuntimeError("to json: a \(object.typeName) has no JSON form")
         @unknown default:
             throw RuntimeError("to json: unsupported value")
         }

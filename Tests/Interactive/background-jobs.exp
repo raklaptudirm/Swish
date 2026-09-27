@@ -1,0 +1,82 @@
+# Drives swish through a real pty to check background jobs: async, await,
+# ^Z, notices before the prompt, and terminal modes. Run from the repo root
+# after `swift build`, or via scripts/test.sh.
+set timeout 5
+log_user 0
+set failures 0
+set env(SWISH_HISTORY) [exec mktemp]
+# The end of a prompt: directory, then the arrow in any color.
+set prompt {\x1b\[0m \x1b\[3[12]m}
+
+proc step {name pattern} {
+  expect {
+    -re $pattern { puts "ok   $name" }
+    timeout { puts "FAIL $name"; global failures; incr failures }
+  }
+}
+
+spawn .build/debug/swish
+expect -re $prompt
+
+# A finished background job is announced before the next prompt.
+send "async sleep 0.2\r"
+step "async shows the job" {\[1\] running  sleep 0.2}
+expect -re $prompt
+after 600
+send "\r"
+step "a finished job is announced before the prompt" {\[1\] done  sleep 0.2}
+expect -re $prompt
+
+# A job waiting for the terminal is stopped, and await gives it the terminal.
+# macOS cuts short a terminal read that stopping interrupted; cat and sh's
+# read give up (under bash's fg too), while Python, like vim or less, retries.
+send "async python3 -c 'print(\"got\", input())'\r"
+expect -re $prompt
+after 400
+send "\r"
+step "a job reading the terminal waits for it" {\[1\] stopped  python3 .*\(waiting for the terminal}
+expect -re $prompt
+send "await\r"
+after 300
+send "via-await\r"
+step "await gives it the terminal" "got via-await"
+expect -re $prompt
+
+# ^Z while awaiting sends it back to jobs; the terminal modes it set come back.
+send "sh -c 'stty -echo; python3 -c \"print(input())\"'\r"
+after 400
+send "\x1a"
+step "^Z stops a foreground job" {\[1\] stopped  sh -c}
+expect -re $prompt
+send "await\r"
+after 300
+send "unechoed\r"
+# With echo off as the job left it, only Python's copy appears before the
+# prompt; with echo back on there'd be two.
+expect {
+  -re {await(.*?)\x1b\[0m \x1b\[3[12]m} {
+    set copies [regexp -all {unechoed} $expect_out(1,string)]
+    if {$copies == 1} { puts "ok   its terminal modes come back with it" } else {
+      puts "FAIL its terminal modes come back with it ($copies copies)"; incr failures
+    }
+  }
+  timeout { puts "FAIL its terminal modes come back with it (no prompt)"; incr failures }
+}
+
+# fg and bg name their replacements; exiting with jobs asks first.
+send "fg\r"
+step "fg names await" "await. brings back the most recent job"
+expect -re $prompt
+send "async sleep 30\r"
+expect -re $prompt
+send "exit\r"
+step "exiting with jobs warns first" "there are jobs in the background"
+expect -re $prompt
+send "jobs.last.cancel(); exit 7\r"
+expect {
+  eof {}
+  timeout { exec kill -9 [exp_pid] }
+}
+lassign [wait] pid spawnid os code
+if {$code != 7} { puts "FAIL exit status: $code"; incr failures } else { puts "ok   exit status" }
+exit [expr {$failures > 0}]

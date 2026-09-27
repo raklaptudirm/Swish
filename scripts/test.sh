@@ -17,3 +17,4 @@ swift test $flags
 swift build
 expect Tests/Interactive/job-control.exp
 expect Tests/Interactive/line-editor.exp
+expect Tests/Interactive/background-jobs.exp

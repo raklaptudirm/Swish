@@ -15,8 +15,13 @@ extension Shell {
         switch value {
         case .nothing:
             return
+        case .output(let output) where output.text.isEmpty:
+            return // A job's output when it printed straight to the terminal.
         case .record(let record):
             for line in keyValueLines(record) { writeAll(stdoutFD, line + "\n") }
+        case .list(let items) where !items.isEmpty && items.allSatisfy({ if case .object = $0 { true } else { false } }):
+            // Jobs and other objects, one per line: `jobs`.
+            for item in items { writeAll(stdoutFD, item.description + "\n") }
         case .list(let items) where items.contains(where: { if case .record = $0 { true } else { false } }):
             let formatter = Formatter(fd: stdoutFD)
             for item in items { formatter.add(item) }
