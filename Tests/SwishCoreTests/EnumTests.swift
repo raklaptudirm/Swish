@@ -15,14 +15,14 @@ private func status(_ source: String) -> Int32 {
 
 @Test func plainCases() throws {
     let kind = "enum Kind { case file, directory };"
-    #expect(try output(kind + "let k = Kind.directory; k; k == .directory; k != .file; Kind.allCases") == "directory\ntrue\ntrue\n[file, directory]\n")
+    #expect(try output(kind + "let k = Kind.directory; k; k == .directory; k != .file; Kind.allCases") == "Kind.directory\ntrue\ntrue\n[Kind.file, Kind.directory]\n")
     #expect(status(kind + "Kind.socket") == 1)
     #expect(status(kind + "Kind.file == \"file\"") == 1) // compare with a case, not a String
 }
 
 @Test func rawValues() throws {
-    #expect(try output("enum Level: Int { case low = 1, mid, high = 10 }; Level.mid.rawValue; Level(rawValue: 10); Level(rawValue: 5) == nil") == "2\nhigh\ntrue\n")
-    #expect(try output(#"enum Code: String { case ok, bad = "BAD" }; Code.ok.rawValue; Code.bad.rawValue"#) == "ok\nBAD\n")
+    #expect(try output("enum Level: Int { case low = 1, mid, high = 10 }; Level.mid.rawValue; Level(rawValue: 10); Level(rawValue: 5) == nil") == "2\nLevel.high\ntrue\n")
+    #expect(try output(#"enum Code: String { case ok, bad = "BAD" }; Code.ok.rawValue; Code.bad.rawValue"#) == "\"ok\"\n\"BAD\"\n")
     #expect(status("enum L: Int { case a = 1, b = 1 }") == 1) // raw values are unique
     #expect(status("enum L { case a = 1 }") == 1)             // raw values need a raw type
     #expect(status("enum K { case a }; K.a.rawValue") == 1)
@@ -30,7 +30,7 @@ private func status(_ source: String) -> Int32 {
 
 @Test func associatedValues() throws {
     let result = "enum Result { case ok, failed(code: Int, String) };"
-    #expect(try output(result + #"Result.failed(code: 2, "boom")"#) == "failed(code: 2, boom)\n")
+    #expect(try output(result + #"Result.failed(code: 2, "boom")"#) == #"Result.failed(code: 2, "boom")"# + "\n")
     #expect(status(result + "Result.failed") == 1)                  // needs its values
     #expect(status(result + #"Result.failed(2, "boom")"#) == 1)    // and their labels
     #expect(status(result + #"Result.failed(code: "x", "boom")"#) == 1) // and types
@@ -39,7 +39,7 @@ private func status(_ source: String) -> Int32 {
 
 @Test func caseLiteralsTakeTheirTypeFromContext() throws {
     let kind = "enum K { case a, b };"
-    #expect(try output(kind + "func f(_ k: K) -> K { k }; f(.b); func g() -> K { .a }; g(); func h(kind: K = .b) -> K { kind }; h") == "b\na\nb\n")
+    #expect(try output(kind + "func f(_ k: K) -> K { k }; f(.b); func g() -> K { .a }; g(); func h(kind: K = .b) -> K { kind }; h") == "K.b\nK.a\nb\n")
     #expect(status(kind + "let x = .a") == 1) // nothing to take a type from
 }
 
@@ -70,7 +70,7 @@ private let result = #"enum Result { case ok, failed(code: Int, String) };"#
     }
     describe(.ok); describe(.failed(code: 2, "boom")); describe(.failed(code: 1, "meh"))
     """#
-    #expect(try output(source) == "fine\nbad 2: boom\nother\n")
+    #expect(try output(source) == "\"fine\"\n\"bad 2: boom\"\n\"other\"\n")
 }
 
 @Test func switchPatterns() throws {
@@ -86,7 +86,7 @@ private let result = #"enum Result { case ok, failed(code: Int, String) };"#
     }
     size(0); size(3); size(100); size(5000); size(500)
     """
-    #expect(try output(source) == "none\nfew\nmany\nhuge 5000\nlots\n")
+    #expect(try output(source) == "\"none\"\n\"few\"\n\"many\"\n\"huge 5000\"\n\"lots\"\n")
     #expect(try output("switch \"b\" { case \"a\": echo a\ncase \"b\", \"c\": echo bc\ndefault: break }") == "bc\n")
 }
 
@@ -106,5 +106,5 @@ private let result = #"enum Result { case ok, failed(code: Int, String) };"#
 // MARK: Builtins
 
 @Test func jobsHaveAState() throws {
-    #expect(try output("let j = async sleep 0.1; j.state == .running; await j; j.state; j.state == JobState.done") == "true\ndone\ntrue\n")
+    #expect(try output("let j = async sleep 0.1; j.state == .running; await j; j.state; j.state == JobState.done") == "true\nJobState.done\ntrue\n")
 }

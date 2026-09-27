@@ -11,13 +11,14 @@ let views: [String: [String]] = [
 
 extension Shell {
     /// Shows a value to a person: a table for a list of records, a
-    /// key/value list for one record, plain text otherwise.
-    func show(_ value: Value) {
+    /// key/value list for one record, and otherwise its text, or its
+    /// `debugDescription` for a bare value (`let r = $(echo hi); r`).
+    func show(_ value: Value, debug: Bool = false) {
         switch value {
         case .nothing:
             return
-        case .output(let output) where output.text.isEmpty:
-            return // A job's output when it printed straight to the terminal.
+        case .output(let output) where output.text.isEmpty && !debug:
+            return
         case .record(let record):
             for line in keyValueLines(record) { writeAll(stdoutFD, line + "\n") }
         case .list(let items) where items.contains(where: { $0.asRecord != nil }):
@@ -25,7 +26,7 @@ extension Shell {
             for item in items { formatter.add(item) }
             formatter.finish()
         default:
-            writeAll(stdoutFD, value.description + "\n")
+            writeAll(stdoutFD, (debug ? value.debugDescription : value.description) + "\n")
         }
     }
 
@@ -39,6 +40,10 @@ extension Shell {
 }
 
 extension Value {
+    var isEmptyOutput: Bool {
+        if case .output(let output) = self { output.text.isEmpty } else { false }
+    }
+
     /// A record, or an object's fields: what a table row is made from.
     var asRecord: Record? {
         switch self {

@@ -276,7 +276,10 @@ extension Shell {
             let value = try evaluate(expr)
             // A bare `true`/`false` stands in for the Unix commands: status only.
             let isBoolLiteral = if case .literal(.bool) = expr { true } else { false }
-            if context == .statement && !isBoolLiteral {
+            // `await build`: the job wrote to the terminal; its Output has
+            // nothing more to show.
+            let awaitedToTerminal = expr.isAwait && value.isEmptyOutput
+            if context == .statement && !isBoolLiteral && !awaitedToTerminal {
                 display(value)
             }
             if case .bool(let truth) = value { return truth ? 0 : 1 }
@@ -373,9 +376,10 @@ extension Shell {
         }
     }
 
+    /// A bare value at the prompt, shown as `debugPrint` would.
     private func display(_ value: Value) {
         guard callDepth == 0 else { return }
-        show(value)
+        show(value, debug: true)
     }
 
     func checkInterrupt() throws {
@@ -821,7 +825,7 @@ extension Shell {
         if case .object(let type as EnumType) = value, type.case(named: name) != nil, type.member(name) == nil {
             return try makeCase(type, name, nil) // Says what values it needs.
         }
-        if case .object(let object) = value, name != "description" {
+        if case .object(let object) = value, name != "description" && name != "debugDescription" {
             guard let member = object.member(name) else {
                 throw RuntimeError("\(object.typeName) has no member '\(name)'")
             }
@@ -830,9 +834,9 @@ extension Shell {
         // Every value has its textual form, as a CustomStringConvertible
         // does in Swift: what interpolation shows. A record's own field of
         // that name comes first.
-        if name == "description" {
+        if name == "description" || name == "debugDescription" {
             if case .record(let record) = value, let field = record[name] { return field }
-            return .string(value.description)
+            return .string(name == "description" ? value.description : value.debugDescription)
         }
         switch (value, name) {
         case (.output(let output), "text"): return .string(output.text)
@@ -841,12 +845,7 @@ extension Shell {
         case (.output(let output), "isEmpty"): return .bool(output.text.isEmpty)
         case (.output(let output), "first"): return output.lines.first.map(Value.string) ?? .nothing
         case (.output(let output), "last"): return output.lines.last.map(Value.string) ?? .nothing
-        case (.output(let output), "status"):
-            return .record(Record([
-                "code": output.code.map(Value.int) ?? .nothing,
-                "signal": output.signal.map(Value.int) ?? .nothing,
-                "succeeded": .bool(output.succeeded),
-            ], typeName: "Status"))
+        case (.output(let output), "status"): return .record(output.status)
         case (.record(let record), _) where record[name] != nil: return record[name]!
         case (.record(let record), "count"): return .int(record.count)
         case (.record(let record), "isEmpty"): return .bool(record.count == 0)

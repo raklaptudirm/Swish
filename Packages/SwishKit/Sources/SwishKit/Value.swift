@@ -28,7 +28,7 @@ public enum Value: Sendable {
 
 /// A live value that answers for its own members, properties and methods
 /// alike (a method is a function value). Objects compare by identity.
-public protocol SwishObject: AnyObject, Sendable, CustomStringConvertible {
+public protocol SwishObject: AnyObject, Sendable, CustomStringConvertible, CustomDebugStringConvertible {
     /// The name `members` and error messages use, like `Job`.
     var typeName: String { get }
     /// Names of its members, for `members` and completion.
@@ -50,6 +50,12 @@ extension SwishObject {
             record[name] = value
         }
         return record
+    }
+
+    /// Its fields, as a Swift struct prints them: `Job(id: 1, …)`; or its
+    /// description, for an object that isn't data.
+    public var debugDescription: String {
+        fields?.debugDescription ?? description
     }
 }
 
@@ -75,6 +81,21 @@ public struct CommandOutput: Sendable, Hashable {
 
     public var succeeded: Bool {
         code == 0
+    }
+
+    /// `output.status`: how the command exited.
+    public var status: Record {
+        Record([
+            "code": code.map(Value.int) ?? .nothing,
+            "signal": signal.map(Value.int) ?? .nothing,
+            "succeeded": .bool(succeeded),
+        ], typeName: "Status")
+    }
+}
+
+extension CommandOutput: CustomDebugStringConvertible {
+    public var debugDescription: String {
+        "Output(text: \(text.debugDescription), status: \(status.debugDescription))"
     }
 }
 
@@ -123,6 +144,18 @@ public struct Record: Sendable, Hashable, Sequence {
 
     public func hash(into hasher: inout Hasher) {
         hasher.combine(storage)
+    }
+}
+
+extension Record: CustomDebugStringConvertible {
+    /// As its type would print, `Status(code: 0, …)`, or as a literal,
+    /// `["name": "x"]`, for a record without one.
+    public var debugDescription: String {
+        if let typeName {
+            return "\(typeName)(" + map { "\($0.key): \($0.value.debugDescription)" }.joined(separator: ", ") + ")"
+        }
+        guard count > 0 else { return "[:]" }
+        return "[" + map { "\($0.key.debugDescription): \($0.value.debugDescription)" }.joined(separator: ", ") + "]"
     }
 }
 
@@ -204,6 +237,27 @@ extension Value: CustomStringConvertible {
         }
     }
 
+}
+
+extension Value: CustomDebugStringConvertible {
+    /// As Swift's `debugPrint` shows it, and as the prompt shows a bare
+    /// value: strings quoted, cases with their type, outputs and records
+    /// with their fields.
+    public var debugDescription: String {
+        switch self {
+        case .nothing: "nil"
+        case .string(let value): value.debugDescription
+        case .list(let values): "[" + values.map(\.debugDescription).joined(separator: ", ") + "]"
+        case .record(let record): record.debugDescription
+        case .output(let output): output.debugDescription
+        case .enumValue(let value): value.debugDescription
+        case .object(let object): object.debugDescription
+        default: description
+        }
+    }
+}
+
+extension Value {
     /// Decimal units, as Finder shows them: `532 B`, `1.2 KB`, `123 MB`.
     public static func formatFileSize(_ bytes: Int64) -> String {
         let units = ["B", "KB", "MB", "GB", "TB", "PB"]

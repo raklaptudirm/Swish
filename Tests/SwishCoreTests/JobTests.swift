@@ -12,12 +12,12 @@ private func status(_ source: String) -> Int32 {
 }
 
 @Test func asyncStartsAJobAndAwaitWaitsForIt() throws {
-    #expect(try output("let j = async sleep 0.2; j.state; j.id; let r = await j; j.state; r.status.code") == "running\n1\ndone\n0\n")
+    #expect(try output("let j = async sleep 0.2; j.state; j.id; let r = await j; j.state; r.status.code") == "JobState.running\n1\nJobState.done\n0\n")
     #expect(try output("async sleep 0.1") == "[1] running  sleep 0.1\n")
 }
 
 @Test func asyncCapturesOutput() throws {
-    #expect(try output(#"let p = async $(sh -c 'sleep 0.1; echo fetched'); echo meanwhile; (await p).text"#) == "meanwhile\nfetched\n")
+    #expect(try output(#"let p = async $(sh -c 'sleep 0.1; echo fetched'); echo meanwhile; (await p).text"#) == "meanwhile\n\"fetched\"\n")
 }
 
 @Test func awaitGivesTheOutputAndTryThrows() throws {
@@ -51,7 +51,7 @@ private func status(_ source: String) -> Int32 {
 }
 
 @Test func cancellingAJob() throws {
-    #expect(try output("let j = async sleep 5; j.cancel(); let r = await j; r.status.signal; j.state") == "15\ncancelled\n")
+    #expect(try output("let j = async sleep 5; j.cancel(); let r = await j; r.status.signal; j.state") == "15\nJobState.cancelled\n")
 }
 
 @Test func finishedJobsAreAnnouncedOnce() throws {
@@ -66,7 +66,7 @@ private func status(_ source: String) -> Int32 {
 }
 
 @Test func jobMembers() throws {
-    #expect(try output("let j = async sleep 0.1; j.command; j.pids.count; j.output == nil; await j; j.output.status.code") == "sleep 0.1\n1\ntrue\n0\n")
+    #expect(try output("let j = async sleep 0.1; j.command; j.pids.count; j.output == nil; await j; j.output.status.code") == "\"sleep 0.1\"\n1\ntrue\n0\n")
     let names = try output("let j = async sleep 0.1; j | members | get name; await j")
     #expect(names == "id\ncommand\nstate\npids\noutput\nresume\ncancel\n")
 }

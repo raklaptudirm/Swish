@@ -255,6 +255,15 @@ struct Argument: Equatable, Sendable {
 }
 
 indirect enum Expr: Equatable, Sendable {
+    /// `await j`, or `try await j`.
+    var isAwait: Bool {
+        switch self {
+        case .await: true
+        case .attempt(let inner, _): inner.isAwait
+        default: false
+        }
+    }
+
     case literal(Value)
     case string([StringPart])
     case variable(String)

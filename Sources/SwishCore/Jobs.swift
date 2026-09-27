@@ -100,6 +100,9 @@ final class Job: SwishObject, @unchecked Sendable {
         }
         return "[\(id)] \(label)  \(source)"
     }
+
+    /// A job on its own reads as `jobs` announces it: `[1] running  make`.
+    var debugDescription: String { description }
 }
 
 /// The job's `$?`-less status and signal, from a `waitpid` status.

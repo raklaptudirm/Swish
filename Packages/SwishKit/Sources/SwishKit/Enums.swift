@@ -63,7 +63,7 @@ public final class EnumType: SwishObject, @unchecked Sendable {
 }
 
 /// One value of an enum: a case, and its associated values if it has any.
-public struct EnumValue: Sendable, Hashable, CustomStringConvertible {
+public struct EnumValue: Sendable, Hashable, CustomStringConvertible, CustomDebugStringConvertible {
     public let type: EnumType
     public let name: String
     /// In the order the case declares them.
@@ -107,5 +107,18 @@ public struct EnumValue: Sendable, Hashable, CustomStringConvertible {
             return (label.map { "\($0): " } ?? "") + value.description
         }
         return "\(name)(\(parts.joined(separator: ", ")))"
+    }
+
+    /// With its type, and its values as they'd be written:
+    /// `Result.failed(code: 2, "no such file")`.
+    public var debugDescription: String {
+        let written = "\(type.name).\(name)"
+        guard !values.isEmpty else { return written }
+        let labels = definition?.labels ?? []
+        let parts = values.enumerated().map { index, value in
+            let label = index < labels.count ? labels[index] : nil
+            return (label.map { "\($0): " } ?? "") + value.debugDescription
+        }
+        return "\(written)(\(parts.joined(separator: ", ")))"
     }
 }

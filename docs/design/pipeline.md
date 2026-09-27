@@ -116,6 +116,12 @@ pipeline turns values into text, and only if nothing else consumed them.
   streams the remaining rows. Later values too wide for their column are
   truncated with `…`. This gives aligned tables for normal output and
   immediate feedback for slow or endless streams.
+- **A bare value shows its `debugDescription`**, as Swift's `debugPrint`
+  would: `let r = $(echo hi); r` shows `Output(text: "hi", status: …)`,
+  a string shows quoted and a case with its type (`FileType.directory`).
+  Interpolation, commands and pipelines use `description`, the plain text,
+  and lists of records and single records are still tables and key/value
+  lists. A job on its own reads as `jobs` announces it: `[1] running  make`.
 - **Objects without a view or `Mirror` children** will show their type name,
   plus their `description` if they conform to `CustomStringConvertible`,
   with a hint to run `members`.
