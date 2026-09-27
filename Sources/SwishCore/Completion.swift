@@ -116,7 +116,7 @@ extension Shell {
                 }
             }
             for name in Shell.builtinNames { described[name] = "shell builtin" }
-            for keyword in ["if", "for", "while", "let", "var", "func", "async", "await", "do", "try", "enum", "switch", "import"] {
+            for keyword in ["if", "for", "while", "let", "var", "func", "async", "await", "do", "try", "enum", "switch", "import", "struct"] {
                 described[keyword] = "keyword"
             }
         }
@@ -191,6 +191,7 @@ extension Shell {
         scopes[0].bindings.merging(scopes[1].bindings) { $1 }.mapValues { binding in
             if binding.isFunction { return .function }
             if case .object(is EnumType) = binding.value { return .type }
+            if case .object(is StructType) = binding.value { return .type }
             return .variable
         }
     }

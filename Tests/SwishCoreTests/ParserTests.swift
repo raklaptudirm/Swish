@@ -89,7 +89,7 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
 
 @Test func assignmentNeedsABoundName() throws {
     let program = try parse("i = 2", bound: ["i"])
-    #expect(program.statements == [.assign(name: "i", value: .literal(.int(2)))])
+    #expect(program.statements == [.assign(Assignment(root: "i", value: .literal(.int(2))))])
     #expect(try modes("i = 2") == ["command"]) // runs a command named `i`
 }
 

@@ -135,6 +135,48 @@ too: `ls` gives each entry a `FileType` (`.file`, `.directory`, `.symlink`,
 `.other`), so `ls | where { $0.type == .directory }`, and a job's `state` is
 a `JobState` (`.running`, `.stopped`, `.done`, `.cancelled`).
 
+## Structs and assignment
+
+A struct's values are records whose type is the struct, so they're values
+as in Swift (copying one copies it), and they work wherever records do:
+tables, `where`, `select`, `to json`. The type adds what a record doesn't
+have: a memberwise init, computed properties, methods and initializers.
+
+```swift
+struct Point {
+    var x: Int
+    var y: Int = 0
+    var lengthSquared: Int { x * x + y * y }
+    func describe() -> String { "(\(x), \(y))" }
+    mutating func move(by d: Int) { x += d; y += d }
+}
+
+var p = Point(x: 3, y: 4)       // Point(x: 3, y: 4)
+p.move(by: 1)
+p.x *= 2
+[p, Point(x: 1)] | where { $0.x > 1 }
+```
+
+- **Members are in scope in their bodies**, through `self`, and a member
+  can use one declared further down. A parameter or local of the same name
+  shadows it; `self.x` still reaches it.
+- **`mutating` is checked as in Swift.** A mutating method can only be
+  called on a `var` (or part of one), and changes it; any other method
+  can't assign to `self`. `let` properties can be set by an `init` and
+  never after.
+- **Initializers:** without one, a struct gets the memberwise init (every
+  stored property in order, except a `let` that already has a value; one
+  with a default can be left out). Declaring an `init` replaces it, and an
+  `init` must set every stored property.
+- **Types are checked** when a value is made and when a property is set:
+  `p.x = "a"` fails with `Point.x must be Int, not String`.
+- **A struct can be a parameter or return type.** Passing a plain record
+  where a `Point` is wanted fails, even if the fields match. Structs can't
+  be typed on a command line yet.
+- **Assignment reaches into values:** `p.x = 1`, `xs[0] += 5`,
+  `r["key"] = v`, `l.end.x -= 1`, with `+=`, `-=`, `*=` and `/=` for
+  variables too. The variable must be a `var`.
+
 ## Scripts
 
 `swish script.sw a b c` runs a script. It's parsed whole, so a syntax error

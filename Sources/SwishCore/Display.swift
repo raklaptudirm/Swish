@@ -19,7 +19,7 @@ extension Shell {
             return
         case .output(let output) where output.text.isEmpty && !debug:
             return
-        case .record(let record):
+        case .record(let record) where !debug:
             for line in keyValueLines(record, styled: Style.enabled(for: stdoutFD)) { writeAll(stdoutFD, line + "\n") }
         // A command's list reads as a pipeline's output would: records as a
         // table, anything else an item per line. A bare list is a value.

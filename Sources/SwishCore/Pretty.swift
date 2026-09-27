@@ -59,7 +59,7 @@ struct PrettyPrinter {
         }
         guard record.count > 0 else { return .segments([("[:]", nil)]) }
         return .group(open: [("[", nil)], items: record.map { key, value in
-            ([(key.debugDescription, Style.string), (": ", nil)], node(for: value))
+            ([(Value.quoted(key), Style.string), (": ", nil)], node(for: value))
         }, close: "]")
     }
 
@@ -126,7 +126,7 @@ struct PrettyPrinter {
         case .segments(let segments):
             return paint(segments)
         case .string(let text):
-            let quoted = text.debugDescription
+            let quoted = Value.quoted(text)
             return (quoted, quoted.styled(Style.string, styled))
         case .group(let open, let items, let close):
             var plain = paint(open).plain

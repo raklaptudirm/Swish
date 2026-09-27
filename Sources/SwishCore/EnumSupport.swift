@@ -109,6 +109,9 @@ extension Shell {
     func conform(_ value: Value, to type: TypeAnnotation) -> Value? {
         switch type {
         case .named(let name):
+            if case .record(let record) = value, record.typeName == name, structType(named: name) != nil {
+                return value
+            }
             guard case .enumValue(let enumValue) = value, let expected = enumType(named: name),
                   enumValue.type === expected else { return nil }
             return value

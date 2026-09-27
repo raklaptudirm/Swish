@@ -105,6 +105,24 @@ describe(.failed(code: 2, "no such file"))
 ls | where { $0.type == .directory }
 ```
 
+### Structs
+
+Structs are records with a type: computed properties, methods and
+`mutating`, and they still work as rows in tables and pipelines.
+
+```swift
+struct Point {
+    var x: Int
+    var y: Int = 0
+    var lengthSquared: Int { x * x + y * y }
+    mutating func move(by d: Int) { x += d; y += d }
+}
+
+var p = Point(x: 3, y: 4)
+p.move(by: 1)
+[p, Point(x: 1)] | where { $0.lengthSquared > 1 }   // a table: x, y
+```
+
 ### Failure is a value until you `try`
 
 `$(…)` gives the command's output and how it exited. It only throws when
@@ -240,6 +258,8 @@ scripts/test.sh     # unit tests, plus pty-driven job-control, editor and backgr
   `do`/`catch`, `env`, `//` comments, scripts with `args` and `main`
 - [x] **Enums and switch**: cases, raw and associated values, `.case` resolved by context,
   `switch` with Swift's patterns, `if case`; `FileType` from `ls`, enum parameters on the command line
+- [x] **Structs**: typed records with the memberwise init or custom `init`s, computed
+  properties, methods and `mutating`; assignment into values (`p.x = 1`, `xs[0] += 5`)
 - [x] **Callables**: command lines derived from signatures, `@input` streaming, `@flag`,
   `--help` from doc comments, overloads, `foreign` and `which`
 - [x] **Structured data**: records, file sizes and dates, `Encodable` → `Value`, views and

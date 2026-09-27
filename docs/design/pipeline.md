@@ -122,8 +122,9 @@ pipeline turns values into text, and only if nothing else consumed them.
   A function called as a command shows its result as a pipeline's output
   would (a list an item per line), since that's what a command's output is.
   Interpolation, commands and pipelines use `description`, the plain text,
-  and lists of records and single records are still tables and key/value
-  lists. A job on its own reads as `jobs` announces it: `[1] running  make`.
+  and a list of records is still a table. A bare record shows its debug
+  form too (`Point(x: 3, y: 4)`); a command's record result is a key/value
+  list. A job on its own reads as `jobs` announces it: `[1] running  make`.
   One that doesn't fit the terminal is broken over lines as you'd format
   it in Swift, and a string of several lines inside it (an Output's text)
   is a `"""` block.

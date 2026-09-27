@@ -55,6 +55,8 @@ struct Binding {
         case environment
         /// `jobs`: the jobs in the background, oldest first.
         case jobs
+        /// `self` in a struct's `init`, which may set its `let` properties.
+        case initializing
     }
 
     var value: Value
@@ -94,12 +96,15 @@ final class Function: Callable, @unchecked Sendable {
     let documentation: Documentation?
     /// The imported module it came from, for a plugin's function.
     let plugin: String?
+    /// A struct's `mutating func` (or `init`), which may change `self`.
+    let isMutating: Bool
 
     init(
         name: String?, parameters: [Parameter], returnType: TypeAnnotation?, body: FunctionBody,
-        captured: [Scope] = [], documentation: Documentation? = nil, plugin: String? = nil
+        captured: [Scope] = [], documentation: Documentation? = nil, plugin: String? = nil, isMutating: Bool = false
     ) {
         self.plugin = plugin
+        self.isMutating = isMutating
         self.name = name
         self.parameters = parameters
         self.returnType = returnType
@@ -182,15 +187,11 @@ extension Shell {
             let value = try evaluate(expr)
             scopes[scopes.count - 1].bindings[name] = Binding(value: value, mutable: mutable)
             return 0
-        case .assign(let name, let expr):
-            let value = try evaluate(expr)
-            guard let scope = scopes.last(where: { $0.bindings[name] != nil }) else {
-                throw RuntimeError("no variable named '\(name)'")
-            }
-            guard scope.bindings[name]!.mutable else {
-                throw RuntimeError("cannot assign to '\(name)': it's a 'let' constant")
-            }
-            scope.bindings[name]!.value = value
+        case .assign(let assignment):
+            try assign(assignment)
+            return 0
+        case .structDecl(let decl):
+            declare(decl)
             return 0
         case .function(let decl):
             // Captures the scope it's bound in, so it can call itself.
@@ -411,7 +412,7 @@ extension Shell {
             case .jobs?:
                 updateJobs() // So their states are current.
                 return .list(jobs.map { .object($0) })
-            case nil: return binding.value
+            case .initializing?, nil: return binding.value
             }
         case .dollar(let name):
             if let binding = lookup(name) { return binding.value }
@@ -463,11 +464,26 @@ extension Shell {
                 body: .swish(literal.body), captured: scopes
             ))
         case .call(let callee, let arguments):
-            // `Result.failed(code: 2)`: a case with associated values.
-            if case .member(let base, let name) = callee, case .object(let type as EnumType) = try evaluate(base) {
-                return try makeCase(type, name, arguments)
+            let value: Value
+            if case .member(let baseExpr, let name) = callee {
+                let base = try evaluate(baseExpr)
+                // `Result.failed(code: 2)`: a case with associated values.
+                if case .object(let type as EnumType) = base {
+                    return try makeCase(type, name, arguments)
+                }
+                // `p.move(by: 1)`: a struct's method, with `p` as `self`.
+                if case .record(let record) = base, record[name] == nil, let type = structType(of: record),
+                   let methods = type.methods[name] {
+                    return try callMethod(methods, of: base, at: baseExpr, arguments)
+                }
+                value = try member(name, of: base)
+            } else {
+                value = try evaluate(callee)
             }
-            let value = try evaluate(callee)
+            // `Point(x: 1, y: 2)`: a new struct.
+            if case .object(let type as StructType) = value {
+                return try construct(type, arguments)
+            }
             // `Level(rawValue: 2)`: the case with that raw value, or nil.
             if case .object(let type as EnumType) = value {
                 guard arguments.count == 1, arguments[0].label == "rawValue" else {
@@ -695,7 +711,7 @@ extension Shell {
         }
     }
 
-    private func apply(_ op: BinaryOperator, _ lhs: Value, _ rhs: Value) throws -> Value {
+    func apply(_ op: BinaryOperator, _ lhs: Value, _ rhs: Value) throws -> Value {
         // Output compares as its text; other String operations go through `.text`.
         let comparisons: [BinaryOperator] = [.equal, .notEqual, .less, .lessEqual, .greater, .greaterEqual]
         if case .output(let output) = lhs, comparisons.contains(op) {
@@ -851,6 +867,10 @@ extension Shell {
             if case .record(let record) = value, let field = record[name] { return field }
             return .string(name == "description" ? value.description : value.debugDescription)
         }
+        if case .record(let record) = value, record[name] == nil, let type = structType(of: record),
+           let found = try structMember(name, of: record, type) {
+            return found
+        }
         switch (value, name) {
         case (.output(let output), "text"): return .string(output.text)
         case (.output(let output), "lines"): return .list(output.lines.map(Value.string))
@@ -902,7 +922,9 @@ extension Shell {
     // MARK: Calls
 
     /// Runs `function` with its parameters bound to `arguments`.
-    func invoke(_ function: Function, with arguments: [String: Value]) throws -> Value {
+    /// Calls `function`. A method gets `receiver` as `self`, and leaves it
+    /// there as the method changed it.
+    func invoke(_ function: Function, with arguments: [String: Value], receiver: Receiver? = nil) throws -> Value {
         guard callDepth < maxCallDepth else {
             throw RuntimeError("maximum call depth (\(maxCallDepth)) exceeded")
         }
@@ -922,10 +944,17 @@ extension Shell {
         }
 
         let savedScopes = scopes
-        scopes = function.captured + [Scope(arguments.mapValues { Binding(value: $0, mutable: false) })]
+        let argumentScope = Scope(arguments.mapValues { Binding(value: $0, mutable: false) })
+        if let receiver {
+            argumentScope.bindings["self"] = Binding(
+                value: receiver.value, mutable: receiver.mutable, special: receiver.initializing ? .initializing : nil
+            )
+        }
+        scopes = function.captured + [argumentScope]
         callDepth += 1
         returnTypes.append(function.returnType)
         defer {
+            if let receiver, let changed = argumentScope.bindings["self"]?.value { receiver.value = changed }
             scopes = savedScopes
             callDepth -= 1
             returnTypes.removeLast()
@@ -975,7 +1004,7 @@ extension Shell {
     ///
     /// The penalty counts conversions and untyped parameters, so overload
     /// resolution can prefer the most specific match.
-    private func bind(_ arguments: [Argument], to function: Function) throws -> (bindings: [String: Value], penalty: Int) {
+    func bind(_ arguments: [Argument], to function: Function) throws -> (bindings: [String: Value], penalty: Int) {
         let name = function.name ?? "closure"
         var bound: [String: Value] = [:]
         var penalty = 0

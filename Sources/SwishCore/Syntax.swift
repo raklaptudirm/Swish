@@ -9,7 +9,8 @@ struct Program: Equatable, Sendable {
 
 enum Statement: Equatable, Sendable {
     case declare(name: String, mutable: Bool, value: Expr)
-    case assign(name: String, value: Expr)
+    /// `x = v`, `p.x += 1`, `xs[0] = v`.
+    case assign(Assignment)
     case function(FunctionDecl)
     /// `env.NAME = value` or `env["NAME"] = value`; nil unsets it.
     case setEnvironment(name: Expr, value: Expr)
@@ -17,6 +18,7 @@ enum Statement: Equatable, Sendable {
     /// handler with `error` (or the name given) bound to it.
     case doCatch(body: Program, errorName: String, handler: Program?)
     case enumDecl(EnumDecl)
+    case structDecl(StructDecl)
     /// `import Tools from "./Tools"`: builds a Swift package and loads the
     /// functions it exports.
     case importPlugin(name: String, path: Expr)
@@ -131,6 +133,39 @@ struct FunctionDecl: Equatable, Sendable {
     var returnType: TypeAnnotation?
     var body: Program
     var documentation: Documentation?
+    /// A struct's `mutating func`, which may change `self`.
+    var isMutating = false
+}
+
+/// Assigning to a variable, or to part of one: `p.x`, `xs[0]`, `r["k"]`.
+struct Assignment: Equatable, Sendable {
+    enum Step: Equatable, Sendable {
+        case member(String)
+        case index(Expr)
+    }
+
+    var root: String
+    var path: [Step] = []
+    /// `+=` and the like: the operator applied to the current value.
+    var op: BinaryOperator?
+    var value: Expr
+}
+
+/// `struct Name { var x: Int; func f() {…}; init(…) {…} }`.
+struct StructDecl: Equatable, Sendable {
+    var name: String
+    var properties: [PropertyDecl]
+    var methods: [FunctionDecl]
+    var initializers: [FunctionDecl]
+}
+
+struct PropertyDecl: Equatable, Sendable {
+    var name: String
+    var mutable: Bool
+    var type: TypeAnnotation? = nil
+    var defaultValue: Expr? = nil
+    /// A computed property's body; nil for a stored one.
+    var getter: Program? = nil
 }
 
 /// The `#` comment block directly above a `func`, for `--help`.
@@ -333,8 +368,10 @@ enum BinaryOperator: String, Sendable {
 /// with it: a variable starts an expression, a function starts a command
 /// unless it's followed by `(`.
 enum NameKind: Equatable, Sendable {
-    /// `type`: an enum's name, as in `FileType.directory`.
-    case variable, function, type
+    /// `type`: an enum's or struct's name, as in `FileType.directory`.
+    /// `member`: a property or method of the struct whose body this is,
+    /// read through `self`.
+    case variable, function, type, member
 }
 
 public struct SyntaxError: Error, Equatable, CustomStringConvertible {
@@ -377,9 +414,9 @@ struct Parser {
     private static let keywords: Set = [
         "let", "var", "if", "else", "true", "false", "nil",
         "for", "in", "while", "func", "return", "break", "continue", "try", "do", "catch",
-        "async", "await", "enum", "switch", "case", "default", "fallthrough", "import",
+        "async", "await", "enum", "switch", "case", "default", "fallthrough", "import", "struct",
     ]
-    private static let statementKeywords: Set = ["let", "var", "func", "return", "break", "continue", "do", "catch", "enum", "fallthrough", "import"]
+    private static let statementKeywords: Set = ["let", "var", "func", "return", "break", "continue", "do", "catch", "enum", "fallthrough", "import", "struct"]
     private static let precedence: [[BinaryOperator]] = [
         [.or],
         [.and],
@@ -506,6 +543,8 @@ struct Parser {
             return .enumDecl(try parseEnum())
         case "import":
             return try parseImport()
+        case "struct":
+            return .structDecl(try parseStruct())
         case "fallthrough":
             guard switchDepth > 0 else { throw SyntaxError("'fallthrough' outside a switch") }
             keyword("fallthrough")
@@ -518,20 +557,63 @@ struct Parser {
             return assignment
         }
 
-        if let name = identifier(), kind(of: name) == .variable {
-            let start = pos
-            let spansBefore = spans.count
-            pos += name.count
-            skipSpaces()
-            if peek() == "=" && peek(1) != "=" {
-                mark(.variable, from: start, to: start + name.count)
-                pos += 1
-                return .assign(name: name, value: try parseExpression())
-            }
-            rewind(to: (start, spansBefore))
+        if let name = identifier(), kind(of: name) == .variable || kind(of: name) == .member,
+           let assignment = try parseAssignment(name) {
+            return .assign(assignment)
         }
 
         return .chain(try parseChain())
+    }
+
+    /// `name = v`, `name.a[i] += v`, …, or nil (having looked ahead) if the
+    /// statement isn't an assignment. In a struct's body, a member's name
+    /// assigns through `self`.
+    private mutating func parseAssignment(_ name: String) throws(SyntaxError) -> Assignment? {
+        let start = (pos, spans.count)
+        mark(.variable, from: pos, to: pos + name.count)
+        pos += name.count
+        var assignment = Assignment(root: name, value: .literal(.nothing))
+        if kind(of: name) == .member {
+            assignment.root = "self"
+            assignment.path = [.member(name)]
+        }
+        while true {
+            if peek() == ".", let next = peek(1), Parser.isIdentifierStart(next) {
+                pos += 1
+                let member = identifier()!
+                pos += member.count
+                assignment.path.append(.member(member))
+            } else if peek() == "[" {
+                pos += 1
+                bracketDepth += 1
+                skipSpaces()
+                let index = try parseExpression()
+                skipSpaces()
+                bracketDepth -= 1
+                guard consume("]") else { throw expected("']'") }
+                assignment.path.append(.index(index))
+            } else {
+                break
+            }
+        }
+        skipSpaces()
+        let compound: [(String, BinaryOperator)] = [("+=", .add), ("-=", .subtract), ("*=", .multiply), ("/=", .divide)]
+        if let (text, op) = compound.first(where: { matches($0.0) }) {
+            mark(.punctuation, from: pos, to: pos + text.count)
+            pos += text.count
+            assignment.op = op
+        } else if peek() == "=" && peek(1) != "=" {
+            pos += 1
+        } else {
+            rewind(to: start)
+            return nil
+        }
+        assignment.value = try parseExpression()
+        return assignment
+    }
+
+    private func matches(_ text: String) -> Bool {
+        text.enumerated().allSatisfy { peek($0.offset) == $0.element }
     }
 
     /// `env.NAME = value` or `env[name] = value`, or nil (having looked
@@ -682,6 +764,135 @@ struct Parser {
         scopes[scopes.count - 1][name] = .variable
         sawImport = true
         return .importPlugin(name: name, path: path)
+    }
+
+    /// `struct Name { … }`: properties, methods and initializers. In their
+    /// bodies, members are in scope and go through `self`, as in Swift.
+    private mutating func parseStruct() throws(SyntaxError) -> StructDecl {
+        keyword("struct")
+        skipSpaces()
+        let nameStart = pos
+        let name = try parseName(after: "'struct'")
+        mark(.type, from: nameStart)
+        skipSpaces()
+        guard consume("{") else { throw expected("'{'") }
+        // Bound first, so members can use the type.
+        scopes[scopes.count - 1][name] = .type
+        var members: [String: NameKind] = ["self": .variable]
+        for member in memberNames() { members[member] = .member }
+        scopes.append(members)
+        defer { scopes.removeLast() }
+
+        var decl = StructDecl(name: name, properties: [], methods: [], initializers: [])
+        while true {
+            skipSeparators()
+            skipSpaces(newlines: true)
+            guard peek() != nil else { throw .incomplete("expected '}'") }
+            if consume("}") { break }
+            switch identifier() {
+            case "var", "let":
+                decl.properties.append(try parseProperty())
+            case "func":
+                decl.methods.append(try parseFunction(method: true))
+            case "mutating":
+                keyword("mutating")
+                skipSpaces()
+                guard identifier() == "func" else { throw expected("'func' after 'mutating'") }
+                var method = try parseFunction(method: true)
+                method.isMutating = true
+                decl.methods.append(method)
+            case "init":
+                decl.initializers.append(try parseInitializer())
+            default:
+                throw SyntaxError("a struct holds properties (var, let), methods (func) and initializers (init)")
+            }
+        }
+        var seen: Set<String> = []
+        for member in decl.properties.map(\.name) + Set(decl.methods.map(\.name)) where !seen.insert(member).inserted {
+            throw SyntaxError("\(name) declares '\(member)' twice")
+        }
+        return decl
+    }
+
+    /// `var x: Int`, `let y = 2`, or a computed `var z: Int { … }`.
+    private mutating func parseProperty() throws(SyntaxError) -> PropertyDecl {
+        let word = identifier()!
+        keyword(word)
+        skipSpaces()
+        let nameStart = pos
+        let name = try parseName(after: "'\(word)'")
+        mark(.variable, from: nameStart)
+        skipSpaces()
+        var property = PropertyDecl(name: name, mutable: word == "var")
+        if consume(":") {
+            property.type = try parseType()
+            skipSpaces()
+        }
+        if consume("{") {
+            guard property.mutable else { throw SyntaxError("computed property '\(name)' must be declared with 'var'") }
+            guard property.type != nil else { throw SyntaxError("computed property '\(name)' needs a type") }
+            property.getter = try parseFunctionBody(parameters: [], anonymous: false).0
+        } else if peek() == "=" && peek(1) != "=" {
+            pos += 1
+            property.defaultValue = try parseExpression()
+        } else if property.type == nil {
+            throw SyntaxError("property '\(name)' needs a type or a value")
+        }
+        return property
+    }
+
+    /// `init(x: Int) { self.x = x }`.
+    private mutating func parseInitializer() throws(SyntaxError) -> FunctionDecl {
+        let documentation = documentation(before: pos)
+        keyword("init")
+        skipSpaces()
+        guard peek() == "(" else { throw expected("'(' after 'init'") }
+        let parameters = try parseParameters(named: true)
+        skipSpaces()
+        guard consume("{") else { throw expected("'{'") }
+        let (body, _) = try parseFunctionBody(parameters: parameters, anonymous: false)
+        return FunctionDecl(name: "init", parameters: parameters, returnType: nil, body: body,
+                            documentation: documentation, isMutating: true)
+    }
+
+    /// The names a struct's body declares, found before parsing it so a
+    /// member can use one declared further down.
+    private func memberNames() -> [String] {
+        var names: [String] = []
+        var depth = 0
+        var index = pos
+        var nameFollows = false
+        while index < chars.count {
+            let c = chars[index]
+            if c == "\"" || c == "'" {
+                index += 1
+                while index < chars.count && chars[index] != c {
+                    if chars[index] == "\\" && c == "\"" { index += 1 }
+                    index += 1
+                }
+            } else if c == "/" && index + 1 < chars.count && chars[index + 1] == "/" {
+                while index < chars.count && chars[index] != "\n" { index += 1 }
+            } else if "{([".contains(c) {
+                depth += 1
+            } else if "})]".contains(c) {
+                if depth == 0 { break }
+                depth -= 1
+            } else if depth == 0, Parser.isIdentifierStart(c), index == 0 || !Parser.isIdentifierPart(chars[index - 1]) {
+                var end = index
+                while end < chars.count && Parser.isIdentifierPart(chars[end]) { end += 1 }
+                let word = String(chars[index..<end])
+                if nameFollows {
+                    names.append(word)
+                    nameFollows = false
+                } else {
+                    nameFollows = ["var", "let", "func"].contains(word)
+                }
+                index = end
+                continue
+            }
+            index += 1
+        }
+        return names
     }
 
     /// `switch subject { case …: … default: … }`
@@ -943,7 +1154,7 @@ struct Parser {
         if c == "$", let next = peek(1), Parser.isDigit(next), anonymousArity.last ?? nil != nil { return true }
         guard let word = identifier() else { return false }
         if ["true", "false", "nil", "try", "async", "await"].contains(word) { return true }
-        return kind(of: word) == .variable || kind(of: word) == .type || peek(word.count) == "("
+        return [.variable, .type, .member].contains(kind(of: word)) || peek(word.count) == "("
     }
 
     private mutating func parseIf() throws(SyntaxError) -> IfStatement {
@@ -1046,7 +1257,9 @@ struct Parser {
 
     // MARK: Functions and closures
 
-    private mutating func parseFunction() throws(SyntaxError) -> FunctionDecl {
+    /// `method`: a struct's, which is reached through `self` rather than
+    /// bound as a function.
+    private mutating func parseFunction(method: Bool = false) throws(SyntaxError) -> FunctionDecl {
         let documentation = documentation(before: pos)
         keyword("func")
         skipSpaces()
@@ -1065,7 +1278,7 @@ struct Parser {
         }
         guard consume("{") else { throw expected("'{'") }
         // Bound before the body is parsed, so the function can call itself.
-        scopes[scopes.count - 1][name] = .function
+        if !method { scopes[scopes.count - 1][name] = .function }
         let (body, _) = try parseFunctionBody(parameters: parameters, anonymous: false)
         return FunctionDecl(
             name: name, parameters: parameters, returnType: returnType, body: body, documentation: documentation
@@ -1926,6 +2139,7 @@ struct Parser {
         guard kind(of: name) != nil || (sawImport && peek() == "(") else {
             throw SyntaxError(peek() == "(" ? "no function named '\(name)'" : "no variable named '\(name)'")
         }
+        if kind(of: name) == .member { return .member(.variable("self"), name) }
         return .variable(name)
     }
 

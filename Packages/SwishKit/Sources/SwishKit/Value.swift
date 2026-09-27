@@ -95,7 +95,7 @@ public struct CommandOutput: Sendable, Hashable {
 
 extension CommandOutput: CustomDebugStringConvertible {
     public var debugDescription: String {
-        "Output(text: \(text.debugDescription), status: \(status.debugDescription))"
+        "Output(text: \(Value.quoted(text)), status: \(status.debugDescription))"
     }
 }
 
@@ -155,7 +155,7 @@ extension Record: CustomDebugStringConvertible {
             return "\(typeName)(" + map { "\($0.key): \($0.value.debugDescription)" }.joined(separator: ", ") + ")"
         }
         guard count > 0 else { return "[:]" }
-        return "[" + map { "\($0.key.debugDescription): \($0.value.debugDescription)" }.joined(separator: ", ") + "]"
+        return "[" + map { "\(Value.quoted($0.key)): \($0.value.debugDescription)" }.joined(separator: ", ") + "]"
     }
 }
 
@@ -239,6 +239,27 @@ extension Value: CustomStringConvertible {
 
 }
 
+extension Value {
+    /// A string as a literal: quotes, backslashes and control characters
+    /// escaped. Like Swift's `debugDescription`, but a `'` stays as it is.
+    public static func quoted(_ text: String) -> String {
+        var result = "\""
+        for scalar in text.unicodeScalars {
+            switch scalar {
+            case "\"": result += "\\\""
+            case "\\": result += "\\\\"
+            case "\n": result += "\\n"
+            case "\t": result += "\\t"
+            case "\r": result += "\\r"
+            case _ where scalar.value < 0x20 || scalar.value == 0x7F:
+                result += "\\u{" + String(scalar.value, radix: 16, uppercase: true) + "}"
+            default: result.unicodeScalars.append(scalar)
+            }
+        }
+        return result + "\""
+    }
+}
+
 extension Value: CustomDebugStringConvertible {
     /// As Swift's `debugPrint` shows it, and as the prompt shows a bare
     /// value: strings quoted, cases with their type, outputs and records
@@ -246,7 +267,7 @@ extension Value: CustomDebugStringConvertible {
     public var debugDescription: String {
         switch self {
         case .nothing: "nil"
-        case .string(let value): value.debugDescription
+        case .string(let value): Value.quoted(value)
         case .list(let values): "[" + values.map(\.debugDescription).joined(separator: ", ") + "]"
         case .record(let record): record.debugDescription
         case .output(let output): output.debugDescription

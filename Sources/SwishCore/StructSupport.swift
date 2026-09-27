@@ -1,0 +1,309 @@
+import Foundation
+import SwishKit
+
+/// A struct's definition. Its values are records with its name as their
+/// type, so they're values like Swift's structs, and tables, `where`,
+/// `select` and `to json` work on them as on any record; what the type adds
+/// (computed properties, methods, initializers) is looked up through here.
+final class StructType: SwishObject, @unchecked Sendable {
+    let name: String
+    /// Stored properties, in declaration order: the order of a value's fields.
+    let stored: [PropertyDecl]
+    let computed: [String: Function]
+    let methods: [String: OverloadSet]
+    /// Custom initializers; without any, the memberwise one.
+    let initializers: OverloadSet?
+    let memberwise: Function
+
+    init(name: String, stored: [PropertyDecl], computed: [String: Function], methods: [String: OverloadSet],
+         initializers: OverloadSet?, memberwise: Function) {
+        self.name = name
+        self.stored = stored
+        self.computed = computed
+        self.methods = methods
+        self.initializers = initializers
+        self.memberwise = memberwise
+    }
+
+    func property(_ name: String) -> PropertyDecl? {
+        stored.first { $0.name == name }
+    }
+
+    var typeName: String { "struct" }
+    var memberNames: [String] { [] }
+    func member(_ name: String) -> Value? { nil }
+    var fields: Record? { nil }
+    var description: String { "struct \(name)" }
+}
+
+/// `self` for a method: its value going in, and as the method left it.
+final class Receiver {
+    var value: Value
+    let mutable: Bool
+    /// In an `init`, which may also set `let` properties.
+    let initializing: Bool
+
+    init(_ value: Value, mutable: Bool, initializing: Bool = false) {
+        self.value = value
+        self.mutable = mutable
+        self.initializing = initializing
+    }
+}
+
+extension Shell {
+    // MARK: Declaring
+
+    func declare(_ decl: StructDecl) {
+        var computed: [String: Function] = [:]
+        for property in decl.properties {
+            guard let getter = property.getter else { continue }
+            computed[property.name] = Function(
+                name: property.name, parameters: [], returnType: property.type, body: .swish(getter), captured: scopes
+            )
+        }
+        var methods: [String: [Function]] = [:]
+        for method in decl.methods {
+            methods[method.name, default: []].append(Function(
+                name: method.name, parameters: method.parameters, returnType: method.returnType,
+                body: .swish(method.body), captured: scopes, documentation: method.documentation,
+                isMutating: method.isMutating
+            ))
+        }
+        let initializers = decl.initializers.map { initializer in
+            Function(
+                name: "\(decl.name).init", parameters: initializer.parameters, returnType: nil,
+                body: .swish(initializer.body), captured: scopes, documentation: initializer.documentation,
+                isMutating: true
+            )
+        }
+        let stored = decl.properties.filter { $0.getter == nil }
+        // As in Swift: every stored property, except a `let` that already
+        // has its value, in order; one with a default may be left out.
+        let memberwise = Function(
+            name: decl.name,
+            parameters: stored.filter { $0.mutable || $0.defaultValue == nil }.map { property in
+                Parameter(label: property.name, name: property.name, type: property.type ?? .any,
+                          defaultValue: property.defaultValue)
+            },
+            returnType: nil, body: .native { _, _ in .nothing }
+        )
+        let type = StructType(
+            name: decl.name, stored: stored, computed: computed,
+            methods: methods.mapValues { OverloadSet(name: $0[0].name!, candidates: $0) },
+            initializers: initializers.isEmpty ? nil : OverloadSet(name: "\(decl.name).init", candidates: initializers),
+            memberwise: memberwise
+        )
+        scopes[scopes.count - 1].bindings[decl.name] = Binding(value: .object(type), mutable: false)
+    }
+
+    func structType(named name: String) -> StructType? {
+        guard case .object(let type as StructType)? = lookup(name)?.value else { return nil }
+        return type
+    }
+
+    func structType(of record: Record) -> StructType? {
+        record.typeName.flatMap(structType(named:))
+    }
+
+    // MARK: Making values
+
+    /// `Point(x: 1, y: 2)`: through an `init` the struct declares, or the
+    /// memberwise one.
+    func construct(_ type: StructType, _ arguments: [Argument]) throws -> Value {
+        let values = try arguments.map { argument -> Argument in
+            if case .caseLiteral = argument.value { return argument }
+            return Argument(label: argument.label, value: .literal(try evaluate(argument.value)))
+        }
+        guard let initializers = type.initializers else {
+            let bound = try bind(values, to: type.memberwise).bindings
+            var record = Record(typeName: type.name)
+            for property in type.stored {
+                if let value = bound[property.name] {
+                    record[property.name] = value
+                } else if let defaultValue = property.defaultValue {
+                    record[property.name] = try storedValue(defaultValue, for: property, of: type)
+                }
+            }
+            return .record(record)
+        }
+
+        let (initializer, bindings) = try resolve(initializers) { try self.bind(values, to: $0) }
+        // Defaults first, then whatever the initializer sets.
+        var start = Record(typeName: type.name)
+        for property in type.stored {
+            if let defaultValue = property.defaultValue {
+                start[property.name] = try storedValue(defaultValue, for: property, of: type)
+            }
+        }
+        let receiver = Receiver(.record(start), mutable: true, initializing: true)
+        _ = try invoke(initializer, with: bindings, receiver: receiver)
+        guard case .record(let made) = receiver.value else {
+            throw RuntimeError("\(type.name).init must leave self a \(type.name)")
+        }
+        // In declaration order, whatever order the initializer set them in.
+        var record = Record(typeName: type.name)
+        for property in type.stored {
+            guard let value = made[property.name] else {
+                throw RuntimeError("\(type.name).init must set '\(property.name)'")
+            }
+            record[property.name] = value
+        }
+        return .record(record)
+    }
+
+    private func storedValue(_ expr: Expr, for property: PropertyDecl, of type: StructType) throws -> Value {
+        let value = try evaluate(expr, expecting: property.type)
+        return try checked(value, as: property, of: type)
+    }
+
+    private func checked(_ value: Value, as property: PropertyDecl, of type: StructType) throws -> Value {
+        guard let expected = property.type else { return value }
+        guard let conforming = conform(value, to: expected) else {
+            throw RuntimeError("\(type.name).\(property.name) must be \(expected), not \(value.typeName)")
+        }
+        return conforming
+    }
+
+    // MARK: Members
+
+    /// A computed property's value, or a method as a function value; nil if
+    /// the type has neither by that name.
+    func structMember(_ name: String, of record: Record, _ type: StructType) throws -> Value? {
+        if let getter = type.computed[name] {
+            return try invoke(getter, with: [:], receiver: Receiver(.record(record), mutable: false))
+        }
+        guard let methods = type.methods[name] else { return nil }
+        // `let f = p.describe`: the method with `p` as `self`.
+        let bound = methods.candidates.map { method in
+            Function(name: method.name, parameters: method.parameters, returnType: method.returnType,
+                     body: .native { shell, arguments in
+                         guard !method.isMutating else {
+                             throw RuntimeError("mutating method '\(name)' must be called on a variable, as in p.\(name)(…)")
+                         }
+                         return try shell.invoke(method, with: arguments, receiver: Receiver(.record(record), mutable: false))
+                     }, documentation: method.documentation)
+        }
+        return .function(OverloadSet(name: name, candidates: bound))
+    }
+
+    /// `p.move(by: 1)`. A mutating method changes `p` itself, so `p` must
+    /// be a `var` (or a part of one).
+    func callMethod(_ methods: OverloadSet, of base: Value, at baseExpr: Expr, _ arguments: [Argument]) throws -> Value {
+        let values = try arguments.map { argument -> Argument in
+            if case .caseLiteral = argument.value { return argument }
+            return Argument(label: argument.label, value: .literal(try evaluate(argument.value)))
+        }
+        let (method, bindings) = try resolve(methods) { try self.bind(values, to: $0) }
+        guard method.isMutating else {
+            return try invoke(method, with: bindings, receiver: Receiver(base, mutable: false))
+        }
+        guard let (root, path) = lvalue(baseExpr) else {
+            throw RuntimeError("cannot use mutating method '\(methods.name)' on a value that isn't in a variable")
+        }
+        try checkAssignable(root, what: "use mutating method '\(methods.name)' on")
+        let receiver = Receiver(base, mutable: true)
+        let result = try invoke(method, with: bindings, receiver: receiver)
+        try update(root, path) { _, _ in receiver.value }
+        return result
+    }
+
+    /// `p`, `p.a`, `xs[0].b`: somewhere a value can be put back.
+    private func lvalue(_ expr: Expr) -> (String, [Assignment.Step])? {
+        switch expr {
+        case .variable(let name):
+            return (name, [])
+        case .member(let base, let name):
+            return lvalue(base).map { ($0.0, $0.1 + [.member(name)]) }
+        case .index(let base, let index):
+            return lvalue(base).map { ($0.0, $0.1 + [.index(index)]) }
+        default:
+            return nil
+        }
+    }
+
+    // MARK: Assigning
+
+    /// `x = v`, `p.x += 1`, `xs[0] = v`, `r["k"] = v`.
+    func assign(_ assignment: Assignment) throws {
+        try checkAssignable(assignment.root, what: "assign to")
+        try update(assignment.root, assignment.path) { current, type in
+            let value = try evaluate(assignment.value, expecting: type)
+            guard let op = assignment.op else { return value }
+            return try apply(op, current, value)
+        }
+    }
+
+    private func checkAssignable(_ root: String, what: String) throws {
+        guard let binding = lookup(root) else { throw RuntimeError("no variable named '\(root)'") }
+        guard binding.mutable else {
+            if root == "self" {
+                throw RuntimeError("cannot \(what) self here: it's only changed by a mutating method")
+            }
+            throw RuntimeError("cannot \(what) '\(root)': it's a 'let' constant")
+        }
+    }
+
+    /// Replaces the value at `path` in the variable `root` with what
+    /// `change` makes of it (given the current value and the type the
+    /// place holds, if known).
+    private func update(
+        _ root: String, _ path: [Assignment.Step], _ change: (Value, TypeAnnotation?) throws -> Value
+    ) throws {
+        guard let scope = scopes.last(where: { $0.bindings[root] != nil }) else {
+            throw RuntimeError("no variable named '\(root)'")
+        }
+        let current = scope.bindings[root]!.value
+        let initializing = scope.bindings[root]!.special == .initializing
+        scope.bindings[root]!.value = try updated(current, path[...], type: nil, initializing: initializing, change)
+    }
+
+    /// `initializing`: this is `self` in an `init`, whose own `let`
+    /// properties can be set.
+    private func updated(
+        _ base: Value, _ path: ArraySlice<Assignment.Step>, type: TypeAnnotation?, initializing: Bool = false,
+        _ change: (Value, TypeAnnotation?) throws -> Value
+    ) throws -> Value {
+        guard let step = path.first else { return try change(base, type) }
+        let rest = path.dropFirst()
+        switch (step, base) {
+        case (.member(let name), .record(var record)):
+            if let structType = structType(of: record) {
+                guard let property = structType.property(name) else {
+                    let what = structType.computed[name] != nil ? "it's a computed property" : "\(structType.name) has no property '\(name)'"
+                    throw RuntimeError("cannot assign to '\(name)': \(what)")
+                }
+                guard property.mutable || (initializing && path.count == 1) else {
+                    throw RuntimeError("cannot assign to '\(name)': it's a 'let' property of \(structType.name)")
+                }
+                let value = try updated(record[name] ?? .nothing, rest, type: property.type, change)
+                record[name] = try checked(value, as: property, of: structType)
+            } else {
+                guard record[name] != nil || rest.isEmpty else {
+                    throw RuntimeError("\(record.typeName ?? "Record") has no field '\(name)'")
+                }
+                record[name] = try updated(record[name] ?? .nothing, rest, type: nil, change)
+            }
+            return .record(record)
+        case (.index(let indexExpr), .list(var items)):
+            let index = try evaluate(indexExpr)
+            guard case .int(let position) = index else { throw RuntimeError("a list is indexed by Int, not \(index.typeName)") }
+            guard items.indices.contains(position) else {
+                throw RuntimeError("index \(position) is out of range for a list of \(items.count)")
+            }
+            items[position] = try updated(items[position], rest, type: nil, change)
+            return .list(items)
+        case (.index(let indexExpr), .record(var record)):
+            let key = try evaluate(indexExpr)
+            guard case .string(let name) = key else { throw RuntimeError("a record is indexed by String, not \(key.typeName)") }
+            if structType(of: record) != nil {
+                return try updated(base, [.member(name)] + rest, type: type, initializing: initializing, change)
+            }
+            record[name] = try updated(record[name] ?? .nothing, rest, type: nil, change)
+            return .record(record)
+        case (.member(let name), _):
+            throw RuntimeError("cannot assign to '\(name)' of \(base.typeName)")
+        case (.index, _):
+            throw RuntimeError("cannot assign into \(base.typeName) by index")
+        }
+    }
+}

@@ -322,7 +322,7 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
 @Test func recordsAndMembers() throws {
     let r = #"let r = ["name": "x", "size": 2.mb];"#
     #expect(try output(r + "r.name; r.size * 2; r.count; r[\"name\"]; r.keys") == "\"x\"\n4.0 MB\n2\n\"x\"\n[\"name\", \"size\"]\n")
-    #expect(try output(r + "r") == "name  x\nsize  2.0 MB\n")
+    #expect(try output(r + "r") == #"["name": "x", "size": 2.0 MB]"# + "\n")
     #expect(status(r + "r.nope") == 1)
     #expect(try output(#""a\nb".lines.count; [1, 2].last; "abc".count"#) == "2\n2\n3\n")
 }
