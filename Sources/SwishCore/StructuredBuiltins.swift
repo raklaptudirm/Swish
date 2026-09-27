@@ -219,10 +219,12 @@ extension Shell {
 
     private func select() -> Function {
         builtin(
-            "select", "Keeps only the named fields of each record.",
-            [input("item", .record), positional("fields", .string, variadic: true)],
+            "select", "Keeps only the named fields of each record or object.",
+            [input("item", .any), positional("fields", .string, variadic: true)],
             .native { _, args in
-                guard case .record(let record) = args["item"] else { return .nothing }
+                guard let record = args["item"]?.asRecord else {
+                    throw RuntimeError("select: \(args["item"]!.description) has no fields")
+                }
                 var selected = Record()
                 for field in args.strings("fields") { selected[field] = record[field] ?? .nothing }
                 return .record(selected)
@@ -376,7 +378,7 @@ extension Shell {
                 var lines: [String] = []
                 for item in items {
                     if !lines.isEmpty { lines.append("") }
-                    if case .record(let record) = item {
+                    if let record = item.asRecord {
                         lines += shell.keyValueLines(record)
                     } else {
                         lines.append(item.description)

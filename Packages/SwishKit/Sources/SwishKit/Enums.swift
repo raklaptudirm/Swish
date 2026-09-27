@@ -56,6 +56,9 @@ public final class EnumType: SwishObject, @unchecked Sendable {
         return .enumValue(EnumValue(type: self, name: name))
     }
 
+    /// A type, not data: it shows as `enum Name`.
+    public var fields: Record? { nil }
+
     public var description: String { "enum \(name)" }
 }
 

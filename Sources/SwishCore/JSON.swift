@@ -47,6 +47,7 @@ enum JSON {
         case .function:
             throw RuntimeError("to json: a function has no JSON form")
         case .object(let object):
+            if let fields = object.fields { return try text(.record(fields), indent: indent) }
             throw RuntimeError("to json: a \(object.typeName) has no JSON form")
         @unknown default:
             throw RuntimeError("to json: unsupported value")

@@ -30,8 +30,24 @@ private func status(_ source: String) -> Int32 {
 
 @Test func jobsAndBareAwait() throws {
     #expect(try output("let a = async sleep 0.1; let b = async sleep 0.2; jobs; jobs.count; await; jobs; await; jobs.count")
-        == "[1] running  sleep 0.1\n[2] running  sleep 0.2\n2\n[1] done  sleep 0.1\n0\n")
+        == "id  state    command\n 1  running  sleep 0.1\n 2  running  sleep 0.2\n2\nid  state  command\n 1  done   sleep 0.1\n0\n")
     #expect(status("await") == 1) // nothing to await
+}
+
+@Test func jobsAreDataForTablesAndPipelines() throws {
+    let shell = Shell()
+    shell.execute("let a = async sleep 0.2; let b = async sleep 0.2 | cat")
+    // Fields like a record's: selected, filtered on, encoded.
+    #expect(try output("jobs | select id command", in: shell) == "id  command\n 1  sleep 0.2\n 2  sleep 0.2 | cat\n")
+    #expect(try output("jobs | where { $0.pids.count == 2 } | get id", in: shell) == "2\n")
+    #expect(try output("jobs | to json", in: shell).contains(#""state": "running""#))
+    #expect(try output("jobs | table", in: shell).hasPrefix("id  command          state    pids       output\n"))
+    // One job on its own is still a line.
+    #expect(try output("a", in: shell) == "[1] running  sleep 0.2\n")
+    // An enum type isn't data.
+    #expect(try output("FileType", in: shell) == "enum FileType\n")
+    shell.execute("await a; await b")
+    #expect(status("FileType | select name") == 1)
 }
 
 @Test func cancellingAJob() throws {

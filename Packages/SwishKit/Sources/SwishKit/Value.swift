@@ -35,6 +35,22 @@ public protocol SwishObject: AnyObject, Sendable, CustomStringConvertible {
     var memberNames: [String] { get }
     /// The member called `name`, or nil if it has none.
     func member(_ name: String) -> Value?
+    /// Its data as a record, which tables, `select` and `to json` use; nil
+    /// for an object that isn't data, like an enum type.
+    var fields: Record? { get }
+}
+
+extension SwishObject {
+    /// Every member that isn't a method, in `memberNames` order.
+    public var fields: Record? {
+        var record = Record(typeName: typeName)
+        for name in memberNames {
+            guard let value = member(name) else { continue }
+            if case .function = value { continue }
+            record[name] = value
+        }
+        return record
+    }
 }
 
 /// A command's standard output (trailing newlines trimmed) and exit status.

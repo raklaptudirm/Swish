@@ -38,6 +38,10 @@ compare; dates compare, and subtract to seconds.
   properties.
 - **Both expose members the same way.** `where`, `select`, `sort` and field
   access (`$0.size`) work identically on records and objects.
+- **An object shows its data as fields.** `SwishObject.fields` is a record
+  of its members that aren't methods, by default; tables, `select`, `list`
+  and `to json` use it, so `jobs` is a table like `ls`. An object that
+  isn't data, like an enum type, returns nil and shows as its description.
 - **There is no table type.** A table is a list or stream of records, and
   the display step decides whether to lay it out as one.
 - **Records keep insertion order.** Column order is part of how a command

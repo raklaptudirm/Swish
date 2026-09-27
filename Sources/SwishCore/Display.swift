@@ -6,6 +6,7 @@ import SwishKit
 let views: [String: [String]] = [
     "FileEntry": ["name", "type", "size", "modified"],
     "ProcessEntry": ["pid", "name", "user", "memory", "cpuTime"],
+    "Job": ["id", "state", "command"],
 ]
 
 extension Shell {
@@ -19,10 +20,7 @@ extension Shell {
             return // A job's output when it printed straight to the terminal.
         case .record(let record):
             for line in keyValueLines(record) { writeAll(stdoutFD, line + "\n") }
-        case .list(let items) where !items.isEmpty && items.allSatisfy({ if case .object = $0 { true } else { false } }):
-            // Jobs and other objects, one per line: `jobs`.
-            for item in items { writeAll(stdoutFD, item.description + "\n") }
-        case .list(let items) where items.contains(where: { if case .record = $0 { true } else { false } }):
+        case .list(let items) where items.contains(where: { $0.asRecord != nil }):
             let formatter = Formatter(fd: stdoutFD)
             for item in items { formatter.add(item) }
             formatter.finish()
@@ -36,6 +34,17 @@ extension Shell {
         let width = record.keys.map(\.count).max() ?? 0
         return record.map { key, value in
             key.padding(toLength: width, withPad: " ", startingAt: 0) + "  " + Formatter.cell(value)
+        }
+    }
+}
+
+extension Value {
+    /// A record, or an object's fields: what a table row is made from.
+    var asRecord: Record? {
+        switch self {
+        case .record(let record): record
+        case .object(let object): object.fields
+        default: nil
         }
     }
 }
@@ -99,6 +108,8 @@ final class Formatter {
             return true
         case .list(let elements):
             return elements.allSatisfy { add($0) }
+        case .object(let object) where object.fields != nil:
+            return add(.record(object.fields!))
         case .record(let record):
             if columns != nil { return emit(row(record)) }
             pending.append(record)

@@ -197,10 +197,14 @@ failed, as `try` does for any command. An awaited job's statement fails if
 the job did, so `await build && echo ok` works.
 
 `jobs` lists the jobs in the background, oldest first: ones started with
-`async`, and ones suspended with ^Z. They're values like any other:
+`async`, and ones suspended with ^Z. They're values like any other, shown
+as a table like `ls`'s records, and their fields (`id`, `command`, `state`,
+`pids`, `output`) work with `where`, `select` and `to json`:
 
 ```swift
-jobs                              // [1] running  swift build …
+jobs                              // id  state    command
+                                  //  1  running  swift build
+jobs | where { $0.state == .stopped } | select id command
 await                             // the most recent job: the ^Z'd vim, say
 await jobs[0]                     // another one
 jobs.last.resume()                // carry a stopped job on in the background

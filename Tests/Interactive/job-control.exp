@@ -33,7 +33,7 @@ send "\x1a"
 step "^Z stops the pipeline" {\[1\] stopped  sleep 30 \| cat}
 expect -re {\x1b\[0m \x1b\[31m}
 send "jobs\r"
-step "jobs lists it" {\[1\] stopped  sleep 30 \| cat}
+step "jobs lists it" { 1  stopped  sleep 30 \| cat}
 expect -re {\x1b\[0m \x1b\[32m}
 send "await\r"
 after 300
