@@ -273,7 +273,7 @@ extension Shell {
         return Int64(exactly: (value * Double(multiplier)).rounded())
     }
 
-    private func kebabCase(_ label: String) -> String {
+    func kebabCase(_ label: String) -> String {
         label.reduce(into: "") { result, c in
             if c.isUppercase {
                 result += "-" + c.lowercased()
@@ -291,13 +291,16 @@ extension Shell {
 
     /// `--help` or `-h`, unless a function claims them for itself.
     func helpRequested(_ args: [CommandArgument], for set: OverloadSet) -> Bool {
-        let claimed = set.candidates.contains { $0.parameters.contains { $0.label == "help" || $0.shortFlag == "h" } }
-        guard !claimed else { return false }
+        guard !helpClaimed(by: set) else { return false }
         for case .text(let arg) in args {
             if arg == "--" { return false }
             if arg == "--help" || arg == "-h" { return true }
         }
         return false
+    }
+
+    func helpClaimed(by set: OverloadSet) -> Bool {
+        set.candidates.contains { $0.parameters.contains { $0.label == "help" || $0.shortFlag == "h" } }
     }
 
     func helpText(for set: OverloadSet) -> String {

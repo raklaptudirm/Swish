@@ -1,0 +1,80 @@
+# Drives swish through a real pty to check highlighting, completion,
+# multi-line input and history. Run from the repo root after `swift build`,
+# or via scripts/test.sh.
+set timeout 5
+log_user 0
+set failures 0
+set history [exec mktemp]
+set env(SWISH_HISTORY) $history
+# The end of a success prompt: directory, then a green arrow.
+set ok {\x1b\[0m \x1b\[32m}
+
+proc step {name pattern} {
+  expect {
+    -re $pattern { puts "ok   $name" }
+    timeout { puts "FAIL $name"; global failures; incr failures }
+  }
+}
+
+spawn .build/debug/swish
+expect -re $ok
+
+send "echo"
+step "a known command is green" {\x1b\[32mecho}
+# Tcl's \x takes every hex digit that follows, so ^U is sent on its own.
+send "\x15"
+send "nosuchcommand"
+step "an unknown command is red" {\x1b\[31mnosuchcommand}
+send "\x15"
+send "echo \"text\" --flag"
+step "strings and flags are colored" {\x1b\[33m"text".*\x1b\[34m--flag}
+send "\x15"
+
+send "func zzgreet(_ name: String, @flag(\"t\") times: Int = 1) \{ echo \"hi \\(name) x\\(times)\" \}\r"
+expect -re $ok
+send "zzgr\t"
+step "a function name completes" {zzgreet\x1b\[0m \r}
+send -- "--ti\t"
+step "its flags complete from the signature" {--times\x1b\[0m \r}
+send "3 Rak\r"
+step "and the completed line runs" "hi Rak x3"
+
+send "ls Packag\t"
+step "a shared prefix is filled in" {ls\x1b\[0m Package\r}
+send "\t"
+step "and the rest are listed" {Package\.swift +Packages/}
+send "\x15"
+
+send "if true \{\r"
+step "Enter in an open block starts a new line" {\x1b\[90m…}
+send "echo inside\r"
+send "\}\r"
+step "the block runs once it's complete" "\r\ninside\r\n"
+
+send "echo persisted-entry\r"
+expect -re $ok
+# ^D rather than `exit`, which would itself be the newest history entry.
+send "\x04"
+expect eof
+
+# A new session reads the same history file.
+spawn .build/debug/swish
+expect -re $ok
+send "\x1b\[A\r"
+step "history survives restarts" "\r\npersisted-entry\r\n"
+send "echo pe\x1b\[A\r"
+step "↑ matches what's typed as a prefix" "\r\npersisted-entry\r\n"
+# Wait for the prompt: typed ahead while a command runs, ^R would reach the
+# terminal in cooked mode, which takes it as "reprint line".
+expect -re $ok
+send "\x12inside"
+step "^R searches back through history" {search:.*inside}
+send "\r"
+step "and Enter runs the match" "\r\ninside\r\n"
+
+send "exit 7\r"
+expect eof
+lassign [wait] pid spawnid os code
+if {$code != 7} { puts "FAIL exit status: $code"; incr failures } else { puts "ok   exit status" }
+file delete $history
+exit [expr {$failures > 0}]

@@ -2,6 +2,8 @@
 # Run from the repo root after `swift build`, or via scripts/test.sh.
 set timeout 5
 log_user 0
+# A scratch history file, so tests never touch ~/.swish_history.
+set env(SWISH_HISTORY) [exec mktemp]
 spawn .build/debug/swish
 # The end of a success prompt: directory, then a green arrow.
 set ok {\x1b\[0m \x1b\[32m}
@@ -14,7 +16,8 @@ proc step {name pattern} {
 }
 expect -re $ok
 send "sleep 0.3\r"
-step "fg command runs, no spurious stop" "sleep 0.3.*\\n.*$ok"
+# Input is highlighted, so match around the escapes between words.
+step "fg command runs, no spurious stop" "0\\.3.*\\n.*$ok"
 send "cat\r"
 send "typed-into-cat\r"
 step "cat owns the terminal (no SIGTTIN)" "typed-into-cat\r\n.*typed-into-cat"

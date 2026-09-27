@@ -210,6 +210,18 @@ public struct SyntaxError: Error, Equatable, CustomStringConvertible {
     }
 }
 
+/// What a stretch of source is, for syntax highlighting. The parser
+/// records these as it goes, so the colors always agree with how the line
+/// will actually be read.
+enum SpanKind: Equatable, Sendable {
+    case keyword, command, flag, string, number, constant, variable, comment, type, punctuation
+}
+
+struct Span: Equatable, Sendable {
+    var range: Range<Int>
+    var kind: SpanKind
+}
+
 // MARK: - Parser
 
 /// A recursive-descent parser over characters rather than tokens, because
@@ -257,9 +269,38 @@ struct Parser {
     /// parameters are named.
     private var anonymousArity: [Int?] = []
 
+    /// Highlight spans, in the order recorded; inner spans (like an
+    /// interpolation inside a string) are shorter than what contains them.
+    /// Input that doesn't parse yet, as while typing, still gets the spans
+    /// found before the problem.
+    private(set) var spans: [Span] = []
+
     static func parse(_ source: String, bound: [String: NameKind]) throws(SyntaxError) -> Program {
         var parser = Parser(source, bound: bound)
         return try parser.parseProgram(until: nil)
+    }
+
+    static func highlight(_ source: String, bound: [String: NameKind]) -> [Span] {
+        var parser = Parser(source, bound: bound)
+        _ = try? parser.parseProgram(until: nil)
+        return parser.spans
+    }
+
+    private mutating func mark(_ kind: SpanKind, from start: Int, to end: Int? = nil) {
+        let end = min(end ?? pos, chars.count)
+        if start < end { spans.append(Span(range: start..<end, kind: kind)) }
+    }
+
+    /// Backs up after looking ahead, dropping spans recorded on the way.
+    private mutating func rewind(to state: (position: Int, spans: Int)) {
+        pos = state.position
+        spans.removeSubrange(state.spans...)
+    }
+
+    /// Consumes a keyword known to be at the current position.
+    private mutating func keyword(_ word: String) {
+        mark(.keyword, from: pos, to: pos + word.count)
+        pos += word.count
     }
 
     private init(_ source: String, bound: [String: NameKind]) {
@@ -294,13 +335,13 @@ struct Parser {
             return .function(try parseFunction())
         case "return":
             guard functionDepth > 0 else { throw SyntaxError("'return' outside a function") }
-            pos += "return".count
+            keyword("return")
             skipSpaces()
             guard let c = peek(), c != ";" && c != "\n" && c != "}" else { return .returnStatement(nil) }
             return .returnStatement(try parseExpression())
         case let word? where word == "break" || word == "continue":
             guard loopDepth > 0 else { throw SyntaxError("'\(word)' outside a loop") }
-            pos += word.count
+            keyword(word)
             return word == "break" ? .breakStatement : .continueStatement
         default:
             break
@@ -308,13 +349,15 @@ struct Parser {
 
         if let name = identifier(), kind(of: name) == .variable {
             let start = pos
+            let spansBefore = spans.count
             pos += name.count
             skipSpaces()
             if peek() == "=" && peek(1) != "=" {
+                mark(.variable, from: start, to: start + name.count)
                 pos += 1
                 return .assign(name: name, value: try parseExpression())
             }
-            pos = start
+            rewind(to: (start, spansBefore))
         }
 
         return .chain(try parseChain())
@@ -322,9 +365,11 @@ struct Parser {
 
     private mutating func parseDeclaration() throws(SyntaxError) -> Statement {
         let keyword = identifier()!
-        pos += keyword.count
+        self.keyword(keyword)
         skipSpaces()
+        let nameStart = pos
         let name = try parseName(after: "'\(keyword)'")
+        mark(.variable, from: nameStart)
         skipSpaces()
         guard peek() == "=" && peek(1) != "=" else { throw expected("'=' after '\(name)'") }
         pos += 1
@@ -407,18 +452,18 @@ struct Parser {
     }
 
     private mutating func parseIf() throws(SyntaxError) -> IfStatement {
-        pos += "if".count
+        keyword("if")
         let condition = try parseCondition()
         skipSpaces()
         let then = try parseBlock()
 
-        let afterBlock = pos
+        let afterBlock = (pos, spans.count)
         skipSpaces(newlines: true)
         guard identifier() == "else" else {
-            pos = afterBlock
+            rewind(to: afterBlock)
             return IfStatement(condition: condition, then: then)
         }
-        pos += "else".count
+        keyword("else")
         skipSpaces()
         if identifier() == "if" {
             let elseIf = Statement.chain(Chain(first: .ifStatement(try parseIf())))
@@ -434,12 +479,14 @@ struct Parser {
     }
 
     private mutating func parseFor() throws(SyntaxError) -> ForLoop {
-        pos += "for".count
+        keyword("for")
         skipSpaces()
+        let variableStart = pos
         let variable = try parseName(after: "'for'")
+        mark(.variable, from: variableStart)
         skipSpaces()
         guard identifier() == "in" else { throw expected("'in'") }
-        pos += "in".count
+        keyword("in")
         let sequence = try parseExpression()
         skipSpaces()
         loopDepth += 1
@@ -449,7 +496,7 @@ struct Parser {
     }
 
     private mutating func parseWhile() throws(SyntaxError) -> WhileLoop {
-        pos += "while".count
+        keyword("while")
         let condition = try parseCondition()
         skipSpaces()
         loopDepth += 1
@@ -476,9 +523,11 @@ struct Parser {
 
     private mutating func parseFunction() throws(SyntaxError) -> FunctionDecl {
         let documentation = documentation(before: pos)
-        pos += "func".count
+        keyword("func")
         skipSpaces()
+        let nameStart = pos
         let name = try parseName(after: "'func'")
+        mark(.command, from: nameStart)
         guard name != "_" else { throw SyntaxError("a function needs a name") }
         skipSpaces()
         guard peek() == "(" else { throw expected("'(' after '\(name)'") }
@@ -570,7 +619,7 @@ struct Parser {
             skipSpaces()
         }
         guard identifier() == "in" else { throw expected("'in'") }
-        pos += "in".count
+        keyword("in")
         return (parameters, returnType)
     }
 
@@ -626,9 +675,12 @@ struct Parser {
     private mutating func parseParameter(named: Bool) throws(SyntaxError) -> Parameter {
         var isInput = false
         var shortFlag: Character?
-        while named && consume("@") {
+        while named && peek() == "@" {
+            let attributeStart = pos
+            pos += 1
             guard let attribute = identifier() else { throw expected("an attribute name after '@'") }
             pos += attribute.count
+            mark(.keyword, from: attributeStart)
             switch attribute {
             case "input":
                 isInput = true
@@ -639,6 +691,7 @@ struct Parser {
                 guard peek() == "\"", let letter = peek(1), letter.isLetter || Parser.isDigit(letter), peek(2) == "\"" else {
                     throw SyntaxError("@flag needs a single letter or digit, like @flag(\"n\")")
                 }
+                mark(.string, from: pos, to: pos + 3)
                 pos += 3
                 skipSpaces()
                 guard consume(")") else { throw expected("')'") }
@@ -735,6 +788,7 @@ struct Parser {
             return .function
         }
         guard let name = identifier() else { throw expected("a type") }
+        mark(.type, from: pos, to: pos + name.count)
         pos += name.count
         let type: TypeAnnotation
         switch name {
@@ -779,6 +833,7 @@ struct Parser {
 
     private mutating func parseCommand() throws(SyntaxError) -> CommandNode {
         skipSpaces()
+        let nameStart = pos
         let external = consume("^")
         var words: [Word] = []
         while true {
@@ -795,7 +850,14 @@ struct Parser {
             if c == "&" {
                 throw SyntaxError("background jobs ('&') aren't supported yet")
             }
-            words.append(.text(try parseWord()))
+            let wordStart = pos
+            let word = try parseWord()
+            if words.isEmpty {
+                mark(.command, from: nameStart)
+            } else if chars[wordStart] == "-" {
+                mark(.flag, from: wordStart)
+            }
+            words.append(.text(word))
         }
         guard !words.isEmpty else {
             if let c = peek() { throw unexpected(c) }
@@ -877,9 +939,11 @@ struct Parser {
 
     private mutating func parseRawString() throws(SyntaxError) -> String {
         guard let end = chars[(pos + 1)...].firstIndex(of: "'") else {
+            mark(.string, from: pos, to: chars.count)
             throw .incomplete("unterminated string")
         }
         let text = String(chars[(pos + 1)..<end])
+        mark(.string, from: pos, to: end + 1)
         pos = end + 1
         return text
     }
@@ -887,18 +951,26 @@ struct Parser {
     /// A double-quoted string, the same in both modes: Swift escapes and
     /// `\(…)`, plus `$name`, `$?` and `$(…)`.
     private mutating func parseInterpolatedString() throws(SyntaxError) -> [StringPart] {
+        let start = pos
         pos += 1
         var parts: [StringPart] = []
         var literal = ""
         while true {
-            guard let c = peek() else { throw .incomplete("unterminated string") }
+            guard let c = peek() else {
+                mark(.string, from: start, to: chars.count)
+                throw .incomplete("unterminated string")
+            }
             switch c {
             case "\"":
                 pos += 1
+                mark(.string, from: start)
                 if !literal.isEmpty || parts.isEmpty { parts.append(.literal(literal)) }
                 return parts
             case "\\":
-                guard let next = peek(1) else { throw .incomplete("unterminated string") }
+                guard let next = peek(1) else {
+                    mark(.string, from: start, to: chars.count)
+                    throw .incomplete("unterminated string")
+                }
                 if next == "(" {
                     if !literal.isEmpty { parts.append(.literal(literal)) }
                     literal = ""
@@ -947,6 +1019,7 @@ struct Parser {
 
     /// `\(expression)`, positioned at the backslash.
     private mutating func parseInterpolation() throws(SyntaxError) -> Expr {
+        mark(.punctuation, from: pos, to: pos + 2)
         pos += 2
         bracketDepth += 1
         defer { bracketDepth -= 1 }
@@ -954,6 +1027,7 @@ struct Parser {
         let expr = try parseExpression()
         skipSpaces()
         guard consume(")") else { throw expected("')'") }
+        mark(.punctuation, from: pos - 1)
         return expr
     }
 
@@ -962,6 +1036,7 @@ struct Parser {
     private mutating func parseDollar() throws(SyntaxError) -> Expr? {
         switch peek(1) {
         case "(":
+            mark(.punctuation, from: pos, to: pos + 2)
             pos += 2
             // A substitution is its own little program: newlines separate
             // statements again, and it can't break or return out of its host.
@@ -973,23 +1048,29 @@ struct Parser {
                 scopes.removeLast()
             }
             let program = try parseProgram(until: ")")
+            mark(.punctuation, from: pos, to: pos + 1)
             pos += 1
             return .substitution(program)
         case "?":
+            mark(.variable, from: pos, to: pos + 2)
             pos += 2
             return .status
         case let c? where Parser.isDigit(c):
             // Only special in a closure without named parameters; elsewhere,
             // as in "costs $5", it's just text.
             guard let arity = anonymousArity.last ?? nil else { return nil }
+            let start = pos
             pos += 1
             guard let index = Int(readDigits()) else { throw SyntaxError("closure parameter number is too large") }
+            mark(.variable, from: start)
             anonymousArity[anonymousArity.count - 1] = max(arity, index + 1)
             return .variable("$\(index)")
         case let c? where Parser.isIdentifierStart(c):
+            let start = pos
             pos += 1
             let name = identifier()!
             pos += name.count
+            mark(.variable, from: start)
             return .dollar(name)
         default:
             return nil
@@ -1107,7 +1188,12 @@ struct Parser {
         }
 
         guard let name = identifier() else { throw unexpected(c) }
+        let nameStart = pos
         pos += name.count
+        switch name {
+        case "true", "false", "nil": mark(.constant, from: nameStart)
+        default: mark(.variable, from: nameStart)
+        }
         switch name {
         case "true": return .literal(.bool(true))
         case "false": return .literal(.bool(false))
@@ -1160,6 +1246,8 @@ struct Parser {
     }
 
     private mutating func parseNumber() throws(SyntaxError) -> Expr {
+        let start = pos
+        defer { mark(.number, from: start) }
         var text = readDigits()
         var isDouble = false
         if peek() == ".", let next = peek(1), Parser.isDigit(next) {
@@ -1246,7 +1334,9 @@ struct Parser {
             } else if c == "\n" && (newlines || bracketDepth > 0) {
                 pos += 1
             } else if c == "#" {
+                let start = pos
                 while let d = peek(), d != "\n" { pos += 1 }
+                mark(.comment, from: start)
             } else {
                 return
             }

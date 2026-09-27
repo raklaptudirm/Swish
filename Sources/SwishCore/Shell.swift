@@ -13,6 +13,8 @@ public final class Shell {
     var scopes = [Scope(), Scope()]
     /// Per-item errors reported so far, like a file `ls` couldn't read.
     var itemErrorCount = 0
+    /// Programs on PATH, for highlighting and completion.
+    var executableCache: (path: String, time: Date, names: Set<String>)?
     /// How many Swish function calls are in progress.
     var callDepth = 0
 
@@ -36,6 +38,16 @@ public final class Shell {
     /// Runs the read-eval loop until EOF or `exit`.
     public func runInteractive() -> Int32 {
         takeTerminal()
+        if interactive {
+            editor.history = History(path: History.defaultPath)
+            editor.continuationPrompt = "\u{1B}[90m…\u{1B}[0m "
+            editor.isComplete = { [unowned self] text in
+                if case .failure(let error) = parse(text), error.incomplete { return false }
+                return true
+            }
+            editor.highlight = { [unowned self] in highlightStyles($0) }
+            editor.complete = { [unowned self] in completions(for: $0, cursor: $1) }
+        }
         // Lines of a statement that isn't finished yet, like an open `if` block.
         var pending = ""
         while true {
@@ -74,10 +86,8 @@ public final class Shell {
     }
 
     private func parse(_ source: String) -> Result<Program, SyntaxError> {
-        let globals = scopes[0].bindings.merging(scopes[1].bindings) { $1 }
-            .mapValues { $0.isFunction ? NameKind.function : .variable }
         do {
-            return .success(try Parser.parse(source, bound: globals))
+            return .success(try Parser.parse(source, bound: globalNames()))
         } catch {
             return .failure(error)
         }
