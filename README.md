@@ -250,7 +250,7 @@ scripts/test.sh     # unit tests, plus pty-driven job-control, editor and backgr
   - [ ] Errors as values you can inspect after the fact
   - [ ] Paths and durations
   - [ ] A lazy `ls`
-- [x] **Line editor**: persistent history (`$SWISH_HISTORY`, default `~/.swish_history`) with
+- [x] **Line editor**: persistent history (`$SWISH_HISTORY`, default `$XDG_STATE_HOME/swish/history`) with
   prefix search and `^R`, completion from signatures, highlighting from the parser,
   multi-line editing and wrapping
 - [x] **Display**: bare values shown with their `debugDescription`, pretty-printed to fit the

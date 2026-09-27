@@ -22,6 +22,24 @@ import Testing
     #expect(History(path: path).entries == ["if x {\n}"]) // trimmed on disk too
 }
 
+@Test func historyLivesInTheXDGStateDirectory() {
+    let path = { (environment: [String: String]) in History.defaultPath(environment: environment) }
+    #expect(path(["HOME": "/h"]) == "/h/.local/state/swish/history")
+    #expect(path(["HOME": "/h", "XDG_STATE_HOME": "/state"]) == "/state/swish/history")
+    #expect(path(["HOME": "/h", "XDG_STATE_HOME": "relative"]) == "/h/.local/state/swish/history")
+    #expect(path(["HOME": "/h", "XDG_STATE_HOME": "/state", "SWISH_HISTORY": "/mine"]) == "/mine")
+    #expect(path(["HOME": "/h", "SWISH_HISTORY": ""]) == nil)
+}
+
+@Test func historyCreatesItsDirectory() throws {
+    let shell = Shell()
+    let directory = try shell.capturing { shell.execute("mktemp -d") }.trimmingCharacters(in: .newlines)
+    let path = directory + "/state/swish/history"
+    History(path: path).add("echo one")
+    #expect(History(path: path).entries == ["echo one"])
+    #expect(try shell.capturing { shell.execute("stat -f %Lp \(directory)/state/swish") } == "700\n")
+}
+
 // MARK: Layout
 
 @Test func layoutWrapsAtTheWidth() {

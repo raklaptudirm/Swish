@@ -2,7 +2,7 @@
 # Run from the repo root after `swift build`, or via scripts/test.sh.
 set timeout 5
 log_user 0
-# A scratch history file, so tests never touch ~/.swish_history.
+# A scratch history file, so tests never touch the real history.
 set env(SWISH_HISTORY) [exec mktemp]
 spawn .build/debug/swish
 # The end of a success prompt: directory, then a green arrow.

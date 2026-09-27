@@ -28,7 +28,11 @@ final class History {
         entries.append(entry)
         guard let path else { return }
         // Appending rather than rewriting lets several shells share a file.
-        let fd = open(path, O_WRONLY | O_APPEND | O_CREAT, 0o600)
+        var fd = open(path, O_WRONLY | O_APPEND | O_CREAT, 0o600)
+        if fd < 0 && errno == ENOENT {
+            History.makeDirectory(for: path)
+            fd = open(path, O_WRONLY | O_APPEND | O_CREAT, 0o600)
+        }
         guard fd >= 0 else { return }
         writeAll(fd, History.encode(entry) + "\n")
         close(fd)
@@ -36,6 +40,7 @@ final class History {
 
     private func rewrite() {
         guard let path else { return }
+        History.makeDirectory(for: path)
         let text = entries.map { History.encode($0) + "\n" }.joined()
         FileManager.default.createFile(atPath: path, contents: Data(text.utf8), attributes: [.posixPermissions: 0o600])
     }
@@ -60,9 +65,26 @@ final class History {
         return result
     }
 
-    /// The default file: `$SWISH_HISTORY`, or `~/.swish_history`.
+    /// The default file: `$SWISH_HISTORY` (empty for none), or `swish/history`
+    /// in the XDG state directory, `$XDG_STATE_HOME` or `~/.local/state`.
     static var defaultPath: String? {
-        if let path = env("SWISH_HISTORY") { return path.isEmpty ? nil : path }
-        return env("HOME").map { $0 + "/.swish_history" }
+        defaultPath(environment: ProcessInfo.processInfo.environment)
+    }
+
+    static func defaultPath(environment: [String: String]) -> String? {
+        if let path = environment["SWISH_HISTORY"] { return path.isEmpty ? nil : path }
+        // The spec says to ignore a relative XDG_STATE_HOME.
+        if let state = environment["XDG_STATE_HOME"], state.hasPrefix("/") {
+            return state + "/swish/history"
+        }
+        return environment["HOME"].map { $0 + "/.local/state/swish/history" }
+    }
+
+    /// Creates the file's directory, private to the user, as the spec asks.
+    static func makeDirectory(for path: String) {
+        let directory = URL(fileURLWithPath: path).deletingLastPathComponent().path
+        try? FileManager.default.createDirectory(
+            atPath: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700]
+        )
     }
 }
