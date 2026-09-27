@@ -353,8 +353,9 @@ private func fixture() throws -> String {
 
 @Test func lsGivesTypedRecords() throws {
     let dir = try fixture()
-    #expect(try output("ls \(dir) | get type") == "file\nfile\ndir\n")
-    #expect(try output("ls \(dir) | where { $0.type == \"file\" } | select name size") == "name         size\nbig.bin    1.5 KB\nsmall.txt     2 B\n")
+    #expect(try output("ls \(dir) | get type") == "file\nfile\ndirectory\n")
+    #expect(try output("ls \(dir) | where { $0.type == .file } | select name size") == "name         size\nbig.bin    1.5 KB\nsmall.txt     2 B\n")
+    #expect(try output("ls \(dir) | where { $0.type != FileType.file } | get name") == "sub\n")
     #expect(try output("ls -a \(dir) | count; ls \(dir) | count") == "4\n3\n")
     #expect(try output("ls \(dir) | first 1 | members | where { $0.name == \"size\" } | get kind") == "FileSize\n")
     #expect(try output("ls \(dir)/small.txt | get path") == "\(dir)/small.txt\n")

@@ -24,6 +24,17 @@ enum JSON {
             return String(double)
         case .string(let string): return quoted(string)
         case .output(let output): return quoted(output.text)
+        case .enumValue(let value):
+            // A raw value, or the case's name; with associated values, a
+            // record of them under the case's name.
+            if let raw = value.rawValue { return try text(raw, indent: indent) }
+            guard !value.values.isEmpty else { return quoted(value.name) }
+            var record = Record()
+            for (index, item) in value.values.enumerated() {
+                let label = value.definition?.labels[index] ?? nil
+                record[label ?? String(index)] = item
+            }
+            return try text(.record(Record([value.name: .record(record)])), indent: indent)
         case .filesize(let bytes): return String(bytes)
         case .date(let date): return quoted(date.formatted(.iso8601))
         case .list(let items):

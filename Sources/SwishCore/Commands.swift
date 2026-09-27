@@ -129,7 +129,7 @@ extension Shell {
                 if type == .string || type == .any { penalty += 1 }
                 return try converted(text, to: type, for: what, of: name)
             case .value(let value):
-                guard let conforming = value.conforming(to: type) else {
+                guard let conforming = conform(value, to: type) else {
                     throw RuntimeError("\(name): \(what) must be \(type), not \(value.typeName)")
                 }
                 return conforming
@@ -257,6 +257,7 @@ extension Shell {
         case .optional(let wrapped): try converted(text, to: wrapped, for: what, of: function)
         case .filesize: parseFileSize(text).map(Value.filesize)
         case .output: .output(CommandOutput(text: text, code: 0))
+        case .named(let name): enumType(named: name).flatMap { enumCase(fromText: text, $0) }
         case .date: (try? Date(text, strategy: .iso8601)).map(Value.date)
         case .record, .list, .function: nil
         }
@@ -383,9 +384,17 @@ extension Shell {
     private func valuePlaceholder(for parameter: Parameter) -> String {
         switch parameter.type {
         case .bool: ""
-        case .list(let element): " <\(element)>"
-        default: " <\(parameter.type)>"
+        case .list(let element): " <\(placeholder(element))>"
+        default: " <\(placeholder(parameter.type))>"
         }
+    }
+
+    /// A type as `--help` shows it: an enum as its choices.
+    private func placeholder(_ type: TypeAnnotation) -> String {
+        if case .named(let name) = type, let enumType = enumType(named: name) {
+            return enumType.cases.filter(\.labels.isEmpty).map(\.name).joined(separator: "|")
+        }
+        return type.description
     }
 
     private func describe(_ defaultValue: Expr) -> String {

@@ -19,6 +19,8 @@ extension Shell {
         // `with` is only called with a closure, so it isn't a command.
         scopes[0].bindings["with"] = Binding(value: .function(OverloadSet(name: "with", candidates: [with()])), mutable: false)
         scopes[0].bindings["env"] = Binding(value: .nothing, mutable: false, special: .environment)
+        scopes[0].bindings["FileType"] = Binding(value: .object(Shell.fileType), mutable: false)
+        scopes[0].bindings["JobState"] = Binding(value: .object(Shell.jobState), mutable: false)
         scopes[0].bindings["jobs"] = Binding(value: .nothing, mutable: false, special: .jobs)
         scopes[0].bindings["args"] = Binding(value: .list([]), mutable: false)
     }
@@ -36,6 +38,12 @@ extension Shell {
             }
         )
     }
+
+    /// What kind of entry `ls` found: `ls | where { $0.type == .directory }`.
+    static let fileType = EnumType(name: "FileType", cases: ["file", "directory", "symlink", "other"].map { .init(name: $0) })
+
+    /// A job's `state`.
+    static let jobState = EnumType(name: "JobState", cases: ["running", "stopped", "done", "cancelled"].map { .init(name: $0) })
 
     // MARK: Sources
 
@@ -104,13 +112,13 @@ extension Shell {
             return nil
         }
         let kind = info.st_mode & S_IFMT
-        let type = switch kind {
-        case S_IFDIR: "dir"
-        case S_IFLNK: "symlink"
-        case S_IFREG: "file"
-        default: "other"
+        let (type, letter) = switch kind {
+        case S_IFDIR: ("directory", "d")
+        case S_IFLNK: ("symlink", "l")
+        case S_IFREG: ("file", "-")
+        default: ("other", "?")
         }
-        let permissions = String(type.prefix(1) == "f" ? "-" : type == "symlink" ? "l" : type.prefix(1))
+        let permissions = letter
             + [S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IWGRP, S_IXGRP, S_IROTH, S_IWOTH, S_IXOTH].enumerated().map { index, bit in
                 info.st_mode & bit != 0 ? ["r", "w", "x"][index % 3] : "-"
             }.joined()
@@ -123,6 +131,7 @@ extension Shell {
             target: kind == S_IFLNK ? try? FileManager.default.destinationOfSymbolicLink(atPath: path) : nil
         )
         guard case .record(var record) = try? ValueEncoder().encode(entry) else { return nil }
+        record["type"] = .enumValue(EnumValue(type: Shell.fileType, name: type))
         if long { record.typeName = nil } // No view: every field shows.
         return .record(record)
     }
@@ -475,6 +484,7 @@ extension SwishKit.Value {
         case (.bool(let a), .bool(let b)): return compare(a ? 1 : 0, b ? 1 : 0)
         case (.int, .int), (.int, .double), (.double, .int), (.double, .double): return compare(asDouble!, other.asDouble!)
         case (.string(let a), .string(let b)): return a.compare(b)
+        case (.enumValue(let a), .enumValue(let b)) where a.type === b.type: return compare(a.index, b.index)
         case (.output(let a), _): return Value.string(a.text).order(comparedTo: other)
         case (_, .output(let b)): return order(comparedTo: .string(b.text))
         case (.filesize(let a), .filesize(let b)): return compare(a, b)
@@ -498,6 +508,7 @@ extension SwishKit.Value {
         case .date: 4
         case .string, .output: 5
         case .list: 6
+        case .enumValue: 6
         case .record: 7
         case .object, .function: 8
         @unknown default: 9

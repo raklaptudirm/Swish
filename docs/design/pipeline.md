@@ -17,6 +17,7 @@ enum Value {
     case list([Value])
     case record(Record)          // ordered String → Value, with an optional type name
     case output(CommandOutput)   // what $(…) and await give: text, lines and status
+    case enumValue(EnumValue)    // a case of an enum: .directory, .failed(code: 2)
     case object(any SwishObject) // a live value with its own members: a Job, and later
                                  // bridged Swift objects (milestone 8)
     case function(any Callable)

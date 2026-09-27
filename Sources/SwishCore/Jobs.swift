@@ -71,7 +71,7 @@ final class Job: SwishObject, @unchecked Sendable {
         switch name {
         case "id": .int(id)
         case "command": .string(source)
-        case "state": .string(cancelled && state == .done ? "cancelled" : state.rawValue)
+        case "state": .enumValue(EnumValue(type: Shell.jobState, name: cancelled && state == .done ? "cancelled" : state.rawValue))
         case "pids": .list(running.map { .int(Int($0)) })
         case "output": output.map(Value.output) ?? .nothing
         case "resume": method("resume") { [unowned self] in shell.resume(self) }

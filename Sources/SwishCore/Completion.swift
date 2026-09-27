@@ -116,7 +116,9 @@ extension Shell {
                 }
             }
             for name in Shell.builtinNames { described[name] = "shell builtin" }
-            for keyword in ["if", "for", "while", "let", "var", "func", "async", "await", "do", "try"] { described[keyword] = "keyword" }
+            for keyword in ["if", "for", "while", "let", "var", "func", "async", "await", "do", "try", "enum", "switch"] {
+                described[keyword] = "keyword"
+            }
         }
         var candidates: [String: LineEditor.Candidate] = [:]
         for name in executableNames() where name.hasPrefix(prefix) {
@@ -186,8 +188,11 @@ extension Shell {
 
     /// Names the parser should know: builtins and globals, as variables or functions.
     func globalNames() -> [String: NameKind] {
-        scopes[0].bindings.merging(scopes[1].bindings) { $1 }
-            .mapValues { $0.isFunction ? NameKind.function : .variable }
+        scopes[0].bindings.merging(scopes[1].bindings) { $1 }.mapValues { binding in
+            if binding.isFunction { return .function }
+            if case .object(is EnumType) = binding.value { return .type }
+            return .variable
+        }
     }
 }
 

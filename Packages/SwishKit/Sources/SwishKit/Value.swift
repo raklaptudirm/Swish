@@ -18,8 +18,10 @@ public enum Value: Sendable {
     case date(Date)
     /// What `$(…)` gives: a command's output and how it exited.
     case output(CommandOutput)
-    /// A live value with members of its own: a background job, and later
-    /// bridged Swift objects.
+    /// A case of an enum: `.directory`, or `.failed(code: 2)`.
+    case enumValue(EnumValue)
+    /// A live value with members of its own: a background job, an enum type,
+    /// and later bridged Swift objects.
     case object(any SwishObject)
     case function(any Callable)
 }
@@ -141,6 +143,7 @@ extension Value: Hashable {
         case (.filesize(let a), .filesize(let b)): a == b
         case (.date(let a), .date(let b)): a == b
         case (.output(let a), .output(let b)): a == b
+        case (.enumValue(let a), .enumValue(let b)): a == b
         case (.object(let a), .object(let b)): a === b
         case (.function(let a), .function(let b)): a === b
         default: false
@@ -159,6 +162,7 @@ extension Value: Hashable {
         case .filesize(let bytes): hasher.combine(bytes)
         case .date(let date): hasher.combine(date)
         case .output(let output): hasher.combine(output)
+        case .enumValue(let value): hasher.combine(value)
         case .object(let object): hasher.combine(ObjectIdentifier(object))
         case .function(let function): hasher.combine(ObjectIdentifier(function))
         }
@@ -178,6 +182,7 @@ extension Value: CustomStringConvertible {
         case .filesize(let bytes): Value.formatFileSize(bytes)
         case .date(let date): Value.dateFormatter.string(from: date)
         case .output(let output): output.text
+        case .enumValue(let value): value.description
         case .object(let object): object.description
         case .function(let function): function.description
         }

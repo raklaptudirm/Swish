@@ -41,10 +41,11 @@ struct Interrupted: Error {}
 
 /// Non-local exits, thrown up to the loop or call that handles them. The
 /// parser guarantees each one has a handler.
-private enum ControlFlow: Error {
+enum ControlFlow: Error {
     case returned(Value)
     case breakLoop
     case continueLoop
+    case fallthroughCase
 }
 
 struct Binding {
@@ -231,8 +232,14 @@ extension Shell {
                 guard let handler else { throw reported }
                 return try runBlock(handler, declaring: [errorName: Binding(value: reported.error.value, mutable: false)])
             }
+        case .enumDecl(let decl):
+            try declare(decl)
+            return 0
+        case .fallthroughStatement:
+            throw ControlFlow.fallthroughCase
         case .returnStatement(let expr):
-            throw ControlFlow.returned(try expr.map(evaluate) ?? .nothing)
+            // A `.case` returned from a function declared to return an enum.
+            throw ControlFlow.returned(try expr.map { try evaluate($0, expecting: returnTypes.last ?? nil) } ?? .nothing)
         case .breakStatement:
             throw ControlFlow.breakLoop
         case .continueStatement:
@@ -286,8 +293,16 @@ extension Shell {
             }
             return 0
 
+        case .switchStatement(let node):
+            return try runSwitch(node)
+
         case .ifStatement(let node):
             switch node.condition {
+            case .pattern(let pattern, let expr):
+                var bindings: [String: Binding] = [:]
+                if try match(pattern, try evaluate(expr), into: &bindings) {
+                    return try runBlock(node.then, declaring: bindings)
+                }
             case .chain(let chain):
                 if try run(chain, context: .condition) == 0 {
                     return try runBlock(node.then)
@@ -411,6 +426,19 @@ extension Shell {
                 record[name] = try evaluate(entry.value)
             }
             return .record(record)
+        case .caseLiteral(let name, _):
+            throw RuntimeError(".\(name) needs a type here; write the enum's name too, as in Kind.\(name)")
+        case .binary(let op, let lhs, let rhs) where (op == .equal || op == .notEqual)
+            && (Shell.isCaseLiteral(lhs) || Shell.isCaseLiteral(rhs)):
+            // `$0.type == .directory`: the case comes from the other side's enum.
+            let known = try evaluate(Shell.isCaseLiteral(lhs) ? rhs : lhs)
+            guard case .enumValue(let enumValue) = known else {
+                throw RuntimeError("\(op.rawValue) with a .case needs an enum on the other side, not \(known.typeName)")
+            }
+            let literal = Shell.isCaseLiteral(lhs) ? lhs : rhs
+            guard case .caseLiteral(let name, let arguments) = literal else { preconditionFailure() }
+            let equal = try makeCase(enumValue.type, name, arguments) == known
+            return .bool(op == .equal ? equal : !equal)
         case .member(let base, let name):
             // An unset environment variable is nil, not a missing field.
             if isEnvironment(base) { return env(name).map(Value.string) ?? .nothing }
@@ -421,8 +449,23 @@ extension Shell {
                 body: .swish(literal.body), captured: scopes
             ))
         case .call(let callee, let arguments):
+            // `Result.failed(code: 2)`: a case with associated values.
+            if case .member(let base, let name) = callee, case .object(let type as EnumType) = try evaluate(base) {
+                return try makeCase(type, name, arguments)
+            }
             let value = try evaluate(callee)
-            let values = try arguments.map { Argument(label: $0.label, value: .literal(try evaluate($0.value))) }
+            // `Level(rawValue: 2)`: the case with that raw value, or nil.
+            if case .object(let type as EnumType) = value {
+                guard arguments.count == 1, arguments[0].label == "rawValue" else {
+                    throw RuntimeError("\(type.name) is made from a raw value: \(type.name)(rawValue: …)")
+                }
+                return type.case(rawValue: try evaluate(arguments[0].value)).map(Value.enumValue) ?? .nothing
+            }
+            // `.case` arguments wait for their parameter's type.
+            let values = try arguments.map { argument -> Argument in
+                if case .caseLiteral = argument.value { return argument }
+                return Argument(label: argument.label, value: .literal(try evaluate(argument.value)))
+            }
             switch value {
             case .function(let set as OverloadSet):
                 let (function, bindings) = try resolve(set) { try self.bind(values, to: $0) }
@@ -495,6 +538,10 @@ extension Shell {
             }
             return try element(of: try evaluate(base), at: try evaluate(index))
         }
+    }
+
+    static func isCaseLiteral(_ expr: Expr) -> Bool {
+        if case .caseLiteral = expr { true } else { false }
     }
 
     private func isEnvironment(_ expr: Expr) -> Bool {
@@ -643,6 +690,14 @@ extension Shell {
         if case .output = lhs, op == .add {
             throw RuntimeError("'+' needs the text of a command's output: use .text")
         }
+        if op == .equal || op == .notEqual {
+            if case .enumValue(let value) = lhs, case .string(let text) = rhs {
+                throw RuntimeError("can't compare \(value.type.name) with a String; compare with a case, like .\(text)")
+            }
+            if case .string(let text) = lhs, case .enumValue(let value) = rhs {
+                throw RuntimeError("can't compare a String with \(value.type.name); compare with a case, like .\(text)")
+            }
+        }
         switch (op, lhs, rhs) {
         case (.equal, _, _):
             return .bool(lhs.isEqual(to: rhs))
@@ -759,6 +814,13 @@ extension Shell {
 
     /// Record fields first, then the few members values have.
     func member(_ name: String, of value: Value) throws -> Value {
+        if case .enumValue(let enumValue) = value, name == "rawValue" {
+            guard let raw = enumValue.rawValue else { throw RuntimeError("\(enumValue.type.name) has no raw values") }
+            return raw
+        }
+        if case .object(let type as EnumType) = value, type.case(named: name) != nil, type.member(name) == nil {
+            return try makeCase(type, name, nil) // Says what values it needs.
+        }
         if case .object(let object) = value, name != "description" {
             guard let member = object.member(name) else {
                 throw RuntimeError("\(object.typeName) has no member '\(name)'")
@@ -850,14 +912,16 @@ extension Shell {
         let savedScopes = scopes
         scopes = function.captured + [Scope(arguments.mapValues { Binding(value: $0, mutable: false) })]
         callDepth += 1
+        returnTypes.append(function.returnType)
         defer {
             scopes = savedScopes
             callDepth -= 1
+            returnTypes.removeLast()
         }
 
         let result: Value
         if let expr = function.implicitReturn {
-            result = try evaluate(expr)
+            result = try evaluate(expr, expecting: function.returnType)
         } else {
             guard case .swish(let body) = function.body else { preconditionFailure() }
             do {
@@ -869,7 +933,7 @@ extension Shell {
         }
 
         guard let returnType = function.returnType else { return result }
-        guard let conforming = result.conforming(to: returnType) else {
+        guard let conforming = conform(result, to: returnType) else {
             let what = result == .nothing ? "nothing" : result.typeName
             throw RuntimeError("\(function.name ?? "closure") must return \(returnType), but returned \(what)")
         }
@@ -911,12 +975,12 @@ extension Shell {
                 if parameter.variadic {
                     var values: [Value] = []
                     repeat {
-                        values.append(try evaluate(arguments[index].value))
+                        values.append(try evaluate(arguments[index].value, expecting: parameter.type))
                         index += 1
                     } while index < arguments.count && arguments[index].label == nil
                     bound[parameter.name] = try checked(.list(values), for: parameter)
                 } else {
-                    bound[parameter.name] = try checked(try evaluate(arguments[index].value), for: parameter)
+                    bound[parameter.name] = try checked(try evaluate(arguments[index].value, expecting: parameter.type), for: parameter)
                     index += 1
                 }
             } else if parameter.variadic {
@@ -940,12 +1004,12 @@ extension Shell {
         let savedScopes = scopes
         scopes = function.captured
         defer { scopes = savedScopes }
-        return try checked(try evaluate(expr), for: parameter, of: function.name ?? "closure")
+        return try checked(try evaluate(expr, expecting: parameter.type), for: parameter, of: function.name ?? "closure")
     }
 
     func checked(_ value: Value, for parameter: Parameter, of function: String) throws -> Value {
         let type = parameter.variadic ? TypeAnnotation.list(parameter.type) : parameter.type
-        guard let conforming = value.conforming(to: type) else {
+        guard let conforming = conform(value, to: type) else {
             throw RuntimeError("\(function): '\(parameter.name)' must be \(type), not \(value.typeName)")
         }
         return conforming
@@ -1011,6 +1075,7 @@ extension Value {
         case .filesize: "FileSize"
         case .date: "Date"
         case .output: "Output"
+        case .enumValue(let value): value.type.name
         case .object(let object): object.typeName
         case .function: "Function"
         @unknown default: "Value"

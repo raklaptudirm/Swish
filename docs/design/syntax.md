@@ -91,6 +91,50 @@ A command run as a statement only succeeds or fails, as in every shell:
 `try! make` stops a script if make fails. There's no global `status` or
 `$?`; using it is an error that points here.
 
+## Enums and switch
+
+Enums are Swift's: plain cases, raw values, and associated values.
+
+```swift
+enum Kind { case file, directory }
+enum Level: Int { case low = 1, mid, high }          // mid is 2
+enum Result { case ok, failed(code: Int, String) }
+
+Kind.allCases                                       // [file, directory]
+Level(rawValue: 2)                                  // mid; nil if there's none
+Level.high.rawValue                                 // 3
+let r = Result.failed(code: 2, "no such file")
+```
+
+`.directory` on its own takes its enum from context, as in Swift: the other
+side of `==`, a `case` in a switch over an enum, a parameter or return type.
+With nothing to go by (`let k = .directory`) it's an error asking for
+`Kind.directory`. Comparing an enum with a String is an error too, pointing
+at the case to use instead. Methods and computed properties on enums wait
+for types in general.
+
+`switch` takes Swift's patterns: cases with their associated values bound
+by `let`, literals, ranges, several patterns to a case, `where`, `_`,
+`default`, `fallthrough`, and `break` to do nothing. Every case needs a
+statement. Swift checks a switch covers every possibility when compiling;
+Swish can only check when it runs, so a switch that matches nothing is an
+error then.
+
+```swift
+switch r {
+case .ok: echo "fine"
+case .failed(let code, let why) where code > 1: echo "\(code): \(why)"
+case .failed: echo "failed"
+}
+if case .failed(let code, _) = r { echo "code \(code)" }
+```
+
+On the command line, an enum parameter takes a case's name (or raw value),
+and `--help` lists them: `pick --kind <file|directory>`. Builtins use enums
+too: `ls` gives each entry a `FileType` (`.file`, `.directory`, `.symlink`,
+`.other`), so `ls | where { $0.type == .directory }`, and a job's `state` is
+a `JobState` (`.running`, `.stopped`, `.done`, `.cancelled`).
+
 ## Scripts
 
 `swish script.sw a b c` runs a script. It's parsed whole, so a syntax error

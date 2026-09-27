@@ -21,6 +21,7 @@ private func modes(_ source: String, bound: Set<String> = [], functions: Set<Str
         case .expression: return "expression"
         case .ifStatement: return "if"
         case .forLoop, .whileLoop: return "loop"
+        case .switchStatement: return "switch"
         }
     }
 }
@@ -507,4 +508,49 @@ private func command(_ source: String) throws -> CommandNode? {
     #expect(command.commands.count == 2)
     #expect(capture.source == "curl x")
     #expect(syntaxError("async $(a; b)") != nil) // one pipeline
+}
+
+// MARK: Enums and switch
+
+@Test func enumDeclarations() throws {
+    let program = try parse(#"enum Result: String { case ok = "OK", bad }; enum Shape { case circle(radius: Double), rect(Double, Double) }"#)
+    guard case .enumDecl(let result) = program.statements[0], case .enumDecl(let shape) = program.statements[1] else {
+        Issue.record()
+        return
+    }
+    #expect(result.rawType == .string)
+    #expect(result.cases.map(\.name) == ["ok", "bad"])
+    #expect(result.cases[0].rawValue == .literal(.string("OK")))
+    #expect(shape.cases[0].associated == [AssociatedValue(label: "radius", type: .double)])
+    #expect(shape.cases[1].associated == [AssociatedValue(label: nil, type: .double), AssociatedValue(label: nil, type: .double)])
+    // The name is a type from then on: it starts an expression, and types parameters.
+    #expect(try modes("enum K { case a }; K.a; func f(_ k: K) {}") == ["declaration", "expression", "declaration"])
+    #expect(syntaxError("enum K: Bool { case a }") != nil)
+}
+
+@Test func switchAndPatterns() throws {
+    let program = try parse("switch x { case .a(let n), .b(let n, _) where n > 1: y\ncase let .c(m): z\ncase 1...9: w\ndefault: break }", bound: ["x", "y", "z", "w"])
+    guard case .chain(let chain) = program.statements[0], case .switchStatement(let node) = chain.first else {
+        Issue.record()
+        return
+    }
+    #expect(node.cases.count == 4)
+    #expect(node.cases[0].patterns == [
+        .enumCase(type: nil, name: "a", arguments: [PatternArgument(label: nil, pattern: .binding(name: "n", mutable: false))]),
+        .enumCase(type: nil, name: "b", arguments: [
+            PatternArgument(label: nil, pattern: .binding(name: "n", mutable: false)),
+            PatternArgument(label: nil, pattern: .wildcard),
+        ]),
+    ])
+    #expect(node.cases[0].guardExpr != nil)
+    #expect(node.cases[1].patterns == [.enumCase(type: nil, name: "c", arguments: [PatternArgument(label: nil, pattern: .binding(name: "m", mutable: false))])])
+    #expect(node.cases[3].patterns.isEmpty) // default
+}
+
+@Test func switchErrors() {
+    #expect(syntaxError("switch x { case 1: }", bound: ["x"])?.description.contains("at least one statement") == true)
+    #expect(syntaxError("switch x { case .a(let n), .b: y }", bound: ["x", "y"])?.description.contains("same names") == true)
+    #expect(syntaxError("fallthrough") != nil)
+    #expect(syntaxError("case 1: x") != nil)
+    #expect(syntaxError("switch x {", bound: ["x"])?.incomplete == true)
 }

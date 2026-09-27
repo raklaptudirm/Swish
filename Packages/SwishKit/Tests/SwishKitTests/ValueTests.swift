@@ -45,3 +45,22 @@ private final class Thing: SwishObject {
     #expect(Value.object(thing) != .object(Thing()))
     #expect(Value.object(thing).description == "a thing")
 }
+
+@Test func enumsCompareByTypeAndCase() {
+    let kind = EnumType(name: "Kind", cases: [.init(name: "file"), .init(name: "directory")])
+    let other = EnumType(name: "Kind", cases: [.init(name: "file")])
+    #expect(Value.enumValue(EnumValue(type: kind, name: "file")) == .enumValue(EnumValue(type: kind, name: "file")))
+    #expect(Value.enumValue(EnumValue(type: kind, name: "file")) != .enumValue(EnumValue(type: other, name: "file")))
+    #expect(kind.allCases?.map(\.name) == ["file", "directory"])
+    #expect(kind.member("directory") == .enumValue(EnumValue(type: kind, name: "directory")))
+}
+
+@Test func enumsWithRawAndAssociatedValues() {
+    let level = EnumType(name: "Level", cases: [.init(name: "low", rawValue: .int(1)), .init(name: "high", rawValue: .int(2))])
+    #expect(level.case(rawValue: .int(2))?.name == "high")
+    #expect(level.case(rawValue: .int(3)) == nil)
+    let result = EnumType(name: "Result", cases: [.init(name: "ok"), .init(name: "failed", labels: ["code", nil])])
+    #expect(result.allCases == nil)
+    #expect(result.member("failed") == nil) // made by calling
+    #expect(EnumValue(type: result, name: "failed", values: [.int(2), .string("x")]).description == "failed(code: 2, x)")
+}

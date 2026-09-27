@@ -196,7 +196,7 @@ extension Shell {
     /// Input items as the parameter's type. Lines from external programs
     /// are text, so they're converted like command-line arguments.
     private func inputValue(_ item: Value, as type: TypeAnnotation, of name: String) throws -> Value {
-        if let value = item.conforming(to: type) { return value }
+        if let value = conform(item, to: type) { return value }
         if case .string(let text) = item, let value = try? converted(text, to: type, for: "input", of: name) {
             return value
         }

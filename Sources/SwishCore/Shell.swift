@@ -29,6 +29,11 @@ public final class Shell {
     var shellModes = termios()
     /// Jobs in the background: started with `async`, or stopped with ^Z.
     var jobs: [Job] = []
+    /// Each enum's associated value types, by case, for checking them.
+    var enumPayloadTypes: [ObjectIdentifier: [String: [TypeAnnotation]]] = [:]
+    /// The return types of the functions being run, innermost last, so a
+    /// returned `.case` knows its enum.
+    var returnTypes: [TypeAnnotation?] = []
     var warnedAboutJobs = false
     /// A `try!` failed in a script, which stops it.
     var scriptStopped = false

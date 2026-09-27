@@ -84,6 +84,27 @@ ls | grep Package          // records reach other programs as their table rows
 ls | get name | wc -l      // or pick the field you want
 ```
 
+### Enums and switch
+
+Swift's enums, with raw and associated values, and `switch` with its
+patterns. Builtins use them too: `ls` says what each entry is with a
+`FileType`.
+
+```swift
+enum Result { case ok, failed(code: Int, String) }
+
+func describe(_ r: Result) -> String {
+    switch r {
+    case .ok: return "fine"
+    case .failed(let code, let why) where code > 1: return "\(code): \(why)"
+    case .failed: return "failed"
+    }
+}
+describe(.failed(code: 2, "no such file"))
+
+ls | where { $0.type == .directory }
+```
+
 ### Failure is a value until you `try`
 
 `$(…)` gives the command's output and how it exited. It only throws when
@@ -186,6 +207,8 @@ scripts/test.sh     # unit tests, plus pty-driven job-control, editor and backgr
 - [x] **The language**: two-mode parsing, `let`/`var`, operators, lists, ranges, `if`/`if let`,
   `??`, loops, `func`, closures and trailing closures, `$(…)` as `Output`, `try`/`try?`/`try!`,
   `do`/`catch`, `env`, `//` comments, scripts with `args` and `main`
+- [x] **Enums and switch**: cases, raw and associated values, `.case` resolved by context,
+  `switch` with Swift's patterns, `if case`; `FileType` from `ls`, enum parameters on the command line
 - [x] **Callables**: command lines derived from signatures, `@input` streaming, `@flag`,
   `--help` from doc comments, overloads, `foreign` and `which`
 - [x] **Structured data**: records, file sizes and dates, `Encodable` → `Value`, views and

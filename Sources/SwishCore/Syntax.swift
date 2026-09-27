@@ -16,6 +16,9 @@ enum Statement: Equatable, Sendable {
     /// `do { … } catch { … }`: a runtime error in the body runs the
     /// handler with `error` (or the name given) bound to it.
     case doCatch(body: Program, errorName: String, handler: Program?)
+    case enumDecl(EnumDecl)
+    /// Carries on into the next case of a switch.
+    case fallthroughStatement
     case returnStatement(Expr?)
     case breakStatement
     case continueStatement
@@ -41,6 +44,7 @@ indirect enum Unit: Equatable, Sendable {
     case pipeline(PipelineNode)
     case expression(Expr)
     case ifStatement(IfStatement)
+    case switchStatement(SwitchStatement)
     case forLoop(ForLoop)
     case whileLoop(WhileLoop)
 }
@@ -51,11 +55,60 @@ struct IfStatement: Equatable, Sendable {
         /// `if let name = value`: runs the body with `name` bound when the
         /// value isn't nil.
         case binding(name: String, mutable: Bool, value: Expr)
+        /// `if case .failed(let code) = result`.
+        case pattern(Pattern, Expr)
     }
 
     var condition: Condition
     var then: Program
     var otherwise: Program?
+}
+
+/// `enum Name: RawType { case a, b(label: Type) = raw }`
+struct EnumDecl: Equatable, Sendable {
+    var name: String
+    var rawType: TypeAnnotation?
+    var cases: [EnumCaseDecl]
+}
+
+struct EnumCaseDecl: Equatable, Sendable {
+    var name: String
+    var rawValue: Expr?
+    var associated: [AssociatedValue]
+}
+
+struct AssociatedValue: Equatable, Sendable {
+    var label: String?
+    var type: TypeAnnotation
+}
+
+struct SwitchStatement: Equatable, Sendable {
+    var subject: Expr
+    var cases: [SwitchCase]
+}
+
+/// `case p1, p2 where guard: body`; no patterns is `default:`.
+struct SwitchCase: Equatable, Sendable {
+    var patterns: [Pattern]
+    var guardExpr: Expr?
+    var body: Program
+}
+
+indirect enum Pattern: Equatable, Sendable {
+    /// `_`
+    case wildcard
+    /// `let x`: matches anything, binding it.
+    case binding(name: String, mutable: Bool)
+    /// `.failed(code: let c)`, or `Result.failed(…)`; nil arguments match
+    /// whatever associated values the case has.
+    case enumCase(type: String?, name: String, arguments: [PatternArgument]?)
+    /// A value to compare with, or a range to be in: `3`, `"a"`, `1...9`.
+    case expression(Expr)
+}
+
+struct PatternArgument: Equatable, Sendable {
+    var label: String?
+    var pattern: Pattern
 }
 
 struct ForLoop: Equatable, Sendable {
@@ -108,6 +161,8 @@ struct Parameter: Equatable, Sendable {
 indirect enum TypeAnnotation: Equatable, Sendable, CustomStringConvertible {
     case any, bool, int, double, string
     case record, filesize, date, output
+    /// An enum declared in Swish or by the shell, like `FileType`.
+    case named(String)
     case list(TypeAnnotation)
     case function
     /// `T?`: a T, or nil.
@@ -126,6 +181,7 @@ indirect enum TypeAnnotation: Equatable, Sendable, CustomStringConvertible {
         case .output: "Output"
         case .list(let element): "[\(element)]"
         case .function: "function"
+        case .named(let name): name
         case .optional(let wrapped): "\(wrapped)?"
         }
     }
@@ -220,6 +276,9 @@ indirect enum Expr: Equatable, Sendable {
     case call(Expr, [Argument])
     /// `value.name`: a record field, or a member like `count`.
     case member(Expr, String)
+    /// `.directory` or `.failed(code: 2)`: a case whose enum comes from
+    /// context, like the other side of `==` or a parameter's type.
+    case caseLiteral(String, [Argument]?)
     case unary(UnaryOperator, Expr)
     case binary(BinaryOperator, Expr, Expr)
     case index(Expr, Expr)
@@ -257,7 +316,8 @@ enum BinaryOperator: String, Sendable {
 /// with it: a variable starts an expression, a function starts a command
 /// unless it's followed by `(`.
 enum NameKind: Equatable, Sendable {
-    case variable, function
+    /// `type`: an enum's name, as in `FileType.directory`.
+    case variable, function, type
 }
 
 public struct SyntaxError: Error, Equatable, CustomStringConvertible {
@@ -300,9 +360,9 @@ struct Parser {
     private static let keywords: Set = [
         "let", "var", "if", "else", "true", "false", "nil",
         "for", "in", "while", "func", "return", "break", "continue", "try", "do", "catch",
-        "async", "await",
+        "async", "await", "enum", "switch", "case", "default", "fallthrough",
     ]
-    private static let statementKeywords: Set = ["let", "var", "func", "return", "break", "continue", "do", "catch"]
+    private static let statementKeywords: Set = ["let", "var", "func", "return", "break", "continue", "do", "catch", "enum", "fallthrough"]
     private static let precedence: [[BinaryOperator]] = [
         [.or],
         [.and],
@@ -328,6 +388,8 @@ struct Parser {
     private var bracketDepth = 0
     private var loopDepth = 0
     private var functionDepth = 0
+    /// Inside a switch's cases, where `fallthrough` and `break` make sense.
+    private var switchDepth = 0
     /// Inside an `if`/`while` condition, `{` after a command starts the body
     /// rather than a closure argument.
     private var conditionDepth = 0
@@ -412,10 +474,20 @@ struct Parser {
             return .returnStatement(try parseExpression())
         case "do":
             return try parseDoCatch()
-        case let word? where word == "break" || word == "continue":
-            guard loopDepth > 0 else { throw SyntaxError("'\(word)' outside a loop") }
-            keyword(word)
-            return word == "break" ? .breakStatement : .continueStatement
+        case "break":
+            guard loopDepth > 0 || switchDepth > 0 else { throw SyntaxError("'break' outside a loop or switch") }
+            keyword("break")
+            return .breakStatement
+        case "continue":
+            guard loopDepth > 0 else { throw SyntaxError("'continue' outside a loop") }
+            keyword("continue")
+            return .continueStatement
+        case "enum":
+            return .enumDecl(try parseEnum())
+        case "fallthrough":
+            guard switchDepth > 0 else { throw SyntaxError("'fallthrough' outside a switch") }
+            keyword("fallthrough")
+            return .fallthroughStatement
         default:
             break
         }
@@ -498,6 +570,217 @@ struct Parser {
         return .doCatch(body: body, errorName: name, handler: handler)
     }
 
+    /// `enum Name[: RawType] { case a, b = raw; case c(label: Type, Type) }`
+    private mutating func parseEnum() throws(SyntaxError) -> EnumDecl {
+        keyword("enum")
+        skipSpaces()
+        let nameStart = pos
+        let name = try parseName(after: "'enum'")
+        mark(.type, from: nameStart)
+        skipSpaces()
+        var rawType: TypeAnnotation?
+        if consume(":") {
+            rawType = try parseType()
+            guard [.int, .string, .double].contains(rawType!) else {
+                throw SyntaxError("an enum's raw values can be Int, String or Double, not \(rawType!)")
+            }
+            skipSpaces()
+        }
+        guard consume("{") else { throw expected("'{'") }
+
+        var cases: [EnumCaseDecl] = []
+        while true {
+            skipSeparators()
+            skipSpaces(newlines: true)
+            guard peek() != nil else { throw .incomplete("expected '}'") }
+            if consume("}") { break }
+            guard identifier() == "case" else { throw expected("'case'") }
+            keyword("case")
+            repeat {
+                skipSpaces()
+                let caseStart = pos
+                let caseName = try parseName(after: "'case'")
+                mark(.constant, from: caseStart)
+                var associated: [AssociatedValue] = []
+                if consume("(") {
+                    bracketDepth += 1
+                    defer { bracketDepth -= 1 }
+                    skipSpaces()
+                    while !consume(")") {
+                        // `code: Int` has a label; a bare `Int` doesn't.
+                        var label: String?
+                        if let word = identifier() {
+                            var after = pos + word.count
+                            while after < chars.count && chars[after] == " " { after += 1 }
+                            if after < chars.count && chars[after] == ":" {
+                                label = word
+                                pos = after + 1
+                                skipSpaces()
+                            }
+                        }
+                        associated.append(AssociatedValue(label: label, type: try parseType()))
+                        skipSpaces()
+                        if consume(",") { skipSpaces() } else if peek() != ")" { throw expected("',' or ')'") }
+                    }
+                }
+                skipSpaces()
+                var rawValue: Expr?
+                if peek() == "=" && peek(1) != "=" {
+                    pos += 1
+                    skipSpaces()
+                    rawValue = try parseUnary()
+                }
+                cases.append(EnumCaseDecl(name: caseName, rawValue: rawValue, associated: associated))
+                skipSpaces()
+            } while consume(",")
+        }
+        var seen: Set<String> = []
+        for enumCase in cases where !seen.insert(enumCase.name).inserted {
+            throw SyntaxError("duplicate case '\(enumCase.name)' in enum \(name)")
+        }
+        scopes[scopes.count - 1][name] = .type
+        return EnumDecl(name: name, rawType: rawType, cases: cases)
+    }
+
+    /// `switch subject { case …: … default: … }`
+    private mutating func parseSwitch() throws(SyntaxError) -> SwitchStatement {
+        keyword("switch")
+        skipSpaces()
+        conditionDepth += 1
+        let subject = try parseExpression()
+        conditionDepth -= 1
+        skipSpaces()
+        guard consume("{") else { throw expected("'{'") }
+        switchDepth += 1
+        defer { switchDepth -= 1 }
+
+        var cases: [SwitchCase] = []
+        while true {
+            skipSeparators()
+            skipSpaces(newlines: true)
+            guard peek() != nil else { throw .incomplete("expected '}'") }
+            if consume("}") { break }
+            if identifier() == "default" {
+                keyword("default")
+                skipSpaces()
+                guard consume(":") else { throw expected("':' after 'default'") }
+                cases.append(SwitchCase(patterns: [], body: try parseCaseBody(declaring: [:])))
+                continue
+            }
+            guard identifier() == "case" else { throw expected("'case' or 'default'") }
+            keyword("case")
+            var patterns = [try parsePattern()]
+            skipSpaces()
+            while consume(",") {
+                skipSpaces(newlines: true)
+                patterns.append(try parsePattern())
+                skipSpaces()
+            }
+            // Every pattern must bind the same names, for the body to use.
+            let names = Set(Parser.names(boundBy: patterns[0]))
+            guard patterns.allSatisfy({ Set(Parser.names(boundBy: $0)) == names }) else {
+                throw SyntaxError("each pattern in a case must bind the same names")
+            }
+            var bound: [String: NameKind] = [:]
+            for name in names { bound[name] = .variable }
+            scopes.append(bound)
+            defer { scopes.removeLast() }
+            var guardExpr: Expr?
+            if identifier() == "where" {
+                keyword("where")
+                guardExpr = try parseExpression()
+                skipSpaces()
+            }
+            guard consume(":") else { throw expected("':' after the case") }
+            cases.append(SwitchCase(patterns: patterns, guardExpr: guardExpr, body: try parseCaseBody(declaring: [:])))
+        }
+        return SwitchStatement(subject: subject, cases: cases)
+    }
+
+    /// The statements after `case …:`, up to the next case or the `}`.
+    private mutating func parseCaseBody(declaring names: [String: NameKind]) throws(SyntaxError) -> Program {
+        scopes.append(names)
+        defer { scopes.removeLast() }
+        var statements: [Statement] = []
+        while true {
+            skipSeparators()
+            guard let c = peek() else { throw .incomplete("expected '}'") }
+            if c == "}" || identifier() == "case" || identifier() == "default" { break }
+            statements.append(try parseStatement())
+            skipSpaces()
+            guard let next = peek() else { continue }
+            guard next == ";" || next == "\n" || next == "}" else { throw unexpected(next) }
+        }
+        guard !statements.isEmpty else {
+            throw SyntaxError("a case needs at least one statement; write `break` to do nothing")
+        }
+        return Program(statements: statements)
+    }
+
+    /// A pattern: `_`, `let x`, `.name(…)`, `Type.name(…)`, or an
+    /// expression to compare with. Under `let`/`var` (`binding`), names in
+    /// it bind rather than refer: `let .failed(code)`.
+    private mutating func parsePattern(binding: Bool = false, mutable: Bool = false) throws(SyntaxError) -> Pattern {
+        skipSpaces()
+        if let word = identifier(), word == "let" || word == "var" {
+            keyword(word)
+            return try parsePattern(binding: true, mutable: word == "var")
+        }
+        if identifier() == "_" {
+            pos += 1
+            return .wildcard
+        }
+        if peek() == ".", let next = peek(1), Parser.isIdentifierStart(next) {
+            let start = pos
+            pos += 1
+            let name = identifier()!
+            pos += name.count
+            mark(.constant, from: start)
+            return .enumCase(type: nil, name: name, arguments: peek() == "(" ? try parsePatternArguments(binding: binding, mutable: mutable) : nil)
+        }
+        if let word = identifier(), kind(of: word) == .type, peek(word.count) == "." {
+            mark(.type, from: pos, to: pos + word.count)
+            pos += word.count + 1
+            let name = try parseName(after: "'.'")
+            return .enumCase(type: word, name: name, arguments: peek() == "(" ? try parsePatternArguments(binding: binding, mutable: mutable) : nil)
+        }
+        if binding, let word = identifier(), !Parser.keywords.contains(word) {
+            mark(.variable, from: pos, to: pos + word.count)
+            pos += word.count
+            return .binding(name: word, mutable: mutable)
+        }
+        return .expression(try parseExpression(logical: false))
+    }
+
+    private mutating func parsePatternArguments(binding: Bool, mutable: Bool) throws(SyntaxError) -> [PatternArgument] {
+        pos += 1
+        bracketDepth += 1
+        defer { bracketDepth -= 1 }
+        var arguments: [PatternArgument] = []
+        skipSpaces()
+        while !consume(")") {
+            var label: String?
+            if let word = identifier(), word != "let", word != "var", peek(word.count) == ":" {
+                label = word
+                pos += word.count + 1
+                skipSpaces()
+            }
+            arguments.append(PatternArgument(label: label, pattern: try parsePattern(binding: binding, mutable: mutable)))
+            skipSpaces()
+            if consume(",") { skipSpaces() } else if peek() != ")" { throw expected("',' or ')'") }
+        }
+        return arguments
+    }
+
+    /// The names a pattern binds.
+    static func names(boundBy pattern: Pattern) -> [String] {
+        switch pattern {
+        case .binding(let name, _): [name]
+        case .enumCase(_, _, let arguments): (arguments ?? []).flatMap { names(boundBy: $0.pattern) }
+        case .wildcard, .expression: []
+        }
+    }
+
     private mutating func parseDeclaration() throws(SyntaxError) -> Statement {
         let keyword = identifier()!
         self.keyword(keyword)
@@ -540,6 +823,10 @@ struct Parser {
             return .forLoop(try parseFor())
         case "while":
             return .whileLoop(try parseWhile())
+        case "switch":
+            return .switchStatement(try parseSwitch())
+        case "case", "default":
+            throw SyntaxError("'\(identifier()!)' outside a switch")
         case "else":
             throw SyntaxError("'else' without a matching 'if'")
         case "in":
@@ -609,10 +896,12 @@ struct Parser {
     private func startsExpression(_ c: Character) -> Bool {
         if Parser.isDigit(c) || "\"'([!-".contains(c) { return true }
         if c == "$" && peek(1) == "(" { return true }
+        // `.directory`, a case; `./script` is still a command.
+        if c == ".", let next = peek(1), Parser.isIdentifierStart(next) { return true }
         if c == "$", let next = peek(1), Parser.isDigit(next), anonymousArity.last ?? nil != nil { return true }
         guard let word = identifier() else { return false }
         if ["true", "false", "nil", "try", "async", "await"].contains(word) { return true }
-        return kind(of: word) == .variable || peek(word.count) == "("
+        return kind(of: word) == .variable || kind(of: word) == .type || peek(word.count) == "("
     }
 
     private mutating func parseIf() throws(SyntaxError) -> IfStatement {
@@ -620,7 +909,17 @@ struct Parser {
         skipSpaces()
         let condition: IfStatement.Condition
         var bound: [String: NameKind] = [:]
-        if let word = identifier(), word == "let" || word == "var" {
+        if identifier() == "case" {
+            keyword("case")
+            let pattern = try parsePattern()
+            skipSpaces()
+            guard peek() == "=" && peek(1) != "=" else { throw expected("'=' after the pattern") }
+            pos += 1
+            conditionDepth += 1
+            defer { conditionDepth -= 1 }
+            condition = .pattern(pattern, try parseExpression())
+            for name in Parser.names(boundBy: pattern) { bound[name] = .variable }
+        } else if let word = identifier(), word == "let" || word == "var" {
             keyword(word)
             skipSpaces()
             let nameStart = pos
@@ -813,11 +1112,12 @@ struct Parser {
     private mutating func parseFunctionBody(
         parameters: [Parameter], anonymous: Bool
     ) throws(SyntaxError) -> (Program, Int) {
-        let saved = (loopDepth, bracketDepth, conditionDepth, tryDepth)
+        let saved = (loopDepth, bracketDepth, conditionDepth, tryDepth, switchDepth)
         loopDepth = 0
         bracketDepth = 0
         conditionDepth = 0
         tryDepth = 0
+        switchDepth = 0
         functionDepth += 1
         var names: [String: NameKind] = [:]
         for parameter in parameters where parameter.name != "_" {
@@ -826,7 +1126,7 @@ struct Parser {
         scopes.append(names)
         anonymousArity.append(anonymous ? 0 : nil)
         defer {
-            (loopDepth, bracketDepth, conditionDepth, tryDepth) = saved
+            (loopDepth, bracketDepth, conditionDepth, tryDepth, switchDepth) = saved
             functionDepth -= 1
             scopes.removeLast()
             anonymousArity.removeLast()
@@ -986,7 +1286,9 @@ struct Parser {
         case "Date": type = .date
         case "Output": type = .output
         case "Any", "Value": type = .any
-        default: throw SyntaxError("unknown type '\(name)'")
+        default:
+            guard kind(of: name) == .type else { throw SyntaxError("unknown type '\(name)'") }
+            type = .named(name)
         }
         return type
     }
@@ -1340,11 +1642,11 @@ struct Parser {
             // Whether this one throws is decided out here; the commands
             // inside are a program of their own.
             let throwing = tryDepth > 0
-            let saved = (bracketDepth, loopDepth, functionDepth, conditionDepth, tryDepth)
-            (bracketDepth, loopDepth, functionDepth, conditionDepth, tryDepth) = (0, 0, 0, 0, 0)
+            let saved = (bracketDepth, loopDepth, functionDepth, conditionDepth, tryDepth, switchDepth)
+            (bracketDepth, loopDepth, functionDepth, conditionDepth, tryDepth, switchDepth) = (0, 0, 0, 0, 0, 0)
             scopes.append([:])
             defer {
-                (bracketDepth, loopDepth, functionDepth, conditionDepth, tryDepth) = saved
+                (bracketDepth, loopDepth, functionDepth, conditionDepth, tryDepth, switchDepth) = saved
                 scopes.removeLast()
             }
             let program = try parseProgram(until: ")")
@@ -1549,6 +1851,13 @@ struct Parser {
         case "{":
             pos += 1
             return .closure(try parseClosure())
+        case "." where peek(1).map(Parser.isIdentifierStart) ?? false:
+            let start = pos
+            pos += 1
+            let name = identifier()!
+            pos += name.count
+            mark(.constant, from: start)
+            return .caseLiteral(name, peek() == "(" ? try parseArguments() : nil)
         case "$":
             guard let expr = try parseDollar() else { throw unexpected(c) }
             return expr
