@@ -104,3 +104,100 @@ private func withVariable(_ name: String, _ value: Any) -> Shell {
     shell.execute("let \(name) = \(literal)")
     return shell
 }
+
+// MARK: Loops
+
+@Test func forLoops() throws {
+    #expect(try output("for i in 1...3 { i }") == "1\n2\n3\n")
+    #expect(try output("for i in 0..<2 { i }; for x in [\"a\", \"b\"] { x }") == "0\n1\na\nb\n")
+    #expect(try output(#"for line in $(printf 'a b\nc') { echo "<\(line)>" }"#) == "<a b>\n<c>\n")
+    #expect(try output(#"for line in "" { echo never }"#) == "")
+    #expect(try output("for _ in 1...2 { echo x }") == "x\nx\n")
+}
+
+@Test func rangesAreLazyInLoops() throws {
+    #expect(try output("for i in 1...9_000_000_000_000 { if i == 2 { break } }; echo done") == "done\n")
+    #expect(status("let r = 1...9_000_000_000_000") == 1)
+    #expect(status("for i in 3...1 {}") == 1)
+}
+
+@Test func whileLoops() throws {
+    #expect(try output("var n = 0; while n < 3 { n = n + 1 }; n") == "3\n")
+    #expect(try output("var n = 0; while test $n -lt 2 { n = n + 1 }; n") == "2\n")
+}
+
+@Test func breakAndContinue() throws {
+    #expect(try output("for i in 0..<10 { if i == 1 { continue }; if i == 3 { break }; i }") == "0\n2\n")
+    #expect(try output("for i in 1...2 { for j in 1...3 { if j == 2 { break }; echo \\(i)\\(j) } }") == "11\n21\n")
+}
+
+// MARK: Functions
+
+@Test func functionsInExpressionMode() throws {
+    #expect(try output("func square(_ x: Int) -> Int { x * x }; square(7)") == "49\n")
+    #expect(try output("func fib(_ n: Int) -> Int { if n < 2 { return n }; return fib(n - 1) + fib(n - 2) }; fib(15)") == "610\n")
+    #expect(try output(#"func greet(_ name: String, times: Int = 1) -> String { "\(name)x\(times)" }; greet("a"); greet("b", times: 2)"#) == "ax1\nbx2\n")
+    #expect(try output("func half(_ x: Double) -> Double { x / 2 }; half(3)") == "1.5\n")
+    #expect(try output("func sum(_ xs: Int...) -> Int { var t = 0; for x in xs { t = t + x }; return t }; sum(); sum(1, 2, 3)") == "0\n6\n")
+}
+
+@Test func argumentErrors() {
+    let f = "func f(_ x: Int, label: String = \"d\") -> Int { x };"
+    #expect(status(f + "f()") == 1)
+    #expect(status(f + "f(\"s\")") == 1)
+    #expect(status(f + "f(1, other: \"x\")") == 1)
+    #expect(status(f + "f(1, 2)") == 1)
+    #expect(status("func f() -> Int { \"no\" }; f()") == 1)
+    #expect(status("func f() -> Int { echo hi }; f()") == 1)
+}
+
+@Test func functionsDontDisplay() throws {
+    #expect(try output("func f() { 42; echo side }; f()") == "side\n")
+}
+
+@Test func closures() throws {
+    #expect(try output("let double = { $0 * 2 }; double(21)") == "42\n")
+    #expect(try output("let add = { a, b in a + b }; add(1, 2)") == "3\n")
+    #expect(try output("func apply(_ f: (Int) -> Int, _ x: Int) -> Int { f(x) }; apply({ $0 + 100 }, 1)") == "101\n")
+}
+
+@Test func closuresCaptureByReference() throws {
+    #expect(try output("func counter() -> (Int) -> Int { var c = 0; return { c = c + $0; return c } }; let next = counter(); next(1); next(5)") == "1\n6\n")
+    #expect(try output("var fs = []; for i in 1...3 { fs = fs + [{ i * 10 }] }; fs[0](); fs[2]()") == "10\n30\n")
+}
+
+// MARK: Command-mode calls
+
+private let greet = #"func greet(_ name: String, times: Int = 1, loud: Bool = false) { var word = "hi"; if loud { word = "HI" }; for _ in 1...times { echo "\(word) \(name)" } };"#
+
+@Test func commandModeBinding() throws {
+    let f = #"func f(_ a: String, count: Int = 0, dryRun: Bool = false, color: Bool = true, include: [String]) -> String { "\(a) \(count) \(dryRun) \(color) \(include)" };"#
+    #expect(try output(f + "f x --count 3 --dry-run --no-color --include a --include=b") == "x 3 true false [a, b]\n")
+    #expect(try output(f + "f --count=2 -- --x") == "--x 2 false true []\n")
+}
+
+@Test func commandModeNumbersAndVariadics() throws {
+    #expect(try output("func add(_ a: Int, _ b: Int) -> Int { a + b }; add 2 -5") == "-3\n")
+    #expect(try output("func sum(_ xs: Double...) -> Double { var t = 0.0; for x in xs { t = t + x }; return t }; sum 1 2.5") == "3.5\n")
+}
+
+@Test func commandModeErrors() {
+    let f = "func f(_ n: Int, name: String) {};"
+    #expect(status(f + "f 1") == 1)                  // missing --name
+    #expect(status(f + "f abc --name x") == 1)       // not an Int
+    #expect(status(f + "f 1 --name x --bogus") == 1) // unknown option
+    #expect(status(f + "f 1 2 --name x") == 1)       // extra positional
+    #expect(status(f + "f 1 --name") == 1)           // flag without a value
+    #expect(status(f + "f 1 --name x -v") == 1)      // no short flags
+}
+
+@Test func functionsInPipelinesAndSubstitutions() throws {
+    #expect(try output(greet + "greet Rak --times 2 | tr a-z A-Z") == "HI RAK\nHI RAK\n")
+    #expect(try output(greet + #"let s = $(greet Rak --loud); echo "[\(s)]""#) == "[HI Rak]\n")
+    #expect(try output(greet + "^greet Rak") == "") // no external named greet
+}
+
+@Test func boolResultsAreStatuses() throws {
+    let isBig = "func isBig(_ n: Int) -> Bool { n > 10 };"
+    #expect(try output(isBig + "isBig 50 && echo big; isBig 5 || echo small") == "big\nsmall\n")
+}

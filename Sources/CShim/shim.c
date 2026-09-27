@@ -14,6 +14,27 @@ int swish_wifsignaled(int status) { return WIFSIGNALED(status); }
 int swish_wtermsig(int status) { return WTERMSIG(status); }
 int swish_wifstopped(int status) { return WIFSTOPPED(status); }
 
+static volatile sig_atomic_t interrupted = 0;
+
+static void on_interrupt(int signal) {
+    (void)signal;
+    interrupted = 1;
+}
+
+void swish_catch_interrupts(void) {
+    struct sigaction action = {0};
+    action.sa_handler = on_interrupt;
+    action.sa_flags = SA_RESTART;
+    sigemptyset(&action.sa_mask);
+    sigaction(SIGINT, &action, NULL);
+}
+
+int swish_take_interrupt(void) {
+    int was = interrupted;
+    interrupted = 0;
+    return was;
+}
+
 pid_t swish_spawn(const char *path, char *const argv[], pid_t pgid,
                   int fd_in, int fd_out, int tty) {
     posix_spawnattr_t attr;

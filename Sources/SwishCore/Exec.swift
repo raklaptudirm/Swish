@@ -20,17 +20,30 @@ struct SpawnFailure: Error {
 
 struct ResolvedCommand {
     var argv: [String]
-    /// Skip builtins (`^name`).
+    /// Skip functions and builtins (`^name`).
     var external = false
+    /// Set when the name refers to a Swish function, which runs in-process.
+    var function: Function?
 }
 
 extension Shell {
-    func runPipeline(_ commands: [ResolvedCommand], source: String) -> Int32 {
-        if commands.count == 1, !commands[0].external, let status = runBuiltin(commands[0].argv) {
-            return status
+    /// Runs a pipeline. Function stages run in the shell's own process once
+    /// the external stages have been spawned, writing into their pipe; they
+    /// don't read their input yet (that arrives with `@input`).
+    ///
+    /// `display` shows the result of a lone function call, as for any statement.
+    func runPipeline(_ commands: [ResolvedCommand], source: String, display: Bool) throws -> Int32 {
+        if commands.count == 1 {
+            if let function = commands[0].function {
+                return try callCommand(function, Array(commands[0].argv.dropFirst()), display: display)
+            }
+            if !commands[0].external, let status = runBuiltin(commands[0].argv) {
+                return status
+            }
         }
 
         var job = Job(commandLine: source)
+        var functionStages: [(function: Function, args: [String], output: Int32, ownsOutput: Bool)] = []
         var input: Int32 = -1
         for (index, command) in commands.enumerated() {
             let isLast = index == commands.count - 1
@@ -38,17 +51,25 @@ extension Shell {
             if !isLast {
                 guard let pipe = makePipe() else {
                     report("pipe: \(errorMessage(errno))")
+                    if input >= 0 { close(input) }
                     job.status = 1
                     break
                 }
                 next = pipe
             }
-
             let output = next?.write ?? (stdoutFD == STDOUT_FILENO ? -1 : stdoutFD)
+            defer { input = next?.read ?? -1 }
+
+            if let function = command.function {
+                if input >= 0 { close(input) }
+                // Its output end stays open until the function has run.
+                functionStages.append((function, Array(command.argv.dropFirst()), output, next != nil))
+                continue
+            }
+
             let result = spawn(command.argv, pgid: interactive ? job.pgid : -1, input: input, output: output)
             if input >= 0 { close(input) }
             if let next { close(next.write) }
-            input = next?.read ?? -1
 
             switch result {
             case .success(let pid):
@@ -62,8 +83,30 @@ extension Shell {
         }
         if input >= 0 { close(input) }
 
-        guard !job.running.isEmpty else { return job.status }
-        return waitForeground(job)
+        var failure: (any Error)?
+        for stage in functionStages {
+            if failure == nil {
+                let savedOutput = stdoutFD
+                if stage.output >= 0 { stdoutFD = stage.output }
+                do {
+                    let status = try callCommand(stage.function, stage.args, display: true)
+                    if stage.function === commands.last?.function { job.status = status }
+                } catch {
+                    failure = error
+                }
+                stdoutFD = savedOutput
+            }
+            // Closing lets the next stage see EOF.
+            if stage.ownsOutput { close(stage.output) }
+        }
+
+        var status = job.status
+        if !job.running.isEmpty {
+            let externalStatus = waitForeground(job)
+            if commands.last?.function == nil { status = externalStatus }
+        }
+        if let failure { throw failure }
+        return status
     }
 
     /// Gives `job` the terminal and waits until it finishes or stops.

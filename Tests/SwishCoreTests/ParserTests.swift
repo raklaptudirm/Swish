@@ -1,20 +1,37 @@
 @testable import SwishCore
 import Testing
 
-private func parse(_ source: String, bound: Set<String> = []) throws -> Program {
-    try Parser.parse(source, bound: bound)
+private func names(_ variables: Set<String>, functions: Set<String> = []) -> [String: NameKind] {
+    var names: [String: NameKind] = [:]
+    for name in variables { names[name] = .variable }
+    for name in functions { names[name] = .function }
+    return names
 }
 
-/// The kind of each top-level unit: "command", "expression" or "if".
-private func modes(_ source: String, bound: Set<String> = []) throws -> [String] {
-    try parse(source, bound: bound).statements.map { statement in
+private func parse(_ source: String, bound: Set<String> = [], functions: Set<String> = []) throws -> Program {
+    try Parser.parse(source, bound: names(bound, functions: functions))
+}
+
+/// The kind of each top-level unit: "command", "expression", "if" or "loop".
+private func modes(_ source: String, bound: Set<String> = [], functions: Set<String> = []) throws -> [String] {
+    try parse(source, bound: bound, functions: functions).statements.map { statement in
         guard case .chain(let chain) = statement else { return "declaration" }
         switch chain.first {
         case .pipeline: return "command"
         case .expression: return "expression"
         case .ifStatement: return "if"
+        case .forLoop, .whileLoop: return "loop"
         }
     }
+}
+
+/// The parameter names of the closure in `let f = <closure>`.
+private func closureParameters(_ source: String) throws -> [String] {
+    guard case .declare(_, _, .closure(let closure)) = try parse(source).statements.first else {
+        Issue.record("not a closure declaration: \(source)")
+        return []
+    }
+    return closure.parameters.map(\.name)
 }
 
 private func words(_ source: String, bound: Set<String> = []) throws -> [[StringPart]] {
@@ -28,7 +45,7 @@ private func words(_ source: String, bound: Set<String> = []) throws -> [[String
 
 private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxError? {
     do {
-        _ = try Parser.parse(source, bound: bound)
+        _ = try Parser.parse(source, bound: names(bound))
         return nil
     } catch {
         return error
@@ -70,6 +87,54 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
     let program = try parse("i = 2", bound: ["i"])
     #expect(program.statements == [.assign(name: "i", value: .literal(.int(2)))])
     #expect(try modes("i = 2") == ["command"]) // runs a command named `i`
+}
+
+@Test func functionNamesStartCommandsUnlessCalled() throws {
+    #expect(try modes("greet Rak --loud; greet(\"Rak\")", functions: ["greet"]) == ["command", "expression"])
+    #expect(try modes("func greet() {}; greet Rak") == ["declaration", "command"])
+}
+
+@Test func loopsAreUnits() throws {
+    #expect(try modes("for x in [1] {}; while false {}; true && for x in [1] {}") == ["loop", "loop", "expression"])
+}
+
+// MARK: Functions and closures
+
+@Test func functionSignatures() throws {
+    let program = try parse("func greet(_ name: String, times: Int = 1, to recipients: [String]...) -> Bool { true }")
+    guard case .function(let decl) = program.statements[0] else { Issue.record(); return }
+    #expect(decl.parameters == [
+        Parameter(label: nil, name: "name", type: .string),
+        Parameter(label: "times", name: "times", type: .int, defaultValue: .literal(.int(1))),
+        Parameter(label: "to", name: "recipients", type: .list(.string), variadic: true),
+    ])
+    #expect(decl.returnType == .bool)
+}
+
+@Test func closureParameterForms() throws {
+    #expect(try closureParameters("let f = { $0 + $1 }") == ["$0", "$1"])
+    #expect(try closureParameters("let f = { a, b in a }") == ["a", "b"])
+    #expect(try closureParameters("let f = { (a: Int) -> Int in a }") == ["a"])
+    #expect(try closureParameters("let f = { echo hi }") == [])
+}
+
+@Test func dollarDigitsOutsideClosuresAreText() throws {
+    #expect(try words("echo costs $5").last == [.literal("$5")])
+}
+
+@Test func controlFlowNeedsAnEnclosingConstruct() {
+    for source in ["return", "break", "continue", "if true { break }", "func f() { $(return) }", "for x in [1] { func g() { break } }"] {
+        #expect(syntaxError(source) != nil, "\(source)")
+    }
+    for source in ["func f() { return }", "func f() -> Int { return 1 }", "for x in [1] { if true { continue } }", "while true { break }"] {
+        #expect(syntaxError(source) == nil, "\(source)")
+    }
+}
+
+@Test func invalidSignatures() {
+    for source in ["func f(x) {}", "func f(_ a: Int, _ a: Int) {}", "func f(_ a: Int..., _ b: Int) {}", "func f(_ a: Foo) {}", "func f(_ a: Int?) {}", "func (_ a: Int) {}"] {
+        #expect(syntaxError(source)?.incomplete == false, "\(source)")
+    }
 }
 
 // MARK: Words
@@ -137,13 +202,14 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
 // MARK: Errors
 
 @Test func incompleteInputAsksForMore() {
-    for source in ["if true {", #"echo "abc"#, "echo 'abc", "ls |", "true &&", "let x =", #"echo \"#, "$(ls", "[1,", "(1 +"] {
+    for source in ["if true {", #"echo "abc"#, "echo 'abc", "ls |", "true &&", "let x =", #"echo \"#, "$(ls", "[1,", "(1 +",
+                   "func f() {", "for x in [1] {", "while true {", "let f = { $0", "func f(_ a: Int,"] {
         #expect(syntaxError(source)?.incomplete == true, "\(source)")
     }
 }
 
 @Test func realErrorsAreNotIncomplete() {
-    for source in ["| ls", "ls )", "echo (x)", "ls &", "}", "else { }", "1 < 2 < 3", "let if = 1", "(undefined + 1)", "f(1)", "7zip"] {
+    for source in ["| ls", "ls )", "echo (x)", "ls &", "}", "else { }", "1 < 2 < 3", "let if = 1", "(undefined + 1)", "(f(1))", "7zip", "1...2...3"] {
         let error = syntaxError(source)
         #expect(error != nil && error?.incomplete == false, "\(source)")
     }

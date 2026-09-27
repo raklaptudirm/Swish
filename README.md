@@ -31,11 +31,13 @@ scripts/test.sh               # unit tests + pty-driven job-control tests
 1. ✅ REPL, PATH lookup, pipes, process groups, `^C`/`^Z`, `fg`/`jobs`, `cd`/`pwd`/`exit`
 2. Redirections (`>`, `>>`, `<`, `2>&1`), globbing (✅ `;`/`&&`/`||`)
 3. Full job control: `&`, `bg`, per-job terminal modes, `SIGCHLD` notifications
-4. The language
-   - ✅ two-mode parsing, `let`/`var`, literals and operators, lists, `if`/`else`,
-     `\(…)`, `$name`/`$?`, `$(…)`, multi-line input
-   - `for`/`while`, `func`, closures
-5. Callables: command-line binding derived from signatures, `@input` streaming, lookup order and `^name`, `--help`
+4. ✅ The language: two-mode parsing, `let`/`var`, literals and operators, lists, ranges,
+   `if`/`else`, `for`/`while`/`break`/`continue`, `func`, closures, `\(…)`, `$name`/`$?`, `$(…)`,
+   multi-line input
+5. Callables
+   - ✅ command-line binding derived from signatures (positionals, `--flags`, switches,
+     `--no-x`, repeated flags, variadics, `--`), lookup order and `^name`
+   - `@input` streaming, short flags, `--help`, overloads
 6. Structured data: records, objects, `Encodable` → `Value`, views and the display step,
    the error stream, `members`, builtins (`ls`, `ps`, `where`, `select`, `sort`, `from`/`to json`)
 7. Line editor: persistent history, completion from signatures, highlighting, multi-line wrapping

@@ -47,6 +47,13 @@ send "if true {\r"
 send "\x03"
 send "echo after\r"
 step "^C discards a pending block" "\nafter\r\n"
+send "while true {}\r"
+after 300
+send "\x03"
+step "^C stops a loop running in the shell itself" {\[130\]}
+send "func greet(_ name: String) { echo \"hi \\(name)\" }\r"
+send "greet Rak\r"
+step "functions persist between prompts" "\nhi Rak\r\n"
 send "exit 7\r"
 expect eof
 lassign [wait] pid spawnid os code

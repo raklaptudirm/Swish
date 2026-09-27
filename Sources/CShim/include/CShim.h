@@ -22,4 +22,11 @@ int swish_wifstopped(int status);
 pid_t swish_spawn(const char *path, char *const argv[], pid_t pgid,
                   int fd_in, int fd_out, int tty);
 
+/// Makes SIGINT set a flag instead of being ignored, so ^C can stop code
+/// running in the shell itself, like a `while true {}` loop.
+void swish_catch_interrupts(void);
+
+/// Whether SIGINT arrived since the last call, clearing the flag.
+int swish_take_interrupt(void);
+
 #endif

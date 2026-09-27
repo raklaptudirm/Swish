@@ -1,3 +1,4 @@
+import CShim
 import Foundation
 
 public final class Shell {
@@ -7,7 +8,9 @@ public final class Shell {
     /// write. Redirected while capturing `$(…)`.
     var stdoutFD = STDOUT_FILENO
     /// Variable scopes, innermost last.
-    var scopes: [[String: Binding]] = [[:]]
+    var scopes = [Scope()]
+    /// How many Swish function calls are in progress.
+    var callDepth = 0
 
     let terminal = STDIN_FILENO
     /// Whether the shell owns the terminal and does job control.
@@ -62,8 +65,9 @@ public final class Shell {
     }
 
     private func parse(_ source: String) -> Result<Program, SyntaxError> {
+        let globals = scopes[0].bindings.mapValues { $0.isFunction ? NameKind.function : .variable }
         do {
-            return .success(try Parser.parse(source, bound: Set(scopes[0].keys)))
+            return .success(try Parser.parse(source, bound: globals))
         } catch {
             return .failure(error)
         }
@@ -72,8 +76,12 @@ public final class Shell {
     /// A runtime error abandons the rest of the input, unlike a failing
     /// command, which only sets the status.
     private func runReportingErrors(_ program: Program) {
+        _ = swish_take_interrupt() // Drop a stale ^C from while the prompt was up.
         do {
             lastStatus = try run(program)
+        } catch is Interrupted {
+            writeAll(STDERR_FILENO, "\n")
+            lastStatus = 128 + SIGINT
         } catch {
             report("error: \(error)")
             lastStatus = 1
@@ -86,9 +94,10 @@ public final class Shell {
         while tcgetpgrp(terminal) != getpgrp() {
             kill(-getpgrp(), SIGTTIN)
         }
-        for signal in [SIGINT, SIGQUIT, SIGTSTP, SIGTTIN, SIGTTOU] {
+        for signal in [SIGQUIT, SIGTSTP, SIGTTIN, SIGTTOU] {
             Foundation.signal(signal, SIG_IGN)
         }
+        swish_catch_interrupts()
         _ = setpgid(0, 0) // Fails harmlessly if we're already a session leader.
         shellPgid = getpgrp()
         tcsetpgrp(terminal, shellPgid)
