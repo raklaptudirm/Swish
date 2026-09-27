@@ -14,14 +14,14 @@ extension Shell {
         for span in Parser.highlight(text, bound: globalNames()).sorted(by: { $0.range.count > $1.range.count }) {
             let range = span.range.clamped(to: 0..<characters.count)
             let style: String? = switch span.kind {
-            case .keyword, .punctuation: "\u{1B}[35m"
+            case .keyword, .punctuation: Style.keyword.escape
             case .command: commandStyle(String(characters[range]))
-            case .flag: "\u{1B}[34m"
-            case .string: "\u{1B}[33m"
-            case .number, .constant: "\u{1B}[95m"
-            case .variable: "\u{1B}[36m"
-            case .comment: "\u{1B}[90m"
-            case .type: "\u{1B}[93m"
+            case .flag: Style.flag.escape
+            case .string: Style.string.escape
+            case .number, .constant: Style.constant.escape
+            case .variable: Style.variable.escape
+            case .comment: Style.comment.escape
+            case .type: Style.type.escape
             }
             for index in range { styles[index] = style }
         }
@@ -42,7 +42,7 @@ extension Shell {
         } else {
             known = executableNames().contains(name)
         }
-        return known ? "\u{1B}[32m" : "\u{1B}[31m"
+        return (known ? Style.green : Style.red).escape
     }
 
     /// Names of programs on PATH, cached for a few seconds, since the

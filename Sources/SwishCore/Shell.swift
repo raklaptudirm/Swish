@@ -57,7 +57,7 @@ public final class Shell {
             return runScript { Swift.readLine() }
         }
         editor.history = History(path: History.defaultPath)
-        editor.continuationPrompt = "\u{1B}[90m…\u{1B}[0m "
+        editor.continuationPrompt = "…".styled(Style.dim) + " "
         editor.isComplete = { [unowned self] text in
             if case .failure(let error) = parse(text), error.incomplete { return false }
             return true
@@ -69,9 +69,9 @@ public final class Shell {
         while true {
             // Finished and stopped background jobs, before the prompt.
             if pending.isEmpty {
-                for notice in announceJobs() { writeAll(STDERR_FILENO, notice + "\n") }
+                for notice in announceJobs(styled: Style.enabled(for: STDERR_FILENO)) { writeAll(STDERR_FILENO, notice + "\n") }
             }
-            switch editor.readLine(prompt: pending.isEmpty ? prompt() : "\u{1B}[90m…\u{1B}[0m ") {
+            switch editor.readLine(prompt: pending.isEmpty ? prompt() : "…".styled(Style.dim) + " ") {
             case .eof:
                 if !pending.isEmpty { execute(pending) }
                 return lastStatus
@@ -217,7 +217,12 @@ public final class Shell {
 
     /// Reports an error, to wherever standard error is redirected.
     func report(_ message: String) {
-        writeAll(stderrFD, "swish: \(message)\n")
+        let styled = Style.enabled(for: stderrFD)
+        if message.hasPrefix("error: ") {
+            writeAll(stderrFD, "swish: error:".styled(Style.error, styled) + message.dropFirst(6) + "\n")
+        } else {
+            writeAll(stderrFD, "swish:".styled(Style.error, styled) + " \(message)\n")
+        }
     }
 
     /// Reports a problem with one item, like a file `ls` couldn't read,
@@ -250,7 +255,7 @@ public final class Shell {
             directory = "~" + directory.dropFirst(home.count)
         }
         let failed = lastStatus != 0
-        let status = failed ? "\u{1B}[31m[\(lastStatus)]\u{1B}[0m " : ""
-        return "\u{1B}[36m\(directory)\u{1B}[0m \(status)\u{1B}[\(failed ? 31 : 32)m❯\u{1B}[0m "
+        let status = failed ? "[\(lastStatus)]".styled(Style.red) + " " : ""
+        return directory.styled(Style.cyan) + " " + status + "❯".styled(failed ? Style.red : Style.green) + " "
     }
 }

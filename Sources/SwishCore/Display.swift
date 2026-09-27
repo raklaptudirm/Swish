@@ -20,23 +20,34 @@ extension Shell {
         case .output(let output) where output.text.isEmpty && !debug:
             return
         case .record(let record):
-            for line in keyValueLines(record) { writeAll(stdoutFD, line + "\n") }
+            for line in keyValueLines(record, styled: Style.enabled(for: stdoutFD)) { writeAll(stdoutFD, line + "\n") }
         case .list(let items) where items.contains(where: { $0.asRecord != nil }):
             let formatter = Formatter(fd: stdoutFD)
             for item in items { formatter.add(item) }
             formatter.finish()
+        case _ where debug:
+            let printer = PrettyPrinter(width: terminalWidth(stdoutFD) ?? 80, styled: Style.enabled(for: stdoutFD))
+            writeAll(stdoutFD, printer.format(value) + "\n")
         default:
-            writeAll(stdoutFD, (debug ? value.debugDescription : value.description) + "\n")
+            writeAll(stdoutFD, value.description + "\n")
         }
     }
 
     /// `name  value` lines, with keys aligned.
-    func keyValueLines(_ record: Record) -> [String] {
+    func keyValueLines(_ record: Record, styled: Bool = false) -> [String] {
         let width = record.keys.map(\.count).max() ?? 0
         return record.map { key, value in
-            key.padding(toLength: width, withPad: " ", startingAt: 0) + "  " + Formatter.cell(value)
+            key.styled(Style.label, styled) + String(repeating: " ", count: width - key.count + 2)
+                + Formatter.cell(value).styled(Formatter.style(of: value, key: key, in: record), styled)
         }
     }
+}
+
+/// The width of the terminal `fd` is, if it is one.
+func terminalWidth(_ fd: Int32) -> Int? {
+    var size = winsize()
+    guard isatty(fd) != 0, ioctl(fd, TIOCGWINSZ, &size) == 0, size.ws_col > 0 else { return nil }
+    return Int(size.ws_col)
 }
 
 extension Value {
@@ -80,10 +91,9 @@ final class Formatter {
     /// Writes to `fd`, fitting the terminal and styling the header when it
     /// is one. A file gets every character: nothing is cut to fit.
     convenience init(fd: Int32) {
-        var size = winsize()
         let isTerminal = isatty(fd) != 0
-        let width = isTerminal && ioctl(fd, TIOCGWINSZ, &size) == 0 && size.ws_col > 0 ? Int(size.ws_col) : Int.max
-        self.init(maxWidth: width, styled: isTerminal, columnCap: isTerminal ? 40 : .max) { writeAll(fd, $0) }
+        self.init(maxWidth: terminalWidth(fd) ?? .max, styled: Style.enabled(for: fd),
+                  columnCap: isTerminal ? 40 : .max) { writeAll(fd, $0) }
     }
 
     /// Rows for another program to read, as in `ls | grep x`: the view's
@@ -138,9 +148,9 @@ final class Formatter {
         guard !pending.isEmpty else { return true }
         columns = layout(for: pending)
         if header {
-            var line = trimmingTrailingSpaces(columns!.map { pad($0.key, $0) }.joined(separator: "  "))
-            if droppedColumns { line += "  …" }
-            guard emit(styled ? "\u{1B}[1m\(line)\u{1B}[0m" : line) else { return false }
+            var line = trimmingTrailingSpaces(columns!.map { pad($0.key, $0, Style.label) }.joined(separator: "  "))
+            if droppedColumns { line += "  " + "…".styled(Style.dim, styled) }
+            guard emit(line) else { return false }
         }
         let rows = pending
         pending = []
@@ -189,7 +199,31 @@ final class Formatter {
     }
 
     private func row(_ record: Record) -> String {
-        trimmingTrailingSpaces(columns!.map { pad(Formatter.cell(record[$0.key] ?? .nothing), $0) }.joined(separator: "  "))
+        trimmingTrailingSpaces(columns!.map { column in
+            let value = record[column.key] ?? .nothing
+            return pad(Formatter.cell(value), column, Formatter.style(of: value, key: column.key, in: record))
+        }.joined(separator: "  "))
+    }
+
+    /// What stands out in a table: directories and links in `ls`, and how
+    /// jobs are going. Everything else is plain.
+    static func style(of value: Value, key: String, in record: Record) -> Style? {
+        if key == "name", case .enumValue(let type)? = record["type"], type.type === Shell.fileType {
+            switch type.name {
+            case "directory": return .boldBlue
+            case "symlink": return .cyan
+            default: return nil
+            }
+        }
+        if case .enumValue(let state) = value, state.type === Shell.jobState {
+            switch state.name {
+            case "running": return .green
+            case "stopped": return .yellow
+            case "cancelled": return .dim
+            default: return nil
+            }
+        }
+        return nil
     }
 
     /// Leading spaces are a right-aligned column's padding, so only the end
@@ -198,10 +232,12 @@ final class Formatter {
         String(line.reversed().drop { $0 == " " }.reversed())
     }
 
-    private func pad(_ text: String, _ column: Column) -> String {
+    /// Styles only the text, so trailing padding can still be trimmed.
+    private func pad(_ text: String, _ column: Column, _ style: Style? = nil) -> String {
         let fitted = text.count > column.width ? text.prefix(column.width - 1) + "…" : text
         let padding = String(repeating: " ", count: column.width - fitted.count)
-        return column.rightAligned ? padding + fitted : fitted + padding
+        let shown = String(fitted).styled(style, styled)
+        return column.rightAligned ? padding + shown : shown + padding
     }
 
     private func emit(_ line: String) -> Bool {

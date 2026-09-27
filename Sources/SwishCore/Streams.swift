@@ -133,7 +133,7 @@ extension Shell {
         _ set: OverloadSet, _ args: [CommandArgument], upstream: ValueStream?, upstreamIsExternal: Bool
     ) throws -> ValueStream {
         if helpRequested(args, for: set) {
-            writeAll(stdoutFD, helpText(for: set))
+            writeAll(stdoutFD, helpText(for: set, styled: Style.enabled(for: stdoutFD)))
             return .empty
         }
 

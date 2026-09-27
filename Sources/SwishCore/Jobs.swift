@@ -89,16 +89,24 @@ final class Job: SwishObject, @unchecked Sendable {
         ]))
     }
 
-    var description: String {
-        let label = switch state {
-        case .running: "running"
-        case .stopped: "stopped"
-        case .done where cancelled: "cancelled"
-        case .done where signal != nil: "failed (\(String(cString: strsignal(signal!)).lowercased()))"
-        case .done where status != 0: "failed (\(status))"
-        case .done: "done"
+    /// `[1] running  make`, in pieces to color: the number dim, the state
+    /// by how it's going.
+    var segments: [PrettyPrinter.Segment] {
+        let (label, style): (String, Style?) = switch state {
+        case .running: ("running", Style.green)
+        case .stopped: ("stopped", Style.yellow)
+        case .done where cancelled: ("cancelled", Style.dim)
+        case .done where signal != nil: ("failed (\(String(cString: strsignal(signal!)).lowercased()))", Style.red)
+        case .done where status != 0: ("failed (\(status))", Style.red)
+        case .done: ("done", nil)
         }
-        return "[\(id)] \(label)  \(source)"
+        return [("[\(id)]", Style.dim), (" ", nil), (label, style), ("  " + source, nil)]
+    }
+
+    var description: String { line(styled: false) }
+
+    func line(styled: Bool) -> String {
+        segments.map { $0.text.styled($0.style, styled) }.joined()
     }
 
     /// A job on its own reads as `jobs` announces it: `[1] running  make`.
@@ -230,14 +238,14 @@ extension Shell {
 
     /// What's changed with background jobs, for the notices before the next
     /// prompt. Finished jobs leave `jobs` once they've been reported.
-    func announceJobs() -> [String] {
+    func announceJobs(styled: Bool = false) -> [String] {
         updateJobs()
         var notices: [String] = []
         for job in jobs where job.state != .running && !job.reported {
             job.reported = true
             notices.append(job.state == .stopped
-                ? job.description + "  (waiting for the terminal: await it)"
-                : job.description)
+                ? job.line(styled: styled) + "  (waiting for the terminal: await it)".styled(Style.dim, styled)
+                : job.line(styled: styled))
         }
         jobs.removeAll { $0.state == .done }
         return notices

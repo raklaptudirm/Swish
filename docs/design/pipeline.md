@@ -122,6 +122,14 @@ pipeline turns values into text, and only if nothing else consumed them.
   Interpolation, commands and pipelines use `description`, the plain text,
   and lists of records and single records are still tables and key/value
   lists. A job on its own reads as `jobs` announces it: `[1] running  make`.
+  One that doesn't fit the terminal is broken over lines as you'd format
+  it in Swift, and a string of several lines inside it (an Output's text)
+  is a `"""` block.
+- **Color is sparing.** It marks what matters and separates parts; the rest
+  is plain. Values use the input highlighter's colors (strings, numbers and
+  `nil`, type names); headers, keys and help sections are bold; errors are
+  red; in tables, directories are blue and jobs are colored by state. Only
+  terminals get color, and `NO_COLOR` or `TERM=dumb` turns it off.
 - **Objects without a view or `Mirror` children** will show their type name,
   plus their `description` if they conform to `CustomStringConvertible`,
   with a hint to run `members`.

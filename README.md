@@ -152,6 +152,8 @@ foreign ls -la                    // the program, not the builtin `ls`
 
 Interactively there's syntax highlighting, completion of commands, paths and
 function flags, history with prefix and `^R` search, and multi-line editing.
+Values print as Swift would show them, colored like the input and broken
+over lines when they're wide.
 
 ## Getting started
 

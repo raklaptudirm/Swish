@@ -4,6 +4,12 @@
 set timeout 5
 log_user 0
 set failures 0
+# Output is colored at word boundaries; `colored` lets a pattern's spaces
+# also match the escapes around them.
+proc colored {pattern} {
+  set c {(?:\x1b\[[0-9;]*m)*}
+  return [string map [list " " "$c $c"] $pattern]
+}
 set env(SWISH_HISTORY) [exec mktemp]
 # The end of a prompt: directory, then the arrow in any color.
 set prompt {\x1b\[0m \x1b\[3[12]m}
@@ -20,11 +26,11 @@ expect -re $prompt
 
 # A finished background job is announced before the next prompt.
 send "async sleep 0.2\r"
-step "async shows the job" {\[1\] running  sleep 0.2}
+step "async shows the job" [colored {\[1\] running  sleep 0.2}]
 expect -re $prompt
 after 600
 send "\r"
-step "a finished job is announced before the prompt" {\[1\] done  sleep 0.2}
+step "a finished job is announced before the prompt" [colored {\[1\] done  sleep 0.2}]
 expect -re $prompt
 
 # A job waiting for the terminal is stopped, and await gives it the terminal.
@@ -34,7 +40,7 @@ send "async python3 -c 'print(\"got\", input())'\r"
 expect -re $prompt
 after 400
 send "\r"
-step "a job reading the terminal waits for it" {\[1\] stopped  python3 .*\(waiting for the terminal}
+step "a job reading the terminal waits for it" [colored {\[1\] stopped  python3 .*\(waiting for the terminal}]
 expect -re $prompt
 send "await\r"
 after 300
@@ -46,7 +52,7 @@ expect -re $prompt
 send "sh -c 'stty -echo; python3 -c \"print(input())\"'\r"
 after 400
 send "\x1a"
-step "^Z stops a foreground job" {\[1\] stopped  sh -c}
+step "^Z stops a foreground job" [colored {\[1\] stopped  sh -c}]
 expect -re $prompt
 send "await\r"
 after 300

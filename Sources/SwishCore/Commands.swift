@@ -86,7 +86,7 @@ extension Shell {
     /// asked. The status is 1 for a false result and 0 otherwise.
     func callCommand(_ set: OverloadSet, _ args: [CommandArgument], display shouldDisplay: Bool) throws -> Int32 {
         if helpRequested(args, for: set) {
-            writeAll(stdoutFD, helpText(for: set))
+            writeAll(stdoutFD, helpText(for: set, styled: Style.enabled(for: stdoutFD)))
             return 0
         }
         let (function, bindings) = try resolve(set) { try self.bind(commandLine: args, to: $0, excludingInput: false) }
@@ -306,12 +306,14 @@ extension Shell {
         set.candidates.contains { $0.parameters.contains { $0.label == "help" || $0.shortFlag == "h" } }
     }
 
-    func helpText(for set: OverloadSet) -> String {
+    /// Section titles stand out when `styled`, and flags are colored as
+    /// the highlighter colors them.
+    func helpText(for set: OverloadSet, styled: Bool = false) -> String {
         var lines: [String] = []
         if let summary = set.candidates.compactMap({ $0.documentation?.summary }).first(where: { !$0.isEmpty }) {
             lines += [summary, ""]
         }
-        lines.append("Usage:")
+        lines.append("Usage:".styled(Style.label, styled))
         lines += set.candidates.map { "  " + usage(of: $0, named: set.name) }
 
         var arguments: [(String, String)] = []
@@ -347,9 +349,11 @@ extension Shell {
         let width = (arguments + options).map(\.0.count).max()! + 2
         func rows(_ title: String, _ entries: [(String, String)]) {
             guard !entries.isEmpty else { return }
-            lines += ["", title]
+            lines += ["", title.styled(Style.label, styled)]
             lines += entries.map { key, detail in
-                detail.isEmpty ? "  " + key : "  " + key.padding(toLength: width, withPad: " ", startingAt: 0) + detail
+                let color: Style? = key.hasPrefix("-") ? Style.flag : nil
+                return detail.isEmpty ? "  " + key.styled(color, styled)
+                    : "  " + key.styled(color, styled) + String(repeating: " ", count: width - key.count) + detail
             }
         }
         rows("Arguments:", arguments)

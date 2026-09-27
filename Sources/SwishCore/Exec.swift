@@ -204,7 +204,7 @@ extension Shell {
                 job.state = .stopped
                 job.reported = true
                 adopt(job)
-                writeAll(STDERR_FILENO, "\n\(job.description)\n")
+                writeAll(STDERR_FILENO, "\n" + job.line(styled: Style.enabled(for: STDERR_FILENO)) + "\n")
                 return 128 + SIGTSTP
             }
             job.running.removeFirst()

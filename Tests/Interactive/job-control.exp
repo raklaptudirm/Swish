@@ -8,6 +8,12 @@ spawn .build/debug/swish
 # The end of a success prompt: directory, then a green arrow.
 set ok {\x1b\[0m \x1b\[32m}
 set failures 0
+# Output is colored at word boundaries; `colored` lets a pattern's spaces
+# also match the escapes around them.
+proc colored {pattern} {
+  set c {(?:\x1b\[[0-9;]*m)*}
+  return [string map [list " " "$c $c"] $pattern]
+}
 proc step {name pattern} {
   expect {
     -re $pattern { puts "ok   $name" }
@@ -30,10 +36,10 @@ step "^C kills the job, not the shell" {\[130\]}
 send "sleep 30 | cat\r"
 after 300
 send "\x1a"
-step "^Z stops the pipeline" {\[1\] stopped  sleep 30 \| cat}
+step "^Z stops the pipeline" [colored {\[1\] stopped  sleep 30 \| cat}]
 expect -re {\x1b\[0m \x1b\[31m}
 send "jobs\r"
-step "jobs lists it" { 1  stopped  sleep 30 \| cat}
+step "jobs lists it" [colored { 1  stopped  sleep 30 \| cat}]
 expect -re {\x1b\[0m \x1b\[32m}
 send "await\r"
 after 300

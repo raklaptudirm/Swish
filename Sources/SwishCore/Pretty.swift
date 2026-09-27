@@ -1,0 +1,168 @@
+import Foundation
+import SwishKit
+
+/// Shows a value as `debugDescription` spells it, but for a person: in the
+/// highlighter's colors, and, when it won't fit on one line, broken over
+/// lines with each element or field on its own, the way you'd format it as
+/// Swift. A string of several lines is a `"""` literal then.
+struct PrettyPrinter {
+    var width = 80
+    var styled = false
+
+    typealias Segment = (text: String, style: Style?)
+
+    /// A value's shape: text that can't be broken, a string, or brackets
+    /// around (labeled) elements.
+    indirect enum Node {
+        case segments([Segment])
+        case string(String)
+        case group(open: [Segment], items: [(label: [Segment], node: Node)], close: String)
+    }
+
+    func format(_ value: Value) -> String {
+        render(node(for: value), indent: 0, used: 0, trailing: 0)
+    }
+
+    // MARK: Shapes
+
+    func node(for value: Value) -> Node {
+        switch value {
+        case .nothing: .segments([("nil", Style.constant)])
+        case .bool, .int, .double, .filesize: .segments([(value.description, Style.constant)])
+        case .date, .function: .segments([(value.description, nil)])
+        case .string(let text): .string(text)
+        case .list(let items):
+            .group(open: [("[", nil)], items: items.map { ([], node(for: $0)) }, close: "]")
+        case .record(let record): node(for: record)
+        case .output(let output):
+            .group(open: [("Output", Style.type), ("(", nil)], items: [
+                (label("text"), .string(output.text)),
+                (label("status"), node(for: output.status)),
+            ], close: ")")
+        case .enumValue(let value):
+            node(for: value)
+        case .object(let job as Job):
+            .segments(job.segments)
+        case .object(let type as EnumType):
+            .segments([("enum", Style.keyword), (" ", nil), (type.name, Style.type)])
+        case .object(let object):
+            object.fields.map { node(for: $0) } ?? .segments([(object.debugDescription, nil)])
+        @unknown default:
+            .segments([(value.debugDescription, nil)])
+        }
+    }
+
+    private func node(for record: Record) -> Node {
+        if let typeName = record.typeName {
+            return .group(open: [(typeName, Style.type), ("(", nil)],
+                          items: record.map { (label($0.key), node(for: $0.value)) }, close: ")")
+        }
+        guard record.count > 0 else { return .segments([("[:]", nil)]) }
+        return .group(open: [("[", nil)], items: record.map { key, value in
+            ([(key.debugDescription, Style.string), (": ", nil)], node(for: value))
+        }, close: "]")
+    }
+
+    private func node(for value: EnumValue) -> Node {
+        let head: [Segment] = [(value.type.name, Style.type), ("." + value.name, nil)]
+        guard !value.values.isEmpty else { return .segments(head) }
+        let labels = value.definition?.labels ?? []
+        let items = value.values.enumerated().map { index, item in
+            (index < labels.count ? labels[index].map(label) ?? [] : [], node(for: item))
+        }
+        return .group(open: head + [("(", nil)], items: items, close: ")")
+    }
+
+    private func label(_ name: String) -> [Segment] {
+        [(name + ": ", nil)]
+    }
+
+    // MARK: Layout
+
+    /// `node` starting `used` columns into a line indented by `indent`, with
+    /// `trailing` columns (a comma) to follow it.
+    private func render(_ node: Node, indent: Int, used: Int, trailing: Int) -> String {
+        let line = flat(node)
+        if !mustBreak(node, indent: indent), used + line.plain.count + trailing <= width { return line.styled }
+        switch node {
+        case .segments:
+            return line.styled // Can't be broken.
+        case .string(let text):
+            guard text.contains("\n") else { return line.styled }
+            let inner = String(repeating: " ", count: indent + 2)
+            let body = text.split(separator: "\n", omittingEmptySubsequences: false).map { row in
+                row.isEmpty ? "" : inner + PrettyPrinter.escapedForBlock(String(row)).styled(Style.string, styled)
+            }
+            let quotes = "\"\"\"".styled(Style.string, styled)
+            return quotes + "\n" + body.joined(separator: "\n") + "\n" + inner + quotes
+        case .group(let open, let items, let close):
+            guard !items.isEmpty else { return line.styled }
+            let inner = String(repeating: " ", count: indent + 2)
+            let rows = items.enumerated().map { index, item in
+                let isLast = index == items.count - 1
+                let label = paint(item.label)
+                return inner + label.styled
+                    + render(item.node, indent: indent + 2, used: indent + 2 + label.plain.count, trailing: isLast ? 0 : 1)
+                    + (isLast ? "" : ",")
+            }
+            return paint(open).styled + "\n" + rows.joined(separator: "\n") + "\n"
+                + String(repeating: " ", count: indent) + close
+        }
+    }
+
+    /// A string of several lines inside something is a `"""` block, so
+    /// command output reads as it printed; what holds one breaks for it.
+    private func mustBreak(_ node: Node, indent: Int) -> Bool {
+        switch node {
+        case .segments: false
+        case .string(let text): indent > 0 && text.contains("\n")
+        case .group(_, let items, _): items.contains { mustBreak($0.node, indent: 1) }
+        }
+    }
+
+    /// The one-line form: exactly `debugDescription`, when plain.
+    private func flat(_ node: Node) -> (plain: String, styled: String) {
+        switch node {
+        case .segments(let segments):
+            return paint(segments)
+        case .string(let text):
+            let quoted = text.debugDescription
+            return (quoted, quoted.styled(Style.string, styled))
+        case .group(let open, let items, let close):
+            var plain = paint(open).plain
+            var colored = paint(open).styled
+            for (index, item) in items.enumerated() {
+                if index > 0 {
+                    plain += ", "
+                    colored += ", "
+                }
+                let label = paint(item.label)
+                let value = flat(item.node)
+                plain += label.plain + value.plain
+                colored += label.styled + value.styled
+            }
+            return (plain + close, colored + close)
+        }
+    }
+
+    /// A line of a `"""` literal: backslashes and control characters (an
+    /// escape sequence in a program's output, say) escaped, so it can't be
+    /// mistaken for anything else or change the terminal.
+    static func escapedForBlock(_ line: String) -> String {
+        var result = ""
+        for scalar in line.unicodeScalars {
+            switch scalar {
+            case "\\": result += "\\\\"
+            case "\t": result += "\t"
+            case _ where scalar.value < 0x20 || scalar.value == 0x7F:
+                result += "\\u{" + String(scalar.value, radix: 16, uppercase: true) + "}"
+            default: result.unicodeScalars.append(scalar)
+            }
+        }
+        return result.replacingOccurrences(of: "\"\"\"", with: "\\\"\"\"")
+    }
+
+    private func paint(_ segments: [Segment]) -> (plain: String, styled: String) {
+        (segments.map(\.text).joined(), segments.map { $0.text.styled($0.style, styled) }.joined())
+    }
+}
