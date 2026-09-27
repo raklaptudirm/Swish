@@ -26,18 +26,22 @@ scripts/test.sh               # unit tests + pty-driven job-control and editor t
   boundaries with external programs, formatting at the end, errors
 - [Functions and commands](docs/design/callables.md): one callable, with a
   Swift call syntax and a command-line syntax derived from its signature
+- [Shell syntax](docs/design/syntax.md): where Swish departs from POSIX:
+  comments, the environment, status, scripts, redirects, background jobs
 
 ## Milestones
 
 1. ✅ REPL, PATH lookup, pipes, process groups, `^C`/`^Z`, `fg`/`jobs`, `cd`/`pwd`/`exit`
-2. ✅ Redirections (`>`, `>>`, `<`, `2>`, `2>&1`, `>&2`, `&>`, applied in order, for Swish
+2. ✅ Redirections (`>`, `>>`, `<`, `e>`, `e>o`, `o>e`, `o+e>`, applied in order, for Swish
    functions too), globbing (`*`, `[…]`, `**`; `?` is literal; no match is an error), `;`/`&&`/`||`
-3. Full job control: `&`, `bg`, per-job terminal modes, `SIGCHLD` notifications
+3. Background jobs as `async`/`await` values (no `&`), `bg`, per-job terminal modes,
+   `SIGCHLD` notifications
 4. ✅ The language: two-mode parsing, `let`/`var`, literals and operators, lists, ranges,
    `if`/`else`, `if let`, `??`, `for`/`while`/`break`/`continue`, `func`, closures, `\(…)`,
-   `$name`/`$?`, `$(…)` (throws if the command fails), `try?`/`try!`, multi-line input
+   `$name` in commands, `$(…)` (throws if the command fails), `try?`/`try!`, `env`, `status`,
+   `//` comments, trailing closures, scripts with `args` and `main`, multi-line input
 5. ✅ Callables: command-line binding derived from signatures, `@input` streaming,
-   `@flag` short flags, `--help` from doc comments, overloads, `^name` and `which`
+   `@flag` short flags, `--help` from doc comments, overloads, `foreign name` and `which`
 6. ✅ Structured data: records, file sizes and dates, `Encodable` → `Value`, views and the
    display step, per-item errors, `members`, builtins (`ls`, `ps`, `where`, `select`, `get`,
    `sort`, `first`, `count`, `reverse`, `from json`, `to json`/`to text`, `table`, `list`)

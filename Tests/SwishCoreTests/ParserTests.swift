@@ -154,15 +154,15 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
 
 @Test func docCommentsAboveFunctions() throws {
     let source = """
-    echo unrelated # not documentation
+    echo unrelated // not documentation
 
-    # Greets someone.
-    #
-    # Politely.
-    # - Parameter name: who to greet
+    /// Greets someone.
+    ///
+    /// Politely.
+    /// - Parameter name: who to greet
       func greet(_ name: String) {}
-    # A stray comment
-    ; func other() {}
+    // An ordinary comment isn't documentation.
+    func other() {}
     """
     let functions = try parse(source).statements.compactMap { statement -> FunctionDecl? in
         if case .function(let decl) = statement { decl } else { nil }
@@ -237,10 +237,9 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
 }
 
 @Test func interpolationInWords() throws {
-    #expect(try words(#"echo \(n)px "$HOME/x" $?"#, bound: ["n"]).dropFirst() == [
+    #expect(try words(#"echo \(n)px "$HOME/x""#, bound: ["n"]).dropFirst() == [
         [.expression(.variable("n")), .literal("px")],
         [.expression(.dollar("HOME")), .literal("/x")],
-        [.expression(.status)],
     ])
 }
 
@@ -308,7 +307,7 @@ private func command(_ source: String) throws -> CommandNode? {
 }
 
 @Test func redirectsInOrder() throws {
-    let node = try command("cmd > out 2>&1 < in >> log 2>> err &> all &>> more 1<&0")
+    let node = try command("cmd > out e>o < in >> log e>> err o+e> all o+e>> more o>e e> e")
     #expect(node?.redirects == [
         Redirect(fd: 1, target: .file([.literal("out")], .write)),
         Redirect(fd: 2, target: .descriptor(1)),
@@ -319,25 +318,85 @@ private func command(_ source: String) throws -> CommandNode? {
         Redirect(fd: 2, target: .descriptor(1)),
         Redirect(fd: 1, target: .file([.literal("more")], .append)),
         Redirect(fd: 2, target: .descriptor(1)),
-        Redirect(fd: 1, target: .descriptor(0)),
+        Redirect(fd: 1, target: .descriptor(2)),
+        Redirect(fd: 2, target: .file([.literal("e")], .write)),
     ])
     #expect(node?.words.count == 1)
 }
 
-@Test func aNumberMustTouchItsRedirect() throws {
-    let spaced = try command("echo 2 > f")
-    #expect(spaced?.words.count == 2)
-    #expect(spaced?.redirects == [Redirect(fd: 1, target: .file([.literal("f")], .write))])
-    #expect(try command("echo 2>f")?.redirects == [Redirect(fd: 2, target: .file([.literal("f")], .write))])
+@Test func redirectSpellingDetails() throws {
+    #expect(try command("echo 2 > f")?.words.count == 2) // a number is just an argument
     #expect(try command("echo a>b")?.words.count == 2) // `>` ends a word
     #expect(try command("> out echo hi")?.words.count == 2) // redirects can come first
+    // `e>o` merges only when it stands alone; `e>output` is a file.
+    #expect(try command("cmd e>output")?.redirects == [Redirect(fd: 2, target: .file([.literal("output")], .write))])
+    #expect(try command("cmd e>o|x")?.redirects == [Redirect(fd: 2, target: .descriptor(1))])
+}
+
+@Test func posixRedirectsNameTheSwishSpelling() {
+    for (posix, swish) in [("2>f", "e>"), ("2>>f", "e>>"), ("2>&1", "e>o"), (">&2", "o>e"), ("&> f", "o+e>"), ("&>> f", "o+e>>"), ("1> f", ">")] {
+        #expect(syntaxError("echo x \(posix)")?.description.hasSuffix(swish) == true, "\(posix)")
+    }
+    #expect(syntaxError("echo x 3> f")?.description.contains("numbered descriptors") == true)
 }
 
 @Test func redirectErrors() {
     #expect(syntaxError("echo >")?.incomplete == true)
     #expect(syntaxError("echo > | cat")?.incomplete == false)
-    #expect(syntaxError("echo >&x")?.incomplete == false)
-    #expect(syntaxError("echo & x")?.incomplete == false) // still no background jobs
+    #expect(syntaxError("echo & x")?.description.contains("async") == true)
+}
+
+@Test func commentsAreSlashes() throws {
+    #expect(try words("echo hi // note").count == 2)
+    #expect(try words("echo #tag http://x//y") == [[.literal("echo")], [.literal("#tag")], [.literal("http://x//y")]])
+    #expect(try parse("#!/usr/bin/env swish\necho hi").statements.count == 1)
+    #expect(syntaxError("let x = 1 # not a comment") != nil)
+}
+
+@Test func dollarStatusIsGone() {
+    #expect(syntaxError("echo $?")?.description.contains("status.code") == true)
+}
+
+@Test func foreignMarksExternal() throws {
+    #expect(try command("foreign ls -la")?.external == true)
+    #expect(try command("foreign ls -la")?.words.count == 2)
+    #expect(try command("^ls")?.external == true)
+    #expect(try command("foreigner x")?.external == false) // only the whole word
+}
+
+@Test func environmentPrefixesAndAssignments() throws {
+    let node = try command(#"EDITOR=vim MSG="a b" EMPTY= git commit"#)
+    #expect(node?.environment == [
+        EnvironmentAssignment(name: "EDITOR", value: [.literal("vim")]),
+        EnvironmentAssignment(name: "MSG", value: [.literal("a b")]),
+        EnvironmentAssignment(name: "EMPTY", value: [.literal("")]),
+    ])
+    #expect(node?.words.count == 2)
+    #expect(syntaxError("FOO=bar")?.description.contains("env.FOO") == true)
+    #expect(try parse(#"env.EDITOR = "vim"; env["X"] = nil"#).statements == [
+        .setEnvironment(name: .literal(.string("EDITOR")), value: .literal(.string("vim"))),
+        .setEnvironment(name: .literal(.string("X")), value: .literal(.nothing)),
+    ])
+}
+
+@Test func dollarNamesInterpolateOnlyInCommands() throws {
+    #expect(try parse(#"let s = "costs $5 and $HOME""#).statements == [
+        .declare(name: "s", mutable: false, value: .literal(.string("costs $5 and $HOME"))),
+    ])
+    #expect(try words(#"echo "$HOME""#).last == [.expression(.dollar("HOME"))])
+}
+
+@Test func trailingClosures() throws {
+    guard case .declare(_, _, .call(_, let arguments)) = try parse("let r = with(env: e) { x }", bound: ["with", "e", "x"]).statements[0] else {
+        Issue.record()
+        return
+    }
+    #expect(arguments.count == 2)
+    #expect(arguments[1].label == nil)
+    // After `if` and `for … in`, `{` is the body.
+    guard case .chain(let chain) = try parse("if f(1) { echo }", bound: ["f"]).statements[0],
+          case .ifStatement(let node) = chain.first else { Issue.record(); return }
+    #expect(node.then.statements.count == 1)
 }
 
 @Test func onlyUnquotedWildcardsGlob() throws {

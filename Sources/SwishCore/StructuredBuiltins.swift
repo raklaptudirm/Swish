@@ -16,6 +16,25 @@ extension Shell {
                 mutable: false, isFunction: true
             )
         }
+        // `with` is only called with a closure, so it isn't a command.
+        scopes[0].bindings["with"] = Binding(value: .function(OverloadSet(name: "with", candidates: [with()])), mutable: false)
+        scopes[0].bindings["env"] = Binding(value: .nothing, mutable: false, special: .environment)
+        scopes[0].bindings["status"] = Binding(value: .nothing, mutable: false, special: .status)
+        scopes[0].bindings["args"] = Binding(value: .list([]), mutable: false)
+    }
+
+    /// `with(env: ["EDITOR": "vim"]) { git commit }`: runs the closure with
+    /// environment variables set, then puts them back.
+    private func with() -> Function {
+        builtin(
+            "with", "Runs a closure with environment variables set.",
+            [option("env", .record), positional("body", .function)],
+            .native { shell, args in
+                guard case .record(let variables) = args["env"] else { return .nothing }
+                let pairs = variables.map { ($0.key, $0.value.description) }
+                return try shell.withEnvironment(pairs) { try shell.call(args["body"]!, with: []) }
+            }
+        )
     }
 
     // MARK: Sources

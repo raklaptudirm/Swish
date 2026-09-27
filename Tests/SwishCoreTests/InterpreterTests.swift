@@ -92,7 +92,7 @@ private func status(_ source: String) -> Int32 {
 }
 
 @Test func failingCommandsDontStopTheInput() throws {
-    #expect(try output("false; echo $?; ^false; echo $?") == "1\n1\n")
+    #expect(try output("false; echo \\(status.code); foreign false; echo \\(status.code)") == "1\n1\n")
 }
 
 @Test func syntaxErrorsSetStatusTwo() {
@@ -197,7 +197,7 @@ private let greet = #"func greet(_ name: String, times: Int = 1, loud: Bool = fa
 @Test func functionsInPipelinesAndSubstitutions() throws {
     #expect(try output(greet + "greet Rak --times 2 | tr a-z A-Z") == "HI RAK\nHI RAK\n")
     #expect(try output(greet + #"let s = $(greet Rak --loud); echo "[\(s)]""#) == "[HI Rak]\n")
-    #expect(try output(greet + "^greet Rak") == "") // no external named greet
+    #expect(try output(greet + "^greet Rak; foreign greet Rak") == "") // no external named greet
 }
 
 @Test func boolResultsAreStatuses() throws {
@@ -282,8 +282,8 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
 
 @Test func generatedHelp() throws {
     let source = """
-    # Greets someone.
-    # - Parameter name: who to greet
+    /// Greets someone.
+    /// - Parameter name: who to greet
     func greet(_ name: String, @flag("n") times: Int = 1, color: Bool = true, tags: [String]) {}
     greet --help
     """
@@ -484,4 +484,48 @@ private func fixture() throws -> String {
 
 @Test func questionMarksAreLiteral() throws {
     #expect(try output("echo https://example.com/?q=1 a?b") == "https://example.com/?q=1 a?b\n")
+}
+
+// MARK: Environment, status, scripts
+
+@Test func environmentValue() throws {
+    let name = "SWISH_TEST_\(Int.random(in: 0..<1_000_000))"
+    #expect(try output("env.\(name) == nil; env.\(name) = \"one two\"; echo $\(name); env[\"\(name)\"]; env.\(name) = nil; env.\(name) == nil") == "true\none two\none two\ntrue\n")
+    #expect(try output("env.HOME == \"\(env("HOME")!)\"") == "true\n")
+    // `env.NAME` is always the variable NAME, even one called `count`.
+    #expect(try output("env.count == nil") == "true\n")
+}
+
+@Test func environmentForOneCommand() throws {
+    let name = "SWISH_TEST_\(Int.random(in: 0..<1_000_000))"
+    #expect(try output(#"\#(name)="a b" sh -c 'echo "$\#(name)"'; env.\#(name) == nil"#) == "a b\ntrue\n")
+    #expect(try output(#"func show() { sh -c 'echo "$\#(name)"' }; \#(name)=fn show"#) == "fn\n")
+    #expect(try output(#"with(env: ["\#(name)": "block"]) { sh -c 'echo "$\#(name)"' }; env.\#(name) == nil"#) == "block\ntrue\n")
+}
+
+@Test func statusValue() throws {
+    // `status` describes the statement before, so it's read once into `s`.
+    #expect(try output("false; let s = status; s.code; s.succeeded; s.signal == nil") == "1\nfalse\ntrue\n")
+    #expect(try output("sh -c 'kill -TERM $$' e> /dev/null; let s = status; s.signal; s.code == nil") == "15\ntrue\n")
+    #expect(try output("false; status.code; status.code") == "1\n0\n")
+}
+
+@Test func stringsInExpressionsArePureSwift() throws {
+    #expect(try output(#""costs $5 and $HOME""#) == "costs $5 and $HOME\n")
+    #expect(try output(#"echo "home: $HOME" | cut -c1-6"#) == "home: \n")
+}
+
+@Test func scriptsGetArgsAndMain() throws {
+    let shell = Shell()
+    let path = try output("mktemp", in: shell).trimmingCharacters(in: .newlines)
+    shell.execute(#"printf '%s\n' '/// Greets someone.' 'func main(_ name: String, loud: Bool = false) { if loud { echo "HI \(name)" } else { echo "hi \(name)" } }' 'echo "args \(args.count)"' > \#(path)"#)
+    let script = Shell()
+    var status: Int32 = 0
+    #expect(try script.capturing { status = script.runScript(at: path, arguments: ["Rak", "--loud"]) } == "args 2\nHI Rak\n")
+    #expect(status == 0)
+    let helper = Shell()
+    let help = try helper.capturing { _ = helper.runScript(at: path, arguments: ["--help"]) }
+    #expect(help.contains("Greets someone.") && help.contains("[--loud] <name>"))
+    let missing = Shell()
+    #expect(missing.runScript(at: path) == 1) // main needs a name
 }

@@ -97,7 +97,7 @@ extension Shell {
             switch stage {
             case .value(let value):
                 stream = .elements(of: value)
-            case .function(let set, let args, _):
+            case .function(let set, let args, _, _):
                 stream = try functionStream(set, args, upstream: stream, upstreamIsExternal: upstreamIsExternal)
             case .external:
                 preconditionFailure("external stages don't run in-process")

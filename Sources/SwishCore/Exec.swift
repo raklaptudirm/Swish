@@ -20,9 +20,9 @@ struct SpawnFailure: Error {
 }
 
 enum Stage {
-    case external([String], skipBuiltins: Bool, redirects: [ResolvedRedirect])
+    case external([String], skipBuiltins: Bool, redirects: [ResolvedRedirect], environment: [(String, String)])
     /// A Swish function, which runs in the shell's own process.
-    case function(OverloadSet, [CommandArgument], redirects: [ResolvedRedirect])
+    case function(OverloadSet, [CommandArgument], redirects: [ResolvedRedirect], environment: [(String, String)])
     /// A value feeding the pipeline, as in `[3, 1, 2] | sort`.
     case value(Value)
 
@@ -32,7 +32,15 @@ enum Stage {
 
     var redirects: [ResolvedRedirect] {
         switch self {
-        case .external(_, _, let redirects), .function(_, _, let redirects): redirects
+        case .external(_, _, let redirects, _), .function(_, _, let redirects, _): redirects
+        case .value: []
+        }
+    }
+
+    /// `NAME=value` given before the command.
+    var environment: [(String, String)] {
+        switch self {
+        case .external(_, _, _, let environment), .function(_, _, _, let environment): environment
         case .value: []
         }
     }
@@ -48,10 +56,15 @@ extension Shell {
         if stages.count == 1 {
             switch stages[0] {
             // A function reading a file (`double < numbers`) streams it, below.
-            case .function(let set, let args, let redirects) where !redirects.contains(where: { $0.fd == 0 }):
-                return try withRedirects(redirects) { _, _ in try callCommand(set, args, display: display) }
-            case .external(let argv, let skipBuiltins, let redirects) where !skipBuiltins && Shell.builtinNames.contains(argv[0]):
-                return try withRedirects(redirects) { _, _ in runBuiltin(argv)! }
+            case .function(let set, let args, let redirects, let environment) where !redirects.contains(where: { $0.fd == 0 }):
+                return try withEnvironment(environment) {
+                    try withRedirects(redirects) { _, _ in try callCommand(set, args, display: display) }
+                }
+            case .external(let argv, let skipBuiltins, let redirects, let environment)
+                where !skipBuiltins && Shell.builtinNames.contains(argv[0]):
+                return try withEnvironment(environment) {
+                    try withRedirects(redirects) { _, _ in runBuiltin(argv)! }
+                }
             default:
                 break
             }
@@ -100,7 +113,7 @@ extension Shell {
             }
             defer { input = next?.read ?? -1 }
 
-            guard case .external(let argv, _, let redirects) = stage else {
+            guard case .external(let argv, _, let redirects, let environment) = stage else {
                 // In-process: remember where the run reads from and writes to.
                 if index == segment?.lowerBound { segmentInput = input }
                 if index == segment?.upperBound, let next { segmentOutput = next.write }
@@ -111,7 +124,10 @@ extension Shell {
             let result: Result<pid_t, SpawnFailure>
             do {
                 try descriptors.apply(redirects)
-                result = spawn(argv, pgid: interactive ? job.pgid : -1, descriptors: descriptors)
+                // Children inherit the environment as it is when they start.
+                result = withEnvironment(environment) {
+                    spawn(argv, pgid: interactive ? job.pgid : -1, descriptors: descriptors)
+                }
                 descriptors.closeFiles()
             } catch {
                 // Like a command that fails to start: this stage fails, the
@@ -137,11 +153,13 @@ extension Shell {
         if let segment {
             do {
                 let pipeOutput = segmentOutput >= 0 ? segmentOutput : stdoutFD
+                try withEnvironment(stages[segment].flatMap(\.environment)) {
                 try withRedirects(segmentRedirects, input: segmentInput, output: pipeOutput) { input, output in
                     // Text for the next program, or, if it went to a file or
                     // the terminal, formatted as it would be displayed.
                     try runSegment(stages[segment], input: input, output: output,
                                    toExternal: segmentOutput >= 0 && output == segmentOutput)
+                }
                 }
             } catch {
                 failure = error
@@ -199,6 +217,7 @@ extension Shell {
         }
         if swish_wifsignaled(raw) != 0 {
             let signal = swish_wtermsig(raw)
+            lastSignalStatus = 128 + signal
             switch signal {
             case SIGINT: if interactive { writeAll(STDERR_FILENO, "\n") }
             case SIGPIPE: break

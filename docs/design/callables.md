@@ -43,15 +43,15 @@ argv verbatim.
 Short flags and help text can't be derived from a signature:
 
 ```swift
-# Repeats a greeting.
-# - Parameter times: how many times to greet
+/// Repeats a greeting.
+/// - Parameter times: how many times to greet
 func greet(_ name: String, @flag("n") times: Int = 1) -> String
 ```
 
 `@flag("n")` gives a labeled parameter a short flag: `-n 3`, `-n3`, and
 switches bundle, as in `-lv`.
 
-The `#` comment block directly above a `func` becomes `greet --help` (or
+The `///` comment block directly above a `func` becomes `greet --help` (or
 `-h`), along with a usage line per overload and every argument and option
 with its type and default. A function that declares its own `help` label or
 `-h` flag gets those arguments instead. The same metadata will drive tab
@@ -106,13 +106,13 @@ thread, and two runs separated by an external would each wait on the other.
 1. Swish functions and builtins
 2. External programs on `PATH`
 
-`^name` forces the external, so defining `func ls` never makes `/bin/ls`
+`foreign name` (or `^name`) forces the external, so defining `func ls` never makes `/bin/ls`
 unreachable. `which name` reports what a name resolves to, listing every
 overload of a function.
 
 Structured builtins deliberately keep their familiar Unix names and shadow
 the tools: a bare `ls`, `ps` or `sort` gives records, so
-`ls | where { $0.size > 1.mb }` works out of the box. `^ls` gets `/bin/ls`.
+`ls | where { $0.size > 1.mb }` works out of the box. `foreign ls` gets `/bin/ls`.
 
 Only names defined with `func` are callable in command mode. A closure
 stored in a variable is called in expression mode (`f(x)`). This keeps

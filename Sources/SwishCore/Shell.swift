@@ -1,5 +1,6 @@
 import CShim
 import Foundation
+import SwishKit
 
 public final class Shell {
     public internal(set) var lastStatus: Int32 = 0
@@ -30,6 +31,9 @@ public final class Shell {
     var warnedAboutStoppedJobs = false
     /// A `try!` failed in a script, which stops it.
     var scriptStopped = false
+    /// The status the last signal-killed command gave, to tell 130 from ^C
+    /// apart from a command that exited with 130.
+    var lastSignalStatus: Int32?
 
     private let editor = LineEditor()
 
@@ -81,13 +85,56 @@ public final class Shell {
 
     /// Runs a script file. A `try!` that fails stops it; any other error
     /// only abandons the statement it's in.
-    public func runScript(at path: String) -> Int32 {
+    ///
+    /// `arguments` are the script's `args`. If the script declares `main`,
+    /// it's then called with them as its command line, so a script gets
+    /// flags, `--help` and completion from `main`'s signature.
+    public func runScript(at path: String, arguments: [String] = []) -> Int32 {
         guard let data = FileManager.default.contents(atPath: path) else {
             report("\(path): \(errorMessage(errno).lowercased())")
             return 127
         }
-        var lines = String(decoding: data, as: UTF8.self).split(separator: "\n", omittingEmptySubsequences: false).makeIterator()
-        return runScript { lines.next().map(String.init) }
+        scopes[0].bindings["args"] = Binding(value: .list(arguments.map(Value.string)), mutable: false)
+        // Parsed whole, so doc comments reach their functions and a syntax
+        // error anywhere stops the script before any of it runs; then run a
+        // statement at a time, so a runtime error only abandons its own.
+        let program: Program
+        switch parse(String(decoding: data, as: UTF8.self)) {
+        case .failure(let error):
+            report("\(path): syntax error: \(error)")
+            return 2
+        case .success(let parsed):
+            program = parsed
+        }
+        var status: Int32 = 0
+        for statement in program.statements {
+            runReportingErrors(Program(statements: [statement]))
+            status = lastStatus
+            if scriptStopped { return status }
+        }
+        guard let main = scopes[1].bindings["main"], main.isFunction,
+              case .function(let set as OverloadSet) = main.value else { return status }
+        // `main` stands for the script, so its help and errors use the script's name.
+        let name = (path as NSString).lastPathComponent
+        let script = OverloadSet(name: name, candidates: set.candidates.map {
+            Function(name: name, parameters: $0.parameters, returnType: $0.returnType, body: $0.body,
+                     captured: $0.captured, documentation: $0.documentation)
+        })
+        do {
+            lastStatus = try callCommand(script, arguments.map(CommandArgument.text), display: true)
+        } catch let fatal as FatalError {
+            report("error: \(fatal.error)")
+            lastStatus = fatal.error.status
+        } catch let error as RuntimeError {
+            report("error: \(error)")
+            lastStatus = error.status
+        } catch is AlreadyReported {
+            lastStatus = 1
+        } catch {
+            report("error: \(error)")
+            lastStatus = 1
+        }
+        return lastStatus
     }
 
     /// Runs lines as they come, grouping those of an unfinished statement.

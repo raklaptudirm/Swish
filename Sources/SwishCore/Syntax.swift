@@ -11,6 +11,8 @@ enum Statement: Equatable, Sendable {
     case declare(name: String, mutable: Bool, value: Expr)
     case assign(name: String, value: Expr)
     case function(FunctionDecl)
+    /// `env.NAME = value` or `env["NAME"] = value`; nil unsets it.
+    case setEnvironment(name: Expr, value: Expr)
     case returnStatement(Expr?)
     case breakStatement
     case continueStatement
@@ -137,16 +139,23 @@ struct CommandNode: Equatable, Sendable {
     var words: [Word]
     /// `^name`: skip functions and builtins, and run the external program.
     var external = false
-    /// In the order written, which matters: `> out 2>&1` sends both to
-    /// `out`, `2>&1 > out` only standard output.
+    /// In the order written, which matters: `> out e>o` sends both to
+    /// `out`, `e>o > out` only standard output.
     var redirects: [Redirect] = []
+    /// `EDITOR=vim git commit`: environment variables for this command only.
+    var environment: [EnvironmentAssignment] = []
 }
 
-/// `> file`, `2>> file`, `< file`, `2>&1` and the like.
+struct EnvironmentAssignment: Equatable, Sendable {
+    var name: String
+    var value: [StringPart]
+}
+
+/// `> file`, `e>> file`, `< file`, `e>o` and the like.
 struct Redirect: Equatable, Sendable {
     enum Target: Equatable, Sendable {
         case file([StringPart], Mode)
-        /// Another of the command's descriptors, as in `2>&1`.
+        /// Another of the command's descriptors, as in `e>o`.
         case descriptor(Int32)
     }
 
@@ -188,8 +197,6 @@ indirect enum Expr: Equatable, Sendable {
     case variable(String)
     /// `$name`: a Swish variable, falling back to the environment.
     case dollar(String)
-    /// `$?`
-    case status
     /// `$(…)`: throws if the command fails, like a call to a throwing
     /// function whose `try` is implicit.
     case substitution(Program)
@@ -388,6 +395,10 @@ struct Parser {
             break
         }
 
+        if identifier() == "env", let assignment = try parseEnvironmentAssignment() {
+            return assignment
+        }
+
         if let name = identifier(), kind(of: name) == .variable {
             let start = pos
             let spansBefore = spans.count
@@ -402,6 +413,38 @@ struct Parser {
         }
 
         return .chain(try parseChain())
+    }
+
+    /// `env.NAME = value` or `env[name] = value`, or nil (having looked
+    /// ahead) if this is some other statement starting with `env`.
+    private mutating func parseEnvironmentAssignment() throws(SyntaxError) -> Statement? {
+        let start = (pos, spans.count)
+        mark(.variable, from: pos, to: pos + 3)
+        pos += 3
+        let name: Expr
+        if peek() == ".", let next = peek(1), Parser.isIdentifierStart(next) {
+            pos += 1
+            let key = identifier()!
+            pos += key.count
+            name = .literal(.string(key))
+        } else if consume("[") {
+            bracketDepth += 1
+            skipSpaces()
+            name = try parseExpression()
+            skipSpaces()
+            bracketDepth -= 1
+            guard consume("]") else { throw expected("']'") }
+        } else {
+            rewind(to: start)
+            return nil
+        }
+        skipSpaces()
+        guard peek() == "=" && peek(1) != "=" else {
+            rewind(to: start)
+            return nil
+        }
+        pos += 1
+        return .setEnvironment(name: name, value: try parseExpression())
     }
 
     private mutating func parseDeclaration() throws(SyntaxError) -> Statement {
@@ -508,6 +551,8 @@ struct Parser {
             skipSpaces()
             guard peek() == "=" && peek(1) != "=" else { throw expected("'=' after '\(name)'") }
             pos += 1
+            conditionDepth += 1
+            defer { conditionDepth -= 1 }
             condition = .binding(name: name, mutable: word == "var", value: try parseExpression())
             bound[name] = .variable
         } else {
@@ -546,7 +591,9 @@ struct Parser {
         skipSpaces()
         guard identifier() == "in" else { throw expected("'in'") }
         keyword("in")
+        conditionDepth += 1
         let sequence = try parseExpression()
+        conditionDepth -= 1
         skipSpaces()
         loopDepth += 1
         defer { loopDepth -= 1 }
@@ -606,7 +653,7 @@ struct Parser {
         )
     }
 
-    /// The `#` comment lines directly above the line starting at `index`.
+    /// The `///` comment lines directly above the line starting at `index`.
     private func documentation(before index: Int) -> Documentation? {
         var lineStart = index
         while lineStart > 0 && (chars[lineStart - 1] == " " || chars[lineStart - 1] == "\t") { lineStart -= 1 }
@@ -618,8 +665,8 @@ struct Parser {
             var start = end
             while start > 0 && chars[start - 1] != "\n" { start -= 1 }
             let line = String(chars[start..<end]).trimmingCharacters(in: .whitespaces)
-            guard line.hasPrefix("#"), !line.hasPrefix("#!") else { break }
-            var text = line.dropFirst()
+            guard line.hasPrefix("///") else { break }
+            var text = line.dropFirst(3)
             if text.first == " " { text = text.dropFirst() }
             lines.insert(String(text), at: 0)
             end = start - 1
@@ -893,9 +940,18 @@ struct Parser {
     private mutating func parseCommand() throws(SyntaxError) -> CommandNode {
         skipSpaces()
         let nameStart = pos
-        let external = consume("^")
+        // `foreign ls` (or `^ls`): the program, never a function or builtin.
+        var external = consume("^")
+        // Where the command name's highlight starts: at a `^` touching it.
+        let caretStart: Int? = external ? nameStart : nil
+        if !external, identifier() == "foreign", peek(7) == " " || peek(7) == "\t" {
+            keyword("foreign")
+            skipSpaces()
+            external = true
+        }
         var words: [Word] = []
         var redirects: [Redirect] = []
+        var environment: [EnvironmentAssignment] = []
         while true {
             skipSpaces()
             guard let c = peek(), !endsCommand(c) else { break }
@@ -912,52 +968,71 @@ struct Parser {
                 throw SyntaxError("unexpected '(' in a command; quote it, or use \\(…) to interpolate an expression")
             }
             if c == "&" {
-                throw SyntaxError("background jobs ('&') aren't supported yet")
+                throw SyntaxError("'&' isn't Swish; background jobs will be `async command`")
+            }
+            // `NAME=value` before the command sets it for the command.
+            if words.isEmpty, let name = identifier(), peek(name.count) == "=", peek(name.count + 1) != "=" {
+                mark(.variable, from: pos, to: pos + name.count)
+                pos += name.count + 1
+                let value = peek().map(isWordBoundary) ?? true ? [.literal("")] : try parseWord()
+                environment.append(EnvironmentAssignment(name: name, value: value))
+                continue
             }
             let wordStart = pos
             let word = try parseWord()
             if words.isEmpty {
-                mark(.command, from: redirects.isEmpty ? nameStart : wordStart)
+                mark(.command, from: redirects.isEmpty && environment.isEmpty ? caretStart ?? wordStart : wordStart)
             } else if chars[wordStart] == "-" {
                 mark(.flag, from: wordStart)
             }
             words.append(.text(word))
         }
         guard !words.isEmpty else {
+            if let assignment = environment.first {
+                throw SyntaxError("\(assignment.name)=… sets a variable for one command; use env.\(assignment.name) = … to set it for the session")
+            }
             if let c = peek() { throw unexpected(c) }
             throw .incomplete("expected a command")
         }
-        return CommandNode(words: words, external: external, redirects: redirects)
+        return CommandNode(words: words, external: external, redirects: redirects, environment: environment)
     }
 
     /// A redirect at the current position, or nil if there isn't one:
-    /// `[n]< file`, `[n]> file`, `[n]>> file`, `[n]>&m`, `[n]<&m`, and
-    /// `&> file` or `&>> file` for standard output and error together. The
-    /// number must touch the operator, so `echo 2 > f` writes "2".
+    /// `> file`, `>> file` and `< file` for standard output and input;
+    /// `e>` and `e>>` for standard error; `o+e>` and `o+e>>` for both; `e>o`
+    /// sends standard error wherever standard output goes, and `o>e` the
+    /// other way. POSIX forms like `2>&1` are an error naming the new one.
     private mutating func parseRedirect() throws(SyntaxError) -> [Redirect]? {
         let start = pos
-        var digits = ""
-        while let c = peek(digits.count), Parser.isDigit(c) { digits.append(c) }
-        guard let op = peek(digits.count), op == "<" || op == ">" || (digits.isEmpty && op == "&" && peek(1) == ">") else {
+        try rejectPosixRedirect()
+
+        func touchesBoundary(after count: Int) -> Bool {
+            peek(count).map(isWordBoundary) ?? true
+        }
+        if startsWith("e>o") && touchesBoundary(after: 3) {
+            pos += 3
+            mark(.punctuation, from: start)
+            return [Redirect(fd: 2, target: .descriptor(1))]
+        }
+        if startsWith("o>e") && touchesBoundary(after: 3) {
+            pos += 3
+            mark(.punctuation, from: start)
+            return [Redirect(fd: 1, target: .descriptor(2))]
+        }
+
+        let fds: [Int32]
+        if consume("o+e>") {
+            fds = [1, 2]
+        } else if consume("e>") {
+            fds = [2]
+        } else if consume(">") {
+            fds = [1]
+        } else if consume("<") {
+            fds = [0]
+        } else {
             return nil
         }
-        pos += digits.count
-
-        let both = consume("&")
-        var fd = Int32(digits) ?? (peek() == "<" ? 0 : 1)
-        let reading = consume("<")
-        if !reading { pos += 1 } // the `>`
-        let append = !reading && consume(">")
-        if !both && consume("&") {
-            let targetStart = pos
-            let target = readDigits()
-            guard let targetFD = Int32(target) else {
-                pos = targetStart
-                throw expected("a descriptor number after '&'")
-            }
-            mark(.punctuation, from: start)
-            return [Redirect(fd: fd, target: .descriptor(targetFD))]
-        }
+        let append = fds != [0] && consume(">")
         mark(.punctuation, from: start)
 
         skipSpaces()
@@ -966,12 +1041,36 @@ struct Parser {
             throw expected("a file to redirect to")
         }
         let file = try parseWord()
-        let mode: Redirect.Mode = reading ? .read : append ? .append : .write
-        if both {
-            fd = 1
+        let mode: Redirect.Mode = fds == [0] ? .read : append ? .append : .write
+        if fds == [1, 2] {
             return [Redirect(fd: 1, target: .file(file, mode)), Redirect(fd: 2, target: .descriptor(1))]
         }
-        return [Redirect(fd: fd, target: .file(file, mode))]
+        return [Redirect(fd: fds[0], target: .file(file, mode))]
+    }
+
+    /// POSIX redirects, which would otherwise read as a word and a redirect,
+    /// with the Swish spelling in the error.
+    private func rejectPosixRedirect() throws(SyntaxError) {
+        var digits = ""
+        while let c = peek(digits.count), Parser.isDigit(c) { digits.append(c) }
+        let rest = String(chars[(pos + digits.count)...].prefix(4))
+        let swish: String?
+        switch (digits, rest) {
+        case (_, _) where startsWith("&>>"): swish = "o+e>>"
+        case (_, _) where startsWith("&>"): swish = "o+e>"
+        case ("", _) where rest.hasPrefix(">&2"): swish = "o>e"
+        case ("2", _) where rest.hasPrefix(">&1"): swish = "e>o"
+        case ("2", _) where rest.hasPrefix(">>"): swish = "e>>"
+        case ("2", _) where rest.hasPrefix(">"): swish = "e>"
+        case ("1", _) where rest.hasPrefix(">"): swish = rest.hasPrefix(">>") ? ">>" : ">"
+        case ("0", _) where rest.hasPrefix("<"): swish = "<"
+        case let (number, _) where !number.isEmpty && (rest.hasPrefix(">") || rest.hasPrefix("<")):
+            throw SyntaxError("numbered descriptors like \(number)\(rest.prefix(1)) aren't part of Swish; redirect with >, e>, e>o, o>e or o+e>")
+        default: swish = nil
+        }
+        if let swish {
+            throw SyntaxError("that's a POSIX redirect; in Swish it's \(swish)")
+        }
     }
 
     private func endsCommand(_ c: Character) -> Bool {
@@ -1017,7 +1116,7 @@ struct Parser {
                 parts.append(.literal(try parseRawString()))
             case "\"":
                 flush()
-                parts += try parseInterpolatedString()
+                parts += try parseInterpolatedString(dollar: true)
             case "\\":
                 guard let next = peek(1) else { throw .incomplete("expected a character after '\\'") }
                 if next == "(" {
@@ -1065,9 +1164,10 @@ struct Parser {
         return text
     }
 
-    /// A double-quoted string, the same in both modes: Swift escapes and
-    /// `\(…)`, plus `$name`, `$?` and `$(…)`.
-    private mutating func parseInterpolatedString() throws(SyntaxError) -> [StringPart] {
+    /// A double-quoted string: Swift escapes and `\(…)`, and in commands
+    /// (`dollar`) also `$name` and `$(…)`. In expressions it's pure Swift,
+    /// so `"costs $5"` and `"$HOME"` are literal there.
+    private mutating func parseInterpolatedString(dollar: Bool) throws(SyntaxError) -> [StringPart] {
         let start = pos
         pos += 1
         var parts: [StringPart] = []
@@ -1104,7 +1204,7 @@ struct Parser {
                 case "u": literal.append(try parseUnicodeEscape())
                 default: throw SyntaxError("invalid escape '\\\(next)' in string")
                 }
-            case "$":
+            case "$" where dollar:
                 if let expr = try parseDollar() {
                     if !literal.isEmpty { parts.append(.literal(literal)) }
                     literal = ""
@@ -1169,9 +1269,7 @@ struct Parser {
             pos += 1
             return .substitution(program)
         case "?":
-            mark(.variable, from: pos, to: pos + 2)
-            pos += 2
-            return .status
+            throw SyntaxError("$? is status.code in Swish")
         case let c? where Parser.isDigit(c):
             // Only special in a closure without named parameters; elsewhere,
             // as in "costs $5", it's just text.
@@ -1264,7 +1362,18 @@ struct Parser {
                 bracketDepth -= 1
                 expr = .index(expr, index)
             } else if peek() == "(" {
-                expr = .call(expr, try parseArguments())
+                var arguments = try parseArguments()
+                // A trailing closure, as in `with(env: e) { … }`; not where
+                // `{` starts a body, as after `if` or `for … in`.
+                let beforeClosure = (pos, spans.count)
+                skipSpaces()
+                if peek() == "{" && conditionDepth == 0 {
+                    pos += 1
+                    arguments.append(Argument(label: nil, value: .closure(try parseClosure())))
+                } else {
+                    rewind(to: beforeClosure)
+                }
+                expr = .call(expr, arguments)
             } else if peek() == ".", let next = peek(1), Parser.isIdentifierStart(next) {
                 pos += 1
                 let name = identifier()!
@@ -1304,7 +1413,7 @@ struct Parser {
 
         switch c {
         case "\"":
-            let parts = try parseInterpolatedString()
+            let parts = try parseInterpolatedString(dollar: false)
             if parts.count == 1, case .literal(let text) = parts[0] { return .literal(.string(text)) }
             return .string(parts)
         case "'":
@@ -1476,7 +1585,8 @@ struct Parser {
                 pos += 2
             } else if c == "\n" && (newlines || bracketDepth > 0) {
                 pos += 1
-            } else if c == "#" {
+            } else if (c == "/" && peek(1) == "/") || (c == "#" && pos == 0 && peek(1) == "!") {
+                // `//` and `///` comments, as in Swift; `#!` only as a shebang.
                 let start = pos
                 while let d = peek(), d != "\n" { pos += 1 }
                 mark(.comment, from: start)

@@ -30,10 +30,19 @@ private enum ControlFlow: Error {
 }
 
 struct Binding {
+    /// Builtin names whose values are live: read when they're used.
+    enum Special {
+        /// `env`: the environment, as a record; `env.NAME` is nil if unset.
+        case environment
+        /// `status`: how the last statement ended.
+        case status
+    }
+
     var value: Value
     let mutable: Bool
     /// Declared with `func`, which makes it callable in command mode.
     var isFunction = false
+    var special: Special?
 }
 
 /// A reference type so closures share variables with the scope they
@@ -179,6 +188,21 @@ extension Shell {
                 value: .function(OverloadSet(name: decl.name, candidates: candidates)), mutable: false, isFunction: true
             )
             return 0
+        case .setEnvironment(let nameExpr, let valueExpr):
+            guard lookup("env")?.special == .environment else {
+                throw RuntimeError("env is a variable here, not the environment")
+            }
+            let name = try evaluate(nameExpr)
+            guard case .string(let key) = name, !key.isEmpty, !key.contains("=") else {
+                throw RuntimeError("an environment variable's name must be a String without '=', not \(name)")
+            }
+            let value = try evaluate(valueExpr)
+            if value == .nothing {
+                unsetenv(key)
+            } else {
+                setenv(key, value.description, 1)
+            }
+            return 0
         case .returnStatement(let expr):
             throw ControlFlow.returned(try expr.map(evaluate) ?? .nothing)
         case .breakStatement:
@@ -218,8 +242,9 @@ extension Shell {
                     throw RuntimeError("a closure can't be a command name")
                 }
                 let redirects = try command.redirects.map(resolve)
+                let environment = try command.environment.map { ($0.name, try expand($0.value)) }
                 if !command.external, let functions = commandFunctions(named: name) {
-                    stages.append(.function(functions, Array(arguments.dropFirst()), redirects: redirects))
+                    stages.append(.function(functions, Array(arguments.dropFirst()), redirects: redirects, environment: environment))
                 } else {
                     let argv = try arguments.map { argument -> String in
                         guard case .text(let text) = argument else {
@@ -227,7 +252,7 @@ extension Shell {
                         }
                         return text
                     }
-                    stages.append(.external(argv, skipBuiltins: command.external, redirects: redirects))
+                    stages.append(.external(argv, skipBuiltins: command.external, redirects: redirects, environment: environment))
                 }
             }
             return try runPipeline(stages, source: node.source, display: context == .statement)
@@ -240,8 +265,10 @@ extension Shell {
                 display(value)
             }
             if case .bool(let truth) = value { return truth ? 0 : 1 }
-            // nil is a failure, so `try? $(…) != nil && …` and `if try? …` work.
-            if value == .nothing { return 1 }
+            // A `try?` that caught an error is a failure, so `try? $(…) != nil
+            // && …` and `if try? …` work. Other nils, like a function that
+            // returns nothing, aren't.
+            if value == .nothing, case .attempt(_, .optional) = expr { return 1 }
             if context == .condition {
                 throw RuntimeError("condition must be a Bool, not \(value.typeName)")
             }
@@ -336,13 +363,15 @@ extension Shell {
             return .string(try expand(parts))
         case .variable(let name):
             guard let binding = lookup(name) else { throw RuntimeError("no variable named '\(name)'") }
-            return binding.value
+            switch binding.special {
+            case .environment?: return environmentRecord()
+            case .status?: return statusRecord()
+            case nil: return binding.value
+            }
         case .dollar(let name):
             if let binding = lookup(name) { return binding.value }
             if let value = env(name) { return .string(value) }
             throw RuntimeError("no variable or environment variable named '\(name)'")
-        case .status:
-            return .int(Int(lastStatus))
         case .substitution(let program):
             var status: Int32 = 0
             var output = try capturing { status = try runBlock(program) }
@@ -364,6 +393,8 @@ extension Shell {
             }
             return .record(record)
         case .member(let base, let name):
+            // An unset environment variable is nil, not a missing field.
+            if isEnvironment(base) { return env(name).map(Value.string) ?? .nothing }
             return try member(name, of: try evaluate(base))
         case .closure(let literal):
             return .function(Function(
@@ -414,8 +445,49 @@ extension Shell {
         case .binary(let op, let lhs, let rhs):
             return try apply(op, try evaluate(lhs), try evaluate(rhs))
         case .index(let base, let index):
+            if isEnvironment(base) {
+                let key = try evaluate(index)
+                guard case .string(let name) = key else { throw RuntimeError("env is indexed by name, not \(key.typeName)") }
+                return env(name).map(Value.string) ?? .nothing
+            }
             return try element(of: try evaluate(base), at: try evaluate(index))
         }
+    }
+
+    private func isEnvironment(_ expr: Expr) -> Bool {
+        guard case .variable(let name) = expr else { return false }
+        return lookup(name)?.special == .environment
+    }
+
+    private func environmentRecord() -> Value {
+        var record = Record(typeName: "Environment")
+        for (key, value) in ProcessInfo.processInfo.environment.sorted(by: { $0.key < $1.key }) {
+            record[key] = .string(value)
+        }
+        return .record(record)
+    }
+
+    /// `code` is nil when a signal ended the command, and `signal` otherwise.
+    private func statusRecord() -> Value {
+        let signal: Int32? = lastStatus > 128 && lastStatus == lastSignalStatus ? lastStatus - 128 : nil
+        return .record(Record([
+            "code": signal == nil ? .int(Int(lastStatus)) : .nothing,
+            "signal": signal.map { .int(Int($0)) } ?? .nothing,
+            "succeeded": .bool(lastStatus == 0),
+        ], typeName: "Status"))
+    }
+
+    /// Sets environment variables around `body`, then puts them back.
+    func withEnvironment<T>(_ variables: [(String, String)], _ body: () throws -> T) rethrows -> T {
+        guard !variables.isEmpty else { return try body() }
+        let saved = variables.map { ($0.0, env($0.0)) }
+        for (name, value) in variables { setenv(name, value, 1) }
+        defer {
+            for (name, value) in saved.reversed() {
+                if let value { setenv(name, value, 1) } else { unsetenv(name) }
+            }
+        }
+        return try body()
     }
 
     /// Joins a string's parts into one string. Interpolation never splits.

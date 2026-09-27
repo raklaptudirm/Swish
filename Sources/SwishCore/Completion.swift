@@ -178,7 +178,7 @@ extension Shell {
     private func escaped(_ text: String) -> String {
         var result = ""
         for character in text {
-            if " \t'\"\\$|;&(){}#*[<>`".contains(character) { result.append("\\") }
+            if " \t'\"\\$|;&(){}*[<>`".contains(character) { result.append("\\") }
             result.append(character)
         }
         return result
@@ -235,7 +235,10 @@ private struct CompletionContext {
             index += 1
         }
         start = wordStart ?? characters.endIndex
-        // A command after `if`, `while` or `else` is still in command position.
-        while let first = words.first, ["if", "while", "else"].contains(first) { words.removeFirst() }
+        // A command after `if`, `while`, `else` or `foreign`, or after
+        // `NAME=value`, is still in command position.
+        while let first = words.first, ["if", "while", "else", "foreign"].contains(first) || first.contains("=") {
+            words.removeFirst()
+        }
     }
 }

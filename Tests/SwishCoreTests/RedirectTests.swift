@@ -64,18 +64,19 @@ private func scratch() throws -> String {
 @Test func redirectOrderMatters() throws {
     let d = try scratch()
     // Both into the file.
-    #expect(try output("sh -c 'echo out; echo err >&2' > \(d)/both 2>&1; cat \(d)/both") == "out\nerr\n")
+    #expect(try output("sh -c 'echo out; echo err >&2' > \(d)/both e>o; cat \(d)/both") == "out\nerr\n")
     // Only output into the file; errors go where output went before: the pipe.
-    #expect(try output("sh -c 'echo out; echo err >&2' 2>&1 > \(d)/only | tr a-z A-Z; cat \(d)/only") == "ERR\nout\n")
-    #expect(try output("sh -c 'echo out; echo err >&2' &> \(d)/amp; cat \(d)/amp") == "out\nerr\n")
-    #expect(try output("sh -c 'echo err >&2' 2> \(d)/e; cat \(d)/e") == "err\n")
+    #expect(try output("sh -c 'echo out; echo err >&2' e>o > \(d)/only | tr a-z A-Z; cat \(d)/only") == "ERR\nout\n")
+    #expect(try output("sh -c 'echo out; echo err >&2' o+e> \(d)/amp; cat \(d)/amp") == "out\nerr\n")
+    #expect(try output("sh -c 'echo err >&2' e> \(d)/e; cat \(d)/e") == "err\n")
+    #expect(try output("sh -c 'echo err >&2' e> \(d)/e2; sh -c 'echo more >&2' e>> \(d)/e2; cat \(d)/e2") == "err\nmore\n")
 }
 
 @Test func swapThroughDuplicates() throws {
-    // `3>&1 1>&2 2>&3` swaps output and error: only the error is captured
-    // (the output goes to the test's stderr).
-    #expect(try output("sh -c 'echo out; echo err >&2' 3>&1 1>&2 2>&3") == "err\n")
-    #expect(try output("sh -c 'echo out; echo err >&2' 2>&1 1>/dev/null") == "err\n")
+    // Errors to where output goes, then output away: only errors captured.
+    #expect(try output("sh -c 'echo out; echo err >&2' e>o > /dev/null") == "err\n")
+    // `o>e` then `e>` to a file: output follows stderr's old target.
+    #expect(try output("sh -c 'echo out' o>e e> /dev/null") == "")
 }
 
 @Test func redirectFailures() throws {
@@ -96,9 +97,9 @@ private func scratch() throws -> String {
     // A table written to a file looks as it would on screen, without color.
     let header = try output("ls \(d)/*.txt > \(d)/l; head -1 \(d)/l")
     #expect(header.hasPrefix("name ") && header.hasSuffix("type  size  modified\n") && !header.contains("\u{1B}"))
-    // A function's errors follow its `2>`.
+    // A function's errors follow its `e>`.
     let shell = Shell()
-    #expect(try output(funcs + "boom 2> \(d)/err", in: shell) == "")
+    #expect(try output(funcs + "boom e> \(d)/err", in: shell) == "")
     #expect(shell.lastStatus == 1)
     #expect(try output("cat \(d)/err") == "swish: error: division by zero\n")
 }

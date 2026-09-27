@@ -63,12 +63,14 @@ private func completion(_ text: String, in shell: Shell = Shell()) -> (start: In
 
 @Test func completesCommandsIncludingFunctions() {
     let shell = Shell()
-    shell.execute("# Greets.\nfunc zzgreet() {}")
+    shell.execute("/// Greets.\nfunc zzgreet() {}")
     let result = shell.completions(for: "zzg", cursor: 3)
     #expect(result?.candidates == [LineEditor.Candidate(replacement: "zzgreet", display: "zzgreet", description: "Greets.")])
     #expect(completion("ech").replacements.contains("echo"))
     #expect(completion("if tru && ls | wher").replacements.contains("where")) // after a pipe: command position
     #expect(completion("^zzg", in: shell).replacements.isEmpty) // ^ is externals only
+    #expect(completion("foreign ech").replacements.contains("echo"))
+    #expect(completion("EDITOR=vim ech").replacements.contains("echo"))
 }
 
 @Test func completesFlagsFromSignatures() {
@@ -101,7 +103,7 @@ private func completion(_ text: String, in shell: Shell = Shell()) -> (start: In
 // MARK: Highlighting
 
 @Test func highlightSpansFollowTheParse() {
-    let source = #"if x > 1 { echo "hi \(x)" --flag } # note"#
+    let source = #"if x > 1 { echo "hi \(x)" --flag } // note"#
     let spans = Parser.highlight(source, bound: ["x": .variable])
     func kinds(_ text: String) -> [SpanKind] {
         let chars = Array(source)
@@ -114,7 +116,7 @@ private func completion(_ text: String, in shell: Shell = Shell()) -> (start: In
     #expect(kinds(#""hi \(x)""#) == [.string])
     #expect(kinds(#"\("#) == [.punctuation])
     #expect(kinds("--flag") == [.flag])
-    #expect(kinds("# note") == [.comment])
+    #expect(kinds("// note") == [.comment])
 }
 
 @Test func unfinishedInputStillHighlights() {
@@ -130,8 +132,8 @@ private func completion(_ text: String, in shell: Shell = Shell()) -> (start: In
 }
 
 @Test func redirectOperatorsHighlight() {
-    let source = "sort < in 2>&1 > out"
+    let source = "sort < in e>o > out o+e>> log"
     let chars = Array(source)
     let marked = Parser.highlight(source, bound: [:]).filter { $0.kind == .punctuation }.map { String(chars[$0.range]) }
-    #expect(marked == ["<", "2>&1", ">"])
+    #expect(marked == ["<", "e>o", ">", "o+e>>"])
 }

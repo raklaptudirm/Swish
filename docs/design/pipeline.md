@@ -124,7 +124,7 @@ pipeline turns values into text, and only if nothing else consumed them.
 - **Per-item errors:** a stage reports a problem with one item (say, one
   unreadable file) and keeps going, as `ls nosuch Package.swift` does. Any
   reported error makes the statement's status a failure, like
-  PowerShell's `$?`. For now they're messages on standard error; making
+  PowerShell's `$?` (Swish's `status`). For now they're messages on standard error; making
   them values (message, source, the item concerned) that can be inspected
   afterwards is still to do, as is a way for Swish functions to report them.
 
@@ -160,7 +160,7 @@ that can throw a runtime error, not just `$(…)`:
 if let head = try? $(git rev-parse HEAD) { echo "at \(head)" } else { echo "not a repo" }
 let editor = (try? $(git config core.editor)) ?? "vi"
 try? $(grep -q TODO notes.txt) != nil && echo "still things to do"
-let config = try! $(cat ~/.config/tool.json)   # a script can't go on without it
+let config = try! $(cat ~/.config/tool.json)   // a script can't go on without it
 ```
 
 As in Swift, `try` covers everything to its right: `try? $(cmd) ?? "vi"` is
