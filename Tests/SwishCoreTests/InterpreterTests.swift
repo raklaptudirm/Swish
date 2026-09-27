@@ -92,7 +92,7 @@ private func status(_ source: String) -> Int32 {
 }
 
 @Test func failingCommandsDontStopTheInput() throws {
-    #expect(try output("false; echo \\(status.code); foreign false; echo \\(status.code)") == "1\n1\n")
+    #expect(try output("false; echo after; foreign false; echo again") == "after\nagain\n")
 }
 
 @Test func syntaxErrorsSetStatusTwo() {
@@ -436,11 +436,21 @@ private func fixture() throws -> String {
 
 // MARK: Failing substitutions
 
-@Test func failingSubstitutionsAreErrors() throws {
-    #expect(status("let x = $(false)") == 1)
-    #expect(try output("let x = $(false); echo unreachable") == "")
-    #expect(status("echo $(sh -c 'exit 3')") == 3) // the command's own status
+@Test func failingSubstitutionsGiveTheirStatus() throws {
+    // Without `try`, a failure is just what `.status` says.
+    #expect(try output("let x = $(sh -c 'echo partial; exit 3'); x.status.code; x.text; echo after") == "3\npartial\nafter\n")
+    #expect(try output("echo $(false) x") == " x\n")
     #expect(try output("let x = $(echo fine); x") == "fine\n")
+}
+
+@Test func tryMakesASubstitutionThrow() throws {
+    #expect(status("let x = try $(false)") == 1)
+    #expect(try output("let x = try $(false); echo unreachable") == "")
+    #expect(status("let x = try $(sh -c 'exit 3')") == 3) // the command's own status
+    // `try` covers what's to its right, including a command's arguments…
+    #expect(try output("try echo $(false) x; echo unreachable") == "")
+    // …but not a function's body, which decides for itself.
+    #expect(try output("func f() -> Output { $(false) }; let o = try f(); o.status.code") == "1\n")
 }
 
 @Test func tryQuestionMark() throws {
@@ -503,11 +513,63 @@ private func fixture() throws -> String {
     #expect(try output(#"with(env: ["\#(name)": "block"]) { sh -c 'echo "$\#(name)"' }; env.\#(name) == nil"#) == "block\ntrue\n")
 }
 
-@Test func statusValue() throws {
-    // `status` describes the statement before, so it's read once into `s`.
-    #expect(try output("false; let s = status; s.code; s.succeeded; s.signal == nil") == "1\nfalse\ntrue\n")
-    #expect(try output("sh -c 'kill -TERM $$' e> /dev/null; let s = status; s.signal; s.code == nil") == "15\ntrue\n")
-    #expect(try output("false; status.code; status.code") == "1\n0\n")
+@Test func noGlobalStatus() {
+    #expect(status("false; status") == 127) // just a command name now
+}
+
+// MARK: Command output
+
+@Test func outputIsLinesWithText() throws {
+    let r = #"let r = $(printf 'a b\nc\n');"#
+    #expect(try output(r + "r.count; r[0]; r.last; r.text; r.text.count") == "2\na b\nc\na b\nc\n5\n")
+    #expect(try output(r + #"for line in r { echo "<\(line)>" }"#) == "<a b>\n<c>\n")
+    #expect(try output(r + "r.status.code; r.status.succeeded; r.status.signal == nil") == "0\ntrue\ntrue\n")
+    #expect(try output("$(true).isEmpty; $(true).count") == "true\n0\n")
+}
+
+@Test func outputIsItsTextWhereAStringIsWanted() throws {
+    #expect(try output(#"let b = $(echo main); b == "main"; "on \(b)"; echo $(echo hi) there"#) == "true\non main\nhi there\n")
+    #expect(try output(#"func up(_ s: String) -> String { s }; up($(echo hi))"#) == "hi\n")
+    #expect(try output("$(echo x).text + \"y\"") == "xy\n")
+    // `description` is every value's textual form, as in Swift; `.text` is
+    // the Output's data.
+    #expect(try output(#"$(echo x).description == $(echo x).text; 1.5.kb.description; ["a": 1].description"#) == "true\n1.5 KB\n{a: 1}\n")
+    #expect(try output(#"["description": "mine"].description"#) == "mine\n")
+    #expect(status("$(echo x) + \"y\"") == 1) // other String operations go through .text
+    #expect(try output("$(printf '3\\n1\\n2') | sort") == "1\n2\n3\n")
+}
+
+// MARK: do/catch
+
+@Test func catchingAFailedCapture() throws {
+    #expect(try output(#"do { let r = try $(sh -c 'echo partial; exit 3') } catch { error.status.code; error.text }"#) == "3\npartial\n")
+    #expect(try output(#"do { let r = try $(sh -c 'kill -TERM $$') } catch { error.status.signal; error.status.code == nil }"#) == "15\ntrue\n")
+    // Without `try`, nothing throws, so the catch doesn't run.
+    #expect(try output(#"do { let r = $(false) } catch { echo never }; echo done"#) == "done\n")
+}
+
+@Test func catchingAnyRuntimeError() throws {
+    #expect(try output("do { 1 / 0 } catch let e { e.message; e.status.code }") == "division by zero\n1\n")
+    #expect(try output("do { echo fine } catch { echo never }") == "fine\n")
+    #expect(try output("do { let x = 1; x }") == "1\n") // do alone is a scope
+    #expect(status("do { 1 / 0 }") == 1) // no catch: still an error
+}
+
+@Test func tryMakesACommandThrow() throws {
+    #expect(try output("do { try sh -c 'exit 4' } catch { echo \"failed with \\(error.status.code)\" }") == "failed with 4\n")
+    #expect(try output("try false; echo unreachable") == "")
+    #expect(try output("try true && echo ok") == "ok\n")
+    #expect(status("try? make") == 2) // try? needs a value: a syntax error
+}
+
+@Test func tryBangCommandStopsAScript() throws {
+    let shell = Shell()
+    let path = try output("mktemp", in: shell).trimmingCharacters(in: .newlines)
+    shell.execute(#"printf '%s\n' 'echo one' 'false' 'echo two' 'try! sh -c "exit 5"' 'echo three' > \#(path)"#)
+    let script = Shell()
+    var code: Int32 = 0
+    #expect(try script.capturing { code = script.runScript(at: path) } == "one\ntwo\n")
+    #expect(code == 5)
 }
 
 @Test func stringsInExpressionsArePureSwift() throws {

@@ -38,7 +38,8 @@ scripts/test.sh               # unit tests + pty-driven job-control and editor t
    `SIGCHLD` notifications
 4. ✅ The language: two-mode parsing, `let`/`var`, literals and operators, lists, ranges,
    `if`/`else`, `if let`, `??`, `for`/`while`/`break`/`continue`, `func`, closures, `\(…)`,
-   `$name` in commands, `$(…)` (throws if the command fails), `try?`/`try!`, `env`, `status`,
+   `$name` in commands, `$(…)` giving lines of `Output` with its status (throws under `try`),
+   `try`/`try?`/`try!`, `do`/`catch`, `env`,
    `//` comments, trailing closures, scripts with `args` and `main`, multi-line input
 5. ✅ Callables: command-line binding derived from signatures, `@input` streaming,
    `@flag` short flags, `--help` from doc comments, overloads, `foreign name` and `which`

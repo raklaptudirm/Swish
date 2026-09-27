@@ -124,7 +124,7 @@ pipeline turns values into text, and only if nothing else consumed them.
 - **Per-item errors:** a stage reports a problem with one item (say, one
   unreadable file) and keeps going, as `ls nosuch Package.swift` does. Any
   reported error makes the statement's status a failure, like
-  PowerShell's `$?` (Swish's `status`). For now they're messages on standard error; making
+  PowerShell's `$?`. For now they're messages on standard error; making
   them values (message, source, the item concerned) that can be inspected
   afterwards is still to do, as is a way for Swish functions to report them.
 
@@ -138,33 +138,49 @@ pipeline turns values into text, and only if nothing else consumed them.
 - **Single-item collections silently becoming scalars.**
 - **Case-insensitivity by default**, and slow startup.
 
-## Failing commands in `$(…)`
+## Failing commands and `try`
 
-`$(…)` is a call to a throwing function whose `try` is implicit, since every
-one would need it: a command that fails inside it is a runtime error, as in
-Nushell, because its output is unlikely to be what the rest of the line
-expects. The error's status is the command's own.
+A command only reports how it went, whether it runs as a statement or is
+captured by `$(…)`; failing isn't an error. `try` makes it one, as it
+marks the place where something can throw in Swift:
 
-Swift's other two forms keep their meaning, and work on any expression
-that can throw a runtime error, not just `$(…)`:
+| | Plain | `try` | `try?` | `try!` |
+|---|---|---|---|---|
+| `make` | sets success or failure, for `&&`, `\|\|` and `if` | throws on failure | (a syntax error: it has no value) | stops a script on failure |
+| `$(make)` | its `Output`, failure or not: check `.status` | throws on failure | nil on failure | stops a script on failure |
 
-- **`try?`** is nil instead of an error. nil counts as failure in `&&`,
-  `||` and `if`.
-- **`try!`** stops a script (`swish script.sw`, or input piped in) with the
-  failure's status, where any other error only abandons its statement and
-  the script carries on. At the interactive prompt it's a plain error,
-  since stopping would mean exiting your shell.
-- A bare **`try`** is accepted for readability and changes nothing.
+The error `try` throws carries the command's status and, for `$(…)`, its
+text, and `do`/`catch` catches it:
 
 ```swift
+do {
+    let log = try $(make)
+} catch {
+    echo "make failed with \(error.status.code)"
+    error.text                            // what it printed before failing
+}
 if let head = try? $(git rev-parse HEAD) { echo "at \(head)" } else { echo "not a repo" }
 let editor = (try? $(git config core.editor)) ?? "vi"
-try? $(grep -q TODO notes.txt) != nil && echo "still things to do"
 let config = try! $(cat ~/.config/tool.json)   // a script can't go on without it
 ```
 
-As in Swift, `try` covers everything to its right: `try? $(cmd) ?? "vi"` is
-nil when `cmd` fails, so a default needs the parentheses above.
+`try` covers everything to its right, as in Swift, including the `$(…)` in
+a command's arguments (`try echo $(cmd)`); `try? $(cmd) ?? "vi"` is nil
+when `cmd` fails, so a default needs the parentheses above. It doesn't
+reach into closures or function bodies, which decide for themselves.
+
+`try?` and `try!` also catch other runtime errors, like an index out of
+range or division by zero. Those always throw, with or without `try`:
+they're bugs rather than outcomes. `try!` stops a script (`swish
+script.sw`, or input piped in) with the failure's status, where any other
+error only abandons its statement; at the prompt it's a plain error.
+
+Without `try`, a failure is easy to miss: outside a repository,
+`let head = $(git rev-parse HEAD)` is empty text with
+`head.status.succeeded == false`, and the script carries on. That's the
+trade for `try` meaning one thing everywhere.
 
 A line starting with `$(` is an expression, so these read naturally; `$name`
-still starts a command, as in `$EDITOR notes.txt`.
+still starts a command, as in `$EDITOR notes.txt`. `$(…)` gives an
+`Output`, a collection of lines that is its text where a String is
+wanted: see [syntax.md](syntax.md).

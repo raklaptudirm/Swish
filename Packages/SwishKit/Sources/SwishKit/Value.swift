@@ -16,7 +16,34 @@ public enum Value: Sendable {
     /// A size in bytes, shown as `1.2 MB`.
     case filesize(Int64)
     case date(Date)
+    /// What `$(…)` gives: a command's output and how it exited.
+    case output(CommandOutput)
     case function(any Callable)
+}
+
+/// A command's standard output (trailing newlines trimmed) and exit status.
+/// It's a collection of lines: iterating, counting and indexing go by line,
+/// and where a String is wanted it's the whole text.
+public struct CommandOutput: Sendable, Hashable {
+    public var text: String
+    /// The exit code, or nil if a signal ended the command.
+    public var code: Int?
+    /// The signal that ended the command, if one did.
+    public var signal: Int?
+
+    public init(text: String, code: Int?, signal: Int? = nil) {
+        self.text = text
+        self.code = code
+        self.signal = signal
+    }
+
+    public var lines: [String] {
+        text.isEmpty ? [] : text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+    }
+
+    public var succeeded: Bool {
+        code == 0
+    }
 }
 
 /// A function value. The interpreter implements this for Swish functions and
@@ -99,6 +126,7 @@ extension Value: Hashable {
         case (.record(let a), .record(let b)): a == b
         case (.filesize(let a), .filesize(let b)): a == b
         case (.date(let a), .date(let b)): a == b
+        case (.output(let a), .output(let b)): a == b
         case (.function(let a), .function(let b)): a === b
         default: false
         }
@@ -115,6 +143,7 @@ extension Value: Hashable {
         case .record(let record): hasher.combine(record)
         case .filesize(let bytes): hasher.combine(bytes)
         case .date(let date): hasher.combine(date)
+        case .output(let output): hasher.combine(output)
         case .function(let function): hasher.combine(ObjectIdentifier(function))
         }
     }
@@ -132,6 +161,7 @@ extension Value: CustomStringConvertible {
         case .record(let record): "{" + record.map { "\($0.key): \($0.value)" }.joined(separator: ", ") + "}"
         case .filesize(let bytes): Value.formatFileSize(bytes)
         case .date(let date): Value.dateFormatter.string(from: date)
+        case .output(let output): output.text
         case .function(let function): function.description
         }
     }

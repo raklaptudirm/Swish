@@ -256,6 +256,7 @@ extension Shell {
         case .bool: ["true": true, "false": false][text].map(Value.bool)
         case .optional(let wrapped): try converted(text, to: wrapped, for: what, of: function)
         case .filesize: parseFileSize(text).map(Value.filesize)
+        case .output: .output(CommandOutput(text: text, code: 0))
         case .date: (try? Date(text, strategy: .iso8601)).map(Value.date)
         case .record, .list, .function: nil
         }

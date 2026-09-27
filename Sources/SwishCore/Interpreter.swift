@@ -6,10 +6,28 @@ struct RuntimeError: Error, CustomStringConvertible {
     let description: String
     /// The status the failure gives: a failed command's own, for `$(…)`.
     var status: Int32 = 1
+    /// For a failed command, its output, so `catch` can look at it.
+    var output: CommandOutput?
 
-    init(_ description: String, status: Int32 = 1) {
+    init(_ description: String, status: Int32 = 1, output: CommandOutput? = nil) {
         self.description = description
         self.status = status
+        self.output = output
+    }
+
+    /// What `catch` binds: the message, how it ended (`status.code`,
+    /// `status.signal`, `status.succeeded`), and a failed command's `text`.
+    var value: Value {
+        let code = output.map { $0.code } ?? Int(status)
+        return .record(Record([
+            "message": .string(description),
+            "status": .record(Record([
+                "code": code.map(Value.int) ?? .nothing,
+                "signal": output?.signal.map(Value.int) ?? .nothing,
+                "succeeded": .bool(false),
+            ], typeName: "Status")),
+            "text": .string(output?.text ?? ""),
+        ], typeName: "Error"))
     }
 }
 
@@ -34,8 +52,6 @@ struct Binding {
     enum Special {
         /// `env`: the environment, as a record; `env.NAME` is nil if unset.
         case environment
-        /// `status`: how the last statement ended.
-        case status
     }
 
     var value: Value
@@ -203,6 +219,16 @@ extension Shell {
                 setenv(key, value.description, 1)
             }
             return 0
+        case .doCatch(let body, let errorName, let handler):
+            do {
+                return try runBlock(body)
+            } catch let error as RuntimeError {
+                guard let handler else { throw error }
+                return try runBlock(handler, declaring: [errorName: Binding(value: error.value, mutable: false)])
+            } catch let reported as AlreadyReported {
+                guard let handler else { throw reported }
+                return try runBlock(handler, declaring: [errorName: Binding(value: reported.error.value, mutable: false)])
+            }
         case .returnStatement(let expr):
             throw ControlFlow.returned(try expr.map(evaluate) ?? .nothing)
         case .breakStatement:
@@ -255,7 +281,15 @@ extension Shell {
                     stages.append(.external(argv, skipBuiltins: command.external, redirects: redirects, environment: environment))
                 }
             }
-            return try runPipeline(stages, source: node.source, display: context == .statement)
+            let status = try runPipeline(stages, source: node.source, display: context == .statement)
+            // `try make`: failing throws, with the status in the error.
+            if case .some(let kind) = node.throwing, status != 0 {
+                let (code, signal) = exitCode(status)
+                let error = RuntimeError("\(node.source) failed with status \(status)", status: status,
+                                         output: CommandOutput(text: "", code: code, signal: signal))
+                throw kind == .forced ? FatalError(error: error) : error
+            }
+            return status
 
         case .expression(let expr):
             let value = try evaluate(expr)
@@ -336,6 +370,8 @@ extension Shell {
             elements = list
         case .string(let text):
             elements = text.map { .string(String($0)) }
+        case .output(let output):
+            elements = output.lines.map(Value.string)
         default:
             throw RuntimeError("can't iterate over \(value.typeName)")
         }
@@ -365,21 +401,23 @@ extension Shell {
             guard let binding = lookup(name) else { throw RuntimeError("no variable named '\(name)'") }
             switch binding.special {
             case .environment?: return environmentRecord()
-            case .status?: return statusRecord()
             case nil: return binding.value
             }
         case .dollar(let name):
             if let binding = lookup(name) { return binding.value }
             if let value = env(name) { return .string(value) }
             throw RuntimeError("no variable or environment variable named '\(name)'")
-        case .substitution(let program):
+        case .substitution(let program, let throwing):
             var status: Int32 = 0
-            var output = try capturing { status = try runBlock(program) }
-            guard status == 0 else {
-                throw RuntimeError("$(…) failed with status \(status); write try? $(…) to get nil instead", status: status)
+            var text = try capturing { status = try runBlock(program) }
+            while text.last == "\n" { text.removeLast() }
+            let (code, signal) = exitCode(status)
+            let output = CommandOutput(text: text, code: code, signal: signal)
+            // Without `try`, failing is just what `.status` says.
+            if throwing && status != 0 {
+                throw RuntimeError("$(…) failed with status \(status)", status: status, output: output)
             }
-            while output.last == "\n" { output.removeLast() }
-            return .string(output)
+            return .output(output)
         case .list(let elements):
             return .list(try elements.map(evaluate))
         case .record(let entries):
@@ -467,14 +505,10 @@ extension Shell {
         return .record(record)
     }
 
-    /// `code` is nil when a signal ended the command, and `signal` otherwise.
-    private func statusRecord() -> Value {
-        let signal: Int32? = lastStatus > 128 && lastStatus == lastSignalStatus ? lastStatus - 128 : nil
-        return .record(Record([
-            "code": signal == nil ? .int(Int(lastStatus)) : .nothing,
-            "signal": signal.map { .int(Int($0)) } ?? .nothing,
-            "succeeded": .bool(lastStatus == 0),
-        ], typeName: "Status"))
+    /// A status as an exit code, or the signal that ended the command.
+    func exitCode(_ status: Int32) -> (code: Int?, signal: Int?) {
+        if status > 128 && status == lastSignalStatus { return (nil, Int(status - 128)) }
+        return (Int(status), nil)
     }
 
     /// Sets environment variables around `body`, then puts them back.
@@ -593,6 +627,17 @@ extension Shell {
     }
 
     private func apply(_ op: BinaryOperator, _ lhs: Value, _ rhs: Value) throws -> Value {
+        // Output compares as its text; other String operations go through `.text`.
+        let comparisons: [BinaryOperator] = [.equal, .notEqual, .less, .lessEqual, .greater, .greaterEqual]
+        if case .output(let output) = lhs, comparisons.contains(op) {
+            return try apply(op, .string(output.text), rhs)
+        }
+        if case .output(let output) = rhs, comparisons.contains(op) {
+            return try apply(op, lhs, .string(output.text))
+        }
+        if case .output = lhs, op == .add {
+            throw RuntimeError("'+' needs the text of a command's output: use .text")
+        }
         switch (op, lhs, rhs) {
         case (.equal, _, _):
             return .bool(lhs.isEqual(to: rhs))
@@ -675,7 +720,26 @@ extension Shell {
 
     /// Record fields first, then the few members values have.
     func member(_ name: String, of value: Value) throws -> Value {
+        // Every value has its textual form, as a CustomStringConvertible
+        // does in Swift: what interpolation shows. A record's own field of
+        // that name comes first.
+        if name == "description" {
+            if case .record(let record) = value, let field = record[name] { return field }
+            return .string(value.description)
+        }
         switch (value, name) {
+        case (.output(let output), "text"): return .string(output.text)
+        case (.output(let output), "lines"): return .list(output.lines.map(Value.string))
+        case (.output(let output), "count"): return .int(output.lines.count)
+        case (.output(let output), "isEmpty"): return .bool(output.text.isEmpty)
+        case (.output(let output), "first"): return output.lines.first.map(Value.string) ?? .nothing
+        case (.output(let output), "last"): return output.lines.last.map(Value.string) ?? .nothing
+        case (.output(let output), "status"):
+            return .record(Record([
+                "code": output.code.map(Value.int) ?? .nothing,
+                "signal": output.signal.map(Value.int) ?? .nothing,
+                "succeeded": .bool(output.succeeded),
+            ], typeName: "Status"))
         case (.record(let record), _) where record[name] != nil: return record[name]!
         case (.record(let record), "count"): return .int(record.count)
         case (.record(let record), "isEmpty"): return .bool(record.count == 0)
@@ -700,6 +764,9 @@ extension Shell {
     private func element(of base: Value, at index: Value) throws -> Value {
         if case .record(let record) = base, case .string(let key) = index {
             return record[key] ?? .nothing
+        }
+        if case .output(let output) = base {
+            return try element(of: .list(output.lines.map(Value.string)), at: index)
         }
         guard case .list(let elements) = base else {
             throw RuntimeError("\(base.typeName) can't be indexed")
@@ -898,6 +965,7 @@ extension Value {
         case .record: "Record"
         case .filesize: "FileSize"
         case .date: "Date"
+        case .output: "Output"
         case .function: "Function"
         @unknown default: "Value"
         }
@@ -928,6 +996,12 @@ extension Value {
     /// Double, as an integer literal would in Swift.
     func conforming(to type: TypeAnnotation) -> Value? {
         switch (type, self) {
+        case (.output, .output):
+            return self
+        case (.string, .output(let output)):
+            return .string(output.text)
+        case (.list(.string), .output(let output)):
+            return .list(output.lines.map(Value.string))
         case (.any, _), (.bool, .bool), (.int, .int), (.double, .double), (.string, .string), (.function, .function),
              (.record, .record), (.filesize, .filesize), (.date, .date):
             return self

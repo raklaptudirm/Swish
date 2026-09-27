@@ -192,6 +192,8 @@ final class Formatter {
         switch value {
         case .string(let text):
             text.replacingOccurrences(of: "\n", with: "↵")
+        case .output(let output):
+            output.text.replacingOccurrences(of: "\n", with: "↵")
         case .list(let items):
             "[\(items.count) item\(items.count == 1 ? "" : "s")]"
         case .record(let record):

@@ -23,6 +23,7 @@ enum JSON {
             guard double.isFinite else { throw RuntimeError("to json: \(double) isn't valid JSON") }
             return String(double)
         case .string(let string): return quoted(string)
+        case .output(let output): return quoted(output.text)
         case .filesize(let bytes): return String(bytes)
         case .date(let date): return quoted(date.formatted(.iso8601))
         case .list(let items):

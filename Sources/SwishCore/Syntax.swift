@@ -13,6 +13,9 @@ enum Statement: Equatable, Sendable {
     case function(FunctionDecl)
     /// `env.NAME = value` or `env["NAME"] = value`; nil unsets it.
     case setEnvironment(name: Expr, value: Expr)
+    /// `do { … } catch { … }`: a runtime error in the body runs the
+    /// handler with `error` (or the name given) bound to it.
+    case doCatch(body: Program, errorName: String, handler: Program?)
     case returnStatement(Expr?)
     case breakStatement
     case continueStatement
@@ -104,7 +107,7 @@ struct Parameter: Equatable, Sendable {
 
 indirect enum TypeAnnotation: Equatable, Sendable, CustomStringConvertible {
     case any, bool, int, double, string
-    case record, filesize, date
+    case record, filesize, date, output
     case list(TypeAnnotation)
     case function
     /// `T?`: a T, or nil.
@@ -120,6 +123,7 @@ indirect enum TypeAnnotation: Equatable, Sendable, CustomStringConvertible {
         case .record: "Record"
         case .filesize: "FileSize"
         case .date: "Date"
+        case .output: "Output"
         case .list(let element): "[\(element)]"
         case .function: "function"
         case .optional(let wrapped): "\(wrapped)?"
@@ -133,6 +137,9 @@ struct PipelineNode: Equatable, Sendable {
     var source: String
     /// A value feeding the pipeline, as in `[3, 1, 2] | sort`.
     var input: Expr?
+    /// `try make` (`.some(nil)`) or `try! make`: failing throws, rather than
+    /// only setting the status.
+    var throwing: TryKind?? = nil
 }
 
 struct CommandNode: Equatable, Sendable {
@@ -197,9 +204,9 @@ indirect enum Expr: Equatable, Sendable {
     case variable(String)
     /// `$name`: a Swish variable, falling back to the environment.
     case dollar(String)
-    /// `$(…)`: throws if the command fails, like a call to a throwing
-    /// function whose `try` is implicit.
-    case substitution(Program)
+    /// `$(…)`: the command's Output, whatever its status. Under `try`
+    /// (`throwing`), a non-zero status throws instead.
+    case substitution(Program, throwing: Bool = false)
     /// `try? expr` or `try! expr`; a plain `try` leaves no trace.
     case attempt(Expr, TryKind)
     case list([Expr])
@@ -281,9 +288,9 @@ struct Span: Equatable, Sendable {
 struct Parser {
     private static let keywords: Set = [
         "let", "var", "if", "else", "true", "false", "nil",
-        "for", "in", "while", "func", "return", "break", "continue", "try",
+        "for", "in", "while", "func", "return", "break", "continue", "try", "do", "catch",
     ]
-    private static let statementKeywords: Set = ["let", "var", "func", "return", "break", "continue"]
+    private static let statementKeywords: Set = ["let", "var", "func", "return", "break", "continue", "do", "catch"]
     private static let precedence: [[BinaryOperator]] = [
         [.or],
         [.and],
@@ -312,6 +319,10 @@ struct Parser {
     /// Inside an `if`/`while` condition, `{` after a command starts the body
     /// rather than a closure argument.
     private var conditionDepth = 0
+    /// Inside the operand of `try`, `try?` or `try!`, where `$(…)` throws
+    /// when its command fails. Closures and function bodies start afresh:
+    /// they decide for themselves whether to throw, as in Swift.
+    private var tryDepth = 0
     /// One entry per enclosing function or closure: how many `$n`
     /// parameters a closure without named parameters uses, or nil if its
     /// parameters are named.
@@ -387,6 +398,8 @@ struct Parser {
             skipSpaces()
             guard let c = peek(), c != ";" && c != "\n" && c != "}" else { return .returnStatement(nil) }
             return .returnStatement(try parseExpression())
+        case "do":
+            return try parseDoCatch()
         case let word? where word == "break" || word == "continue":
             guard loopDepth > 0 else { throw SyntaxError("'\(word)' outside a loop") }
             keyword(word)
@@ -447,6 +460,32 @@ struct Parser {
         return .setEnvironment(name: name, value: try parseExpression())
     }
 
+    /// `do { … }`, optionally `catch { … }` or `catch let name { … }`.
+    private mutating func parseDoCatch() throws(SyntaxError) -> Statement {
+        keyword("do")
+        skipSpaces()
+        let body = try parseBlock()
+        let afterBody = (pos, spans.count)
+        skipSpaces(newlines: true)
+        guard identifier() == "catch" else {
+            rewind(to: afterBody)
+            return .doCatch(body: body, errorName: "error", handler: nil)
+        }
+        keyword("catch")
+        skipSpaces()
+        var name = "error"
+        if identifier() == "let" {
+            keyword("let")
+            skipSpaces()
+            let nameStart = pos
+            name = try parseName(after: "'let'")
+            mark(.variable, from: nameStart)
+            skipSpaces()
+        }
+        let handler = try parseBlock(declaring: [name: .variable])
+        return .doCatch(body: body, errorName: name, handler: handler)
+    }
+
     private mutating func parseDeclaration() throws(SyntaxError) -> Statement {
         let keyword = identifier()!
         self.keyword(keyword)
@@ -498,6 +537,10 @@ struct Parser {
         default:
             break
         }
+        // `try make` or `try! make`: a command whose failure throws.
+        if identifier() == "try", let command = try parseThrowingCommand() {
+            return .pipeline(command)
+        }
         if startsExpression(c) {
             let start = pos
             // `a < 1 || b > 2` is one expression, with Swift's precedence, so
@@ -521,12 +564,35 @@ struct Parser {
         return .pipeline(try parsePipeline())
     }
 
+    /// `try cmd …` or `try! cmd …`, or nil (having looked ahead) when what
+    /// follows the `try` is an expression, as in `try? $(cmd)`.
+    private mutating func parseThrowingCommand() throws(SyntaxError) -> PipelineNode? {
+        let before = (pos, spans.count)
+        guard let kind = try parseTry() else { return nil }
+        skipSpaces()
+        // `try false` is the command: a Bool literal can't throw.
+        let boolCommand = kind != .optional && ["true", "false"].contains(identifier() ?? "")
+            && peek(identifier()!.count).map(isWordBoundary) ?? true
+        guard let next = peek(), boolCommand || !startsExpression(next) else {
+            rewind(to: before)
+            return nil
+        }
+        if kind == .optional {
+            throw SyntaxError("try? needs a value; capture the command with try? $(…)")
+        }
+        tryDepth += 1
+        defer { tryDepth -= 1 }
+        var pipeline = try parsePipeline()
+        pipeline.throwing = .some(kind)
+        return pipeline
+    }
+
     /// Whether a unit starting at `c` is an expression rather than a command:
     /// a literal, a bracket, `!` or `-`, a variable, or a call.
     ///
     /// A function name without `(` starts a command (`greet Rak --loud`).
     /// `$name` starts a command, as in `$EDITOR notes.txt`, but `$(…)` an
-    /// expression, as in `$(cmd)? ?? "default"`, and so does a closure's `$0`;
+    /// expression, as in `$(cmd).count`, and so does a closure's `$0`;
     /// `^` always starts a command.
     private func startsExpression(_ c: Character) -> Bool {
         if Parser.isDigit(c) || "\"'([!-".contains(c) { return true }
@@ -735,10 +801,11 @@ struct Parser {
     private mutating func parseFunctionBody(
         parameters: [Parameter], anonymous: Bool
     ) throws(SyntaxError) -> (Program, Int) {
-        let saved = (loopDepth, bracketDepth, conditionDepth)
+        let saved = (loopDepth, bracketDepth, conditionDepth, tryDepth)
         loopDepth = 0
         bracketDepth = 0
         conditionDepth = 0
+        tryDepth = 0
         functionDepth += 1
         var names: [String: NameKind] = [:]
         for parameter in parameters where parameter.name != "_" {
@@ -747,7 +814,7 @@ struct Parser {
         scopes.append(names)
         anonymousArity.append(anonymous ? 0 : nil)
         defer {
-            (loopDepth, bracketDepth, conditionDepth) = saved
+            (loopDepth, bracketDepth, conditionDepth, tryDepth) = saved
             functionDepth -= 1
             scopes.removeLast()
             anonymousArity.removeLast()
@@ -905,6 +972,7 @@ struct Parser {
         case "Record": type = .record
         case "FileSize": type = .filesize
         case "Date": type = .date
+        case "Output": type = .output
         case "Any", "Value": type = .any
         default: throw SyntaxError("unknown type '\(name)'")
         }
@@ -1257,19 +1325,22 @@ struct Parser {
             pos += 2
             // A substitution is its own little program: newlines separate
             // statements again, and it can't break or return out of its host.
-            let saved = (bracketDepth, loopDepth, functionDepth, conditionDepth)
-            (bracketDepth, loopDepth, functionDepth, conditionDepth) = (0, 0, 0, 0)
+            // Whether this one throws is decided out here; the commands
+            // inside are a program of their own.
+            let throwing = tryDepth > 0
+            let saved = (bracketDepth, loopDepth, functionDepth, conditionDepth, tryDepth)
+            (bracketDepth, loopDepth, functionDepth, conditionDepth, tryDepth) = (0, 0, 0, 0, 0)
             scopes.append([:])
             defer {
-                (bracketDepth, loopDepth, functionDepth, conditionDepth) = saved
+                (bracketDepth, loopDepth, functionDepth, conditionDepth, tryDepth) = saved
                 scopes.removeLast()
             }
             let program = try parseProgram(until: ")")
             mark(.punctuation, from: pos, to: pos + 1)
             pos += 1
-            return .substitution(program)
+            return .substitution(program, throwing: throwing)
         case "?":
-            throw SyntaxError("$? is status.code in Swish")
+            throw SyntaxError("$? isn't Swish: a captured command has its own .status, and `try` makes a failure throw")
         case let c? where Parser.isDigit(c):
             // Only special in a closure without named parameters; elsewhere,
             // as in "costs $5", it's just text.
@@ -1301,6 +1372,8 @@ struct Parser {
     private mutating func parseExpression(logical: Bool = true) throws(SyntaxError) -> Expr {
         skipSpaces()
         if let kind = try parseTry() {
+            tryDepth += 1
+            defer { tryDepth -= 1 }
             let operand = try parseExpression(logical: logical)
             return kind.map { .attempt(operand, $0) } ?? operand
         }

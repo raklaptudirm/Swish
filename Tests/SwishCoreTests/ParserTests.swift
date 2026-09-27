@@ -354,7 +354,7 @@ private func command(_ source: String) throws -> CommandNode? {
 }
 
 @Test func dollarStatusIsGone() {
-    #expect(syntaxError("echo $?")?.description.contains("status.code") == true)
+    #expect(syntaxError("echo $?")?.description.contains(".status") == true)
 }
 
 @Test func foreignMarksExternal() throws {
@@ -444,13 +444,50 @@ private func command(_ source: String) throws -> CommandNode? {
 }
 
 @Test func tryCoversTheRestOfTheExpression() throws {
-    let program = try parse("let a = try? $(x) ?? 1; let b = (try? $(x)) ?? 1; let c = try $(x)")
-    #expect(program.statements[0] == .declare(name: "a", mutable: false, value:
-        .attempt(.binary(.coalesce, .substitution(Program(statements: [.chain(Chain(first: .pipeline(PipelineNode(commands: [CommandNode(words: [.text([.literal("x")])])], source: "x"))))])), .literal(.int(1))), .optional)))
-    guard case .declare(_, _, .binary(.coalesce, .attempt(_, .optional), _)) = program.statements[1],
-          case .declare(_, _, .substitution) = program.statements[2] else {
+    let program = try parse("let a = try? $(x) ?? 1; let b = (try? $(x)) ?? 1; let c = try $(x); let d = $(x)")
+    // `try?` covers the `??` too, as in Swift, and marks the $(…) under it.
+    guard case .declare(_, _, .attempt(.binary(.coalesce, .substitution(_, throwing: true), _), .optional)) = program.statements[0],
+          case .declare(_, _, .binary(.coalesce, .attempt(.substitution(_, throwing: true), .optional), _)) = program.statements[1],
+          case .declare(_, _, .substitution(_, throwing: true)) = program.statements[2],
+          case .declare(_, _, .substitution(_, throwing: false)) = program.statements[3] else {
         Issue.record("\(program.statements)")
         return
     }
     #expect(syntaxError("$(x)?") != nil) // the old postfix form is gone
+}
+
+@Test func tryDoesNotReachIntoClosures() throws {
+    guard case .declare(_, _, .attempt(.call(_, let arguments), .optional)) = try parse("let r = try? f({ $(x) })", bound: ["f"]).statements[0],
+          case .closure(let closure) = arguments[0].value,
+          case .chain(let chain) = closure.body.statements[0],
+          case .expression(.substitution(_, throwing: false)) = chain.first else {
+        Issue.record()
+        return
+    }
+}
+
+// MARK: do/catch and throwing commands
+
+@Test func doCatchForms() throws {
+    let program = try parse("do { a } catch { error }\ndo { b } catch let e { e }\ndo { c }")
+    guard case .doCatch(_, "error", .some) = program.statements[0],
+          case .doCatch(_, "e", .some) = program.statements[1],
+          case .doCatch(_, _, nil) = program.statements[2] else {
+        Issue.record("\(program.statements)")
+        return
+    }
+    // `error` is bound in the handler: an expression there, a command outside.
+    #expect(try modes("do { } catch { error }; error") == ["declaration", "command"])
+}
+
+@Test func tryBeforeACommand() throws {
+    guard case .chain(let chain) = try parse("try make -j4").statements[0],
+          case .pipeline(let pipeline) = chain.first else { Issue.record(); return }
+    #expect(pipeline.throwing == .some(nil))
+    #expect(pipeline.commands[0].words.count == 2)
+    guard case .chain(let forced) = try parse("try! false").statements[0],
+          case .pipeline(let bang) = forced.first else { Issue.record(); return }
+    #expect(bang.throwing == .some(.forced))
+    // An expression after `try` is still an expression.
+    #expect(try modes("try $(x); try? false") == ["expression", "expression"])
 }

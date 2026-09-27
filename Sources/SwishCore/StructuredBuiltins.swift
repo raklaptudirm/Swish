@@ -19,7 +19,6 @@ extension Shell {
         // `with` is only called with a closure, so it isn't a command.
         scopes[0].bindings["with"] = Binding(value: .function(OverloadSet(name: "with", candidates: [with()])), mutable: false)
         scopes[0].bindings["env"] = Binding(value: .nothing, mutable: false, special: .environment)
-        scopes[0].bindings["status"] = Binding(value: .nothing, mutable: false, special: .status)
         scopes[0].bindings["args"] = Binding(value: .list([]), mutable: false)
     }
 
@@ -471,6 +470,8 @@ extension SwishKit.Value {
         case (.bool(let a), .bool(let b)): return compare(a ? 1 : 0, b ? 1 : 0)
         case (.int, .int), (.int, .double), (.double, .int), (.double, .double): return compare(asDouble!, other.asDouble!)
         case (.string(let a), .string(let b)): return a.compare(b)
+        case (.output(let a), _): return Value.string(a.text).order(comparedTo: other)
+        case (_, .output(let b)): return order(comparedTo: .string(b.text))
         case (.filesize(let a), .filesize(let b)): return compare(a, b)
         case (.date(let a), .date(let b)): return compare(a, b)
         case (.list(let a), .list(let b)):
@@ -490,7 +491,7 @@ extension SwishKit.Value {
         case .int, .double: 2
         case .filesize: 3
         case .date: 4
-        case .string: 5
+        case .string, .output: 5
         case .list: 6
         case .record: 7
         case .function: 8

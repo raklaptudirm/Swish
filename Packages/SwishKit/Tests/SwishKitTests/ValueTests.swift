@@ -23,3 +23,11 @@ private final class Stub: Callable {
     #expect(Set([Value.function(stub), .function(stub)]).count == 1)
     #expect(Value.function(stub).description == "stub")
 }
+
+@Test func commandOutputIsLines() {
+    let output = CommandOutput(text: "a\nb", code: 0)
+    #expect(output.lines == ["a", "b"])
+    #expect(CommandOutput(text: "", code: 0).lines.isEmpty)
+    #expect(Value.output(output).description == "a\nb")
+    #expect(!CommandOutput(text: "", code: nil, signal: 15).succeeded)
+}

@@ -46,12 +46,50 @@ what it's usually for.
 `with(env:)` uses a trailing closure, which Swish supports as Swift does,
 except where `{` starts a body: after `if`, `while` and `for … in`.
 
-## Status
+## Command output and failure
 
-`status` describes how the previous statement ended: `status.code` (nil if
-a signal ended it), `status.signal` (nil otherwise) and `status.succeeded`.
-Reading it is a statement too, so read it once into a variable to use more
-than one field. POSIX's `$?` is an error that names `status.code`.
+`$(…)` gives an `Output`: the command's text and how it exited. It's a
+collection of lines, so iterating, counting and indexing go by line, as
+in other shells; where a String is wanted (interpolation, `==` with a
+String, a command argument, a `String` parameter) it's the whole text.
+Other String operations go through `.text`.
+
+Like every value, an Output also has a `description`, its textual form as
+in Swift's `CustomStringConvertible`, which here is the same text. `.text`
+is the one to use for the output itself: `description` is how a value
+shows, and isn't promised to stay a plain copy of the data.
+
+```swift
+let r = $(git status --short)
+for line in r { … }              // line by line
+r.count; r[0]; r.first           // lines
+r.text                           // the whole text
+r.status.code                    // non-zero if it failed
+"on \($(git branch --show-current))"
+```
+
+Failing isn't an error unless you say so with `try` (see
+[pipeline.md](pipeline.md)); Swift's `do`/`catch` catches it, with the
+result in the error:
+
+```swift
+do {
+    let log = try $(make)        // without `try`, a failure is only in log.status
+} catch {
+    echo "make failed with \(error.status.code)"
+    error.text                   // what it printed before failing
+}
+```
+
+`catch` catches any runtime error; `error.message` says what happened,
+and `error.status` has `code`, `signal` (if one ended it) and `succeeded`.
+`catch let e { … }` names it something else.
+
+A command run as a statement only succeeds or fails, as in every shell:
+`if make { }`, `make && …`. `try make` makes its failure throw, so
+`do { try make } catch { error.status.code }` gets the code, and
+`try! make` stops a script if make fails. There's no global `status` or
+`$?`; using it is an error that points here.
 
 ## Scripts
 
@@ -103,9 +141,9 @@ you hold.
 
 ```swift
 let build = async swift build   // starts it; `build` is the job
-await build                     // waits; gives its status
+try await build                 // waits; throws if it failed, like `try make`
 let page = async $(curl -s example.com)
-let html = await page           // waits; gives its output
+let html = await page           // waits; gives its Output, or throws
 build.cancel()
 ```
 

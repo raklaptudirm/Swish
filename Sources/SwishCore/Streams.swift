@@ -25,6 +25,7 @@ final class ValueStream {
         let items: [Value] = switch value {
         case .nothing: []
         case .list(let list): list
+        case .output(let output): output.lines.map(Value.string)
         default: [value]
         }
         var index = 0
