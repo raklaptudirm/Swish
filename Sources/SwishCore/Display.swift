@@ -21,7 +21,9 @@ extension Shell {
             return
         case .record(let record):
             for line in keyValueLines(record, styled: Style.enabled(for: stdoutFD)) { writeAll(stdoutFD, line + "\n") }
-        case .list(let items) where items.contains(where: { $0.asRecord != nil }):
+        // A command's list reads as a pipeline's output would: records as a
+        // table, anything else an item per line. A bare list is a value.
+        case .list(let items) where !debug || items.contains(where: { $0.asRecord != nil }):
             let formatter = Formatter(fd: stdoutFD)
             for item in items { formatter.add(item) }
             formatter.finish()

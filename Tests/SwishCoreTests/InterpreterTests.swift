@@ -603,3 +603,11 @@ private func fixture() throws -> String {
     // Awaiting a job that wrote to the terminal shows nothing more.
     #expect(try output("let j = async true; await j").isEmpty)
 }
+
+@Test func aCommandsListReadsLikePipelineOutput() throws {
+    // In command form, an item per line, as `names | cat` would give; called
+    // as Swift, the list as a value.
+    #expect(try output(#"func names() -> [String] { ["a", "b"] }; names; names(); names | cat"#)
+        == "a\nb\n" + #"["a", "b"]"# + "\na\nb\n")
+    #expect(try output("func none() -> [Int] { [] }; none").isEmpty)
+}

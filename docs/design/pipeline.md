@@ -1,6 +1,6 @@
 # Structured pipelines
 
-Status: **implemented**, except live objects and generated bridges
+Status: **implemented**, except generated bridges (milestone 9)
 (milestone 8), paths and durations, and errors as inspectable values.
 
 Swish pipelines carry values, not text, in the style of PowerShell. The goal
@@ -119,6 +119,8 @@ pipeline turns values into text, and only if nothing else consumed them.
 - **A bare value shows its `debugDescription`**, as Swift's `debugPrint`
   would: `let r = $(echo hi); r` shows `Output(text: "hi", status: …)`,
   a string shows quoted and a case with its type (`FileType.directory`).
+  A function called as a command shows its result as a pipeline's output
+  would (a list an item per line), since that's what a command's output is.
   Interpolation, commands and pipelines use `description`, the plain text,
   and lists of records and single records are still tables and key/value
   lists. A job on its own reads as `jobs` announces it: `[1] running  make`.

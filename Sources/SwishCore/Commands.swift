@@ -237,6 +237,8 @@ extension Shell {
         for parameter in parameters where bound[parameter.name] == nil {
             if let defaultValue = parameter.defaultValue {
                 bound[parameter.name] = try defaultArgument(defaultValue, for: parameter, of: function)
+            } else if parameter.externalDefault != nil {
+                continue // The plugin fills it in.
             } else if parameter.type == .bool && parameter.label != nil {
                 bound[parameter.name] = .bool(false)
             } else if parameter.type.isList && parameter.label != nil {
@@ -328,6 +330,8 @@ extension Shell {
                 }
                 if let defaultValue = parameter.defaultValue {
                     details.append("(default: \(describe(defaultValue)))")
+                } else if let source = parameter.externalDefault {
+                    details.append("(default: \(source))")
                 }
                 if let label = parameter.label {
                     let short = parameter.shortFlag.map { "-\($0), " } ?? "    "
@@ -368,14 +372,14 @@ extension Shell {
             if parameter.type == .bool && parameter.defaultValue == .literal(.bool(true)) {
                 flag = "--no-" + flag.dropFirst(2)
             }
-            let optional = parameter.defaultValue != nil || parameter.type == .bool || parameter.type.isList
+            let optional = parameter.hasDefault || parameter.type == .bool || parameter.type.isList
             parts.append(optional ? "[\(flag)]" : flag)
         }
         for parameter in function.parameters where parameter.label == nil {
             var argument = "<\(parameter.name)>"
             if parameter.variadic || (parameter.isInput && parameter.type.isList) {
                 argument = "[\(argument)...]"
-            } else if parameter.defaultValue != nil || parameter.isInput {
+            } else if parameter.hasDefault || parameter.isInput {
                 argument = "[\(argument)]"
             }
             parts.append(argument)

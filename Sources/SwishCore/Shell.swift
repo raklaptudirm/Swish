@@ -37,6 +37,11 @@ public final class Shell {
     var warnedAboutJobs = false
     /// A `try!` failed in a script, which stops it.
     var scriptStopped = false
+    /// The running script's directory, which relative `import` paths start
+    /// from; nil at the prompt, where they start from the working directory.
+    var scriptDirectory: String?
+    /// Imported plugins: each module's name, and the package it came from.
+    var plugins: [String: String] = [:]
     /// The status the last signal-killed command gave, to tell 130 from ^C
     /// apart from a command that exited with 130.
     var lastSignalStatus: Int32?
@@ -105,6 +110,7 @@ public final class Shell {
             return 127
         }
         scopes[0].bindings["args"] = Binding(value: .list(arguments.map(Value.string)), mutable: false)
+        scriptDirectory = URL(fileURLWithPath: path).standardizedFileURL.deletingLastPathComponent().path
         // Parsed whole, so doc comments reach their functions and a syntax
         // error anywhere stops the script before any of it runs; then run a
         // statement at a time, so a runtime error only abandons its own.

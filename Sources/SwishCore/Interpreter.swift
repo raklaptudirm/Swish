@@ -92,11 +92,14 @@ final class Function: Callable, @unchecked Sendable {
     let body: FunctionBody
     let captured: [Scope]
     let documentation: Documentation?
+    /// The imported module it came from, for a plugin's function.
+    let plugin: String?
 
     init(
         name: String?, parameters: [Parameter], returnType: TypeAnnotation?, body: FunctionBody,
-        captured: [Scope] = [], documentation: Documentation? = nil
+        captured: [Scope] = [], documentation: Documentation? = nil, plugin: String? = nil
     ) {
+        self.plugin = plugin
         self.name = name
         self.parameters = parameters
         self.returnType = returnType
@@ -232,6 +235,13 @@ extension Shell {
                 guard let handler else { throw reported }
                 return try runBlock(handler, declaring: [errorName: Binding(value: reported.error.value, mutable: false)])
             }
+        case .importPlugin(let name, let pathExpr):
+            let path = try evaluate(pathExpr)
+            guard case .string(let text) = path else {
+                throw RuntimeError("import \(name): the path must be a String, not \(path.typeName)")
+            }
+            try importPlugin(name, from: text)
+            return 0
         case .enumDecl(let decl):
             try declare(decl)
             return 0
@@ -475,6 +485,9 @@ extension Shell {
                 let (function, bindings) = try resolve(set) { try self.bind(values, to: $0) }
                 return try invoke(function, with: bindings)
             case .function(let function as Function):
+                return try invoke(function, with: try bind(values, to: function).bindings)
+            case .function(let native as NativeFunction):
+                let function = hostFunction(native.function)
                 return try invoke(function, with: try bind(values, to: function).bindings)
             default:
                 throw RuntimeError("\(value.typeName) isn't a function")
@@ -949,6 +962,9 @@ extension Shell {
             return try invoke(function, with: bindings)
         case .function(let function as Function):
             return try invoke(function, with: try bind(unlabeled, to: function).bindings)
+        case .function(let native as NativeFunction):
+            let function = hostFunction(native.function)
+            return try invoke(function, with: try bind(unlabeled, to: function).bindings)
         default:
             throw RuntimeError("\(value.typeName) isn't a function")
         }
@@ -986,6 +1002,8 @@ extension Shell {
                 bound[parameter.name] = .list([])
             } else if let defaultValue = parameter.defaultValue {
                 bound[parameter.name] = try defaultArgument(defaultValue, for: parameter, of: function)
+            } else if parameter.externalDefault != nil {
+                continue // The plugin fills it in.
             } else {
                 let label = parameter.label.map { "'\($0):'" } ?? "#\(function.parameters.firstIndex(of: parameter)! + 1)"
                 throw RuntimeError("\(name): missing argument \(label)")

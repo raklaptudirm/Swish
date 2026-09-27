@@ -17,6 +17,9 @@ enum Statement: Equatable, Sendable {
     /// handler with `error` (or the name given) bound to it.
     case doCatch(body: Program, errorName: String, handler: Program?)
     case enumDecl(EnumDecl)
+    /// `import Tools from "./Tools"`: builds a Swift package and loads the
+    /// functions it exports.
+    case importPlugin(name: String, path: Expr)
     /// Carries on into the next case of a switch.
     case fallthroughStatement
     case returnStatement(Expr?)
@@ -156,6 +159,11 @@ struct Parameter: Equatable, Sendable {
     var isInput = false
     /// `@flag("n")`: a short flag in command mode.
     var shortFlag: Character?
+    /// A plugin's default only Swift can compute, like `Date()`: the
+    /// argument is left out for the plugin to fill in. Its source, for help.
+    var externalDefault: String?
+
+    var hasDefault: Bool { defaultValue != nil || externalDefault != nil }
 }
 
 indirect enum TypeAnnotation: Equatable, Sendable, CustomStringConvertible {
@@ -369,9 +377,9 @@ struct Parser {
     private static let keywords: Set = [
         "let", "var", "if", "else", "true", "false", "nil",
         "for", "in", "while", "func", "return", "break", "continue", "try", "do", "catch",
-        "async", "await", "enum", "switch", "case", "default", "fallthrough",
+        "async", "await", "enum", "switch", "case", "default", "fallthrough", "import",
     ]
-    private static let statementKeywords: Set = ["let", "var", "func", "return", "break", "continue", "do", "catch", "enum", "fallthrough"]
+    private static let statementKeywords: Set = ["let", "var", "func", "return", "break", "continue", "do", "catch", "enum", "fallthrough", "import"]
     private static let precedence: [[BinaryOperator]] = [
         [.or],
         [.and],
@@ -393,6 +401,9 @@ struct Parser {
     private let chars: [Character]
     private var pos = 0
     private var scopes: [[String: NameKind]]
+    /// An `import` came earlier: the functions it brings aren't known until
+    /// it runs, so calling an unknown name is left for then.
+    private var sawImport = false
     /// Inside (), [] and \( ), newlines don't end an expression.
     private var bracketDepth = 0
     private var loopDepth = 0
@@ -493,6 +504,8 @@ struct Parser {
             return .continueStatement
         case "enum":
             return .enumDecl(try parseEnum())
+        case "import":
+            return try parseImport()
         case "fallthrough":
             guard switchDepth > 0 else { throw SyntaxError("'fallthrough' outside a switch") }
             keyword("fallthrough")
@@ -649,6 +662,26 @@ struct Parser {
         }
         scopes[scopes.count - 1][name] = .type
         return EnumDecl(name: name, rawType: rawType, cases: cases)
+    }
+
+    /// `import Name from "path"`. The functions it brings aren't known until
+    /// it runs; the module's name is, for `Tools.greet(…)`.
+    private mutating func parseImport() throws(SyntaxError) -> Statement {
+        keyword("import")
+        skipSpaces()
+        let nameStart = pos
+        let name = try parseName(after: "'import'")
+        mark(.type, from: nameStart)
+        skipSpaces()
+        guard identifier() == "from" else {
+            throw SyntaxError("import needs where the package is: import \(name) from \"path/to/\(name)\"")
+        }
+        keyword("from")
+        skipSpaces()
+        let path = try parsePrimary()
+        scopes[scopes.count - 1][name] = .variable
+        sawImport = true
+        return .importPlugin(name: name, path: path)
     }
 
     /// `switch subject { case …: … default: … }`
@@ -1890,7 +1923,7 @@ struct Parser {
         if Parser.keywords.contains(name) {
             throw SyntaxError("expected an expression, found '\(name)'")
         }
-        guard kind(of: name) != nil else {
+        guard kind(of: name) != nil || (sawImport && peek() == "(") else {
             throw SyntaxError(peek() == "(" ? "no function named '\(name)'" : "no variable named '\(name)'")
         }
         return .variable(name)

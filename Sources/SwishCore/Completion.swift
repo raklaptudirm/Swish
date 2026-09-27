@@ -116,7 +116,7 @@ extension Shell {
                 }
             }
             for name in Shell.builtinNames { described[name] = "shell builtin" }
-            for keyword in ["if", "for", "while", "let", "var", "func", "async", "await", "do", "try", "enum", "switch"] {
+            for keyword in ["if", "for", "while", "let", "var", "func", "async", "await", "do", "try", "enum", "switch", "import"] {
                 described[keyword] = "keyword"
             }
         }

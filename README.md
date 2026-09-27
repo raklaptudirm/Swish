@@ -2,8 +2,8 @@
 
 **A shell that speaks Swift.** Commands work the way they do in any shell;
 everything else is a small Swift-flavored language, with values instead of
-text flowing through pipelines. The goal is to `import` Swift packages and
-use them right from the prompt.
+text flowing through pipelines, and Swift packages you can `import` and use
+right from the prompt.
 
 ```swift
 let n = 3
@@ -140,6 +140,32 @@ jobs                              // background jobs, including ones you ^Z'd
 await                             // bring back the most recent: the ^Z'd vim, say
 ```
 
+### Swift packages as commands
+
+Mark functions in a Swift package with `@SwishExport` and `import` it: each
+one becomes a command with flags, `--help` and piping, derived from its
+signature and doc comment, just like a Swish `func`.
+
+```swift
+// In a package that depends on SwishKit:
+/// Greets someone.
+@SwishExport
+public func greet(_ name: String, @Flag("n") times: Int = 1) -> [String] { … }
+
+@SwishExport
+public func longest(@Input _ lines: [String]) -> String? { … }
+```
+
+```swift
+import Tools from "~/code/tools"   // builds it, and loads the library
+greet Rak -n 2
+ls | get name | longest
+```
+
+Enums that conform to `SwishEnum` work as arguments, `Encodable` results
+become records, and `@SwishObject` classes are live objects with their
+properties and methods. See [`Examples/Tools`](Examples/Tools).
+
 ### The rest of a shell, a little tidier
 
 ```swift
@@ -181,11 +207,12 @@ scripts/test.sh     # unit tests, plus pty-driven job-control, editor and backgr
 
 | Path | What |
 |---|---|
-| `Packages/SwishKit` | `Value` and, later, the plugin API. A separate package so it links as a **dylib** shared by the shell and every compiled plugin. |
+| `Packages/SwishKit` | `Value` and the plugin API, with the `@SwishExport` and `@SwishObject` macros. A separate package so it links as a **dylib** shared by the shell and every plugin. |
 | `Sources/CShim` | `posix_spawn` with process groups and terminal handoff, plus the wait-status macros Swift can't import. |
 | `Sources/SwishCore` | Parser, interpreter, pipelines, job control, builtins, line editor. |
 | `Sources/swish` | The executable. |
 | `Tests/Interactive` | `expect` scripts that drive the shell through a real terminal. |
+| `Examples/Tools` | An example plugin, which the tests import. |
 
 </details>
 
@@ -197,6 +224,8 @@ scripts/test.sh     # unit tests, plus pty-driven job-control, editor and backgr
   Swift call syntax and a command-line syntax derived from its signature
 - [Shell syntax](docs/design/syntax.md): where Swish departs from POSIX:
   comments, the environment, command output, scripts, redirects, background jobs
+- [Plugins](docs/design/plugins.md): exporting from Swift, and how `import`
+  builds, loads and registers a package
 
 ## Roadmap
 
@@ -215,15 +244,19 @@ scripts/test.sh     # unit tests, plus pty-driven job-control, editor and backgr
   `--help` from doc comments, overloads, `foreign` and `which`
 - [x] **Structured data**: records, file sizes and dates, `Encodable` → `Value`, views and
   tables, per-item errors, `members`, and builtins (`ls`, `ps`, `where`, `select`, `get`,
-  `sort`, `first`, `count`, `reverse`, `from json`, `to json`/`to text`, `table`, `list`)
-  - [ ] Live objects for bridged Swift values (with the plugin ABI)
+  `sort`, `first`, `count`, `reverse`, `from json`, `to json`/`to text`, `table`, `list`),
+  objects shown through their fields
+  - [x] Live objects for bridged Swift values
   - [ ] Errors as values you can inspect after the fact
   - [ ] Paths and durations
   - [ ] A lazy `ls`
 - [x] **Line editor**: persistent history (`$SWISH_HISTORY`, default `~/.swish_history`) with
   prefix search and `^R`, completion from signatures, highlighting from the parser,
   multi-line editing and wrapping
-- [ ] **Plugin ABI**: SwishKit's plugin API and an `@SwishExport` macro, reusing the
-  callable metadata
-- [ ] **`import`**: `import Package from "url"`, with SwiftPM resolution, generated bridges and
-  cached dylibs
+- [x] **Display**: bare values shown with their `debugDescription`, pretty-printed to fit the
+  terminal; color for what matters (errors, job states, directories) and for structure
+- [x] **Plugin ABI**: `@SwishExport` functions with `@Flag`/`@Input`, `SwishEnum` enums,
+  `@SwishObject` classes and `Encodable` results; exports found by symbol, no list to keep;
+  `import Name from "path"` builds, loads and registers a local package
+- [ ] **`import` from anywhere**: `import Package from "url"`, with SwiftPM resolution, generated
+  bridges for packages that don't use SwishKit, and cached dylibs
