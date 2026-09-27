@@ -38,18 +38,28 @@ final class Scope {
     }
 }
 
-/// A Swish function or closure.
+enum FunctionBody {
+    case swish(Program)
+    /// A builtin written in Swift, called with the bound arguments.
+    case native((Shell, [String: Value]) throws -> Value)
+    /// A builtin that transforms its `@input` stream lazily, so `first 5`
+    /// can stop pulling after five items.
+    case stream((Shell, ValueStream, [String: Value]) throws -> ValueStream)
+}
+
+/// A Swish function or closure, or a builtin written in Swift. Both get the
+/// same argument binding, help, overloads and streaming.
 final class Function: Callable, @unchecked Sendable {
     let name: String?
     let parameters: [Parameter]
     let returnType: TypeAnnotation?
-    let body: Program
+    let body: FunctionBody
     let captured: [Scope]
     let documentation: Documentation?
 
     init(
-        name: String?, parameters: [Parameter], returnType: TypeAnnotation?, body: Program,
-        captured: [Scope], documentation: Documentation? = nil
+        name: String?, parameters: [Parameter], returnType: TypeAnnotation?, body: FunctionBody,
+        captured: [Scope] = [], documentation: Documentation? = nil
     ) {
         self.name = name
         self.parameters = parameters
@@ -75,9 +85,13 @@ final class Function: Callable, @unchecked Sendable {
         return "<func \(name)(\(labels))>"
     }
 
+    var isBuiltin: Bool {
+        if case .swish = body { false } else { true }
+    }
+
     /// A body that is a single expression returns its value, as in Swift.
     var implicitReturn: Expr? {
-        guard body.statements.count == 1,
+        guard case .swish(let body) = body, body.statements.count == 1,
               case .chain(let chain) = body.statements[0], chain.links.isEmpty,
               case .expression(let expr) = chain.first else { return nil }
         return expr
@@ -115,7 +129,15 @@ extension Shell {
         return try run(program)
     }
 
+    /// Per-item errors reported while a statement runs make its status a
+    /// failure, even though the statement carried on.
     private func run(_ statement: Statement) throws -> Int32 {
+        let errorsBefore = itemErrorCount
+        let status = try runReportedErrorsAside(statement)
+        return itemErrorCount > errorsBefore && status == 0 ? 1 : status
+    }
+
+    private func runReportedErrorsAside(_ statement: Statement) throws -> Int32 {
         switch statement {
         case .declare(let name, let mutable, let expr):
             let value = try evaluate(expr)
@@ -135,7 +157,7 @@ extension Shell {
             // Captures the scope it's bound in, so it can call itself.
             let function = Function(
                 name: decl.name, parameters: decl.parameters, returnType: decl.returnType,
-                body: decl.body, captured: scopes, documentation: decl.documentation
+                body: .swish(decl.body), captured: scopes, documentation: decl.documentation
             )
             // A second declaration with a different signature overloads the
             // name; one with the same signature replaces the old one.
@@ -177,10 +199,24 @@ extension Shell {
                 stages.append(.value(try evaluate(input)))
             }
             for command in node.commands {
-                let argv = try command.words.map { try expand($0) }
-                if !command.external, let functions = commandFunctions(named: argv[0]) {
-                    stages.append(.function(functions, Array(argv.dropFirst())))
+                let arguments = try command.words.map { word -> CommandArgument in
+                    switch word {
+                    case .text(let parts): .text(try expand(parts))
+                    case .closure(let literal): .value(try evaluate(.closure(literal)))
+                    }
+                }
+                guard case .text(let name) = arguments[0] else {
+                    throw RuntimeError("a closure can't be a command name")
+                }
+                if !command.external, let functions = commandFunctions(named: name) {
+                    stages.append(.function(functions, Array(arguments.dropFirst())))
                 } else {
+                    let argv = try arguments.map { argument -> String in
+                        guard case .text(let text) = argument else {
+                            throw RuntimeError("\(name) is an external command, so it can't take a closure")
+                        }
+                        return text
+                    }
                     stages.append(.external(argv, skipBuiltins: command.external))
                 }
             }
@@ -261,8 +297,8 @@ extension Shell {
     }
 
     private func display(_ value: Value) {
-        guard callDepth == 0, value != .nothing else { return }
-        writeAll(stdoutFD, value.description + "\n")
+        guard callDepth == 0 else { return }
+        show(value)
     }
 
     func checkInterrupt() throws {
@@ -292,10 +328,22 @@ extension Shell {
             return .string(output)
         case .list(let elements):
             return .list(try elements.map(evaluate))
+        case .record(let entries):
+            var record = Record()
+            for entry in entries {
+                let key = try evaluate(entry.key)
+                guard case .string(let name) = key else {
+                    throw RuntimeError("record keys must be Strings, not \(key.typeName)")
+                }
+                record[name] = try evaluate(entry.value)
+            }
+            return .record(record)
+        case .member(let base, let name):
+            return try member(name, of: try evaluate(base))
         case .closure(let literal):
             return .function(Function(
                 name: nil, parameters: literal.parameters, returnType: literal.returnType,
-                body: literal.body, captured: scopes
+                body: .swish(literal.body), captured: scopes
             ))
         case .call(let callee, let arguments):
             let value = try evaluate(callee)
@@ -381,6 +429,8 @@ extension Shell {
             return .int(result)
         case (.negate, .double(let d)):
             return .double(-d)
+        case (.negate, .filesize(let bytes)):
+            return .filesize(-bytes)
         default:
             throw RuntimeError("'\(op.rawValue)' can't be applied to \(value.typeName)")
         }
@@ -402,10 +452,32 @@ extension Shell {
             return try integerArithmetic(op, a, b)
         case (_, .int, .double), (_, .double, .int), (_, .double, .double):
             if let result = try floatingArithmetic(op, lhs.asDouble!, rhs.asDouble!) { return result }
+        case (_, .filesize(let a), .filesize(let b)):
+            switch op {
+            case .add: return try checkedFileSize(Double(a) + Double(b))
+            case .subtract: return try checkedFileSize(Double(a) - Double(b))
+            case .divide: return .double(Double(a) / Double(b))
+            default: if let result = compare(op, a, b) { return .bool(result) }
+            }
+        case (.multiply, .filesize(let bytes), _) where rhs.asDouble != nil:
+            return try checkedFileSize(Double(bytes) * rhs.asDouble!)
+        case (.multiply, _, .filesize(let bytes)) where lhs.asDouble != nil:
+            return try checkedFileSize(Double(bytes) * lhs.asDouble!)
+        case (.divide, .filesize(let bytes), _) where rhs.asDouble != nil:
+            guard rhs.asDouble != 0 else { throw RuntimeError("division by zero") }
+            return try checkedFileSize(Double(bytes) / rhs.asDouble!)
+        case (_, .date(let a), .date(let b)):
+            if op == .subtract { return .double(a.timeIntervalSince(b)) }
+            if let result = compare(op, a, b) { return .bool(result) }
         default:
             break
         }
         throw RuntimeError("'\(op.rawValue)' can't be applied to \(lhs.typeName) and \(rhs.typeName)")
+    }
+
+    private func checkedFileSize(_ bytes: Double) throws -> Value {
+        guard bytes.magnitude < Double(Int64.max) else { throw RuntimeError("arithmetic overflow") }
+        return .filesize(Int64(bytes))
     }
 
     private func integerArithmetic(_ op: BinaryOperator, _ a: Int, _ b: Int) throws -> Value {
@@ -445,7 +517,34 @@ extension Shell {
         }
     }
 
+    /// Record fields first, then the few members values have.
+    func member(_ name: String, of value: Value) throws -> Value {
+        switch (value, name) {
+        case (.record(let record), _) where record[name] != nil: return record[name]!
+        case (.record(let record), "count"): return .int(record.count)
+        case (.record(let record), "isEmpty"): return .bool(record.count == 0)
+        case (.record(let record), "keys"): return .list(record.keys.map(Value.string))
+        case (.record(let record), "values"): return .list(record.map(\.value))
+        case (.list(let list), "count"): return .int(list.count)
+        case (.list(let list), "isEmpty"): return .bool(list.isEmpty)
+        case (.list(let list), "first"): return list.first ?? .nothing
+        case (.list(let list), "last"): return list.last ?? .nothing
+        case (.string(let text), "count"): return .int(text.count)
+        case (.string(let text), "isEmpty"): return .bool(text.isEmpty)
+        case (.string(let text), "lines"):
+            return .list(text.isEmpty ? [] : text.split(separator: "\n", omittingEmptySubsequences: false).map { .string(String($0)) })
+        case (.filesize(let bytes), "bytes"): return .int(Int(bytes))
+        case (.record(let record), _):
+            throw RuntimeError("\(record.typeName ?? "Record") has no field '\(name)'")
+        default:
+            throw RuntimeError("\(value.typeName) has no member '\(name)'")
+        }
+    }
+
     private func element(of base: Value, at index: Value) throws -> Value {
+        if case .record(let record) = base, case .string(let key) = index {
+            return record[key] ?? .nothing
+        }
         guard case .list(let elements) = base else {
             throw RuntimeError("\(base.typeName) can't be indexed")
         }
@@ -466,6 +565,20 @@ extension Shell {
             throw RuntimeError("maximum call depth (\(maxCallDepth)) exceeded")
         }
         try checkInterrupt()
+        switch function.body {
+        case .native(let body):
+            return try body(self, arguments)
+        case .stream(let transform):
+            // Called directly: the input is a list, and so is the result.
+            let input = function.inputParameter.flatMap { arguments[$0.name] } ?? .list([])
+            let output = try transform(self, .elements(of: input), arguments)
+            var items: [Value] = []
+            while let item = try output.next() { items.append(item) }
+            return .list(items)
+        case .swish:
+            break
+        }
+
         let savedScopes = scopes
         scopes = function.captured + [Scope(arguments.mapValues { Binding(value: $0, mutable: false) })]
         callDepth += 1
@@ -478,8 +591,9 @@ extension Shell {
         if let expr = function.implicitReturn {
             result = try evaluate(expr)
         } else {
+            guard case .swish(let body) = function.body else { preconditionFailure() }
             do {
-                _ = try run(function.body)
+                _ = try run(body)
                 result = .nothing
             } catch ControlFlow.returned(let value) {
                 result = value
@@ -492,6 +606,21 @@ extension Shell {
             throw RuntimeError("\(function.name ?? "closure") must return \(returnType), but returned \(what)")
         }
         return conforming
+    }
+
+    /// Calls a function value with positional arguments, as builtins like
+    /// `where` call the closures they're given.
+    func call(_ value: Value, with arguments: [Value]) throws -> Value {
+        let unlabeled = arguments.map { Argument(label: nil, value: .literal($0)) }
+        switch value {
+        case .function(let set as OverloadSet):
+            let (function, bindings) = try resolve(set) { try self.bind(unlabeled, to: $0) }
+            return try invoke(function, with: bindings)
+        case .function(let function as Function):
+            return try invoke(function, with: try bind(unlabeled, to: function).bindings)
+        default:
+            throw RuntimeError("\(value.typeName) isn't a function")
+        }
     }
 
     /// Matches expression-mode arguments to parameters by Swift's rules:
@@ -610,6 +739,9 @@ extension Value {
         case .double: "Double"
         case .string: "String"
         case .list: "List"
+        case .record: "Record"
+        case .filesize: "FileSize"
+        case .date: "Date"
         case .function: "Function"
         @unknown default: "Value"
         }
@@ -640,7 +772,8 @@ extension Value {
     /// Double, as an integer literal would in Swift.
     func conforming(to type: TypeAnnotation) -> Value? {
         switch (type, self) {
-        case (.any, _), (.bool, .bool), (.int, .int), (.double, .double), (.string, .string), (.function, .function):
+        case (.any, _), (.bool, .bool), (.int, .int), (.double, .double), (.string, .string), (.function, .function),
+             (.record, .record), (.filesize, .filesize), (.date, .date):
             return self
         case (.double, .int(let n)):
             return .double(Double(n))

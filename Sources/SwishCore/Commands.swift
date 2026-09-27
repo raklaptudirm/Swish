@@ -28,6 +28,20 @@ extension Function {
     }
 }
 
+/// One argument to a command: text, or a value like the closure in
+/// `where { $0.size > 1.mb }`.
+enum CommandArgument: CustomStringConvertible {
+    case text(String)
+    case value(Value)
+
+    var description: String {
+        switch self {
+        case .text(let text): text
+        case .value(let value): value.description
+        }
+    }
+}
+
 extension TypeAnnotation {
     var isList: Bool {
         if case .list = self { true } else { false }
@@ -70,15 +84,15 @@ extension Shell {
 
     /// Calls a function with command-line arguments, displaying its result if
     /// asked. The status is 1 for a false result and 0 otherwise.
-    func callCommand(_ set: OverloadSet, _ args: [String], display shouldDisplay: Bool) throws -> Int32 {
+    func callCommand(_ set: OverloadSet, _ args: [CommandArgument], display shouldDisplay: Bool) throws -> Int32 {
         if helpRequested(args, for: set) {
             writeAll(stdoutFD, helpText(for: set))
             return 0
         }
         let (function, bindings) = try resolve(set) { try self.bind(commandLine: args, to: $0, excludingInput: false) }
         let result = try invoke(function, with: bindings)
-        if shouldDisplay && result != .nothing {
-            writeAll(stdoutFD, result.description + "\n")
+        if shouldDisplay {
+            show(result)
         }
         if case .bool(let truth) = result { return truth ? 0 : 1 }
         return 0
@@ -91,7 +105,7 @@ extension Shell {
     /// The penalty counts arguments taken as text by String or untyped
     /// parameters, so an Int overload beats a String one for `f 5`.
     func bind(
-        commandLine args: [String], to function: Function, excludingInput: Bool
+        commandLine args: [CommandArgument], to function: Function, excludingInput: Bool
     ) throws -> (bindings: [String: Value], penalty: Int) {
         let name = function.name ?? "closure"
         let parameters = function.parameters.filter { !(excludingInput && $0.isInput) }
@@ -108,11 +122,19 @@ extension Shell {
 
         var bound: [String: Value] = [:]
         var penalty = 0
-        func take(_ text: String, as type: TypeAnnotation, for what: String) throws -> Value {
-            if type == .string || type == .any { penalty += 1 }
-            return try converted(text, to: type, for: what, of: name)
+        func take(_ argument: CommandArgument, as type: TypeAnnotation, for what: String) throws -> Value {
+            switch argument {
+            case .text(let text):
+                if type == .string || type == .any { penalty += 1 }
+                return try converted(text, to: type, for: what, of: name)
+            case .value(let value):
+                guard let conforming = value.conforming(to: type) else {
+                    throw RuntimeError("\(name): \(what) must be \(type), not \(value.typeName)")
+                }
+                return conforming
+            }
         }
-        func assign(_ parameter: Parameter, _ text: String, flag: String) throws {
+        func assign(_ parameter: Parameter, _ text: CommandArgument, flag: String) throws {
             if case .list(let elementType) = parameter.type {
                 // Repeated flags accumulate: --include a --include b.
                 let element = try take(text, as: elementType, for: flag)
@@ -127,14 +149,14 @@ extension Shell {
             }
         }
 
-        var positionals: [String] = []
+        var positionals: [CommandArgument] = []
         var index = 0
         var flagsEnded = false
         while index < args.count {
-            let arg = args[index]
+            let argument = args[index]
             index += 1
-            if flagsEnded || !arg.hasPrefix("-") || arg == "-" {
-                positionals.append(arg)
+            guard case .text(let arg) = argument, !flagsEnded, arg.hasPrefix("-"), arg != "-" else {
+                positionals.append(argument)
                 continue
             }
             if arg == "--" {
@@ -153,7 +175,7 @@ extension Shell {
                     guard inline == nil else { throw RuntimeError("\(name): --\(flagName) doesn't take a value") }
                     bound[parameter.name] = .bool(!negated)
                 } else if let inline {
-                    try assign(parameter, inline, flag: "--\(flagName)")
+                    try assign(parameter, .text(inline), flag: "--\(flagName)")
                 } else {
                     guard index < args.count else { throw RuntimeError("\(name): --\(flagName) needs a value") }
                     try assign(parameter, args[index], flag: "--\(flagName)")
@@ -162,31 +184,35 @@ extension Shell {
                 continue
             }
 
-            // Short flags: `-n 3`, `-n3`, or bundled switches like `-lv`. A
+            // Short flags: `-n 3`, `-n3`, bundled switches like `-lv`, and
+            // a bundle ending in one that takes a value, like `-rb size`. A
             // dash and a number that isn't a flag is a negative number.
             let letters = Array(arg.dropFirst())
-            guard let first = shortFlags[letters[0]] else {
-                if Double(arg) != nil {
-                    positionals.append(arg)
+            if shortFlags[letters[0]] == nil, Double(arg) != nil {
+                positionals.append(argument)
+                continue
+            }
+            var position = 0
+            while position < letters.count {
+                let letter = letters[position]
+                guard let parameter = shortFlags[letter] else {
+                    throw RuntimeError("\(name): unknown option -\(letter)\(letters.count > 1 ? " in \(arg)" : "")")
+                }
+                position += 1
+                if parameter.type == .bool {
+                    bound[parameter.name] = .bool(true)
                     continue
                 }
-                throw RuntimeError("\(name): unknown option \(arg)")
-            }
-            if first.type == .bool {
-                for letter in letters {
-                    guard let parameter = shortFlags[letter], parameter.type == .bool else {
-                        throw RuntimeError("\(name): unknown option -\(letter) in \(arg)")
-                    }
-                    bound[parameter.name] = .bool(true)
-                }
-            } else if letters.count > 1 {
-                var value = String(letters.dropFirst())
+                var value = String(letters[position...])
                 if value.hasPrefix("=") { value.removeFirst() }
-                try assign(first, value, flag: "-\(letters[0])")
-            } else {
-                guard index < args.count else { throw RuntimeError("\(name): -\(letters[0]) needs a value") }
-                try assign(first, args[index], flag: "-\(letters[0])")
-                index += 1
+                if value.isEmpty {
+                    guard index < args.count else { throw RuntimeError("\(name): -\(letter) needs a value") }
+                    try assign(parameter, args[index], flag: "-\(letter)")
+                    index += 1
+                } else {
+                    try assign(parameter, .text(value), flag: "-\(letter)")
+                }
+                break
             }
         }
 
@@ -204,7 +230,7 @@ extension Shell {
             }
         }
         if let extra = remaining.first {
-            throw RuntimeError("\(name): unexpected argument '\(extra)'")
+            throw RuntimeError("\(name): unexpected argument '\(extra.description)'")
         }
 
         for parameter in parameters where bound[parameter.name] == nil {
@@ -228,12 +254,23 @@ extension Shell {
         case .double: Double(text).map(Value.double)
         case .bool: ["true": true, "false": false][text].map(Value.bool)
         case .optional(let wrapped): try converted(text, to: wrapped, for: what, of: function)
-        case .list, .function: nil
+        case .filesize: parseFileSize(text).map(Value.filesize)
+        case .date: (try? Date(text, strategy: .iso8601)).map(Value.date)
+        case .record, .list, .function: nil
         }
         guard let value else {
             throw RuntimeError("\(function): \(what) must be \(type), got '\(text)'")
         }
         return value
+    }
+
+    /// `1024`, `1.5mb`, `1.5 MB`, `2kib`.
+    private func parseFileSize(_ text: String) -> Int64? {
+        let trimmed = text.trimmingCharacters(in: .whitespaces).lowercased()
+        let number = trimmed.prefix { $0.isNumber || $0 == "." }
+        let unit = trimmed.dropFirst(number.count).trimmingCharacters(in: .whitespaces)
+        guard let value = Double(number), let multiplier = unit.isEmpty ? 1 : Parser.fileSizeUnits[unit] else { return nil }
+        return Int64(exactly: (value * Double(multiplier)).rounded())
     }
 
     private func kebabCase(_ label: String) -> String {
@@ -253,10 +290,10 @@ extension Shell {
     // MARK: Help
 
     /// `--help` or `-h`, unless a function claims them for itself.
-    func helpRequested(_ args: [String], for set: OverloadSet) -> Bool {
+    func helpRequested(_ args: [CommandArgument], for set: OverloadSet) -> Bool {
         let claimed = set.candidates.contains { $0.parameters.contains { $0.label == "help" || $0.shortFlag == "h" } }
         guard !claimed else { return false }
-        for arg in args {
+        for case .text(let arg) in args {
             if arg == "--" { return false }
             if arg == "--help" || arg == "-h" { return true }
         }

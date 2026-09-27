@@ -1,4 +1,5 @@
 @testable import SwishCore
+import SwishKit
 import Testing
 
 /// Runs `source` in `shell`, returning what it wrote to standard output.
@@ -308,8 +309,122 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
 }
 
 @Test func which() throws {
-    let text = try output("func greet(_ name: String) {}; which greet cd ls")
-    #expect(text.hasPrefix("greet: function greet(_ name: String)\ncd: shell builtin\n/"))
-    #expect(text.hasSuffix("/ls\n"))
+    let text = try output("func greet(_ name: String) {}; which greet cd first cat")
+    #expect(text.hasPrefix("greet: function greet(_ name: String)\ncd: shell builtin\nfirst: builtin function first(@input _ items: [Any], _ count: Int)\n/"))
+    #expect(text.hasSuffix("/cat\n"))
     #expect(status("which surely-not-a-command") == 1)
+}
+
+// MARK: Structured data
+
+@Test func recordsAndMembers() throws {
+    let r = #"let r = ["name": "x", "size": 2.mb];"#
+    #expect(try output(r + "r.name; r.size * 2; r.count; r[\"name\"]; r.keys") == "x\n4.0 MB\n2\nx\n[name, size]\n")
+    #expect(try output(r + "r") == "name  x\nsize  2.0 MB\n")
+    #expect(status(r + "r.nope") == 1)
+    #expect(try output(#""a\nb".lines.count; [1, 2].last; "abc".count"#) == "2\n2\n3\n")
+}
+
+@Test func fileSizes() throws {
+    #expect(try output("1.5.gb + 500.mb; 1.kib.bytes; 10.mb / 4; 1.mb > 999.kb; 4.mb / 2.mb; -1.kb") == "2.0 GB\n1024\n2.5 MB\ntrue\n2.0\n-1.0 KB\n")
+    #expect(try output(#"func f(_ s: FileSize) -> FileSize { s }; f 1.5mb; f 2048"#) == "1.5 MB\n2.0 KB\n")
+}
+
+@Test func listsOfRecordsDisplayAsTables() throws {
+    #expect(try output(#"[["n": 5, "s": "a"], ["n": 100, "t": "b"]]"#) == "  n  s  t\n  5  a\n100     b\n")
+    #expect(try output(#"[["n": 5], ["n": 100]] | where { $0.n > 10 }"#) == "  n\n100\n")
+}
+
+/// A directory with known files, for `ls`. (Built with commands, since
+/// Foundation can't be imported next to Testing with the Command Line Tools.)
+private func fixture() throws -> String {
+    let shell = Shell()
+    let directory = try output("mktemp -d", in: shell).trimmingCharacters(in: .newlines)
+    shell.execute("""
+    mkdir \(directory)/sub
+    head -c 1500 /dev/zero | dd of=\(directory)/big.bin status=none
+    printf hi | dd of=\(directory)/small.txt status=none
+    touch \(directory)/.hidden
+    """)
+    return directory
+}
+
+@Test func lsGivesTypedRecords() throws {
+    let dir = try fixture()
+    #expect(try output("ls \(dir) | get type") == "file\nfile\ndir\n")
+    #expect(try output("ls \(dir) | where { $0.type == \"file\" } | select name size") == "name         size\nbig.bin    1.5 KB\nsmall.txt     2 B\n")
+    #expect(try output("ls -a \(dir) | count; ls \(dir) | count") == "4\n3\n")
+    #expect(try output("ls \(dir) | first 1 | members | where { $0.name == \"size\" } | get kind") == "FileSize\n")
+    #expect(try output("ls \(dir)/small.txt | get path") == "\(dir)/small.txt\n")
+}
+
+@Test func lsReportsBadPathsAndCarriesOn() throws {
+    let dir = try fixture()
+    let shell = Shell()
+    #expect(try output("ls \(dir)/nope \(dir)/small.txt | get name", in: shell) == "\(dir)/small.txt\n")
+    #expect(shell.lastStatus == 1)
+}
+
+@Test func psListsProcesses() throws {
+    #expect(try output("ps | where { $0.pid == 1 } | get name") == "launchd\n")
+}
+
+@Test func sortingAndSlicing() throws {
+    let data = #"let xs = [["n": 3, "s": "c"], ["n": 1, "s": "a"], ["n": 2, "s": "b"]];"#
+    #expect(try output(data + "xs | sort --by n | get s") == "a\nb\nc\n")
+    #expect(try output(data + "xs | sort -rb s | first 2 | get n") == "3\n2\n")
+    #expect(try output(data + "xs | reverse | get n; xs | count") == "2\n1\n3\n3\n")
+    #expect(status(data + "xs | sort") == 1) // records need --by
+    #expect(try output("printf 'b\\n10\\n9\\na\\n' | sort; printf '10\\n9\\n9\\n' | sort -nu") == "10\n9\na\nb\n9\n10\n")
+    #expect(try output("[3, 1.5, 2] | sort") == "1.5\n2\n3\n")
+    #expect(try output("seq 1000000 | first 2; yes | first 1") == "1\n2\ny\n")
+}
+
+@Test func json() throws {
+    #expect(try output(#"echo '{"z": 1, "a": {"b": [1, 2.5, null, true]}, "u": "é\n"}' | from json | to json"#) == """
+    {
+      "z": 1,
+      "a": {
+        "b": [
+          1,
+          2.5,
+          null,
+          true
+        ]
+      },
+      "u": "é\\n"
+    }
+
+    """)
+    #expect(try output(#"echo '[{"n": 1}, {"n": 2}]' | from json | get n"#) == "1\n2\n")
+    #expect(status(#"echo '{"a": }' | from json"#) == 1)
+}
+
+@Test func textConversions() throws {
+    let data = #"let xs = [["a": 1, "b": "x"], ["a": 22, "b": "y"]];"#
+    #expect(try output(data + "xs | to text | tr a-z A-Z") == " A  B\n 1  X\n22  Y\n")
+    #expect(try output(data + "xs | list") == "a  1\nb  x\n\na  22\nb  y\n")
+}
+
+@Test func recordsNeedConvertingForExternals() throws {
+    #expect(status(#"[["a": 1]] | cat"#) == 1)
+    #expect(try output(#"[["a": 1]] | to json | tr -d ' \n'"#) == #"{"a":1}"#)
+}
+
+@Test func formatterFitsTheWidth() {
+    var lines: [String] = []
+    let formatter = Formatter(maxWidth: 20) { lines.append($0); return true }
+    formatter.add(.record(Record(["name": .string("a-rather-long-file-name"), "size": .filesize(1)])))
+    formatter.finish()
+    // The name column shrinks from 23 to 14 so the table fits in 20.
+    #expect(lines == ["name            size\n", "a-rather-long…   1 B\n"])
+}
+
+@Test func formatterDropsColumnsThatCantFit() {
+    var lines: [String] = []
+    let formatter = Formatter(maxWidth: 20) { lines.append($0); return true }
+    formatter.add(.record(Record(["alpha": .string("aaaaaaaa"), "bravo": .string("bbbbbbbb"), "charlie": .string("cccccccc")])))
+    formatter.finish()
+    // Even at 6 wide, three columns need 22; the last is left off.
+    #expect(lines == ["alpha   bravo  …\n", "aaaaa…  bbbbb…\n"])
 }

@@ -95,6 +95,7 @@ struct Parameter: Equatable, Sendable {
 
 indirect enum TypeAnnotation: Equatable, Sendable, CustomStringConvertible {
     case any, bool, int, double, string
+    case record, filesize, date
     case list(TypeAnnotation)
     case function
     /// `T?`: a T, or nil.
@@ -107,6 +108,9 @@ indirect enum TypeAnnotation: Equatable, Sendable, CustomStringConvertible {
         case .int: "Int"
         case .double: "Double"
         case .string: "String"
+        case .record: "Record"
+        case .filesize: "FileSize"
+        case .date: "Date"
         case .list(let element): "[\(element)]"
         case .function: "function"
         case .optional(let wrapped): "\(wrapped)?"
@@ -123,14 +127,25 @@ struct PipelineNode: Equatable, Sendable {
 }
 
 struct CommandNode: Equatable, Sendable {
-    var words: [[StringPart]]
+    var words: [Word]
     /// `^name`: skip functions and builtins, and run the external program.
     var external = false
+}
+
+enum Word: Equatable, Sendable {
+    case text([StringPart])
+    /// `where { $0.size > 1.mb }`: a closure passed as an argument.
+    case closure(ClosureLiteral)
 }
 
 enum StringPart: Equatable, Sendable {
     case literal(String)
     case expression(Expr)
+}
+
+struct RecordEntry: Equatable, Sendable {
+    var key: Expr
+    var value: Expr
 }
 
 struct Argument: Equatable, Sendable {
@@ -149,8 +164,11 @@ indirect enum Expr: Equatable, Sendable {
     /// `$(…)`
     case substitution(Program)
     case list([Expr])
+    case record([RecordEntry])
     case closure(ClosureLiteral)
     case call(Expr, [Argument])
+    /// `value.name`: a record field, or a member like `count`.
+    case member(Expr, String)
     case unary(UnaryOperator, Expr)
     case binary(BinaryOperator, Expr, Expr)
     case index(Expr, Expr)
@@ -217,6 +235,10 @@ struct Parser {
         [.multiply, .divide, .remainder],
     ]
     private static let comparisonLevel = 2
+    static let fileSizeUnits: [String: Int64] = [
+        "b": 1, "kb": 1_000, "mb": 1_000_000, "gb": 1_000_000_000, "tb": 1_000_000_000_000,
+        "kib": 1 << 10, "mib": 1 << 20, "gib": 1 << 30, "tib": 1 << 40,
+    ]
     /// Levels whose operators can't be chained, like `a < b < c`.
     private static let nonAssociativeLevels: Set = [2, 3]
 
@@ -227,6 +249,9 @@ struct Parser {
     private var bracketDepth = 0
     private var loopDepth = 0
     private var functionDepth = 0
+    /// Inside an `if`/`while` condition, `{` after a command starts the body
+    /// rather than a closure argument.
+    private var conditionDepth = 0
     /// One entry per enclosing function or closure: how many `$n`
     /// parameters a closure without named parameters uses, or nil if its
     /// parameters are named.
@@ -346,7 +371,18 @@ struct Parser {
         }
         if startsExpression(c) {
             let start = pos
-            let expr = try parseExpression(logical: false)
+            // `a < 1 || b > 2` is one expression, with Swift's precedence, so
+            // `{ $0.a < 1 || $0.b > 2 }` returns it. Only when an operand
+            // isn't an expression, as in `x > 1 && echo big`, do `&&`/`||`
+            // chain units by exit status instead.
+            let beforeExpression = self
+            var expr: Expr
+            do {
+                expr = try parseExpression(logical: true)
+            } catch {
+                self = beforeExpression
+                expr = try parseExpression(logical: false)
+            }
             skipSpaces()
             guard peek() == "|", peek(1) != "|" else { return .expression(expr) }
             pos += 1
@@ -372,7 +408,7 @@ struct Parser {
 
     private mutating func parseIf() throws(SyntaxError) -> IfStatement {
         pos += "if".count
-        let condition = try parseChain()
+        let condition = try parseCondition()
         skipSpaces()
         let then = try parseBlock()
 
@@ -389,6 +425,12 @@ struct Parser {
             return IfStatement(condition: condition, then: then, otherwise: Program(statements: [elseIf]))
         }
         return IfStatement(condition: condition, then: then, otherwise: try parseBlock())
+    }
+
+    private mutating func parseCondition() throws(SyntaxError) -> Chain {
+        conditionDepth += 1
+        defer { conditionDepth -= 1 }
+        return try parseChain()
     }
 
     private mutating func parseFor() throws(SyntaxError) -> ForLoop {
@@ -408,7 +450,7 @@ struct Parser {
 
     private mutating func parseWhile() throws(SyntaxError) -> WhileLoop {
         pos += "while".count
-        let condition = try parseChain()
+        let condition = try parseCondition()
         skipSpaces()
         loopDepth += 1
         defer { loopDepth -= 1 }
@@ -418,8 +460,13 @@ struct Parser {
     private mutating func parseBlock(declaring names: [String: NameKind] = [:]) throws(SyntaxError) -> Program {
         guard peek() == "{" else { throw expected("'{'") }
         pos += 1
+        let savedCondition = conditionDepth
+        conditionDepth = 0
         scopes.append(names)
-        defer { scopes.removeLast() }
+        defer {
+            scopes.removeLast()
+            conditionDepth = savedCondition
+        }
         let body = try parseProgram(until: "}")
         pos += 1 // parseProgram only returns at the closing brace.
         return body
@@ -533,9 +580,10 @@ struct Parser {
     private mutating func parseFunctionBody(
         parameters: [Parameter], anonymous: Bool
     ) throws(SyntaxError) -> (Program, Int) {
-        let saved = (loopDepth, bracketDepth)
+        let saved = (loopDepth, bracketDepth, conditionDepth)
         loopDepth = 0
         bracketDepth = 0
+        conditionDepth = 0
         functionDepth += 1
         var names: [String: NameKind] = [:]
         for parameter in parameters where parameter.name != "_" {
@@ -544,7 +592,7 @@ struct Parser {
         scopes.append(names)
         anonymousArity.append(anonymous ? 0 : nil)
         defer {
-            (loopDepth, bracketDepth) = saved
+            (loopDepth, bracketDepth, conditionDepth) = saved
             functionDepth -= 1
             scopes.removeLast()
             anonymousArity.removeLast()
@@ -694,6 +742,9 @@ struct Parser {
         case "Double": type = .double
         case "String": type = .string
         case "Bool": type = .bool
+        case "Record": type = .record
+        case "FileSize": type = .filesize
+        case "Date": type = .date
         case "Any", "Value": type = .any
         default: throw SyntaxError("unknown type '\(name)'")
         }
@@ -729,17 +780,22 @@ struct Parser {
     private mutating func parseCommand() throws(SyntaxError) -> CommandNode {
         skipSpaces()
         let external = consume("^")
-        var words: [[StringPart]] = []
+        var words: [Word] = []
         while true {
             skipSpaces()
             guard let c = peek(), !endsCommand(c) else { break }
+            if c == "{" && peek(1) != "}" {
+                pos += 1
+                words.append(.closure(try parseClosure()))
+                continue
+            }
             if c == "(" {
                 throw SyntaxError("unexpected '(' in a command; quote it, or use \\(…) to interpolate an expression")
             }
             if c == "&" {
                 throw SyntaxError("background jobs ('&') aren't supported yet")
             }
-            words.append(try parseWord())
+            words.append(.text(try parseWord()))
         }
         guard !words.isEmpty else {
             if let c = peek() { throw unexpected(c) }
@@ -752,7 +808,7 @@ struct Parser {
         switch c {
         case "|", ";", "\n", ")", "}": true
         case "&": peek(1) == "&"
-        case "{": peek(1) != "}"
+        case "{": peek(1) != "}" && conditionDepth > 0
         default: false
         }
     }
@@ -909,11 +965,11 @@ struct Parser {
             pos += 2
             // A substitution is its own little program: newlines separate
             // statements again, and it can't break or return out of its host.
-            let saved = (bracketDepth, loopDepth, functionDepth)
-            (bracketDepth, loopDepth, functionDepth) = (0, 0, 0)
+            let saved = (bracketDepth, loopDepth, functionDepth, conditionDepth)
+            (bracketDepth, loopDepth, functionDepth, conditionDepth) = (0, 0, 0, 0)
             scopes.append([:])
             defer {
-                (bracketDepth, loopDepth, functionDepth) = saved
+                (bracketDepth, loopDepth, functionDepth, conditionDepth) = saved
                 scopes.removeLast()
             }
             let program = try parseProgram(until: ")")
@@ -985,6 +1041,11 @@ struct Parser {
                 expr = .index(expr, index)
             } else if peek() == "(" {
                 expr = .call(expr, try parseArguments())
+            } else if peek() == ".", let next = peek(1), Parser.isIdentifierStart(next) {
+                pos += 1
+                let name = identifier()!
+                pos += name.count
+                expr = .member(expr, name)
             } else {
                 return expr
             }
@@ -1062,20 +1123,40 @@ struct Parser {
         return .variable(name)
     }
 
+    /// `[1, 2]`, or a record like `["name": "x", "size": 1.kb]` or `[:]`.
     private mutating func parseList() throws(SyntaxError) -> Expr {
         pos += 1
         bracketDepth += 1
         defer { bracketDepth -= 1 }
-        var elements: [Expr] = []
         skipSpaces()
+        if consume(":") {
+            skipSpaces()
+            guard consume("]") else { throw expected("']'") }
+            return .record([])
+        }
+        var elements: [Expr] = []
+        var entries: [RecordEntry] = []
+        // Decided by the first element: a colon after it makes a record.
+        var isRecord: Bool?
         while peek() != "]" {
-            elements.append(try parseExpression())
+            let element = try parseExpression()
+            skipSpaces()
+            if isRecord == nil {
+                isRecord = consume(":")
+            } else if isRecord == true {
+                guard consume(":") else { throw expected("':' in a record literal") }
+            }
+            if isRecord == true {
+                entries.append(RecordEntry(key: element, value: try parseExpression()))
+            } else {
+                elements.append(element)
+            }
             skipSpaces()
             guard consume(",") else { break }
             skipSpaces()
         }
         guard consume("]") else { throw expected("']'") }
-        return .list(elements)
+        return isRecord == true ? .record(entries) : .list(elements)
     }
 
     private mutating func parseNumber() throws(SyntaxError) -> Expr {
@@ -1085,6 +1166,17 @@ struct Parser {
             isDouble = true
             pos += 1
             text += "." + readDigits()
+        }
+        if peek() == ".", let next = peek(1), Parser.isIdentifierStart(next) {
+            pos += 1
+            let unit = identifier()!
+            guard let multiplier = Parser.fileSizeUnits[unit] else {
+                throw SyntaxError("unknown unit '\(unit)'; file sizes use b, kb, mb, gb, tb, or kib, mib, gib, tib")
+            }
+            pos += unit.count
+            let bytes = Double(text)! * Double(multiplier)
+            guard bytes.magnitude < Double(Int64.max) else { throw SyntaxError("file size \(text).\(unit) is too large") }
+            return .literal(.filesize(Int64(bytes)))
         }
         if let c = peek(), Parser.isIdentifierPart(c) {
             throw SyntaxError("unexpected '\(c)' after a number (use ^ to run a command whose name starts with a digit)")

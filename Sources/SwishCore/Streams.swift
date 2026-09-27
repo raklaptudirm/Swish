@@ -107,23 +107,37 @@ extension Shell {
 
         guard let stream else { return }
         do {
-            while let item = try stream.next() {
-                try write(item, to: output, forExternal: toExternal)
+            if toExternal {
+                while let item = try stream.next() {
+                    try writeText(item, to: output)
+                }
+            } else {
+                // The end of the pipeline: format for a person.
+                let formatter = Formatter(fd: output)
+                while let item = try stream.next() {
+                    guard formatter.add(item) else { throw BrokenPipe() }
+                }
+                formatter.finish()
             }
         } catch is BrokenPipe {
             // The reader has what it wanted; stop producing.
         }
     }
 
-    /// Lists are written one element per line, since a list item is what a
-    /// per-item function returns to produce several outputs.
-    private func write(_ item: Value, to fd: Int32, forExternal: Bool) throws {
+    /// One line per item for an external program. Lists are written one
+    /// element per line, since a list item is what a per-item function
+    /// returns to produce several outputs. Records have no one obvious text
+    /// form, so they need an explicit conversion rather than a guess.
+    private func writeText(_ item: Value, to fd: Int32) throws {
         switch item {
         case .nothing:
             return
         case .list(let elements):
-            for element in elements { try write(element, to: fd, forExternal: forExternal) }
-        case .function where forExternal:
+            for element in elements { try writeText(element, to: fd) }
+        case .record(let record):
+            throw RuntimeError("can't send a \(record.typeName ?? "Record") to an external command; "
+                + "convert it with `to json` or `to text`, or pick a field with `get`")
+        case .function:
             throw RuntimeError("can't send a function to an external command")
         default:
             guard writeAll(fd, item.description + "\n") else { throw BrokenPipe() }
@@ -131,7 +145,7 @@ extension Shell {
     }
 
     private func functionStream(
-        _ set: OverloadSet, _ args: [String], upstream: ValueStream?, upstreamIsExternal: Bool
+        _ set: OverloadSet, _ args: [CommandArgument], upstream: ValueStream?, upstreamIsExternal: Bool
     ) throws -> ValueStream {
         if helpRequested(args, for: set) {
             writeAll(stdoutFD, helpText(for: set))
@@ -142,6 +156,10 @@ extension Shell {
             // First in the pipeline: every parameter, @input included, comes
             // from the command line, and the function runs once.
             let (function, bindings) = try resolve(set) { try self.bind(commandLine: args, to: $0, excludingInput: false) }
+            if case .stream(let transform) = function.body {
+                let input = function.inputParameter.flatMap { bindings[$0.name] } ?? .list([])
+                return try transform(self, .elements(of: input), bindings)
+            }
             let result = try invoke(function, with: bindings)
             if let input = function.inputParameter, !input.type.isList {
                 return .elements(of: .list([result]))
@@ -150,6 +168,9 @@ extension Shell {
         }
 
         let (function, bindings) = try resolve(set) { try self.bind(commandLine: args, to: $0, excludingInput: true) }
+        if case .stream(let transform) = function.body {
+            return try transform(self, upstream, bindings)
+        }
         let name = function.name ?? "closure"
         guard let input = function.inputParameter else {
             // Takes no input: let in-process stages before it run for their

@@ -22,7 +22,7 @@ struct SpawnFailure: Error {
 enum Stage {
     case external([String], skipBuiltins: Bool)
     /// A Swish function, which runs in the shell's own process.
-    case function(OverloadSet, [String])
+    case function(OverloadSet, [CommandArgument])
     /// A value feeding the pipeline, as in `[3, 1, 2] | sort`.
     case value(Value)
 

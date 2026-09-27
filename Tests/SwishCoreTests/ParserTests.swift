@@ -40,7 +40,10 @@ private func words(_ source: String, bound: Set<String> = []) throws -> [[String
         Issue.record("not a command: \(source)")
         return []
     }
-    return pipeline.commands[0].words
+    return pipeline.commands[0].words.map { word in
+        guard case .text(let parts) = word else { return [] }
+        return parts
+    }
 }
 
 private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxError? {
@@ -178,6 +181,48 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
     #expect(syntaxError("[1] |")?.incomplete == true)
 }
 
+@Test func logicalOperatorsBindTighterThanChains() throws {
+    // All expressions: one expression, with && tighter than ||.
+    let program = try parse("a || b && c", bound: ["a", "b", "c"])
+    #expect(program.statements == [.chain(Chain(first: .expression(
+        .binary(.or, .variable("a"), .binary(.and, .variable("b"), .variable("c")))
+    )))])
+    // A command operand makes it a chain of units instead.
+    guard case .chain(let chain) = try parse("a && echo hi", bound: ["a"]).statements[0] else { Issue.record(); return }
+    #expect(chain.first == .expression(.variable("a")))
+    #expect(chain.links.count == 1)
+}
+
+// MARK: Structured data
+
+@Test func membersRecordsAndFileSizes() throws {
+    let program = try parse(#"let r = ["name": "x", "size": 1.5.kb]; r.size; [:]"#)
+    #expect(program.statements[0] == .declare(name: "r", mutable: false, value: .record([
+        RecordEntry(key: .literal(.string("name")), value: .literal(.string("x"))),
+        RecordEntry(key: .literal(.string("size")), value: .literal(.filesize(1500))),
+    ])))
+    #expect(program.statements[1] == .chain(Chain(first: .expression(.member(.variable("r"), "size")))))
+    #expect(program.statements[2] == .chain(Chain(first: .expression(.record([])))))
+    #expect(try parse("2.kib; 1...3").statements.count == 2) // ranges still work
+    #expect(syntaxError("1.parsecs") != nil)
+    #expect(syntaxError(#"["a": 1, 2]"#) != nil)
+}
+
+@Test func closuresAsCommandArguments() throws {
+    guard case .chain(let chain) = try parse("ls | where { $0.size > 1.mb }").statements[0],
+          case .pipeline(let pipeline) = chain.first,
+          case .closure(let closure) = pipeline.commands[1].words[1] else { Issue.record(); return }
+    #expect(closure.parameters.map(\.name) == ["$0"])
+}
+
+@Test func braceEndsACommandInAConditionOnly() throws {
+    guard case .chain(let chain) = try parse("if grep -q x f { echo yes }").statements[0],
+          case .ifStatement(let node) = chain.first,
+          case .pipeline(let condition) = node.condition.first else { Issue.record(); return }
+    #expect(condition.commands[0].words.count == 4)
+    #expect(node.then.statements.count == 1)
+}
+
 // MARK: Words
 
 @Test func quotingAndEscapes() throws {
@@ -225,11 +270,8 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
         .binary(.equal, .binary(.add, .literal(.int(1)), .binary(.multiply, .literal(.int(2)), .literal(.int(3)))), .literal(.int(7))),
         .unary(.not, .literal(.bool(false)))
     )
-    // A whole-unit expression leaves && to the chain, so compare the parts.
-    guard case .chain(let chain) = program.statements[0] else { Issue.record(); return }
-    #expect(chain.first == .expression(.binary(.equal, .binary(.add, .literal(.int(1)), .binary(.multiply, .literal(.int(2)), .literal(.int(3)))), .literal(.int(7)))))
-    #expect(chain.links == [Link(op: .and, unit: .expression(.unary(.not, .literal(.bool(false)))))])
-    // Inside a declaration, && is an ordinary operator.
+    #expect(program.statements == [.chain(Chain(first: .expression(expected)))])
+    // Inside a declaration too.
     #expect(try parse("let x = 1 + 2 * 3 == 7 && !false").statements == [.declare(name: "x", mutable: false, value: expected)])
 }
 

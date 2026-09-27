@@ -112,7 +112,8 @@ extension Shell {
         for name in args {
             if let functions = commandFunctions(named: name) {
                 for function in functions.candidates {
-                    writeAll(stdoutFD, "\(name): function \(function.signature)\n")
+                    let kind = function.isBuiltin ? "builtin function" : "function"
+                    writeAll(stdoutFD, "\(name): \(kind) \(function.signature)\n")
                 }
             } else if Shell.builtinNames.contains(name) {
                 writeAll(stdoutFD, "\(name): shell builtin\n")

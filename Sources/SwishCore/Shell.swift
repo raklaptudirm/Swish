@@ -7,8 +7,12 @@ public final class Shell {
     /// Where builtins, displayed values and the last stage of a pipeline
     /// write. Redirected while capturing `$(…)`.
     var stdoutFD = STDOUT_FILENO
-    /// Variable scopes, innermost last.
-    var scopes = [Scope()]
+    /// Variable scopes, innermost last. The outermost holds the builtin
+    /// functions, so a `func` at the prompt shadows one rather than
+    /// overloading it.
+    var scopes = [Scope(), Scope()]
+    /// Per-item errors reported so far, like a file `ls` couldn't read.
+    var itemErrorCount = 0
     /// How many Swish function calls are in progress.
     var callDepth = 0
 
@@ -26,6 +30,7 @@ public final class Shell {
         // The shell writes into pipes itself now; a reader exiting early
         // should end that write with EPIPE, not kill the shell.
         signal(SIGPIPE, SIG_IGN)
+        installBuiltinFunctions()
     }
 
     /// Runs the read-eval loop until EOF or `exit`.
@@ -69,7 +74,8 @@ public final class Shell {
     }
 
     private func parse(_ source: String) -> Result<Program, SyntaxError> {
-        let globals = scopes[0].bindings.mapValues { $0.isFunction ? NameKind.function : .variable }
+        let globals = scopes[0].bindings.merging(scopes[1].bindings) { $1 }
+            .mapValues { $0.isFunction ? NameKind.function : .variable }
         do {
             return .success(try Parser.parse(source, bound: globals))
         } catch {
@@ -90,6 +96,13 @@ public final class Shell {
             report("error: \(error)")
             lastStatus = 1
         }
+    }
+
+    /// Reports a problem with one item, like a file `ls` couldn't read,
+    /// without stopping; the statement's status becomes a failure.
+    func reportItemError(_ message: String) {
+        report(message)
+        itemErrorCount += 1
     }
 
     private func takeTerminal() {

@@ -1,7 +1,7 @@
 # Structured pipelines
 
-Status: **design**, nothing here is implemented yet beyond raw byte pipes
-between external commands.
+Status: **implemented**, except live objects and generated bridges
+(milestone 8), paths and durations, and errors as inspectable values.
 
 Swish pipelines carry values, not text, in the style of PowerShell. The goal
 is PowerShell's model (a shell over a runtime's libraries, with objects
@@ -13,13 +13,20 @@ verbosity or its mistakes at the boundary with native programs.
 ```swift
 enum Value {
     case nothing, bool(Bool), int(Int), double(Double), string(String)
-    case path(FilePath), filesize(Int64), duration(Duration), date(Date)
+    case filesize(Int64), date(Date)
     case list([Value])
-    case record(Record)          // ordered String → Value
-    case object(SwishObject)     // a live, bridged Swift value
-    case closure(Closure)
+    case record(Record)          // ordered String → Value, with an optional type name
+    case function(any Callable)
+    // Planned: object(SwishObject), a live bridged Swift value (milestone 8);
+    // path and duration.
 }
 ```
+
+Literals: `1.5.mb`, `2.kib` for file sizes; `["name": "x", "size": 1.kb]`
+for records and `[:]` for an empty one. Fields are read with `r.name` or
+`r["name"]`; lists, strings and records also have a few members like
+`count`, `isEmpty`, `keys` and `lines`. File sizes add, subtract, scale and
+compare; dates compare, and subtract to seconds.
 
 - **Plain data is the default.** Builtins produce records and lists. They
   display cleanly, convert to JSON, and can be handed to external programs.
@@ -39,11 +46,12 @@ In order of preference:
 
 1. **Generated bridges** (see [callables.md](callables.md)) for functions
    and methods.
-2. **`Encodable` → `Value`.** A custom `Encoder` turns any `Encodable`
-   value into a record, so most library model types need no bridge code at
-   all.
-3. **`Mirror` as a fallback** for reading the stored properties of anything
-   else, enough for display and `select`.
+2. **`Encodable` → `Value`** (`ValueEncoder` in SwishKit). Structs become
+   records named after their type, so views apply; `Date` and `FileSize`
+   keep their meaning. Most library model types need no bridge code at
+   all. The `ls` and `ps` builtins produce their records this way.
+3. **`Mirror` as a fallback** (`Value(reflecting:)`) for reading the stored
+   properties of anything else, enough for display and `select`.
 
 ## Stages and boundaries
 
@@ -53,9 +61,9 @@ programs. What flows across each boundary:
 | From → to | Carries |
 |---|---|
 | external → external | A raw fd pipe. Swish never touches the bytes. |
-| external → internal | A lazy stream of lines (`String`), or parsed values with `from json`, `from csv` and so on. |
+| external → internal | A lazy stream of lines (`String`), or parsed values with `from json`. |
 | internal → internal | `Value`s, one at a time. |
-| internal → external | Strings and scalars are written one per line, and lists one line per item. Records and objects are an **error** that suggests `to json` or `to text`, rather than a guessed rendering. |
+| internal → external | Strings and scalars are written one per line, and lists one line per item. Records are an **error** that suggests `to json`, `to text` or `get`, rather than a guessed rendering, so `ls \| grep x` is an error and `ls \| get name \| grep x` works. |
 
 External-to-external must stay raw. PowerShell before 7.4 decoded
 native-to-native pipes as text and re-encoded them, which broke binary data
@@ -64,8 +72,9 @@ native-to-native pipes as text and re-encoded them, which broke binary data
 ### Streaming
 
 Internal stages are pull-based, synchronous iterators, so no async is
-needed in the executor. A stage pulls only what it needs: `ls -r | first 5`
-stops walking the tree after five entries. When an internal stage stops
+needed in the executor. A stage pulls only what it needs: `seq 1000000 |
+first 5` reads five lines. (`ls` itself isn't lazy yet; it lists a whole
+directory before passing it on.) When an internal stage stops
 early and upstream is external, Swish closes the read end and the process
 gets `SIGPIPE`, just as it would with `head`.
 
@@ -80,31 +89,38 @@ pipeline turns values into text, and only if nothing else consumed them.
 
 - **Views** are registered per type and pick default columns and a layout
   (table for lists of similar records, key/value list for a single record).
-  `ls` records carry every field (permissions, inode, owner, …) but show
-  `name`, `type`, `size` and `modified`.
+  `ls` records carry every field (permissions, owner, dates, path, …) but
+  show `name`, `type`, `size` and `modified`; `ls -l` shows them all.
 - Explicit formatters (`table`, `list`, `to text`, `to json`) override the
-  view.
+  view. They return lines of text, so their output can go on to external
+  programs.
+- **Tables fit the terminal.** Wide columns shrink, down to 6 characters;
+  if that isn't enough, columns are left off the right and the header ends
+  in `…`. Numeric columns are right-aligned. When the output isn't a
+  terminal, only the 40-character column cap applies.
 - **Streams are shown progressively.** The display step buffers up to about
   100 rows or 200ms, sizes the columns from that sample, prints it, then
   streams the remaining rows. Later values too wide for their column are
   truncated with `…`. This gives aligned tables for normal output and
   immediate feedback for slow or endless streams.
-- **Objects without a view or `Mirror` children** show their type name,
+- **Objects without a view or `Mirror` children** will show their type name,
   plus their `description` if they conform to `CustomStringConvertible`,
   with a hint to run `members`.
 - **`members`** (PowerShell's `Get-Member`) describes whatever is in the
-  pipeline: its type, fields, and for objects, methods and their signatures.
-  This is how you find your way around an imported library.
+  pipeline: each type's fields and their types, members like `count`, and
+  function signatures. For objects it will list methods too; it's how you'll
+  find your way around an imported library.
 
 ## Errors
 
-- **Fatal errors:** a function that `throw`s stops the pipeline, and the
-  statement's status is failure.
+- **Fatal errors:** a runtime error stops the pipeline and the rest of the
+  input, and the statement's status is failure.
 - **Per-item errors:** a stage reports a problem with one item (say, one
-  unreadable file) to a separate error stream and keeps going. Reported
-  errors are values (message, source, the item concerned), rendered by the
-  display step and inspectable afterwards. Any reported error makes the
-  statement's status a failure, like PowerShell's `$?`.
+  unreadable file) and keeps going, as `ls nosuch Package.swift` does. Any
+  reported error makes the statement's status a failure, like
+  PowerShell's `$?`. For now they're messages on standard error; making
+  them values (message, source, the item concerned) that can be inspected
+  afterwards is still to do, as is a way for Swish functions to report them.
 
 ## Deliberately not copied from PowerShell
 

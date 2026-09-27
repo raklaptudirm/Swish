@@ -1,8 +1,9 @@
+import Foundation
+
 /// A value flowing through Swish.
 ///
 /// This is the currency shared by the interpreter and every compiled plugin,
-/// which is why it lives in its own dynamic library. More cases (paths, file
-/// sizes, records, objects, streams) arrive with structured data.
+/// which is why it lives in its own dynamic library.
 public enum Value: Sendable {
     case nothing
     case bool(Bool)
@@ -10,12 +11,80 @@ public enum Value: Sendable {
     case double(Double)
     case string(String)
     case list([Value])
+    /// Named fields in order, like a row of a table.
+    case record(Record)
+    /// A size in bytes, shown as `1.2 MB`.
+    case filesize(Int64)
+    case date(Date)
     case function(any Callable)
 }
 
 /// A function value. The interpreter implements this for Swish functions and
 /// closures; plugins will implement it for bridged Swift functions.
 public protocol Callable: AnyObject, Sendable, CustomStringConvertible {}
+
+/// Fields in insertion order. Two records are equal when they have the same
+/// fields, whatever their order or type name.
+public struct Record: Sendable, Hashable, Sequence {
+    public private(set) var keys: [String] = []
+    private var storage: [String: Value] = [:]
+    /// The Swift type this record came from, like `FileEntry`, which picks
+    /// how it's displayed.
+    public var typeName: String?
+
+    public init(typeName: String? = nil) {
+        self.typeName = typeName
+    }
+
+    public init(_ fields: KeyValuePairs<String, Value>, typeName: String? = nil) {
+        self.typeName = typeName
+        for (key, value) in fields { self[key] = value }
+    }
+
+    public subscript(key: String) -> Value? {
+        get { storage[key] }
+        set {
+            if let newValue {
+                if storage.updateValue(newValue, forKey: key) == nil { keys.append(key) }
+            } else if storage.removeValue(forKey: key) != nil {
+                keys.removeAll { $0 == key }
+            }
+        }
+    }
+
+    public var count: Int { keys.count }
+
+    public func makeIterator() -> some IteratorProtocol<(key: String, value: Value)> {
+        keys.lazy.map { (key: $0, value: storage[$0]!) }.makeIterator()
+    }
+
+    public static func == (lhs: Record, rhs: Record) -> Bool {
+        lhs.storage == rhs.storage
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(storage)
+    }
+}
+
+/// Encodes as a `.filesize` value through `ValueEncoder`, and as a plain
+/// byte count elsewhere.
+public struct FileSize: Codable, Hashable, Sendable {
+    public var bytes: Int64
+
+    public init(bytes: Int64) {
+        self.bytes = bytes
+    }
+
+    public init(from decoder: any Decoder) throws {
+        bytes = try decoder.singleValueContainer().decode(Int64.self)
+    }
+
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(bytes)
+    }
+}
 
 extension Value: Hashable {
     /// Functions compare by identity.
@@ -27,6 +96,9 @@ extension Value: Hashable {
         case (.double(let a), .double(let b)): a == b
         case (.string(let a), .string(let b)): a == b
         case (.list(let a), .list(let b)): a == b
+        case (.record(let a), .record(let b)): a == b
+        case (.filesize(let a), .filesize(let b)): a == b
+        case (.date(let a), .date(let b)): a == b
         case (.function(let a), .function(let b)): a === b
         default: false
         }
@@ -40,6 +112,9 @@ extension Value: Hashable {
         case .double(let value): hasher.combine(value)
         case .string(let value): hasher.combine(value)
         case .list(let values): hasher.combine(values)
+        case .record(let record): hasher.combine(record)
+        case .filesize(let bytes): hasher.combine(bytes)
+        case .date(let date): hasher.combine(date)
         case .function(let function): hasher.combine(ObjectIdentifier(function))
         }
     }
@@ -54,7 +129,32 @@ extension Value: CustomStringConvertible {
         case .double(let value): String(value)
         case .string(let value): value
         case .list(let values): "[" + values.map(\.description).joined(separator: ", ") + "]"
+        case .record(let record): "{" + record.map { "\($0.key): \($0.value)" }.joined(separator: ", ") + "}"
+        case .filesize(let bytes): Value.formatFileSize(bytes)
+        case .date(let date): Value.dateFormatter.string(from: date)
         case .function(let function): function.description
         }
     }
+
+    /// Decimal units, as Finder shows them: `532 B`, `1.2 KB`, `123 MB`.
+    public static func formatFileSize(_ bytes: Int64) -> String {
+        let units = ["B", "KB", "MB", "GB", "TB", "PB"]
+        var size = Double(bytes.magnitude)
+        var unit = 0
+        while size >= 1000 && unit < units.count - 1 {
+            size /= 1000
+            unit += 1
+        }
+        let sign = bytes < 0 ? "-" : ""
+        if unit == 0 { return "\(sign)\(bytes.magnitude) B" }
+        let number = size < 100 ? String(format: "%.1f", size) : String(format: "%.0f", size)
+        return "\(sign)\(number) \(units[unit])"
+    }
+
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return formatter
+    }()
 }
