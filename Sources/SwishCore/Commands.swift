@@ -91,7 +91,8 @@ extension Shell {
         }
         let (function, bindings) = try resolve(set) { try self.bind(commandLine: args, to: $0, excludingInput: false) }
         let result = try invoke(function, with: bindings)
-        if shouldDisplay {
+        // A command that found nothing (`ls` of an empty directory) shows nothing.
+        if shouldDisplay && result != .list([]) {
             show(result)
         }
         if case .bool(let truth) = result { return truth ? 0 : 1 }

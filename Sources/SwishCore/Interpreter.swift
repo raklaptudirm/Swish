@@ -199,17 +199,19 @@ extension Shell {
                 stages.append(.value(try evaluate(input)))
             }
             for command in node.commands {
-                let arguments = try command.words.map { word -> CommandArgument in
+                var arguments: [CommandArgument] = []
+                for word in command.words {
                     switch word {
-                    case .text(let parts): .text(try expand(parts))
-                    case .closure(let literal): .value(try evaluate(.closure(literal)))
+                    case .text(let parts): arguments += try expandWord(parts).map(CommandArgument.text)
+                    case .closure(let literal): arguments.append(.value(try evaluate(.closure(literal))))
                     }
                 }
                 guard case .text(let name) = arguments[0] else {
                     throw RuntimeError("a closure can't be a command name")
                 }
+                let redirects = try command.redirects.map(resolve)
                 if !command.external, let functions = commandFunctions(named: name) {
-                    stages.append(.function(functions, Array(arguments.dropFirst())))
+                    stages.append(.function(functions, Array(arguments.dropFirst()), redirects: redirects))
                 } else {
                     let argv = try arguments.map { argument -> String in
                         guard case .text(let text) = argument else {
@@ -217,7 +219,7 @@ extension Shell {
                         }
                         return text
                     }
-                    stages.append(.external(argv, skipBuiltins: command.external))
+                    stages.append(.external(argv, skipBuiltins: command.external, redirects: redirects))
                 }
             }
             return try runPipeline(stages, source: node.source, display: context == .statement)
@@ -376,15 +378,56 @@ extension Shell {
         }
     }
 
-    /// Joins a word or string's parts into one string. Interpolation never
-    /// splits: each word is exactly one argument.
+    /// Joins a string's parts into one string. Interpolation never splits.
     private func expand(_ parts: [StringPart]) throws -> String {
         try parts.map { part in
             switch part {
-            case .literal(let text): text
+            case .literal(let text), .glob(let text): text
             case .expression(let expr): try evaluate(expr).description
             }
         }.joined()
+    }
+
+    /// A command word's arguments: one, unless it has an unquoted wildcard,
+    /// when it's the matching paths. Interpolated values are literal in the
+    /// pattern, so `"$dir"/*.txt` works whatever `$dir` holds. A pattern
+    /// that matches nothing is an error, not passed on as it is.
+    private func expandWord(_ parts: [StringPart]) throws -> [String] {
+        var text = ""
+        var pattern = ""
+        var hasGlob = false
+        for part in parts {
+            switch part {
+            case .literal(let literal):
+                text += literal
+                pattern += Glob.escape(literal)
+            case .glob(let glob):
+                text += glob
+                pattern += glob
+                hasGlob = true
+            case .expression(let expr):
+                let value = try evaluate(expr).description
+                text += value
+                pattern += Glob.escape(value)
+            }
+        }
+        guard hasGlob, Glob.hasWildcards(pattern) else { return [text] }
+        let matches = Glob.expand(pattern)
+        guard !matches.isEmpty else { throw RuntimeError("no matches for \(text)") }
+        return matches
+    }
+
+    private func resolve(_ redirect: Redirect) throws -> ResolvedRedirect {
+        switch redirect.target {
+        case .descriptor(let source):
+            return ResolvedRedirect(fd: redirect.fd, action: .duplicate(source))
+        case .file(let parts, let mode):
+            let paths = try expandWord(parts)
+            guard paths.count == 1 else {
+                throw RuntimeError("ambiguous redirect: \(paths.count) files match")
+            }
+            return ResolvedRedirect(fd: redirect.fd, action: .open(paths[0], mode))
+        }
     }
 
     func lookup(_ name: String) -> Binding? {

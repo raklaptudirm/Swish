@@ -20,14 +20,21 @@ struct SpawnFailure: Error {
 }
 
 enum Stage {
-    case external([String], skipBuiltins: Bool)
+    case external([String], skipBuiltins: Bool, redirects: [ResolvedRedirect])
     /// A Swish function, which runs in the shell's own process.
-    case function(OverloadSet, [CommandArgument])
+    case function(OverloadSet, [CommandArgument], redirects: [ResolvedRedirect])
     /// A value feeding the pipeline, as in `[3, 1, 2] | sort`.
     case value(Value)
 
     var isExternal: Bool {
         if case .external = self { true } else { false }
+    }
+
+    var redirects: [ResolvedRedirect] {
+        switch self {
+        case .external(_, _, let redirects), .function(_, _, let redirects): redirects
+        case .value: []
+        }
     }
 }
 
@@ -40,11 +47,12 @@ extension Shell {
     func runPipeline(_ stages: [Stage], source: String, display: Bool) throws -> Int32 {
         if stages.count == 1 {
             switch stages[0] {
-            case .function(let set, let args):
-                return try callCommand(set, args, display: display)
-            case .external(let argv, let skipBuiltins):
-                if !skipBuiltins, let status = runBuiltin(argv) { return status }
-            case .value:
+            // A function reading a file (`double < numbers`) streams it, below.
+            case .function(let set, let args, let redirects) where !redirects.contains(where: { $0.fd == 0 }):
+                return try withRedirects(redirects) { _, _ in try callCommand(set, args, display: display) }
+            case .external(let argv, let skipBuiltins, let redirects) where !skipBuiltins && Shell.builtinNames.contains(argv[0]):
+                return try withRedirects(redirects) { _, _ in runBuiltin(argv)! }
+            default:
                 break
             }
         }
@@ -56,6 +64,22 @@ extension Shell {
             throw RuntimeError("a pipeline can only have one run of Swish functions for now")
         }
         let segment = inProcess.first.map { $0...inProcess.last! }
+        // The run as a whole can read a file at its start, write one at its
+        // end, and send standard error anywhere.
+        var segmentRedirects: [ResolvedRedirect] = []
+        if let segment {
+            for index in segment {
+                for redirect in stages[index].redirects {
+                    let allowed = redirect.fd == 2
+                        || (redirect.fd == 0 && index == segment.lowerBound)
+                        || (redirect.fd != 0 && index == segment.upperBound)
+                    guard allowed else {
+                        throw RuntimeError("only the first and last Swish functions in a pipeline can redirect their input and output")
+                    }
+                    segmentRedirects.append(redirect)
+                }
+            }
+        }
 
         var job = Job(commandLine: source)
         var input: Int32 = -1
@@ -76,15 +100,24 @@ extension Shell {
             }
             defer { input = next?.read ?? -1 }
 
-            guard case .external(let argv, _) = stage else {
+            guard case .external(let argv, _, let redirects) = stage else {
                 // In-process: remember where the run reads from and writes to.
                 if index == segment?.lowerBound { segmentInput = input }
                 if index == segment?.upperBound, let next { segmentOutput = next.write }
                 continue
             }
 
-            let output = next?.write ?? (stdoutFD == STDOUT_FILENO ? -1 : stdoutFD)
-            let result = spawn(argv, pgid: interactive ? job.pgid : -1, input: input, output: output)
+            var descriptors = DescriptorTable([0: input >= 0 ? input : 0, 1: next?.write ?? stdoutFD, 2: stderrFD])
+            let result: Result<pid_t, SpawnFailure>
+            do {
+                try descriptors.apply(redirects)
+                result = spawn(argv, pgid: interactive ? job.pgid : -1, descriptors: descriptors)
+                descriptors.closeFiles()
+            } catch {
+                // Like a command that fails to start: this stage fails, the
+                // others still run.
+                result = .failure(SpawnFailure(message: "\(error)", status: 1))
+            }
             if input >= 0 { close(input) }
             if let next { close(next.write) }
 
@@ -103,10 +136,13 @@ extension Shell {
         var failure: (any Error)?
         if let segment {
             do {
-                try runSegment(
-                    stages[segment], input: segmentInput,
-                    output: segmentOutput >= 0 ? segmentOutput : stdoutFD, toExternal: segmentOutput >= 0
-                )
+                let pipeOutput = segmentOutput >= 0 ? segmentOutput : stdoutFD
+                try withRedirects(segmentRedirects, input: segmentInput, output: pipeOutput) { input, output in
+                    // Text for the next program, or, if it went to a file or
+                    // the terminal, formatted as it would be displayed.
+                    try runSegment(stages[segment], input: input, output: output,
+                                   toExternal: segmentOutput >= 0 && output == segmentOutput)
+                }
             } catch {
                 failure = error
             }
@@ -173,15 +209,33 @@ extension Shell {
         return 1
     }
 
-    private func spawn(_ argv: [String], pgid: pid_t, input: Int32, output: Int32) -> Result<pid_t, SpawnFailure> {
+    private func spawn(_ argv: [String], pgid: pid_t, descriptors: DescriptorTable) -> Result<pid_t, SpawnFailure> {
         let name = argv[0]
         guard let path = findExecutable(name) else {
             return .failure(SpawnFailure(message: "\(name): command not found", status: 127))
         }
 
+        // Each changed descriptor, as (the child's, ours). One of ours that
+        // is also a target, as in `>&2 2> file`, is copied out of the way
+        // first, so the order the child applies them in can't matter.
+        let changed = descriptors.map.filter { $0.key != $0.value }
+        var targets: [Int32] = []
+        var sources: [Int32] = []
+        var copies: [Int32] = []
+        for (target, source) in changed {
+            var source = source
+            if changed.keys.contains(source) {
+                source = fcntl(source, F_DUPFD_CLOEXEC, 10)
+                copies.append(source)
+            }
+            targets.append(target)
+            sources.append(source)
+        }
+        defer { copies.forEach { close($0) } }
+
         let cArgs = argv.map { strdup($0) } + [nil]
         defer { cArgs.forEach { free($0) } }
-        let pid = swish_spawn(path, cArgs, pgid, input, output, interactive ? terminal : -1)
+        let pid = swish_spawn(path, cArgs, pgid, targets, sources, Int32(targets.count), interactive ? terminal : -1)
         guard pid < 0 else { return .success(pid) }
 
         let code = -pid

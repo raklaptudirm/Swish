@@ -210,7 +210,7 @@ private struct CompletionContext {
                 continue
             }
             switch character {
-            case " ", "\t":
+            case " ", "\t", "<", ">":
                 if wordStart != nil { words.append(current) }
                 current = ""
                 wordStart = nil

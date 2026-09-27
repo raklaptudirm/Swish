@@ -73,7 +73,12 @@ send "\r"
 step "and Enter runs the match" "\r\ninside\r\n"
 
 send "exit 7\r"
-expect eof
+# A shell that doesn't exit (a failed step left it busy) is killed, so a
+# failure can't hang the suite.
+expect {
+  eof {}
+  timeout { exec kill -9 [exp_pid] }
+}
 lassign [wait] pid spawnid os code
 if {$code != 7} { puts "FAIL exit status: $code"; incr failures } else { puts "ok   exit status" }
 file delete $history

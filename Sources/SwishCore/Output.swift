@@ -22,10 +22,6 @@ func writeAll(_ fd: Int32, _ text: String) -> Bool {
     }
 }
 
-func report(_ message: String) {
-    writeAll(STDERR_FILENO, "swish: \(message)\n")
-}
-
 func errorMessage(_ code: Int32) -> String {
     String(cString: strerror(code))
 }

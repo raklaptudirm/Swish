@@ -51,14 +51,21 @@ send "\x03"
 send "echo after\r"
 step "^C discards a pending block" "\nafter\r\n"
 send "while true {}\r"
-after 300
+# ^C typed before the editor has handed the terminal back is just a queued
+# byte, not a signal, so give the loop time to start.
+after 1000
 send "\x03"
 step "^C stops a loop running in the shell itself" {\[130\]}
 send "func greet(_ name: String) { echo \"hi \\(name)\" }\r"
 send "greet Rak\r"
 step "functions persist between prompts" "\nhi Rak\r\n"
 send "exit 7\r"
-expect eof
+# A shell that doesn't exit (a failed step left it busy) is killed, so a
+# failure can't hang the suite.
+expect {
+  eof {}
+  timeout { exec kill -9 [exp_pid] }
+}
 lassign [wait] pid spawnid os code
 if {$code != 7} { puts "FAIL exit status: $code"; incr failures } else { puts "ok   exit status" }
 exit [expr {$failures > 0}]

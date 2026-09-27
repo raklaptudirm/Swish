@@ -7,6 +7,9 @@ public final class Shell {
     /// Where builtins, displayed values and the last stage of a pipeline
     /// write. Redirected while capturing `$(…)`.
     var stdoutFD = STDOUT_FILENO
+    /// Where errors are reported, and programs' standard error goes, while
+    /// running something with `2>`.
+    var stderrFD = STDERR_FILENO
     /// Variable scopes, innermost last. The outermost holds the builtin
     /// functions, so a `func` at the prompt shadows one rather than
     /// overloading it.
@@ -102,10 +105,17 @@ public final class Shell {
         } catch is Interrupted {
             writeAll(STDERR_FILENO, "\n")
             lastStatus = 128 + SIGINT
+        } catch is AlreadyReported {
+            lastStatus = 1
         } catch {
             report("error: \(error)")
             lastStatus = 1
         }
+    }
+
+    /// Reports an error, to wherever standard error is redirected.
+    func report(_ message: String) {
+        writeAll(stderrFD, "swish: \(message)\n")
     }
 
     /// Reports a problem with one item, like a file `ls` couldn't read,

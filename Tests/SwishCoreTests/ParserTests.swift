@@ -297,3 +297,54 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
         #expect(error != nil && error?.incomplete == false, "\(source)")
     }
 }
+
+// MARK: Redirects and globs
+
+private func command(_ source: String) throws -> CommandNode? {
+    guard case .chain(let chain) = try parse(source).statements.first,
+          case .pipeline(let pipeline) = chain.first else { return nil }
+    return pipeline.commands.first
+}
+
+@Test func redirectsInOrder() throws {
+    let node = try command("cmd > out 2>&1 < in >> log 2>> err &> all &>> more 1<&0")
+    #expect(node?.redirects == [
+        Redirect(fd: 1, target: .file([.literal("out")], .write)),
+        Redirect(fd: 2, target: .descriptor(1)),
+        Redirect(fd: 0, target: .file([.literal("in")], .read)),
+        Redirect(fd: 1, target: .file([.literal("log")], .append)),
+        Redirect(fd: 2, target: .file([.literal("err")], .append)),
+        Redirect(fd: 1, target: .file([.literal("all")], .write)),
+        Redirect(fd: 2, target: .descriptor(1)),
+        Redirect(fd: 1, target: .file([.literal("more")], .append)),
+        Redirect(fd: 2, target: .descriptor(1)),
+        Redirect(fd: 1, target: .descriptor(0)),
+    ])
+    #expect(node?.words.count == 1)
+}
+
+@Test func aNumberMustTouchItsRedirect() throws {
+    let spaced = try command("echo 2 > f")
+    #expect(spaced?.words.count == 2)
+    #expect(spaced?.redirects == [Redirect(fd: 1, target: .file([.literal("f")], .write))])
+    #expect(try command("echo 2>f")?.redirects == [Redirect(fd: 2, target: .file([.literal("f")], .write))])
+    #expect(try command("echo a>b")?.words.count == 2) // `>` ends a word
+    #expect(try command("> out echo hi")?.words.count == 2) // redirects can come first
+}
+
+@Test func redirectErrors() {
+    #expect(syntaxError("echo >")?.incomplete == true)
+    #expect(syntaxError("echo > | cat")?.incomplete == false)
+    #expect(syntaxError("echo >&x")?.incomplete == false)
+    #expect(syntaxError("echo & x")?.incomplete == false) // still no background jobs
+}
+
+@Test func onlyUnquotedWildcardsGlob() throws {
+    #expect(try words(#"ls *.swift "*.txt" \*.md a[bc] '?'"#).dropFirst() == [
+        [.glob("*.swift")],
+        [.literal("*.txt")],
+        [.literal("*"), .literal(".md")],
+        [.glob("a[bc]")],
+        [.literal("?")],
+    ])
+}

@@ -65,6 +65,13 @@ programs. What flows across each boundary:
 | internal → internal | `Value`s, one at a time. |
 | internal → external | Strings and scalars are written one per line, and lists one line per item. Records are an **error** that suggests `to json`, `to text` or `get`, rather than a guessed rendering, so `ls \| grep x` is an error and `ls \| get name \| grep x` works. |
 
+Redirecting a Swish stage's output to a file (`ls > files.txt`) writes it
+as it would be displayed, without color, rather than failing like a record
+sent to a program: a file is read by a person, or by `from`. Its errors
+follow its `2>`, so `f 2>/dev/null` silences a Swish function as it would
+a program. Only the first and last Swish functions in a pipeline can
+redirect their input and output.
+
 External-to-external must stay raw. PowerShell before 7.4 decoded
 native-to-native pipes as text and re-encoded them, which broke binary data
 (`curl … | tar x`).

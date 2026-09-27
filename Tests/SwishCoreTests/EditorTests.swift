@@ -128,3 +128,10 @@ private func completion(_ text: String, in shell: Shell = Shell()) -> (start: In
     #expect(styles[0] == "\u{1B}[32m")
     #expect(styles[4] == "\u{1B}[31m")
 }
+
+@Test func redirectOperatorsHighlight() {
+    let source = "sort < in 2>&1 > out"
+    let chars = Array(source)
+    let marked = Parser.highlight(source, bound: [:]).filter { $0.kind == .punctuation }.map { String(chars[$0.range]) }
+    #expect(marked == ["<", "2>&1", ">"])
+}

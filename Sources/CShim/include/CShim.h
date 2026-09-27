@@ -13,14 +13,16 @@ int swish_wifstopped(int status);
 /// Spawns `path` with `argv` and the current environment.
 ///
 /// `pgid` < 0 keeps the shell's process group, 0 starts a new group led by
-/// the child, and > 0 joins that group. `fd_in`/`fd_out` are dup'd onto
-/// stdin/stdout when >= 0; other fds should be close-on-exec.
+/// the child, and > 0 joins that group. For each i < `count`, the child gets
+/// `sources[i]` (a descriptor of ours) as its descriptor `targets[i]`; the
+/// sources must not be among the targets, so the order doesn't matter.
+/// Other descriptors should be close-on-exec.
 /// When `tty` >= 0 and the child leads a new group, the terminal is handed to
 /// that group before the child runs any code.
 ///
 /// Returns the child's pid, or -errno on failure.
 pid_t swish_spawn(const char *path, char *const argv[], pid_t pgid,
-                  int fd_in, int fd_out, int tty);
+                  const int *targets, const int *sources, int count, int tty);
 
 /// Makes SIGINT set a flag instead of being ignored, so ^C can stop code
 /// running in the shell itself, like a `while true {}` loop.

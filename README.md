@@ -29,7 +29,8 @@ scripts/test.sh               # unit tests + pty-driven job-control and editor t
 ## Milestones
 
 1. ✅ REPL, PATH lookup, pipes, process groups, `^C`/`^Z`, `fg`/`jobs`, `cd`/`pwd`/`exit`
-2. Redirections (`>`, `>>`, `<`, `2>&1`), globbing (✅ `;`/`&&`/`||`)
+2. ✅ Redirections (`>`, `>>`, `<`, `2>`, `2>&1`, `>&2`, `&>`, applied in order, for Swish
+   functions too), globbing (`*`, `?`, `[…]`, `**`; no match is an error), `;`/`&&`/`||`
 3. Full job control: `&`, `bg`, per-job terminal modes, `SIGCHLD` notifications
 4. ✅ The language: two-mode parsing, `let`/`var`, literals and operators, lists, ranges,
    `if`/`else`, `for`/`while`/`break`/`continue`, `func`, closures, `\(…)`, `$name`/`$?`, `$(…)`,

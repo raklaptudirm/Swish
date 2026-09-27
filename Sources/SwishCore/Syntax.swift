@@ -130,6 +130,25 @@ struct CommandNode: Equatable, Sendable {
     var words: [Word]
     /// `^name`: skip functions and builtins, and run the external program.
     var external = false
+    /// In the order written, which matters: `> out 2>&1` sends both to
+    /// `out`, `2>&1 > out` only standard output.
+    var redirects: [Redirect] = []
+}
+
+/// `> file`, `2>> file`, `< file`, `2>&1` and the like.
+struct Redirect: Equatable, Sendable {
+    enum Target: Equatable, Sendable {
+        case file([StringPart], Mode)
+        /// Another of the command's descriptors, as in `2>&1`.
+        case descriptor(Int32)
+    }
+
+    enum Mode: Equatable, Sendable {
+        case read, write, append
+    }
+
+    var fd: Int32
+    var target: Target
 }
 
 enum Word: Equatable, Sendable {
@@ -141,6 +160,9 @@ enum Word: Equatable, Sendable {
 enum StringPart: Equatable, Sendable {
     case literal(String)
     case expression(Expr)
+    /// Unquoted text with a wildcard, like `*.swift`; only unquoted
+    /// wildcards expand to file names.
+    case glob(String)
 }
 
 struct RecordEntry: Equatable, Sendable {
@@ -836,9 +858,14 @@ struct Parser {
         let nameStart = pos
         let external = consume("^")
         var words: [Word] = []
+        var redirects: [Redirect] = []
         while true {
             skipSpaces()
             guard let c = peek(), !endsCommand(c) else { break }
+            if let redirect = try parseRedirect() {
+                redirects += redirect
+                continue
+            }
             if c == "{" && peek(1) != "}" {
                 pos += 1
                 words.append(.closure(try parseClosure()))
@@ -853,7 +880,7 @@ struct Parser {
             let wordStart = pos
             let word = try parseWord()
             if words.isEmpty {
-                mark(.command, from: nameStart)
+                mark(.command, from: redirects.isEmpty ? nameStart : wordStart)
             } else if chars[wordStart] == "-" {
                 mark(.flag, from: wordStart)
             }
@@ -863,7 +890,51 @@ struct Parser {
             if let c = peek() { throw unexpected(c) }
             throw .incomplete("expected a command")
         }
-        return CommandNode(words: words, external: external)
+        return CommandNode(words: words, external: external, redirects: redirects)
+    }
+
+    /// A redirect at the current position, or nil if there isn't one:
+    /// `[n]< file`, `[n]> file`, `[n]>> file`, `[n]>&m`, `[n]<&m`, and
+    /// `&> file` or `&>> file` for standard output and error together. The
+    /// number must touch the operator, so `echo 2 > f` writes "2".
+    private mutating func parseRedirect() throws(SyntaxError) -> [Redirect]? {
+        let start = pos
+        var digits = ""
+        while let c = peek(digits.count), Parser.isDigit(c) { digits.append(c) }
+        guard let op = peek(digits.count), op == "<" || op == ">" || (digits.isEmpty && op == "&" && peek(1) == ">") else {
+            return nil
+        }
+        pos += digits.count
+
+        let both = consume("&")
+        var fd = Int32(digits) ?? (peek() == "<" ? 0 : 1)
+        let reading = consume("<")
+        if !reading { pos += 1 } // the `>`
+        let append = !reading && consume(">")
+        if !both && consume("&") {
+            let targetStart = pos
+            let target = readDigits()
+            guard let targetFD = Int32(target) else {
+                pos = targetStart
+                throw expected("a descriptor number after '&'")
+            }
+            mark(.punctuation, from: start)
+            return [Redirect(fd: fd, target: .descriptor(targetFD))]
+        }
+        mark(.punctuation, from: start)
+
+        skipSpaces()
+        guard let c = peek(), !isWordBoundary(c) else {
+            if peek() == nil { throw .incomplete("expected a file to redirect to") }
+            throw expected("a file to redirect to")
+        }
+        let file = try parseWord()
+        let mode: Redirect.Mode = reading ? .read : append ? .append : .write
+        if both {
+            fd = 1
+            return [Redirect(fd: 1, target: .file(file, mode)), Redirect(fd: 2, target: .descriptor(1))]
+        }
+        return [Redirect(fd: fd, target: .file(file, mode))]
     }
 
     private func endsCommand(_ c: Character) -> Bool {
@@ -876,15 +947,18 @@ struct Parser {
     }
 
     private func isWordBoundary(_ c: Character) -> Bool {
-        c == " " || c == "\t" || c == "\n" || "|;&(){}".contains(c)
+        c == " " || c == "\t" || c == "\n" || "|;&(){}<>".contains(c)
     }
 
     private mutating func parseWord() throws(SyntaxError) -> [StringPart] {
         var parts: [StringPart] = []
         var literal = ""
+        // Whether the unquoted text in `literal` has a wildcard in it.
+        var wildcard = false
         func flush() {
-            if !literal.isEmpty { parts.append(.literal(literal)) }
+            if !literal.isEmpty { parts.append(wildcard ? .glob(literal) : .literal(literal)) }
             literal = ""
+            wildcard = false
         }
 
         if peek() == "~", peek(1).map({ $0 == "/" || isWordBoundary($0) }) ?? true {
@@ -914,6 +988,11 @@ struct Parser {
                     parts.append(.expression(try parseInterpolation()))
                 } else if next == "\n" {
                     pos += 2
+                } else if "*?[".contains(next) {
+                    // An escaped wildcard is literal, even next to real ones.
+                    flush()
+                    parts.append(.literal(String(next)))
+                    pos += 2
                 } else {
                     literal.append(next)
                     pos += 2
@@ -927,6 +1006,7 @@ struct Parser {
                     pos += 1
                 }
             default:
+                if "*?[".contains(c) { wildcard = true }
                 literal.append(c)
                 pos += 1
             }
