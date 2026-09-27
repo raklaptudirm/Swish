@@ -7,6 +7,7 @@ let views: [String: [String]] = [
     "FileEntry": ["name", "type", "size", "modified"],
     "ProcessEntry": ["pid", "name", "user", "memory", "cpuTime"],
     "Job": ["id", "state", "command"],
+    "Help": ["name", "source", "summary"],
 ]
 
 extension Shell {

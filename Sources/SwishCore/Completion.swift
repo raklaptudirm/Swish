@@ -84,6 +84,11 @@ extension Shell {
             if external {
                 candidates = candidates.map { var candidate = $0; candidate.replacement = "^" + candidate.replacement; return candidate }
             }
+        } else if ["help", "which"].contains(context.words[0]) && context.quote == nil
+                    && !word.hasPrefix("-") && !word.contains("/") {
+            // `help <name>`: anything that runs, as for the first word.
+            candidates = commandCandidates(prefix: word, externalOnly: false)
+                .filter { !["variable", "keyword"].contains($0.description) }
         } else if word.hasPrefix("-") && context.quote == nil, let functions = commandFunctions(named: context.words[0]) {
             candidates = flagCandidates(for: functions, prefix: word)
         } else {

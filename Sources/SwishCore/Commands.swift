@@ -328,7 +328,7 @@ extension Shell {
                 if parameter.isInput {
                     details.append(parameter.type.isList ? "(or the whole pipeline input)" : "(or each pipeline input item)")
                 }
-                if let defaultValue = parameter.defaultValue {
+                if let defaultValue = parameter.defaultValue, defaultValue != .literal(.nothing) {
                     details.append("(default: \(describe(defaultValue)))")
                 } else if let source = parameter.externalDefault {
                     details.append("(default: \(source))")

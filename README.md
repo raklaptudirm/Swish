@@ -49,7 +49,7 @@ func greet(_ name: String, @flag("n") times: Int = 1, loud: Bool = false) {
 
 greet("Rak", times: 2)        // as Swift
 greet Rak -n 2 --loud         // as a command
-greet --help
+greet --help                  // or `help greet`; `help` lists every function
 ```
 
 ```

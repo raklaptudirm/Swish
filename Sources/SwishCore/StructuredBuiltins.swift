@@ -8,7 +8,7 @@ extension Shell {
     func installBuiltinFunctions() {
         let functions = [
             ls(), ps(), whereFunction(), select(), get(), sort(), first(), count(), reverse(),
-            from(), to(), table(), list(), members(),
+            from(), to(), table(), list(), members(), help(),
         ]
         for function in functions {
             scopes[0].bindings[function.name!] = Binding(

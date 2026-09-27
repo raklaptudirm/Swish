@@ -119,6 +119,20 @@ stored in a variable is called in expression mode (`f(x)`). This keeps
 command-mode lookup static, which also lets highlighting and completion know
 what a name is before it runs.
 
+## Finding functions
+
+`help` lists every function you can call as records (`name`, `source`,
+`summary`, `usage`), so it can be filtered like anything else: the
+builtins, shell builtins like `cd`, your own functions (source `yours`),
+and imported ones (source: their module). `help name` shows what
+`name --help` does, and for a program, where it is and where to look.
+
+```swift
+help
+help | where { $0.source == "Tools" }
+help first
+```
+
 ## Overloads
 
 Declaring a `func` whose signature (labels and types) differs from an
