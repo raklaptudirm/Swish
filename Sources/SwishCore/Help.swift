@@ -1,8 +1,8 @@
 import Foundation
 import SwishKit
 
-/// `help`: every function you can call, as records (so `help | where …`
-/// works); `help name`: one of them in full.
+/// `help`: every function you can call, as records (so `help | filter …`
+/// works), sequence methods included; `help name`: one of them in full.
 extension Shell {
     /// The builtins that aren't functions, since they change the shell
     /// itself: their usage and what they do.
@@ -44,6 +44,12 @@ extension Shell {
                 }
             }
         }
+        for (name, methods) in sequenceMethods {
+            for method in methods.candidates {
+                rows.append((name, helpRecord(name, source: "Sequence", usage: method.signature,
+                                              summary: method.documentation?.summary ?? "")))
+            }
+        }
         for builtin in Shell.shellBuiltins where !seen.contains(builtin.name) {
             rows.append((builtin.name, helpRecord(builtin.name, source: "shell", usage: builtin.usage, summary: builtin.summary)))
         }
@@ -62,7 +68,7 @@ extension Shell {
     /// What `name --help` shows, or what a shell builtin or program is.
     func helpLines(for name: String) throws -> [String] {
         var text: String
-        if let set = commandFunctions(named: name) ?? functionSet(named: name) {
+        if let set = commandFunctions(named: name) ?? sequenceMethods[name] ?? functionSet(named: name) {
             text = helpText(for: set)
         } else if let builtin = Shell.shellBuiltins.first(where: { $0.name == name }) {
             text = "\(builtin.summary)\n\nUsage:\n  \(builtin.usage)\n"

@@ -77,12 +77,16 @@ extension Shell {
         Foundation.exit(code)
     }
 
-    /// What each name runs in command mode, in lookup order: functions,
-    /// builtins, then programs on PATH.
+    /// What each name runs in command mode, in lookup order: after a `|`,
+    /// sequence methods; functions, builtins, then programs on PATH.
     private func which(_ args: [String]) -> Int32 {
         var status: Int32 = 0
         for name in args {
-            if let functions = commandFunctions(named: name) {
+            if let methods = sequenceMethods[name] {
+                for method in methods.candidates {
+                    writeAll(stdoutFD, "\(name): sequence method \(method.signature)\n")
+                }
+            } else if let functions = commandFunctions(named: name) {
                 for function in functions.candidates {
                     let kind = function.isBuiltin ? "builtin function" : "function"
                     writeAll(stdoutFD, "\(name): \(kind) \(function.signature)\n")

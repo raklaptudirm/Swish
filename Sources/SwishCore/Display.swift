@@ -54,6 +54,15 @@ func terminalWidth(_ fd: Int32) -> Int? {
 }
 
 extension Value {
+    /// A list's items, or an Output's lines: what sequence methods work on.
+    var sequenceItems: [Value]? {
+        switch self {
+        case .list(let items): items
+        case .output(let output): output.lines.map(Value.string)
+        default: nil
+        }
+    }
+
     var isEmptyOutput: Bool {
         if case .output(let output) = self { output.text.isEmpty } else { false }
     }

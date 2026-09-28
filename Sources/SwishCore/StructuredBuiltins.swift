@@ -6,10 +6,7 @@ import SwishKit
 /// the shell: the same flags, help, overloads and streaming as Swish ones.
 extension Shell {
     func installBuiltinFunctions() {
-        let functions = [
-            ls(), ps(), whereFunction(), select(), get(), sort(), first(), count(), reverse(),
-            from(), to(), table(), list(), members(), help(),
-        ]
+        let functions = [ls(), ps(), from(), to(), table(), list(), members(), help()]
         for function in functions {
             scopes[0].bindings[function.name!] = Binding(
                 value: .function(OverloadSet(name: function.name!, candidates: [function])),
@@ -23,6 +20,7 @@ extension Shell {
         scopes[0].bindings["JobState"] = Binding(value: .object(Shell.jobState), mutable: false)
         scopes[0].bindings["jobs"] = Binding(value: .nothing, mutable: false, special: .jobs)
         scopes[0].bindings["args"] = Binding(value: .list([]), mutable: false)
+        installSequenceMethods()
     }
 
     /// `with(env: ["EDITOR": "vim"]) { git commit }`: runs the closure with
@@ -199,20 +197,41 @@ extension Shell {
         var threads: Int?
     }
 
-    // MARK: Filters and transforms
+    // MARK: Sequence methods
 
-    private func whereFunction() -> Function {
+    /// Methods of every sequence (a list, a stream, or an Output's lines),
+    /// named as Swift's are: `xs.sorted(by: "size")`, and as a pipeline
+    /// stage with the input as the sequence, `ls | sorted --by size`.
+    func installSequenceMethods() {
+        let methods = [sorted(), filter(), map(), prefix(), reversed(), count(), select(), get()]
+        for method in methods {
+            sequenceMethods[method.name!] = OverloadSet(name: method.name!, candidates: [method])
+        }
+    }
+
+    private func filter() -> Function {
         builtin(
-            "where", "Keeps the items for which the predicate returns true.",
-            [input("item", .any), positional("predicate", .function)],
-            docs: ["predicate": "a closure like { $0.size > 1.mb }"],
+            "filter", "The items for which the predicate returns true.",
+            [input("item", .any), positional("isIncluded", .function)],
+            docs: ["isIncluded": "a closure like { $0.size > 1.mb }"],
             .native { shell, args in
                 let item = args["item"]!
-                let verdict = try shell.call(args["predicate"]!, with: [item])
+                let verdict = try shell.call(args["isIncluded"]!, with: [item])
                 guard case .bool(let keep) = verdict else {
-                    throw RuntimeError("where: the predicate must return a Bool, not \(verdict.typeName)")
+                    throw RuntimeError("filter: the predicate must return a Bool, not \(verdict.typeName)")
                 }
                 return keep ? item : .nothing
+            }
+        )
+    }
+
+    private func map() -> Function {
+        builtin(
+            "map", "Each item transformed by the closure; nil results are dropped.",
+            [input("item", .any), positional("transform", .function)],
+            docs: ["transform": "a closure like { $0.name }"],
+            .native { shell, args in
+                try shell.call(args["transform"]!, with: [args["item"]!])
             }
         )
     }
@@ -243,58 +262,77 @@ extension Shell {
         )
     }
 
-    private func sort() -> Function {
+    private func sorted() -> Function {
         builtin(
-            "sort", "Sorts the input.",
+            "sorted", "The items in order: by a field, or by a closure like { $0.size < $1.size }.",
             [
                 input("items", .list(.any)),
-                option("by", .optional(.string), default: .nothing, short: "b"),
+                option("by", .any, default: .nothing, short: "b"),
                 option("reverse", .bool, default: .bool(false), short: "r"),
                 option("numeric", .bool, default: .bool(false), short: "n"),
                 option("unique", .bool, default: .bool(false), short: "u"),
             ],
             docs: [
-                "by": "the field to sort records by",
+                "by": "the field to sort records by, or a closure saying whether $0 comes before $1",
                 "numeric": "compare text as numbers",
                 "unique": "drop items equal to the one before",
             ],
             .native { shell, args in
                 guard case .list(let items) = args["items"] else { return .list([]) }
-                let field = args.strings("by").first
-                let numeric = args["numeric"] == .bool(true)
-                let keyed = try items.enumerated().map { index, item in
-                    var key = item
-                    if let field {
-                        key = try shell.member(field, of: item)
-                    } else if case .record = item {
-                        throw RuntimeError("sort: sorting records needs --by <field>")
+                var ordered: [Value]
+                if case .function = args["by"] {
+                    ordered = try items.sorted { a, b in
+                        let verdict = try shell.call(args["by"]!, with: [a, b])
+                        guard case .bool(let before) = verdict else {
+                            throw RuntimeError("sorted: the closure must return a Bool, not \(verdict.typeName)")
+                        }
+                        return before
                     }
-                    if numeric, case .string(let text) = key {
-                        key = Double(text.trimmingCharacters(in: .whitespaces)).map(Value.double) ?? key
+                    if args["unique"] == .bool(true) {
+                        ordered = ordered.enumerated().filter { $0.offset == 0 || !ordered[$0.offset - 1].isEqual(to: $0.element) }.map(\.element)
                     }
-                    return (key: key, index: index, item: item)
+                } else {
+                    let field: String? = switch args["by"] {
+                    case .string(let name)?: name
+                    case .nothing?, nil: nil
+                    case let other?: throw RuntimeError("sorted: by must be a field's name or a closure, not \(other.typeName)")
+                    }
+                    let numeric = args["numeric"] == .bool(true)
+                    let keyed = try items.enumerated().map { index, item in
+                        var key = item
+                        if let field {
+                            key = try shell.member(field, of: item)
+                        } else if case .record = item {
+                            throw RuntimeError("sorted: sorting records needs a field, as in sorted(by: \"size\")")
+                        }
+                        if numeric, case .string(let text) = key {
+                            key = Double(text.trimmingCharacters(in: .whitespaces)).map(Value.double) ?? key
+                        }
+                        return (key: key, index: index, item: item)
+                    }
+                    // Ties keep their input order.
+                    var sortedKeys = keyed.sorted { a, b in
+                        let order = a.key.order(comparedTo: b.key)
+                        return order != .orderedSame ? order == .orderedAscending : a.index < b.index
+                    }
+                    if args["unique"] == .bool(true) {
+                        sortedKeys = sortedKeys.enumerated().filter { $0.offset == 0 || !sortedKeys[$0.offset - 1].key.isEqual(to: $0.element.key) }.map(\.element)
+                    }
+                    ordered = sortedKeys.map(\.item)
                 }
-                // Ties keep their input order.
-                var sorted = keyed.sorted { a, b in
-                    let order = a.key.order(comparedTo: b.key)
-                    return order != .orderedSame ? order == .orderedAscending : a.index < b.index
-                }
-                if args["unique"] == .bool(true) {
-                    sorted = sorted.enumerated().filter { $0.offset == 0 || !sorted[$0.offset - 1].key.isEqual(to: $0.element.key) }.map(\.element)
-                }
-                if args["reverse"] == .bool(true) { sorted.reverse() }
-                return .list(sorted.map(\.item))
+                if args["reverse"] == .bool(true) { ordered.reverse() }
+                return .list(ordered)
             }
         )
     }
 
-    private func first() -> Function {
+    private func prefix() -> Function {
         builtin(
-            "first", "The first items of the input; stops reading after them.",
-            [input("items", .list(.any)), positional("count", .int, default: .int(1))],
+            "prefix", "The first items; stops reading after them.",
+            [input("items", .list(.any)), positional("maxLength", .int, default: .int(1))],
             .stream { _, upstream, args in
-                guard case .int(let count) = args["count"], count >= 0 else {
-                    throw RuntimeError("first: the count must be zero or more")
+                guard case .int(let count) = args["maxLength"], count >= 0 else {
+                    throw RuntimeError("prefix: the length must be zero or more")
                 }
                 var taken = 0
                 return ValueStream {
@@ -308,17 +346,28 @@ extension Shell {
 
     private func count() -> Function {
         builtin(
-            "count", "How many items the input has.", [input("items", .list(.any))],
-            .native { _, args in
+            "count", "How many items there are, or how many the predicate is true for.",
+            [input("items", .list(.any)), option("where", .optional(.function), default: .nothing)],
+            docs: ["where": "a closure like { $0.size > 1.mb }"],
+            .native { shell, args in
                 guard case .list(let items) = args["items"] else { return .int(0) }
-                return .int(items.count)
+                guard case .function = args["where"] else { return .int(items.count) }
+                var count = 0
+                for item in items {
+                    let verdict = try shell.call(args["where"]!, with: [item])
+                    guard case .bool(let matches) = verdict else {
+                        throw RuntimeError("count: the predicate must return a Bool, not \(verdict.typeName)")
+                    }
+                    if matches { count += 1 }
+                }
+                return .int(count)
             }
         )
     }
 
-    private func reverse() -> Function {
+    private func reversed() -> Function {
         builtin(
-            "reverse", "The input in reverse order.", [input("items", .list(.any))],
+            "reversed", "The items in reverse order.", [input("items", .list(.any))],
             .native { _, args in
                 guard case .list(let items) = args["items"] else { return .list([]) }
                 return .list(items.reversed())

@@ -78,7 +78,7 @@ positional in command mode when the function starts the pipeline
 
 What flows between stages:
 
-- **Between Swish functions:** values, pulled one at a time, so `… | first 5`
+- **Between Swish functions:** values, pulled one at a time, so `… | prefix 5`
   stops upstream work early. A whole-stream function's list result flows
   out as its elements.
 - **From an external program:** its output lines, as Strings, converted to
@@ -86,7 +86,7 @@ What flows between stages:
 - **To an external program, or the terminal:** one line per item, with lists
   one line per element. When the reader exits early (`… | head -1`), the
   function stops being called.
-- **A value can start a pipeline:** `[3, 1, 2] | sort`, `"text" | tr a-z A-Z`.
+- **A value can start a pipeline:** `[3, 1, 2] | sorted`, `"text" | tr a-z A-Z`.
 - A function without `@input` in the middle of a pipeline ignores its input.
 
 For now, a pipeline can have only one run of consecutive Swish functions
@@ -111,8 +111,39 @@ unreachable. `which name` reports what a name resolves to, listing every
 overload of a function.
 
 Structured builtins deliberately keep their familiar Unix names and shadow
-the tools: a bare `ls`, `ps` or `sort` gives records, so
-`ls | where { $0.size > 1.mb }` works out of the box. `foreign ls` gets `/bin/ls`.
+the tools: a bare `ls` or `ps` gives records, so
+`ls | filter { $0.size > 1.mb }` works out of the box. `foreign ls` gets `/bin/ls`.
+
+## Methods as pipeline stages
+
+After a `|`, a stage's name can be a method of what's piped in, with the
+input as `self`: `x | name args` is `x.name(args)`. Lookup goes:
+
+1. **The sequence's methods.** A stream, list, or an Output's lines has
+   Swift's sequence methods: `sorted`, `filter`, `map`, `prefix`,
+   `reversed` and `count`, plus `select` and `get` for records. They're
+   also called as methods on values: `xs.sorted(by: "size")`,
+   `xs.filter { $0 > 1 }.map { $0 * 2 }`. `prefix` and `filter` stream,
+   so `yes | prefix 3` ends.
+2. **Each item's methods,** when a struct in scope declares one by that
+   name (or it's a job's, like `cancel`): `points | describe` calls
+   `describe()` on each point, and what it returns flows on. A mutating
+   method can't be piped, since a piped value isn't a variable.
+3. **Functions, then programs,** as for the first command. `foreign sort`
+   still reaches `/usr/bin/sort`.
+4. **Items' methods found only at run time,** like a plugin object's: if
+   nothing else has the name, each item is asked for it.
+
+Methods come before functions so a `func sorted` can't silently change
+`ls | sorted`. Without a `|` there's nothing for a method to work on, so
+`sorted` alone is an error that says so.
+
+A stage can also be written as a call: `ls | sorted(by: "type")`,
+`points | scaled(by: 2)`. Its arguments bind by Swift's rules, and the
+input fills the `@input` parameter as it does for a command. In both
+syntaxes a trailing closure can fill a labeled parameter, as in Swift:
+`ls | sorted { $0.size < $1.size }` passes it as `by:`, and
+`count { $0 > 1 }` as `where:`.
 
 Only names defined with `func` are callable in command mode. A closure
 stored in a variable is called in expression mode (`f(x)`). This keeps
@@ -129,7 +160,7 @@ and imported ones (source: their module). `help name` shows what
 
 ```swift
 help
-help | where { $0.source == "Tools" }
+help | filter { $0.source == "Tools" }
 help first
 ```
 

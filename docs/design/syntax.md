@@ -132,14 +132,14 @@ if case .failed(let code, _) = r { echo "code \(code)" }
 On the command line, an enum parameter takes a case's name (or raw value),
 and `--help` lists them: `pick --kind <file|directory>`. Builtins use enums
 too: `ls` gives each entry a `FileType` (`.file`, `.directory`, `.symlink`,
-`.other`), so `ls | where { $0.type == .directory }`, and a job's `state` is
+`.other`), so `ls | filter { $0.type == .directory }`, and a job's `state` is
 a `JobState` (`.running`, `.stopped`, `.done`, `.cancelled`).
 
 ## Structs and assignment
 
 A struct's values are records whose type is the struct, so they're values
 as in Swift (copying one copies it), and they work wherever records do:
-tables, `where`, `select`, `to json`. The type adds what a record doesn't
+tables, `filter`, `select`, `to json`. The type adds what a record doesn't
 have: a memberwise init, computed properties, methods and initializers.
 
 ```swift
@@ -154,7 +154,7 @@ struct Point {
 var p = Point(x: 3, y: 4)       // Point(x: 3, y: 4)
 p.move(by: 1)
 p.x *= 2
-[p, Point(x: 1)] | where { $0.x > 1 }
+[p, Point(x: 1)] | filter { $0.x > 1 }
 ```
 
 - **Members are in scope in their bodies**, through `self`, and a member
@@ -241,12 +241,12 @@ the job did, so `await build && echo ok` works.
 `jobs` lists the jobs in the background, oldest first: ones started with
 `async`, and ones suspended with ^Z. They're values like any other, shown
 as a table like `ls`'s records, and their fields (`id`, `command`, `state`,
-`pids`, `output`) work with `where`, `select` and `to json`:
+`pids`, `output`) work with `filter`, `select` and `to json`:
 
 ```swift
 jobs                              // id  state    command
                                   //  1  running  swift build
-jobs | where { $0.state == .stopped } | select id command
+jobs | filter { $0.state == .stopped } | select id command
 await                             // the most recent job: the ^Z'd vim, say
 await jobs[0]                     // another one
 jobs.last.resume()                // carry a stopped job on in the background

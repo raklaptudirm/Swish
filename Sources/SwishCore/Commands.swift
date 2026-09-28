@@ -33,11 +33,15 @@ extension Function {
 enum CommandArgument: CustomStringConvertible {
     case text(String)
     case value(Value)
+    /// From a stage written as a call, `ls | sorted(by: "size")`: bound by
+    /// Swift's rules instead of as a command line.
+    case call(Argument)
 
     var description: String {
         switch self {
         case .text(let text): text
         case .value(let value): value.description
+        case .call(let argument): (argument.label.map { "\($0): " } ?? "") + "…"
         }
     }
 }
@@ -45,6 +49,15 @@ enum CommandArgument: CustomStringConvertible {
 extension TypeAnnotation {
     var isList: Bool {
         if case .list = self { true } else { false }
+    }
+
+    /// Whether a closure can be passed for it.
+    var acceptsFunction: Bool {
+        switch self {
+        case .function, .any: true
+        case .optional(let wrapped): wrapped.acceptsFunction
+        default: false
+        }
     }
 }
 
@@ -110,6 +123,17 @@ extension Shell {
     ) throws -> (bindings: [String: Value], penalty: Int) {
         let name = function.name ?? "closure"
         let parameters = function.parameters.filter { !(excludingInput && $0.isInput) }
+        // A stage written as a call binds as a call does, without the input.
+        let callArguments = args.compactMap { argument -> Argument? in
+            if case .call(let call) = argument { call } else { nil }
+        }
+        if !callArguments.isEmpty {
+            let stripped = Function(
+                name: function.name, parameters: parameters, returnType: function.returnType, body: function.body,
+                captured: function.captured, documentation: function.documentation
+            )
+            return try bind(callArguments, to: stripped)
+        }
         var longFlags: [String: (parameter: Parameter, negated: Bool)] = [:]
         var shortFlags: [Character: Parameter] = [:]
         for parameter in parameters {
@@ -133,6 +157,8 @@ extension Shell {
                     throw RuntimeError("\(name): \(what) must be \(type), not \(value.typeName)")
                 }
                 return conforming
+            case .call:
+                preconditionFailure("call arguments are bound as a call")
             }
         }
         func assign(_ parameter: Parameter, _ text: CommandArgument, flag: String) throws {
@@ -229,6 +255,13 @@ extension Shell {
             } else if let text = remaining.popFirst() {
                 bound[parameter.name] = try take(text, as: parameter.type, for: what)
             }
+        }
+        // A closure left over goes to a labeled parameter that takes one, as
+        // a trailing closure does in Swift: `ls | sorted { $0.size < $1.size }`.
+        if remaining.count == 1, case .value(let closure) = remaining.first!, case .function = closure,
+           let parameter = parameters.first(where: { $0.label != nil && bound[$0.name] == nil && $0.type.acceptsFunction }) {
+            bound[parameter.name] = closure
+            remaining = []
         }
         if let extra = remaining.first {
             throw RuntimeError("\(name): unexpected argument '\(extra.description)'")

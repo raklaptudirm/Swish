@@ -42,6 +42,8 @@ public final class Shell {
     var scriptDirectory: String?
     /// Imported plugins: each module's name, and the package it came from.
     var plugins: [String: String] = [:]
+    /// Methods every sequence has, like `sorted` and `filter`.
+    var sequenceMethods: [String: OverloadSet] = [:]
     /// The status the last signal-killed command gave, to tell 130 from ^C
     /// apart from a command that exited with 130.
     var lastSignalStatus: Int32?

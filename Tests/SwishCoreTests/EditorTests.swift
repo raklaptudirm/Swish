@@ -85,7 +85,7 @@ private func completion(_ text: String, in shell: Shell = Shell()) -> (start: In
     let result = shell.completions(for: "zzg", cursor: 3)
     #expect(result?.candidates == [LineEditor.Candidate(replacement: "zzgreet", display: "zzgreet", description: "Greets.")])
     #expect(completion("ech").replacements.contains("echo"))
-    #expect(completion("if tru && ls | wher").replacements.contains("where")) // after a pipe: command position
+    #expect(completion("if tru && ls | filt").replacements.contains("filter")) // after a pipe: command position
     #expect(completion("^zzg", in: shell).replacements.isEmpty) // ^ is externals only
     #expect(completion("foreign ech").replacements.contains("echo"))
     #expect(completion("EDITOR=vim ech").replacements.contains("echo"))
@@ -96,7 +96,7 @@ private func completion(_ text: String, in shell: Shell = Shell()) -> (start: In
     shell.execute(#"func f(@flag("n") times: Int = 1, color: Bool = true) {}"#)
     #expect(completion("f --", in: shell).replacements == ["--color", "--help", "--no-color", "--times"])
     #expect(completion("f -", in: shell).replacements.contains("-n"))
-    #expect(completion("sort --r").replacements == ["--reverse"])
+    #expect(completion("ls | sorted --r").replacements == ["--reverse"])
 }
 
 @Test func completesVariables() {

@@ -9,7 +9,7 @@ right from the prompt.
 let n = 3
 if n > 2 { echo "big \(n)" }
 
-ls | where { $0.size > 1.kb } | sort --by size -r | first 3
+ls | filter { $0.size > 1.kb } | sorted --by size -r | prefix 3
 ```
 
 ```
@@ -75,7 +75,7 @@ Functions stream values from one to the next, and text to and from other
 programs.
 
 ```swift
-ps | where { $0.name == "launchd" } | select pid user
+ps | filter { $0.name == "launchd" } | select pid user
 
 func double(@input _ n: Int) -> Int { n * 2 }
 seq 5 | double | tr 0-9 a-j
@@ -102,7 +102,7 @@ func describe(_ r: Result) -> String {
 }
 describe(.failed(code: 2, "no such file"))
 
-ls | where { $0.type == .directory }
+ls | filter { $0.type == .directory }
 ```
 
 ### Structs
@@ -120,7 +120,7 @@ struct Point {
 
 var p = Point(x: 3, y: 4)
 p.move(by: 1)
-[p, Point(x: 1)] | where { $0.lengthSquared > 1 }   // a table: x, y
+[p, Point(x: 1)] | filter { $0.lengthSquared > 1 }   // a table: x, y
 ```
 
 ### Failure is a value until you `try`
@@ -258,13 +258,17 @@ scripts/test.sh     # unit tests, plus pty-driven job-control, editor and backgr
   `do`/`catch`, `env`, `//` comments, scripts with `args` and `main`
 - [x] **Enums and switch**: cases, raw and associated values, `.case` resolved by context,
   `switch` with Swift's patterns, `if case`; `FileType` from `ls`, enum parameters on the command line
+- [x] **Methods as stages**: after a `|`, a name is a method of what's piped in: the sequence's
+  (`sorted`, `filter`, `map`, `prefix`, `reversed`, `count`, `select`, `get`, as in Swift, also
+  `xs.sorted(by: "size")`), then each item's (`points | describe`, `jobs | cancel`); stages
+  written as calls, `ls | sorted(by: "size")`; trailing closures for labeled parameters
 - [x] **Structs**: typed records with the memberwise init or custom `init`s, computed
   properties, methods and `mutating`; assignment into values (`p.x = 1`, `xs[0] += 5`)
 - [x] **Callables**: command lines derived from signatures, `@input` streaming, `@flag`,
   `--help` from doc comments, overloads, `foreign` and `which`
 - [x] **Structured data**: records, file sizes and dates, `Encodable` → `Value`, views and
-  tables, per-item errors, `members`, and builtins (`ls`, `ps`, `where`, `select`, `get`,
-  `sort`, `first`, `count`, `reverse`, `from json`, `to json`/`to text`, `table`, `list`),
+  tables, per-item errors, `members`, and builtins (`ls`, `ps`, `from json`, `to json`/`to text`,
+  `table`, `list`),
   objects shown through their fields
   - [x] Live objects for bridged Swift values
   - [ ] Errors as values you can inspect after the fact

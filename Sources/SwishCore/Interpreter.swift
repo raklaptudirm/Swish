@@ -476,6 +476,10 @@ extension Shell {
                    let methods = type.methods[name] {
                     return try callMethod(methods, of: base, at: baseExpr, arguments)
                 }
+                // `xs.sorted(by: "size")`: a sequence's method.
+                if let methods = sequenceMethods[name], let items = base.sequenceItems {
+                    return try callSequenceMethod(methods, on: items, arguments)
+                }
                 value = try member(name, of: base)
             } else {
                 value = try evaluate(callee)
@@ -817,7 +821,9 @@ extension Shell {
         if let input = node.input {
             stages.append(.value(try evaluate(input)))
         }
-        for command in node.commands {
+        for (index, command) in node.commands.enumerated() {
+            // After a `|`, a name can be a method of what's piped in.
+            let piped = index > 0 || node.input != nil
             var arguments: [CommandArgument] = []
             for word in command.words {
                 switch word {
@@ -828,10 +834,31 @@ extension Shell {
             guard case .text(let name) = arguments[0] else {
                 throw RuntimeError("a closure can't be a command name")
             }
+            if let call = command.call {
+                guard !command.external else { throw RuntimeError("a program can't be called with (…)") }
+                // `.case` arguments wait for their parameter's type.
+                arguments += try call.map { argument in
+                    if case .caseLiteral = argument.value { return .call(argument) }
+                    return .call(Argument(label: argument.label, value: .literal(try evaluate(argument.value))))
+                }
+            }
             let redirects = try command.redirects.map(resolve)
             let environment = try command.environment.map { ($0.name, try expand($0.value)) }
-            if !command.external, let functions = commandFunctions(named: name) {
-                stages.append(.function(functions, Array(arguments.dropFirst()), redirects: redirects, environment: environment))
+            let rest = Array(arguments.dropFirst())
+            // Methods of the input first (the sequence's, then its items'),
+            // then functions, then programs; `foreign` skips to programs.
+            if !command.external, piped, let methods = sequenceMethods[name] {
+                stages.append(.function(methods, rest, redirects: redirects, environment: environment))
+            } else if !command.external, piped, itemsMayHaveMethod(name) {
+                stages.append(.method(name, rest, redirects: redirects, environment: environment))
+            } else if !command.external, let functions = commandFunctions(named: name) {
+                stages.append(.function(functions, rest, redirects: redirects, environment: environment))
+            } else if !command.external, piped, !Shell.builtinNames.contains(name), findExecutable(name) == nil {
+                // Nothing else by that name: perhaps the items have it, like
+                // a job's `cancel`. Only known once they arrive.
+                stages.append(.method(name, rest, redirects: redirects, environment: environment))
+            } else if !command.external, !piped, sequenceMethods[name] != nil, findExecutable(name) == nil {
+                throw RuntimeError("\(name) is a method of sequences: pipe something into it, as in `ls | \(name)`, or call it on a list, as in `xs.\(name)(…)`")
             } else {
                 let argv = try arguments.map { argument -> String in
                     guard case .text(let text) = argument else {
@@ -999,6 +1026,20 @@ extension Shell {
         }
     }
 
+    /// A closure last and unlabeled can go to a labeled parameter, as a
+    /// trailing closure does in Swift (`xs.sorted { $0.x < $1.x }` for
+    /// `by:`), unless a later unlabeled parameter is waiting for it.
+    private func isTrailingClosure(
+        _ arguments: [Argument], at index: Int, for parameter: Parameter, before later: ArraySlice<Parameter>
+    ) -> Bool {
+        guard index == arguments.count - 1, arguments[index].label == nil, parameter.label != nil,
+              later.allSatisfy({ $0.label != nil }) else { return false }
+        switch arguments[index].value {
+        case .closure, .literal(.function): return parameter.type.acceptsFunction
+        default: return false
+        }
+    }
+
     /// Matches expression-mode arguments to parameters by Swift's rules:
     /// in order, labels must match, defaulted parameters may be skipped.
     ///
@@ -1014,8 +1055,9 @@ extension Shell {
             return result
         }
         var index = 0
-        for parameter in function.parameters {
-            if index < arguments.count, arguments[index].label == parameter.label {
+        for (position, parameter) in function.parameters.enumerated() {
+            if index < arguments.count, arguments[index].label == parameter.label
+                || isTrailingClosure(arguments, at: index, for: parameter, before: function.parameters[(position + 1)...]) {
                 if parameter.variadic {
                     var values: [Value] = []
                     repeat {

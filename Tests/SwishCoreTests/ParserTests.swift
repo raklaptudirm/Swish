@@ -173,11 +173,11 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
 }
 
 @Test func valuesCanFeedPipelines() throws {
-    guard case .chain(let chain) = try parse("[1, 2] | sort | head -1").statements[0],
+    guard case .chain(let chain) = try parse("[1, 2] | sorted | head -1").statements[0],
           case .pipeline(let pipeline) = chain.first else { Issue.record(); return }
     #expect(pipeline.input == .list([.literal(.int(1)), .literal(.int(2))]))
     #expect(pipeline.commands.map { $0.words.count } == [1, 2])
-    #expect(pipeline.source == "[1, 2] | sort | head -1")
+    #expect(pipeline.source == "[1, 2] | sorted | head -1")
     #expect(try modes("false || true") == ["expression"]) // `||` is still a chain
     #expect(syntaxError("[1] |")?.incomplete == true)
 }
@@ -210,7 +210,7 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
 }
 
 @Test func closuresAsCommandArguments() throws {
-    guard case .chain(let chain) = try parse("ls | where { $0.size > 1.mb }").statements[0],
+    guard case .chain(let chain) = try parse("ls | filter { $0.size > 1.mb }").statements[0],
           case .pipeline(let pipeline) = chain.first,
           case .closure(let closure) = pipeline.commands[1].words[1] else { Issue.record(); return }
     #expect(closure.parameters.map(\.name) == ["$0"])

@@ -250,6 +250,8 @@ struct CommandNode: Equatable, Sendable {
     var redirects: [Redirect] = []
     /// `EDITOR=vim git commit`: environment variables for this command only.
     var environment: [EnvironmentAssignment] = []
+    /// `sorted(by: "size")` after a `|`: arguments written as a call.
+    var call: [Argument]? = nil
 }
 
 struct EnvironmentAssignment: Equatable, Sendable {
@@ -1589,6 +1591,7 @@ struct Parser {
         var words: [Word] = []
         var redirects: [Redirect] = []
         var environment: [EnvironmentAssignment] = []
+        var call: [Argument]?
         while true {
             skipSpaces()
             guard let c = peek(), !endsCommand(c) else { break }
@@ -1601,8 +1604,22 @@ struct Parser {
                 words.append(.closure(try parseClosure()))
                 continue
             }
+            // `sorted(by: "size")`: a name touching its arguments is a call,
+            // as in Swift; a trailing closure may follow.
+            if c == "(", words.count == 1, call == nil, !external, pos > 0, Parser.isIdentifierPart(chars[pos - 1]) {
+                call = try parseArguments()
+                skipSpaces()
+                if peek() == "{" {
+                    pos += 1
+                    call!.append(Argument(label: nil, value: .closure(try parseClosure())))
+                }
+                continue
+            }
             if c == "(" {
                 throw SyntaxError("unexpected '(' in a command; quote it, or use \\(…) to interpolate an expression")
+            }
+            if call != nil {
+                throw SyntaxError("a command written as a call takes all its arguments in the parentheses")
             }
             if c == "&" {
                 throw SyntaxError("'&' isn't Swish; background jobs will be `async command`")
@@ -1631,7 +1648,7 @@ struct Parser {
             if let c = peek() { throw unexpected(c) }
             throw .incomplete("expected a command")
         }
-        return CommandNode(words: words, external: external, redirects: redirects, environment: environment)
+        return CommandNode(words: words, external: external, redirects: redirects, environment: environment, call: call)
     }
 
     /// A redirect at the current position, or nil if there isn't one:
@@ -2031,6 +2048,15 @@ struct Parser {
                 let name = identifier()!
                 pos += name.count
                 expr = .member(expr, name)
+                // `xs.filter { … }`: a call with only a trailing closure.
+                let beforeClosure = (pos, spans.count)
+                skipSpaces()
+                if peek() == "{" && peek(1) != "}" && conditionDepth == 0 {
+                    pos += 1
+                    expr = .call(expr, [Argument(label: nil, value: .closure(try parseClosure()))])
+                } else {
+                    rewind(to: beforeClosure)
+                }
             } else {
                 return expr
             }

@@ -11,8 +11,10 @@ enum Stage {
     case external([String], skipBuiltins: Bool, redirects: [ResolvedRedirect], environment: [(String, String)])
     /// A Swish function, which runs in the shell's own process.
     case function(OverloadSet, [CommandArgument], redirects: [ResolvedRedirect], environment: [(String, String)])
-    /// A value feeding the pipeline, as in `[3, 1, 2] | sort`.
+    /// A value feeding the pipeline, as in `[3, 1, 2] | sorted`.
     case value(Value)
+    /// `[p1, p2] | describe`: a method of each item piped in.
+    case method(String, [CommandArgument], redirects: [ResolvedRedirect], environment: [(String, String)])
 
     var isExternal: Bool {
         if case .external = self { true } else { false }
@@ -20,7 +22,7 @@ enum Stage {
 
     var redirects: [ResolvedRedirect] {
         switch self {
-        case .external(_, _, let redirects, _), .function(_, _, let redirects, _): redirects
+        case .external(_, _, let redirects, _), .function(_, _, let redirects, _), .method(_, _, let redirects, _): redirects
         case .value: []
         }
     }
@@ -28,7 +30,7 @@ enum Stage {
     /// `NAME=value` given before the command.
     var environment: [(String, String)] {
         switch self {
-        case .external(_, _, _, let environment), .function(_, _, _, let environment): environment
+        case .external(_, _, _, let environment), .function(_, _, _, let environment), .method(_, _, _, let environment): environment
         case .value: []
         }
     }

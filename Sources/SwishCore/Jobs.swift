@@ -65,6 +65,8 @@ final class Job: SwishObject, @unchecked Sendable {
 
     var typeName: String { "Job" }
 
+    static let methodNames: Set = ["resume", "cancel"]
+
     var memberNames: [String] { ["id", "command", "state", "pids", "output", "resume", "cancel"] }
 
     func member(_ name: String) -> Value? {

@@ -31,7 +31,7 @@ struct Point {
     // Fields, computed properties and methods, with members in scope.
     #expect(try output(point + "let p = Point(x: 3, y: 4); p.x; p.lengthSquared; p.describe()") == "3\n25\n\"(3, 4)\"\n")
     // Records underneath: tables, filters, JSON; and values like Swift's.
-    #expect(try output(point + "[Point(x: 5), Point(x: 1)] | where { $0.x > 1 }") == "x  y\n5  0\n")
+    #expect(try output(point + "[Point(x: 5), Point(x: 1)] | filter { $0.x > 1 }") == "x  y\n5  0\n")
     #expect(try output(point + "Point(x: 1) | to json | tr -d ' \\n'") == #"{"x":1,"y":0}"#)
     #expect(try output(point + "Point(x: 1) == Point(x: 1, y: 0)") == "true\n")
     #expect(try output(point + "var a = Point(x: 1); var b = a; b.x = 9; a.x") == "1\n")

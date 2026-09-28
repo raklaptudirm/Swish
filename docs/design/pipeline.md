@@ -36,7 +36,7 @@ compare; dates compare, and subtract to seconds.
 - **`.object` exists for library interop.** Values from imported Swift
   packages that aren't plain data stay live, with bridged methods and
   properties.
-- **Both expose members the same way.** `where`, `select`, `sort` and field
+- **Both expose members the same way.** `filter`, `select`, `sorted` and field
   access (`$0.size`) work identically on records and objects.
 - **An object shows its data as fields.** `SwishObject.fields` is a record
   of its members that aren't methods, by default; tables, `select`, `list`
@@ -86,7 +86,7 @@ native-to-native pipes as text and re-encoded them, which broke binary data
 
 Internal stages are pull-based, synchronous iterators, so no async is
 needed in the executor. A stage pulls only what it needs: `seq 1000000 |
-first 5` reads five lines. (`ls` itself isn't lazy yet; it lists a whole
+prefix 5` reads five lines. (`ls` itself isn't lazy yet; it lists a whole
 directory before passing it on.) When an internal stage stops
 early and upstream is external, Swish closes the read end and the process
 gets `SIGPIPE`, just as it would with `head`.

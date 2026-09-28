@@ -311,8 +311,8 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
 }
 
 @Test func which() throws {
-    let text = try output("func greet(_ name: String) {}; which greet cd first cat")
-    #expect(text.hasPrefix("greet: function greet(_ name: String)\ncd: shell builtin\nfirst: builtin function first(@input _ items: [Any], _ count: Int)\n/"))
+    let text = try output("func greet(_ name: String) {}; which greet cd prefix cat")
+    #expect(text.hasPrefix("greet: function greet(_ name: String)\ncd: shell builtin\nprefix: sequence method prefix(@input _ items: [Any], _ maxLength: Int)\n/"))
     #expect(text.hasSuffix("/cat\n"))
     #expect(status("which surely-not-a-command") == 1)
 }
@@ -334,7 +334,7 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
 
 @Test func listsOfRecordsDisplayAsTables() throws {
     #expect(try output(#"[["n": 5, "s": "a"], ["n": 100, "t": "b"]]"#) == "  n  s  t\n  5  a\n100     b\n")
-    #expect(try output(#"[["n": 5], ["n": 100]] | where { $0.n > 10 }"#) == "  n\n100\n")
+    #expect(try output(#"[["n": 5], ["n": 100]] | filter { $0.n > 10 }"#) == "  n\n100\n")
 }
 
 /// A directory with known files, for `ls`. (Built with commands, since
@@ -354,10 +354,10 @@ private func fixture() throws -> String {
 @Test func lsGivesTypedRecords() throws {
     let dir = try fixture()
     #expect(try output("ls \(dir) | get type") == "file\nfile\ndirectory\n")
-    #expect(try output("ls \(dir) | where { $0.type == .file } | select name size") == "name         size\nbig.bin    1.5 KB\nsmall.txt     2 B\n")
-    #expect(try output("ls \(dir) | where { $0.type != FileType.file } | get name") == "sub\n")
+    #expect(try output("ls \(dir) | filter { $0.type == .file } | select name size") == "name         size\nbig.bin    1.5 KB\nsmall.txt     2 B\n")
+    #expect(try output("ls \(dir) | filter { $0.type != FileType.file } | get name") == "sub\n")
     #expect(try output("ls -a \(dir) | count; ls \(dir) | count") == "4\n3\n")
-    #expect(try output("ls \(dir) | first 1 | members | where { $0.name == \"size\" } | get kind") == "FileSize\n")
+    #expect(try output("ls \(dir) | prefix 1 | members | filter { $0.name == \"size\" } | get kind") == "FileSize\n")
     #expect(try output("ls \(dir)/small.txt | get path") == "\(dir)/small.txt\n")
 }
 
@@ -369,18 +369,18 @@ private func fixture() throws -> String {
 }
 
 @Test func psListsProcesses() throws {
-    #expect(try output("ps | where { $0.pid == 1 } | get name") == "launchd\n")
+    #expect(try output("ps | filter { $0.pid == 1 } | get name") == "launchd\n")
 }
 
 @Test func sortingAndSlicing() throws {
     let data = #"let xs = [["n": 3, "s": "c"], ["n": 1, "s": "a"], ["n": 2, "s": "b"]];"#
-    #expect(try output(data + "xs | sort --by n | get s") == "a\nb\nc\n")
-    #expect(try output(data + "xs | sort -rb s | first 2 | get n") == "3\n2\n")
-    #expect(try output(data + "xs | reverse | get n; xs | count") == "2\n1\n3\n3\n")
-    #expect(status(data + "xs | sort") == 1) // records need --by
-    #expect(try output("printf 'b\\n10\\n9\\na\\n' | sort; printf '10\\n9\\n9\\n' | sort -nu") == "10\n9\na\nb\n9\n10\n")
-    #expect(try output("[3, 1.5, 2] | sort") == "1.5\n2\n3\n")
-    #expect(try output("seq 1000000 | first 2; yes | first 1") == "1\n2\ny\n")
+    #expect(try output(data + "xs | sorted --by n | get s") == "a\nb\nc\n")
+    #expect(try output(data + "xs | sorted -rb s | prefix 2 | get n") == "3\n2\n")
+    #expect(try output(data + "xs | reversed | get n; xs | count") == "2\n1\n3\n3\n")
+    #expect(status(data + "xs | sorted") == 1) // records need --by
+    #expect(try output("printf 'b\\n10\\n9\\na\\n' | sorted; printf '10\\n9\\n9\\n' | sorted -nu") == "10\n9\na\nb\n9\n10\n")
+    #expect(try output("[3, 1.5, 2] | sorted") == "1.5\n2\n3\n")
+    #expect(try output("seq 1000000 | prefix 2; yes | prefix 1") == "1\n2\ny\n")
 }
 
 @Test func json() throws {
@@ -537,7 +537,7 @@ private func fixture() throws -> String {
     #expect(try output(#"$(echo x).description == $(echo x).text; 1.5.kb.description; ["a": 1].description"#) == "true\n\"1.5 KB\"\n\"{a: 1}\"\n")
     #expect(try output(#"["description": "mine"].description"#) == "\"mine\"\n")
     #expect(status("$(echo x) + \"y\"") == 1) // other String operations go through .text
-    #expect(try output("$(printf '3\\n1\\n2') | sort") == "1\n2\n3\n")
+    #expect(try output("$(printf '3\\n1\\n2') | sorted") == "1\n2\n3\n")
 }
 
 // MARK: do/catch
@@ -599,7 +599,7 @@ private func fixture() throws -> String {
     #expect(try output(#"enum E { case a, b(code: Int, String) }; E.b(code: 2, "no"); "\(E.b(code: 2, "no"))""#)
         == #"E.b(code: 2, "no")"# + "\n" + #""b(code: 2, no)""# + "\n")
     // Interpolation, commands and pipelines use the plain text.
-    #expect(try output(#"let r = $(echo Hello); echo $r "\(r)"; ["a", "b"] | first 2"#) == "Hello Hello\na\nb\n")
+    #expect(try output(#"let r = $(echo Hello); echo $r "\(r)"; ["a", "b"] | prefix 2"#) == "Hello Hello\na\nb\n")
     // Awaiting a job that wrote to the terminal shows nothing more.
     #expect(try output("let j = async true; await j").isEmpty)
 }

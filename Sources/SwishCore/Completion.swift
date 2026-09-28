@@ -34,7 +34,8 @@ extension Shell {
         // Names built at run time can't be checked while typing.
         guard !name.isEmpty, !name.contains(where: { "$\\\"'(".contains($0) }) else { return nil }
         let known: Bool
-        if !external && (commandFunctions(named: name) != nil || Shell.builtinNames.contains(name)) {
+        if !external && (commandFunctions(named: name) != nil || sequenceMethods[name] != nil
+                         || Shell.builtinNames.contains(name)) {
             known = true
         } else if name.contains("/") {
             let path = name.hasPrefix("~") ? (env("HOME") ?? "") + name.dropFirst() : name
@@ -89,7 +90,8 @@ extension Shell {
             // `help <name>`: anything that runs, as for the first word.
             candidates = commandCandidates(prefix: word, externalOnly: false)
                 .filter { !["variable", "keyword"].contains($0.description) }
-        } else if word.hasPrefix("-") && context.quote == nil, let functions = commandFunctions(named: context.words[0]) {
+        } else if word.hasPrefix("-") && context.quote == nil,
+                  let functions = sequenceMethods[context.words[0]] ?? commandFunctions(named: context.words[0]) {
             candidates = flagCandidates(for: functions, prefix: word)
         } else {
             candidates = pathCandidates(for: word, quote: context.quote, executablesOnly: false)
@@ -121,6 +123,9 @@ extension Shell {
                 }
             }
             for name in Shell.builtinNames { described[name] = "shell builtin" }
+            for (name, set) in sequenceMethods {
+                described[name] = set.candidates.first?.documentation.map { String($0.summary.prefix { $0 != "\n" }) } ?? "sequence method"
+            }
             for keyword in ["if", "for", "while", "let", "var", "func", "async", "await", "do", "try", "enum", "switch", "import", "struct"] {
                 described[keyword] = "keyword"
             }

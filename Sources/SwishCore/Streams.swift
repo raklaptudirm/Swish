@@ -100,6 +100,8 @@ extension Shell {
                 stream = .elements(of: value)
             case .function(let set, let args, _, _):
                 stream = try functionStream(set, args, upstream: stream, upstreamIsExternal: upstreamIsExternal)
+            case .method(let name, let args, _, _):
+                stream = methodStream(name, args, upstream: stream ?? .empty)
             case .external:
                 preconditionFailure("external stages don't run in-process")
             }
@@ -153,6 +155,14 @@ extension Shell {
         }
 
         let (function, bindings) = try resolve(set) { try self.bind(commandLine: args, to: $0, excludingInput: true) }
+        return try stream(function, bindings, upstream: upstream, upstreamIsExternal: upstreamIsExternal)
+    }
+
+    /// `function` fed by `upstream`: once per item for an item parameter,
+    /// once with them all for a list, or lazily for a stream builtin.
+    private func stream(
+        _ function: Function, _ bindings: [String: Value], upstream: ValueStream, upstreamIsExternal: Bool
+    ) throws -> ValueStream {
         if case .stream(let transform) = function.body {
             return try transform(self, upstream, bindings)
         }
@@ -191,6 +201,80 @@ extension Shell {
             }
             return nil
         }
+    }
+
+    // MARK: Methods
+
+    /// `xs.sorted(by: "size")`: a sequence method called on a list, with
+    /// the list as its input, and a list back (or a count, for `count`).
+    func callSequenceMethod(_ methods: OverloadSet, on items: [Value], _ arguments: [Argument]) throws -> Value {
+        let values = try [Argument(label: nil, value: .literal(.list(items)))] + arguments.map { argument -> Argument in
+            if case .caseLiteral = argument.value { return argument }
+            return Argument(label: argument.label, value: .literal(try evaluate(argument.value)))
+        }
+        let (function, bindings) = try resolve(methods) { try self.bind(values, to: $0) }
+        guard let input = function.inputParameter else { return try invoke(function, with: bindings) }
+        if input.type.isList, case .native = function.body {
+            return try invoke(function, with: bindings)
+        }
+        var rest = bindings
+        rest.removeValue(forKey: input.name)
+        let output = try stream(function, rest, upstream: .elements(of: .list(items)), upstreamIsExternal: false)
+        var results: [Value] = []
+        while let item = try output.next() { results.append(item) }
+        return .list(results)
+    }
+
+    /// Whether items could have a method called `name`, known before they
+    /// arrive: a struct in scope declares it, or a job has it. A stage by
+    /// that name is then its items' method, ahead of functions and programs
+    /// (`jobs | cancel`, not /usr/bin/cancel).
+    func itemsMayHaveMethod(_ name: String) -> Bool {
+        if Job.methodNames.contains(name) { return true }
+        return scopes.contains { scope in
+            scope.bindings.values.contains { binding in
+                if case .object(let type as StructType) = binding.value { type.methods[name] != nil } else { false }
+            }
+        }
+    }
+
+    /// `[p1, p2] | describe`: the method called on each item, with the
+    /// stage's arguments; what it returns flows on.
+    func methodStream(_ name: String, _ args: [CommandArgument], upstream: ValueStream) -> ValueStream {
+        ValueStream {
+            while let item = try upstream.next() {
+                let result = try self.callItemMethod(name, args, on: item)
+                if result != .nothing { return result }
+            }
+            return nil
+        }
+    }
+
+    private func callItemMethod(_ name: String, _ args: [CommandArgument], on item: Value) throws -> Value {
+        switch item {
+        case .record(let record):
+            if let type = structType(of: record), let methods = type.methods[name] {
+                let (method, bindings) = try resolve(methods) { try self.bind(commandLine: args, to: $0, excludingInput: false) }
+                guard !method.isMutating else {
+                    throw RuntimeError("\(type.name).\(name) is mutating, and a piped value can't change: call it on a variable")
+                }
+                return try invoke(method, with: bindings, receiver: Receiver(item, mutable: false))
+            }
+        case .object(let object):
+            let callable: OverloadSet? = switch object.member(name) {
+            case .function(let set as OverloadSet)?: set
+            case .function(let native as NativeFunction)?: OverloadSet(name: name, candidates: [hostFunction(native.function)])
+            default: nil
+            }
+            if let callable {
+                let (method, bindings) = try resolve(callable) { try self.bind(commandLine: args, to: $0, excludingInput: false) }
+                return try invoke(method, with: bindings)
+            }
+        default:
+            break
+        }
+        let type = if case .record(let record) = item { record.typeName ?? "Record" } else { item.typeName }
+        throw RuntimeError("\(name): not a method of \(type), nor a function or program")
     }
 
     /// Input items as the parameter's type. Lines from external programs
