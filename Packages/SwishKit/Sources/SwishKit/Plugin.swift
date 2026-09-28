@@ -22,20 +22,34 @@ public struct ExportedFunction: Sendable {
     public let returnType: SwishType?
     /// The `swishPluginABIVersion` the plugin was built with.
     public let abiVersion: Int
+    /// Declared `throws`: a call to it needs `try`.
+    public let isThrowing: Bool
     /// Called with every argument bound, by parameter name, except ones
     /// left to a Swift default (`defaultSource`).
     public let call: @Sendable ([String: Value]) throws -> Value
 
     public init(
         name: String, summary: String? = nil, parameters: [ExportedParameter], returnType: SwishType?,
-        abiVersion: Int = swishPluginABIVersion, call: @escaping @Sendable ([String: Value]) throws -> Value
+        abiVersion: Int = swishPluginABIVersion, isThrowing: Bool,
+        call: @escaping @Sendable ([String: Value]) throws -> Value
     ) {
         self.abiVersion = abiVersion
+        self.isThrowing = isThrowing
         self.name = name
         self.summary = summary
         self.parameters = parameters
         self.returnType = returnType
         self.call = call
+    }
+
+    /// As plugins built before `isThrowing` call it: SwishKit keeps every
+    /// public initializer it has shipped, so they still load.
+    public init(
+        name: String, summary: String? = nil, parameters: [ExportedParameter], returnType: SwishType?,
+        abiVersion: Int = swishPluginABIVersion, call: @escaping @Sendable ([String: Value]) throws -> Value
+    ) {
+        self.init(name: name, summary: summary, parameters: parameters, returnType: returnType,
+                  abiVersion: abiVersion, isThrowing: false, call: call)
     }
 }
 

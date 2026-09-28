@@ -11,7 +11,7 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
         return "syntax error"
     }
     do {
-        try TypeChecker(shell: shell).check(program)
+        _ = try TypeChecker(shell: shell).check(program)
         return nil
     } catch {
         return error.message
@@ -96,4 +96,55 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
     let printed = try onLargeStack { try script.capturing { _ = script.runScript(at: path) } }
     #expect(printed == "") // `echo one` didn't run
     #expect(script.lastStatus == 2)
+}
+
+// MARK: Phase 2: functions as values, overloads, throws
+
+@Test func overloadsAreChosenStatically() throws {
+    let g = #"func g(_ x: Any) -> String { "any" }; func g(_ x: Int) -> String { "int" }; "#
+    // The static type decides, as in Swift: `a` is an Any, though it holds an Int.
+    #expect(try output(g + "let a: Any = 5; g(a); g(5)") == "\"any\"\n\"int\"\n")
+    #expect(try output(#"func f(_ x: Int) -> String { "int" }; func f(_ x: Double) -> String { "double" }; f(5); f(5.5)"#)
+        == "\"int\"\n\"double\"\n")
+    #expect(typeError("func h(_ x: Int, y: Int = 0) {}; func h(_ x: Int, z: Int = 0) {}; h(1)")?.hasPrefix("h: ambiguous call") == true)
+}
+
+@Test func functionsAreValues() throws {
+    #expect(try output("func double(_ x: Int) -> Int { x * 2 }; [1, 2].map(double).map { $0 + 1 }") == "[3, 5]\n")
+    // An overloaded name is picked by the type wanted.
+    let conv = #"func conv(_ x: Int) -> String { "int" }; func conv(_ x: String) -> String { "string" }; "#
+    #expect(try output(conv + "let f: (String) -> String = conv; f(\"a\")") == "\"string\"\n")
+    #expect(try output("func apply(_ f: (Int) -> Int, _ x: Int) -> Int { f(x) }; apply({ $0 * 3 }, 2)") == "6\n")
+    #expect(typeError("func apply(_ f: (Int) -> Int) -> Int { f(1) }; apply({ $0 + \"a\" })") == "'+' can't be applied to Int and String")
+}
+
+@Test func closuresInferTheirResult() throws {
+    let sign = "let sign = { (x: Int) in\n    if x > 0 { return \"pos\" }\n    return \"neg\"\n}\n"
+    #expect(try output(sign + "sign(-1).count") == "3\n")
+    #expect(typeError(sign + "sign(1) + 1") == "'+' can't be applied to String and Int")
+}
+
+@Test func throwingNeedsTryAndAHandler() throws {
+    let risky = "func risky(_ fail: Bool) throws -> Int { if fail { try $(false) }; return 1 }\n"
+    #expect(try output(risky + "try risky(false); do { try risky(true) } catch { echo caught }; (try? risky(true)) ?? 0")
+        == "1\ncaught\n0\n")
+    #expect(typeError(risky + "risky(false)") == "'risky' can throw, but isn't marked with 'try'")
+    #expect(typeError(risky + "func safe() -> Int { try risky(false) }")?.hasPrefix("this can throw, but safe isn't 'throws'") == true)
+    #expect(typeError(risky + "func safe() -> Int { (try? risky(false)) ?? 0 }") == nil)
+    #expect(typeError("func build() { try $(swift build) }")?.contains("build isn't 'throws'") == true)
+    #expect(typeError("func build() { try false }")?.contains("build isn't 'throws'") == true)
+    // Closures throw if their body does; passing one on makes the call throw.
+    #expect(typeError(risky + "[true].map { try risky($0) }") == "'map' can throw, but isn't marked with 'try'")
+    #expect(typeError(risky + "let r = try [false].map { try risky($0) }") == nil)
+    #expect(typeError(risky + "func apply(_ f: (Bool) -> Int) -> Int { f(true) }; apply({ try risky($0) })")
+        == "apply: 'f' must be (Bool) -> Int, not (Bool) throws -> Int")
+    #expect(typeError(risky + "func apply(_ f: (Bool) throws -> Int) rethrows -> Int { 0 }") == "syntax error")
+    #expect(typeError(risky + "func apply(_ f: (Bool) throws -> Int) throws -> Int { try f(true) }; try apply({ try risky($0) })") == nil)
+}
+
+@Test func tryOnAVoidCallTellsSuccessFromFailure() throws {
+    let funcs = "func build() throws { try $(true) }; func fail() throws { try $(false) }; "
+    #expect(try output(funcs + "(try? build()) != nil; (try? fail()) != nil; try? build()") == "true\nfalse\n")
+    #expect(try output(funcs + "if try? build() { echo yes }; if try? fail() { echo no } else { echo failed }") == "yes\nfailed\n")
+    #expect(typeError("let x: Int? = 1; if x { echo y }") == "a condition must be a Bool, not Int?")
 }

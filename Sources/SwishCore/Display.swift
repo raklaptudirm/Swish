@@ -18,6 +18,8 @@ extension Shell {
         switch value {
         case .nothing:
             return
+        case .record(let record) where record.count == 0 && record.typeName == nil:
+            return // `()`: what a Void call gives as a value.
         case .output(let output) where output.text.isEmpty && !debug:
             return
         case .record(let record) where !debug:

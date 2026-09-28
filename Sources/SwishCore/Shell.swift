@@ -128,7 +128,7 @@ public final class Shell {
             program = parsed
         }
         // Checked whole too: a type error anywhere runs none of it.
-        guard typeCheck(program, file: path) else { return lastStatus }
+        guard let program = typeCheck(program, file: path) else { return lastStatus }
         var status: Int32 = 0
         for statement in program.statements {
             runReportingErrors(Program(statements: [statement]))
@@ -172,7 +172,7 @@ public final class Shell {
                 report("syntax error: \(error)")
                 lastStatus = 2
             case .success(let program):
-                if typeCheck(program) { runReportingErrors(program) }
+                if let program = typeCheck(program) { runReportingErrors(program) }
                 if scriptStopped { return lastStatus }
             }
             pending = ""
@@ -188,24 +188,25 @@ public final class Shell {
             report("syntax error: \(error)")
             lastStatus = 2
         case .success(let program):
-            if typeCheck(program) { runReportingErrors(program) }
+            if let program = typeCheck(program) { runReportingErrors(program) }
         }
         return lastStatus
     }
 
     /// Checks types before anything runs, reporting what's wrong (with the
-    /// line, in a file). False if the program mustn't run.
-    func typeCheck(_ program: Program, file: String? = nil) -> Bool {
+    /// line, in a file). The program as checked, with what the checker
+    /// decided written in, or nil if it mustn't run.
+    func typeCheck(_ program: Program, file: String? = nil) -> Program? {
         let checker = TypeChecker(shell: self)
         do {
-            try checker.check(program)
+            let checked = try checker.check(program)
             staticTypes.merge(checker.declaredGlobals) { $1 }
-            return true
+            return checked
         } catch {
             let place = file.map { "\($0):\(error.line.map(String.init) ?? "")" + (error.line == nil ? "" : ":") + " " } ?? ""
             report("\(place)error: \(error.message)")
             lastStatus = 2
-            return false
+            return nil
         }
     }
 

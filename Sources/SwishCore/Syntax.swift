@@ -142,6 +142,8 @@ struct FunctionDecl: Equatable, Sendable {
     var documentation: Documentation?
     /// A struct's `mutating func`, which may change `self`.
     var isMutating = false
+    /// `throws`: calling it needs `try`.
+    var isThrowing = false
 }
 
 /// Assigning to a variable, or to part of one: `p.x`, `xs[0]`, `r["k"]`.
@@ -226,8 +228,8 @@ indirect enum TypeAnnotation: Hashable, Sendable, CustomStringConvertible {
     case tuple([TupleElement])
     /// Any function: a closure whose signature isn't known yet.
     case function
-    /// `(Int, String) -> Bool`.
-    case functionType([TypeAnnotation], TypeAnnotation)
+    /// `(Int, String) -> Bool`, or `(Int) throws -> Bool`.
+    case functionType([TypeAnnotation], TypeAnnotation, throws: Bool = false)
     /// `T?`: a T, or nil.
     case optional(TypeAnnotation)
     /// Not known yet: what a program prints, or a builtin that hasn't
@@ -256,8 +258,8 @@ indirect enum TypeAnnotation: Hashable, Sendable, CustomStringConvertible {
         case .tuple(let elements):
             "(" + elements.map { ($0.label.map { "\($0): " } ?? "") + $0.type.description }.joined(separator: ", ") + ")"
         case .function: "function"
-        case .functionType(let parameters, let result):
-            "(" + parameters.map(\.description).joined(separator: ", ") + ") -> \(result)"
+        case .functionType(let parameters, let result, let throwing):
+            "(" + parameters.map(\.description).joined(separator: ", ") + ")" + (throwing ? " throws" : "") + " -> \(result)"
         case .named(let name): name
         case .optional(let wrapped):
             if case .functionType = wrapped { "(\(wrapped))?" } else { "\(wrapped)?" }
@@ -353,7 +355,7 @@ indirect enum Expr: Equatable, Sendable {
     /// `$(…)`: the command's Output, whatever its status. Under `try`
     /// (`throwing`), a non-zero status throws instead.
     case substitution(Program, throwing: Bool = false)
-    /// `try? expr` or `try! expr`; a plain `try` leaves no trace.
+    /// `try expr`, `try? expr` or `try! expr`.
     case attempt(Expr, TryKind)
     /// `async swift build` or `async $(curl …)`: starts it in the background.
     case async(AsyncTarget)
@@ -380,6 +382,12 @@ indirect enum Expr: Equatable, Sendable {
     case forceUnwrap(Expr)
     /// `x?.name`: nil if `x` is, and its member otherwise.
     case optionalMember(Expr, String)
+    /// A function, method or initializer, with the overload the checker
+    /// chose: the candidate at that position. Only the checker makes these.
+    case chosen(Expr, overload: Int)
+    /// A call returning Void, as a value: `()` once it's run, so `try?`
+    /// can tell success (`()`) from failure (nil). Only the checker makes these.
+    case voidValue(Expr)
 }
 
 indirect enum AsyncTarget: Equatable, Sendable {
@@ -389,6 +397,8 @@ indirect enum AsyncTarget: Equatable, Sendable {
 }
 
 enum TryKind: Equatable, Sendable {
+    /// `try`: an error goes on to whatever handles it.
+    case plain
     /// `try?`: nil instead of a runtime error.
     case optional
     /// `try!`: a runtime error stops the whole script, not just the line.
@@ -460,7 +470,7 @@ struct Parser {
     private static let keywords: Set = [
         "let", "var", "if", "else", "true", "false", "nil",
         "for", "in", "while", "func", "return", "break", "continue", "try", "do", "catch",
-        "async", "await", "enum", "switch", "case", "default", "fallthrough", "import", "struct",
+        "async", "await", "enum", "switch", "case", "default", "fallthrough", "import", "struct", "throws",
     ]
     private static let statementKeywords: Set = ["let", "var", "func", "return", "break", "continue", "do", "catch", "enum", "fallthrough", "import", "struct"]
     private static let precedence: [[BinaryOperator]] = [
@@ -911,10 +921,11 @@ struct Parser {
         guard peek() == "(" else { throw expected("'(' after 'init'") }
         let parameters = try parseParameters(named: true)
         skipSpaces()
+        let throwing = parseThrows()
         guard consume("{") else { throw expected("'{'") }
         let (body, _) = try parseFunctionBody(parameters: parameters, anonymous: false)
         return FunctionDecl(name: "init", parameters: parameters, returnType: nil, body: body,
-                            documentation: documentation, isMutating: true)
+                            documentation: documentation, isMutating: true, isThrowing: throwing)
     }
 
     /// The names a struct's body declares, found before parsing it so a
@@ -1339,6 +1350,7 @@ struct Parser {
         guard peek() == "(" else { throw expected("'(' after '\(name)'") }
         let parameters = try parseParameters(named: true)
         skipSpaces()
+        let throwing = parseThrows()
         var returnType: TypeAnnotation?
         if consume("->") {
             returnType = try parseType()
@@ -1349,8 +1361,17 @@ struct Parser {
         if !method { scopes[scopes.count - 1][name] = .function }
         let (body, _) = try parseFunctionBody(parameters: parameters, anonymous: false)
         return FunctionDecl(
-            name: name, parameters: parameters, returnType: returnType, body: body, documentation: documentation
+            name: name, parameters: parameters, returnType: returnType, body: body, documentation: documentation,
+            isThrowing: throwing
         )
+    }
+
+    /// `throws` after a signature's parameters.
+    private mutating func parseThrows() -> Bool {
+        guard identifier() == "throws" else { return false }
+        keyword("throws")
+        skipSpaces()
+        return true
     }
 
     /// The `///` comment lines directly above the line starting at `index`.
@@ -1607,12 +1628,19 @@ struct Parser {
             }
             let afterParentheses = (pos, spans.count)
             skipSpaces()
+            var throwing = false
+            if identifier() == "throws" {
+                keyword("throws")
+                throwing = true
+                skipSpaces()
+            }
             if consume("->") {
                 guard elements.allSatisfy({ $0.label == nil }) else {
                     throw SyntaxError("a function type's parameters have no labels")
                 }
-                return .functionType(elements.map(\.type), try parseType())
+                return .functionType(elements.map(\.type), try parseType(), throws: throwing)
             }
+            if throwing { throw expected("'->' after 'throws'") }
             rewind(to: afterParentheses)
             if elements.isEmpty { return .void }
             if elements.count == 1 && elements[0].label == nil { return elements[0].type }
@@ -2051,7 +2079,7 @@ struct Parser {
             tryDepth += 1
             defer { tryDepth -= 1 }
             let operand = try parseExpression(logical: logical)
-            return kind.map { .attempt(operand, $0) } ?? operand
+            return .attempt(operand, kind ?? .plain)
         }
         return try parseBinary(level: logical ? 0 : Parser.comparisonLevel)
     }

@@ -66,14 +66,14 @@ extension Shell {
             methods[method.name, default: []].append(Function(
                 name: method.name, parameters: method.parameters, returnType: method.returnType,
                 body: .swish(method.body), captured: scopes, documentation: method.documentation,
-                isMutating: method.isMutating
+                isMutating: method.isMutating, isThrowing: method.isThrowing
             ))
         }
         let initializers = decl.initializers.map { initializer in
             Function(
                 name: "\(decl.name).init", parameters: initializer.parameters, returnType: nil,
                 body: .swish(initializer.body), captured: scopes, documentation: initializer.documentation,
-                isMutating: true
+                isMutating: true, isThrowing: initializer.isThrowing
             )
         }
         let stored = decl.properties.filter { $0.getter == nil }
@@ -109,7 +109,7 @@ extension Shell {
 
     /// `Point(x: 1, y: 2)`: through an `init` the struct declares, or the
     /// memberwise one.
-    func construct(_ type: StructType, _ arguments: [Argument]) throws -> Value {
+    func construct(_ type: StructType, _ arguments: [Argument], overload: Int? = nil) throws -> Value {
         let values = try arguments.map { argument -> Argument in
             if case .caseLiteral = argument.value { return argument }
             return Argument(label: argument.label, value: .literal(try evaluate(argument.value)))
@@ -127,7 +127,7 @@ extension Shell {
             return .record(record)
         }
 
-        let (initializer, bindings) = try resolve(initializers) { try self.bind(values, to: $0) }
+        let (initializer, bindings) = try resolve(narrowed(initializers, overload)) { try self.bind(values, to: $0) }
         // Defaults first, then whatever the initializer sets.
         var start = Record(typeName: type.name)
         for property in type.stored {

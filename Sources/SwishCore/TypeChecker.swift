@@ -21,15 +21,19 @@ struct TypeError: Error, CustomStringConvertible {
 /// entries at the prompt, and the builtins) come from the shell; those the
 /// program declares come from the program.
 ///
-/// Phase 1 of the plan: commands, pipelines and builtins' results are
-/// `unknown` for now, which fits anywhere, so nothing that ran before is
-/// refused for lack of a type.
+/// It also decides what the interpreter would otherwise decide as it runs,
+/// and writes that into the program it returns: which overload a call
+/// uses (`.chosen`). Commands, pipelines and builtins' results are
+/// `unknown` until phase 3, which fits anywhere.
 final class TypeChecker {
     struct Signature {
         var name: String
         var parameters: [Parameter]
         var returns: TypeAnnotation
         var isMutating = false
+        var isThrowing = false
+        /// Its position among the overloads the interpreter will have.
+        var index = 0
     }
 
     struct StructInfo {
@@ -63,11 +67,35 @@ final class TypeChecker {
         case environment
     }
 
+    /// Where `return` goes: the declared result, or, for a closure that
+    /// didn't say, the types its `return`s give.
+    private final class ReturnContext {
+        let declared: TypeAnnotation?
+        var seen: [TypeAnnotation] = []
+
+        init(declared: TypeAnnotation?) {
+            self.declared = declared
+        }
+    }
+
+    /// Whether an error thrown here is handled: in a `throws` function, a
+    /// closure, a `do` with a `catch`, or at the top level.
+    private struct ErrorContext {
+        var handled: Bool
+        /// The function it's in, for messages.
+        var function: String?
+    }
+
     private unowned let shell: Shell
     /// What the program declares, innermost last, on top of the shell's names.
     private var scopes: [[String: Symbol]] = [[:]]
-    /// The return type of each function being checked, innermost last.
-    private var returnTypes: [TypeAnnotation] = []
+    private var returns: [ReturnContext] = []
+    private var errorContexts = [ErrorContext(handled: true)]
+    /// Above zero while checking what a `try` covers.
+    private var tryDepth = 0
+    /// Places that can throw, so far: how a `try` or a closure knows it
+    /// covers one.
+    private var throwingSites = 0
     /// After an `import`, names it may bring can't be checked.
     private var afterImport = false
     private var line: Int?
@@ -76,16 +104,18 @@ final class TypeChecker {
         self.shell = shell
     }
 
-    /// Checks a program, with the line of the statement a problem is in.
-    func check(_ program: Program) throws(TypeError) {
+    /// Checks a program, returning it with what was decided written in.
+    func check(_ program: Program) throws(TypeError) -> Program {
+        var checked = program
         do {
-            try checkBlock(program)
+            try checkBlock(&checked)
         } catch var error as TypeError {
             error.line = error.line ?? line
             throw error
         } catch {
             preconditionFailure("the checker only throws TypeError")
         }
+        return checked
     }
 
     /// The types of the globals a checked program declared, for the next
@@ -96,7 +126,7 @@ final class TypeChecker {
 
     // MARK: Statements
 
-    private func checkBlock(_ program: Program, declaring names: [String: Symbol] = [:], newScope: Bool = false) throws {
+    private func checkBlock(_ program: inout Program, declaring names: [String: Symbol] = [:], newScope: Bool = false) throws {
         if newScope { scopes.append(names) }
         defer { if newScope { scopes.removeLast() } }
         // Declared first, so functions and types can be used before (and by)
@@ -109,133 +139,175 @@ final class TypeChecker {
             default: break
             }
         }
-        for (index, statement) in program.statements.enumerated() {
+        for index in program.statements.indices {
             if index < program.lines.count { line = program.lines[index] }
-            try checkStatement(statement)
+            try checkStatement(&program.statements[index])
         }
     }
 
-    private func checkStatement(_ statement: Statement) throws {
+    private func checkStatement(_ statement: inout Statement) throws {
         switch statement {
-        case .declare(let name, let mutable, let value):
-            var type = try typeOf(value)
+        case .declare(let name, let mutable, var value):
+            var type = try typeOf(&value)
             if type == .optional(.unknown), case .literal(.nothing) = value {
                 throw TypeError("'nil' needs a type: let \(name): T? = nil")
             }
             if case .tuple([]) = type { type = .void }
             scopes[scopes.count - 1][name] = .variable(type, mutable: mutable)
-        case .assign(let assignment):
-            try checkAssignment(assignment)
-        case .function(let decl):
-            try checkFunction(decl)
-        case .setEnvironment(let name, let value):
-            try expect(name, .string, "an environment variable's name")
-            _ = try typeOf(value)
-        case .doCatch(let body, let errorName, let handler):
-            try checkBlock(body, newScope: true)
-            if let handler {
-                try checkBlock(handler, declaring: [errorName: .variable(.named("Error"), mutable: false)], newScope: true)
+            statement = .declare(name: name, mutable: mutable, value: value)
+        case .assign(var assignment):
+            try checkAssignment(&assignment)
+            statement = .assign(assignment)
+        case .function(var decl):
+            try checkFunction(&decl)
+            statement = .function(decl)
+        case .setEnvironment(var name, var value):
+            try expect(&name, .string, "an environment variable's name")
+            _ = try typeOf(&value)
+            statement = .setEnvironment(name: name, value: value)
+        case .doCatch(var body, let errorName, var handler):
+            // A `do` with a `catch` handles what its body throws.
+            errorContexts.append(ErrorContext(handled: handler != nil || errorContexts.last!.handled,
+                                              function: errorContexts.last!.function))
+            try checkBlock(&body, newScope: true)
+            errorContexts.removeLast()
+            if var caught = handler {
+                try checkBlock(&caught, declaring: [errorName: .variable(.named("Error"), mutable: false)], newScope: true)
+                handler = caught
             }
-        case .enumDecl(let decl):
-            try checkEnum(decl)
-        case .structDecl(let decl):
-            try checkStruct(decl)
-        case .importPlugin(let name, let path):
-            try expect(path, .string, "an import's path")
+            statement = .doCatch(body: body, errorName: errorName, handler: handler)
+        case .enumDecl(var decl):
+            try checkEnum(&decl)
+            statement = .enumDecl(decl)
+        case .structDecl(var decl):
+            try checkStruct(&decl)
+            statement = .structDecl(decl)
+        case .importPlugin(let name, var path):
+            try expect(&path, .string, "an import's path")
             scopes[scopes.count - 1][name] = .module
             afterImport = true
-        case .returnStatement(let value):
-            guard let expected = returnTypes.last else { return }
-            if let value {
-                if expected == .void { throw TypeError("a function without '->' returns nothing, so 'return' takes no value") }
-                try expect(value, expected, "the returned value")
-            } else if expected != .void && expected != .unknown {
-                throw TypeError("this function must return \(expected)")
+            statement = .importPlugin(name: name, path: path)
+        case .returnStatement(var value):
+            guard let context = returns.last else { return }
+            if value != nil {
+                if context.declared == .void {
+                    throw TypeError("a function without '->' returns nothing, so 'return' takes no value")
+                }
+                if let declared = context.declared {
+                    try expect(&value!, declared, "the returned value")
+                } else {
+                    context.seen.append(try typeOf(&value!))
+                }
+            } else if let declared = context.declared, declared != .void, declared != .unknown {
+                throw TypeError("this function must return \(declared)")
             }
+            statement = .returnStatement(value)
         case .fallthroughStatement, .breakStatement, .continueStatement:
             break
-        case .chain(let chain):
-            try checkChain(chain, condition: false)
+        case .chain(var chain):
+            try checkChain(&chain, condition: false)
+            statement = .chain(chain)
         }
     }
 
-    private func checkChain(_ chain: Chain, condition: Bool) throws {
-        try checkUnit(chain.first, condition: condition || !chain.links.isEmpty)
-        for link in chain.links { try checkUnit(link.unit, condition: true) }
+    private func checkChain(_ chain: inout Chain, condition: Bool) throws {
+        try checkUnit(&chain.first, condition: condition || !chain.links.isEmpty)
+        for index in chain.links.indices { try checkUnit(&chain.links[index].unit, condition: true) }
     }
 
     /// `condition`: the unit's status decides something, as in `if` or
     /// `&&`: an expression there must be a Bool, an Output, or optional.
-    private func checkUnit(_ unit: Unit, condition: Bool) throws {
+    private func checkUnit(_ unit: inout Unit, condition: Bool) throws {
         switch unit {
-        case .pipeline(let pipeline):
-            try checkPipeline(pipeline)
-        case .expression(let expr):
-            let type = try typeOf(expr)
+        case .pipeline(var pipeline):
+            try checkPipeline(&pipeline)
+            unit = .pipeline(pipeline)
+        case .expression(var expr):
+            let type = try typeOf(&expr)
             if condition {
+                // `if try? build()`: whether it succeeded.
+                let attempted = if case .attempt(_, .optional) = expr { true } else { false }
                 switch type {
-                case .bool, .output, .optional, .unknown: break
+                case .bool, .output, .unknown: break
+                case .optional where attempted: break
                 default: throw TypeError("a condition must be a Bool, not \(type)")
                 }
             }
-        case .ifStatement(let node):
-            try checkIf(node)
-        case .switchStatement(let node):
-            try checkSwitch(node)
-        case .forLoop(let loop):
-            let element = try elementType(of: try typeOf(loop.sequence), iterating: true)
-            try checkBlock(loop.body, declaring: [loop.variable: .variable(element, mutable: false)], newScope: true)
-        case .whileLoop(let loop):
-            try checkChain(loop.condition, condition: true)
-            try checkBlock(loop.body, newScope: true)
+            unit = .expression(expr)
+        case .ifStatement(var node):
+            try checkIf(&node)
+            unit = .ifStatement(node)
+        case .switchStatement(var node):
+            try checkSwitch(&node)
+            unit = .switchStatement(node)
+        case .forLoop(var loop):
+            let element = try elementType(of: try typeOf(&loop.sequence))
+            try checkBlock(&loop.body, declaring: [loop.variable: .variable(element, mutable: false)], newScope: true)
+            unit = .forLoop(loop)
+        case .whileLoop(var loop):
+            try checkChain(&loop.condition, condition: true)
+            try checkBlock(&loop.body, newScope: true)
+            unit = .whileLoop(loop)
         }
     }
 
-    private func checkIf(_ node: IfStatement) throws {
+    private func checkIf(_ node: inout IfStatement) throws {
         var bound: [String: Symbol] = [:]
         switch node.condition {
-        case .chain(let chain):
-            try checkChain(chain, condition: true)
-        case .binding(let name, let mutable, let value):
-            let type = try typeOf(value)
-            guard case .optional(let wrapped) = type else {
-                if type == .unknown {
-                    bound[name] = .variable(.unknown, mutable: mutable)
-                    break
-                }
+        case .chain(var chain):
+            try checkChain(&chain, condition: true)
+            node.condition = .chain(chain)
+        case .binding(let name, let mutable, var value):
+            let type = try typeOf(&value)
+            if case .optional(let wrapped) = type {
+                bound[name] = .variable(wrapped, mutable: mutable)
+            } else if type == .unknown {
+                bound[name] = .variable(.unknown, mutable: mutable)
+            } else {
                 throw TypeError("'if let' unwraps an optional, but this is \(type)")
             }
-            bound[name] = .variable(wrapped, mutable: mutable)
-        case .pattern(let pattern, let value):
-            try checkPattern(pattern, against: try typeOf(value), binding: &bound)
+            node.condition = .binding(name: name, mutable: mutable, value: value)
+        case .pattern(var pattern, var value):
+            try checkPattern(&pattern, against: try typeOf(&value), binding: &bound)
+            node.condition = .pattern(pattern, value)
         }
-        try checkBlock(node.then, declaring: bound, newScope: true)
-        if let otherwise = node.otherwise { try checkBlock(otherwise, newScope: true) }
+        try checkBlock(&node.then, declaring: bound, newScope: true)
+        if var otherwise = node.otherwise {
+            try checkBlock(&otherwise, newScope: true)
+            node.otherwise = otherwise
+        }
     }
 
-    private func checkSwitch(_ node: SwitchStatement) throws {
-        let subject = try typeOf(node.subject)
-        for switchCase in node.cases {
+    private func checkSwitch(_ node: inout SwitchStatement) throws {
+        let subject = try typeOf(&node.subject)
+        for index in node.cases.indices {
             var bound: [String: Symbol] = [:]
-            for pattern in switchCase.patterns { try checkPattern(pattern, against: subject, binding: &bound) }
+            for patternIndex in node.cases[index].patterns.indices {
+                try checkPattern(&node.cases[index].patterns[patternIndex], against: subject, binding: &bound)
+            }
             scopes.append(bound)
             defer { scopes.removeLast() }
-            if let guardExpr = switchCase.guardExpr { try expect(guardExpr, .bool, "a case's 'where'") }
-            try checkBlock(switchCase.body, newScope: true)
+            if node.cases[index].guardExpr != nil {
+                try expect(&node.cases[index].guardExpr!, .bool, "a case's 'where'")
+            }
+            try checkBlock(&node.cases[index].body, newScope: true)
         }
     }
 
-    private func checkPattern(_ pattern: Pattern, against type: TypeAnnotation, binding bound: inout [String: Symbol]) throws {
+    private func checkPattern(_ pattern: inout Pattern, against type: TypeAnnotation, binding bound: inout [String: Symbol]) throws {
         switch pattern {
         case .wildcard:
             break
         case .binding(let name, let mutable):
             bound[name] = .variable(type, mutable: mutable)
-        case .enumCase(let typeName, let name, let arguments):
+        case .enumCase(let typeName, let name, var arguments):
             var subject = type
             if case .optional(let wrapped) = subject { subject = wrapped }
-            guard subject != .unknown else {
-                for argument in arguments ?? [] { try checkPattern(argument.pattern, against: .unknown, binding: &bound) }
+            if subject == .unknown {
+                for index in (arguments ?? []).indices {
+                    try checkPattern(&arguments![index].pattern, against: .unknown, binding: &bound)
+                }
+                pattern = .enumCase(type: typeName, name: name, arguments: arguments)
                 return
             }
             guard case .named(let enumName) = subject, let info = enumInfo(named: enumName) else {
@@ -245,63 +317,87 @@ final class TypeChecker {
                 throw TypeError("\(typeName).\(name) can't match a \(enumName)")
             }
             guard let payload = info.payload(of: name) else { throw TypeError("\(enumName) has no case '\(name)'") }
-            guard let arguments else { return }
-            guard arguments.count == payload.count else {
-                throw TypeError("\(enumName).\(name) has \(payload.count) associated values, not \(arguments.count)")
+            guard arguments != nil else { return }
+            guard arguments!.count == payload.count else {
+                throw TypeError("\(enumName).\(name) has \(payload.count) associated values, not \(arguments!.count)")
             }
-            for (argument, value) in zip(arguments, payload) {
-                try checkPattern(argument.pattern, against: value.type, binding: &bound)
+            for index in arguments!.indices {
+                try checkPattern(&arguments![index].pattern, against: payload[index].type, binding: &bound)
             }
-        case .expression(let expr):
-            if case .binary(let op, let lower, let upper) = expr, op == .closedRange || op == .halfOpenRange {
-                for bound in [lower, upper] { try expect(bound, type == .double ? .double : type, "a range's bound") }
+            pattern = .enumCase(type: typeName, name: name, arguments: arguments)
+        case .expression(var expr):
+            if case .binary(let op, var lower, var upper) = expr, op == .closedRange || op == .halfOpenRange {
+                let boundType = type == .double ? TypeAnnotation.double : type
+                try expect(&lower, boundType, "a range's bound")
+                try expect(&upper, boundType, "a range's bound")
+                pattern = .expression(.binary(op, lower, upper))
                 return
             }
-            let valueType = try typeOf(expr, expecting: type)
+            let valueType = try typeOf(&expr, expecting: type)
             guard fits(valueType, type) || fits(type, valueType) else {
                 throw TypeError("a \(valueType) can't match a \(type)")
             }
+            pattern = .expression(expr)
         }
     }
 
     // MARK: Declarations
 
+    /// Adds `decl` to its name's overloads, in the order the interpreter
+    /// keeps them: one with the same parameters replaces the old.
     private func declareFunction(_ decl: FunctionDecl) {
-        let signature = Signature(name: decl.name, parameters: decl.parameters, returns: decl.returnType ?? .void)
         var overloads: [Signature] = []
-        if case .functions(let existing)? = scopes[scopes.count - 1][decl.name] { overloads = existing }
+        if case .functions(let existing)? = scopes[scopes.count - 1][decl.name] {
+            overloads = existing
+        } else if scopes.count == 1, let binding = shell.scopes.last?.bindings[decl.name], binding.isFunction,
+                  case .function(let set as OverloadSet) = binding.value {
+            // At the top, it joins what earlier entries declared.
+            overloads = set.candidates.map(signature)
+        }
         overloads.removeAll { sameParameters($0.parameters, decl.parameters) }
-        scopes[scopes.count - 1][decl.name] = .functions(overloads + [signature])
+        overloads.append(Signature(
+            name: decl.name, parameters: decl.parameters, returns: decl.returnType ?? .void, isThrowing: decl.isThrowing
+        ))
+        for index in overloads.indices { overloads[index].index = index }
+        scopes[scopes.count - 1][decl.name] = .functions(overloads)
     }
 
     private func sameParameters(_ a: [Parameter], _ b: [Parameter]) -> Bool {
         a.count == b.count && zip(a, b).allSatisfy { $0.label == $1.label && $0.type == $1.type && $0.variadic == $1.variadic }
     }
 
-    private func checkFunction(_ decl: FunctionDecl, self selfType: TypeAnnotation? = nil, mutating: Bool = false, initializing: Bool = false) throws {
+    private func checkFunction(
+        _ decl: inout FunctionDecl, self selfType: TypeAnnotation? = nil, mutating: Bool = false, initializing: Bool = false
+    ) throws {
         var names: [String: Symbol] = [:]
-        for parameter in decl.parameters {
-            if let defaultValue = parameter.defaultValue {
-                try expect(defaultValue, parameter.type, "\(parameter.name)'s default")
+        for index in decl.parameters.indices {
+            let parameter = decl.parameters[index]
+            if decl.parameters[index].defaultValue != nil {
+                try expect(&decl.parameters[index].defaultValue!, parameter.type, "\(parameter.name)'s default")
             }
             names[parameter.name] = .variable(parameter.variadic ? .list(parameter.type) : parameter.type, mutable: false)
         }
         if let selfType { names["self"] = .variable(selfType, mutable: mutating || initializing) }
         if initializing { names["$initializing"] = .variable(.void, mutable: false) }
-        let returns = decl.returnType ?? .void
-        returnTypes.append(returns)
-        defer { returnTypes.removeLast() }
+        let result = decl.returnType ?? .void
+        returns.append(ReturnContext(declared: result))
+        errorContexts.append(ErrorContext(handled: decl.isThrowing, function: decl.name))
         scopes.append(names)
-        defer { scopes.removeLast() }
+        defer {
+            returns.removeLast()
+            errorContexts.removeLast()
+            scopes.removeLast()
+        }
 
         // A body that's one expression is the result, when there's one.
-        if returns != .void, let expr = implicitReturn(decl.body) {
-            try expect(expr, returns, "\(decl.name)'s result")
+        if result != .void, var expr = implicitReturn(decl.body) {
+            try expect(&expr, result, "\(decl.name)'s result")
+            decl.body.statements[0] = .chain(Chain(first: .expression(expr)))
             return
         }
-        try checkBlock(decl.body)
-        if returns != .void && returns != .unknown && !definitelyReturns(decl.body) {
-            throw TypeError("\(decl.name) must return \(returns) on every path")
+        try checkBlock(&decl.body)
+        if result != .void && result != .unknown && !definitelyReturns(decl.body) {
+            throw TypeError("\(decl.name) must return \(result) on every path")
         }
     }
 
@@ -311,8 +407,8 @@ final class TypeChecker {
         return expr
     }
 
-    /// Whether running `program` always ends in a `return` (or a `try!`
-    /// that stops): as simple as Swift's own check, from the last statement.
+    /// Whether running `program` always ends in a `return`: as simple as
+    /// Swift's own check, from the last statement.
     private func definitelyReturns(_ program: Program) -> Bool {
         guard let last = program.statements.last else { return false }
         switch last {
@@ -341,15 +437,16 @@ final class TypeChecker {
         for property in decl.properties where property.getter != nil { computed[property.name] = property.type ?? .unknown }
         var methods: [String: [Signature]] = [:]
         for method in decl.methods {
-            methods[method.name, default: []].append(Signature(
-                name: method.name, parameters: method.parameters, returns: method.returnType ?? .void, isMutating: method.isMutating
-            ))
+            var signature = Signature(name: method.name, parameters: method.parameters, returns: method.returnType ?? .void,
+                                      isMutating: method.isMutating, isThrowing: method.isThrowing)
+            signature.index = methods[method.name]?.count ?? 0
+            methods[method.name, default: []].append(signature)
         }
         var stored: [PropertyDecl] = []
         for var property in decl.properties where property.getter == nil {
             // An untyped property takes its default's type.
-            if property.type == nil, let defaultValue = property.defaultValue {
-                property.type = try typeOf(defaultValue)
+            if property.type == nil, var defaultValue = property.defaultValue {
+                property.type = try typeOf(&defaultValue)
             }
             stored.append(property)
         }
@@ -360,28 +457,35 @@ final class TypeChecker {
             },
             returns: .named(decl.name)
         )
-        let initializers = decl.initializers.map {
-            Signature(name: "\(decl.name).init", parameters: $0.parameters, returns: .named(decl.name), isMutating: true)
+        let initializers = decl.initializers.enumerated().map { index, initializer in
+            Signature(name: "\(decl.name).init", parameters: initializer.parameters, returns: .named(decl.name),
+                      isMutating: true, isThrowing: initializer.isThrowing, index: index)
         }
         return StructInfo(name: decl.name, stored: stored, computed: computed, methods: methods,
                           initializers: initializers, memberwise: memberwise)
     }
 
-    private func checkStruct(_ decl: StructDecl) throws {
+    private func checkStruct(_ decl: inout StructDecl) throws {
         let selfType = TypeAnnotation.named(decl.name)
-        for property in decl.properties {
+        for index in decl.properties.indices {
+            let property = decl.properties[index]
             if let getter = property.getter {
-                let function = FunctionDecl(name: property.name, parameters: [], returnType: property.type, body: getter)
-                try checkFunction(function, self: selfType)
-            } else if let defaultValue = property.defaultValue, let type = property.type {
-                try expect(defaultValue, type, "\(decl.name).\(property.name)'s default")
+                var function = FunctionDecl(name: property.name, parameters: [], returnType: property.type, body: getter)
+                try checkFunction(&function, self: selfType)
+                decl.properties[index].getter = function.body
+            } else if property.defaultValue != nil, let type = property.type {
+                try expect(&decl.properties[index].defaultValue!, type, "\(decl.name).\(property.name)'s default")
             }
         }
-        for method in decl.methods { try checkFunction(method, self: selfType, mutating: method.isMutating) }
-        for initializer in decl.initializers {
-            var function = initializer
+        for index in decl.methods.indices {
+            try checkFunction(&decl.methods[index], self: selfType, mutating: decl.methods[index].isMutating)
+        }
+        for index in decl.initializers.indices {
+            var function = decl.initializers[index]
             function.name = "\(decl.name).init"
-            try checkFunction(function, self: selfType, initializing: true)
+            try checkFunction(&function, self: selfType, initializing: true)
+            function.name = "init"
+            decl.initializers[index] = function
         }
     }
 
@@ -389,16 +493,16 @@ final class TypeChecker {
         EnumInfo(name: decl.name, cases: decl.cases.map { ($0.name, $0.associated) }, rawType: decl.rawType)
     }
 
-    private func checkEnum(_ decl: EnumDecl) throws {
+    private func checkEnum(_ decl: inout EnumDecl) throws {
         guard let rawType = decl.rawType else { return }
-        for enumCase in decl.cases {
-            if let raw = enumCase.rawValue { try expect(raw, rawType, "\(decl.name).\(enumCase.name)'s raw value") }
+        for index in decl.cases.indices where decl.cases[index].rawValue != nil {
+            try expect(&decl.cases[index].rawValue!, rawType, "\(decl.name).\(decl.cases[index].name)'s raw value")
         }
     }
 
     // MARK: Assignment
 
-    private func checkAssignment(_ assignment: Assignment) throws {
+    private func checkAssignment(_ assignment: inout Assignment) throws {
         guard let symbol = lookup(assignment.root) else { throw TypeError("no variable named '\(assignment.root)'") }
         guard case .variable(let rootType, let mutable) = symbol else {
             throw TypeError("cannot assign to '\(assignment.root)': it isn't a variable")
@@ -410,9 +514,9 @@ final class TypeChecker {
             throw TypeError("cannot assign to '\(assignment.root)': it's a 'let' constant")
         }
         var type = rootType
-        for (index, step) in assignment.path.enumerated() {
+        for index in assignment.path.indices {
             let last = index == assignment.path.count - 1
-            switch step {
+            switch assignment.path[index] {
             case .member(let name):
                 if case .named(let structName) = type, let info = structInfo(named: structName) {
                     guard let property = info.property(name) else {
@@ -432,29 +536,30 @@ final class TypeChecker {
                 } else {
                     throw TypeError("cannot assign to '\(name)' of \(type)")
                 }
-            case .index(let indexExpr):
+            case .index(var indexExpr):
                 switch type {
                 case .list(let element):
-                    try expect(indexExpr, .int, "a list's index")
+                    try expect(&indexExpr, .int, "a list's index")
                     type = element
                 case .dictionary(let key, let value):
-                    try expect(indexExpr, key, "the key")
+                    try expect(&indexExpr, key, "the key")
                     // Assigning nil removes the entry.
                     type = last ? .optional(value) : value
                 case .unknown, .record, .any:
-                    _ = try typeOf(indexExpr)
+                    _ = try typeOf(&indexExpr)
                     type = .unknown
                 default:
                     throw TypeError("cannot assign into \(type) by index")
                 }
+                assignment.path[index] = .index(indexExpr)
             }
         }
         if let op = assignment.op {
-            let valueType = try typeOf(assignment.value, expecting: type)
-            let result = try binaryType(op, type, valueType, lhs: nil, rhs: assignment.value)
+            let valueType = try typeOf(&assignment.value, expecting: type)
+            let result = try binaryType(op, type, valueType)
             guard fits(result, type) else { throw TypeError("'\(op.rawValue)=' would make \(type) a \(result)") }
         } else {
-            try expect(assignment.value, type, "the value assigned")
+            try expect(&assignment.value, type, "the value assigned")
         }
     }
 
@@ -462,41 +567,80 @@ final class TypeChecker {
 
     /// Commands take text, and what they give isn't typed yet (phase 3);
     /// the expressions inside them are.
-    private func checkPipeline(_ pipeline: PipelineNode) throws {
+    private func checkPipeline(_ pipeline: inout PipelineNode) throws {
+        // `try make`: the command's failure throws, which must be handled.
+        if case .some(.none) = pipeline.throwing {
+            throwingSites += 1
+            try checkHandled("'try \(pipeline.source)'")
+        }
         // What a stage takes isn't typed yet, so an empty `[]` needs no type.
-        if let input = pipeline.input { _ = try typeOf(input, expecting: .unknown) }
-        for command in pipeline.commands {
-            for word in command.words {
-                switch word {
-                case .text(let parts): try checkParts(parts)
-                case .closure(let closure): _ = try closureType(closure, expecting: nil)
+        if pipeline.input != nil { _ = try typeOf(&pipeline.input!, expecting: .unknown) }
+        for commandIndex in pipeline.commands.indices {
+            var command = pipeline.commands[commandIndex]
+            for wordIndex in command.words.indices {
+                switch command.words[wordIndex] {
+                case .text(var parts):
+                    try checkParts(&parts)
+                    command.words[wordIndex] = .text(parts)
+                case .closure(let closure):
+                    var expr = Expr.closure(closure)
+                    _ = try typeOf(&expr)
+                    if case .closure(let checked) = expr { command.words[wordIndex] = .closure(checked) }
                 }
             }
-            for argument in command.call ?? [] { _ = try typeOf(argument.value) }
-            for assignment in command.environment { try checkParts(assignment.value) }
-            for redirect in command.redirects {
-                if case .file(let parts, _) = redirect.target { try checkParts(parts) }
+            for index in (command.call ?? []).indices { _ = try typeOf(&command.call![index].value, expecting: .unknown) }
+            for index in command.environment.indices { try checkParts(&command.environment[index].value) }
+            for index in command.redirects.indices {
+                if case .file(var parts, let mode) = command.redirects[index].target {
+                    try checkParts(&parts)
+                    command.redirects[index].target = .file(parts, mode)
+                }
+            }
+            pipeline.commands[commandIndex] = command
+        }
+    }
+
+    private func checkParts(_ parts: inout [StringPart]) throws {
+        for index in parts.indices {
+            if case .expression(var expr) = parts[index] {
+                _ = try typeOf(&expr)
+                parts[index] = .expression(expr)
             }
         }
     }
 
-    private func checkParts(_ parts: [StringPart]) throws {
-        for part in parts {
-            if case .expression(let expr) = part { _ = try typeOf(expr) }
+    // MARK: Throwing
+
+    /// A plain `try` covers something that throws: it has to be handled.
+    private func checkHandled(_ what: String) throws {
+        guard let context = errorContexts.last, !context.handled else { return }
+        let place = context.function.map { "\($0) isn't 'throws'" } ?? "nothing catches it"
+        throw TypeError("\(what) can throw, but \(place): mark it 'throws', or use do/catch, try? or try!")
+    }
+
+    /// Something that can throw, like a call to a `throws` function: it
+    /// needs a `try` covering it.
+    private func throwingSite(_ what: String) throws {
+        throwingSites += 1
+        guard tryDepth > 0 else {
+            throw TypeError("\(what) can throw, but isn't marked with 'try'")
         }
     }
 
     // MARK: Expressions
 
     /// `expr`'s type, which must fit `expected`.
-    private func expect(_ expr: Expr, _ expected: TypeAnnotation, _ what: String) throws {
-        let type = try typeOf(expr, expecting: expected)
+    private func expect(_ expr: inout Expr, _ expected: TypeAnnotation, _ what: String) throws {
+        let type = try typeOf(&expr, expecting: expected)
         guard fits(type, expected) else {
             throw TypeError("\(what) must be \(expected), not \(type)")
         }
     }
 
-    func typeOf(_ expr: Expr, expecting expected: TypeAnnotation? = nil) throws -> TypeAnnotation {
+    /// `expr`'s type, given what the context expects of it (which a literal,
+    /// a closure or a `.case` takes its type from); `expr` gets what the
+    /// checker decided.
+    func typeOf(_ expr: inout Expr, expecting expected: TypeAnnotation? = nil) throws -> TypeAnnotation {
         switch expr {
         case .literal(let value):
             switch value {
@@ -508,8 +652,9 @@ final class TypeChecker {
             default:
                 return type(of: value)
             }
-        case .string(let parts):
-            try checkParts(parts)
+        case .string(var parts):
+            try checkParts(&parts)
+            expr = .string(parts)
             return .string
         case .variable(let name):
             guard let symbol = lookup(name) else {
@@ -517,83 +662,157 @@ final class TypeChecker {
                 throw TypeError("no variable named '\(name)'")
             }
             switch symbol {
-            case .variable(let type, _): return type
+            case .variable(let type, _):
+                return type
             case .functions(let overloads):
-                return overloads.count == 1 ? functionType(overloads[0]) : .function
-            case .environment: return .dictionary(.string, .string)
-            case .structType, .enumType, .module: return .unknown
+                return functionValue(name, overloads, expected: expected, expr: &expr)
+            case .environment:
+                return .dictionary(.string, .string)
+            case .structType, .enumType, .module:
+                return .unknown
             }
         case .dollar(let name):
             if case .variable(let type, _)? = lookup(name) { return type }
             return .string
-        case .substitution(let program, _):
-            try checkBlock(program, newScope: true)
+        case .substitution(var program, let throwing):
+            if throwing { try throwingSite("the command") }
+            try checkBlock(&program, newScope: true)
+            expr = .substitution(program, throwing: throwing)
             return .output
-        case .attempt(let inner, let kind):
-            let type = try typeOf(inner, expecting: expected.flatMap { if case .optional(let w) = $0 { w } else { $0 } })
-            guard kind == .optional else { return type }
-            if case .optional = type { return type }
-            return type == .void ? .optional(.tuple([])) : .optional(type)
-        case .async(let target):
-            switch target {
-            case .command(let pipeline), .capture(let pipeline): try checkPipeline(pipeline)
+        case .attempt(var inner, let kind):
+            let sitesBefore = throwingSites
+            tryDepth += 1
+            let wanted = expected.flatMap { if case .optional(let wrapped) = $0 { wrapped } else { $0 } }
+            let type = try typeOf(&inner, expecting: kind == .optional ? wanted : expected)
+            tryDepth -= 1
+            expr = .attempt(inner, kind)
+            switch kind {
+            case .plain:
+                if throwingSites > sitesBefore { try checkHandled("this") }
+                return type
+            case .forced:
+                throwingSites = sitesBefore // Handled right here.
+                return type
+            case .optional:
+                throwingSites = sitesBefore
+                if case .optional = type { return type }
+                if type == .void {
+                    // Success is `()`, not nil, as in Swift.
+                    expr = .attempt(.voidValue(inner), kind)
+                    return .optional(.void)
+                }
+                return .optional(type)
             }
+        case .async(var target):
+            switch target {
+            case .command(var pipeline):
+                try checkPipeline(&pipeline)
+                target = .command(pipeline)
+            case .capture(var pipeline):
+                try checkPipeline(&pipeline)
+                target = .capture(pipeline)
+            }
+            expr = .async(target)
             return .named("Job")
-        case .await(let job, _):
-            if let job { try expect(job, .named("Job"), "what 'await' waits for") }
+        case .await(var job, let throwing):
+            if throwing { try throwingSite("awaiting a job") }
+            if job != nil { try expect(&job!, .named("Job"), "what 'await' waits for") }
+            expr = .await(job, throwing: throwing)
             return .output
-        case .list(let items):
-            return try listType(items, expected: expected)
-        case .record(let entries):
-            return try dictionaryType(entries, expected: expected)
-        case .tuple(let elements):
+        case .list(var items):
+            let type = try listType(&items, expected: expected)
+            expr = .list(items)
+            return type
+        case .record(var entries):
+            let type = try dictionaryType(&entries, expected: expected)
+            expr = .record(entries)
+            return type
+        case .tuple(var elements):
             if elements.isEmpty { return .void }
-            var expectedElements: [TypeAnnotation.TupleElement]?
-            if case .tuple(let wanted)? = expected, wanted.count == elements.count { expectedElements = wanted }
-            return .tuple(try elements.enumerated().map { index, element in
-                .init(label: element.label, type: try typeOf(element.value, expecting: expectedElements?[index].type))
-            })
-        case .closure(let closure):
-            return try closureType(closure, expecting: expected)
-        case .call(let callee, let arguments):
-            return try callType(callee, arguments, expected: expected)
-        case .member(let base, let name):
-            return try memberType(base, name, expected: expected)
-        case .caseLiteral(let name, let arguments):
-            return try caseType(name, arguments, expected: expected)
-        case .unary(let op, let operand):
-            let type = try typeOf(operand, expecting: op == .negate ? expected : .bool)
+            var wanted: [TypeAnnotation.TupleElement]?
+            if case .tuple(let elementTypes)? = expected, elementTypes.count == elements.count { wanted = elementTypes }
+            var types: [TypeAnnotation.TupleElement] = []
+            for index in elements.indices {
+                types.append(.init(label: elements[index].label, type: try typeOf(&elements[index].value, expecting: wanted?[index].type)))
+            }
+            expr = .tuple(elements)
+            return .tuple(types)
+        case .closure(var closure):
+            let type = try closureType(&closure, expecting: expected)
+            expr = .closure(closure)
+            return type
+        case .call(var callee, var arguments):
+            let type = try callType(&callee, &arguments, expected: expected)
+            expr = .call(callee, arguments)
+            return type
+        case .member(var base, let name):
+            let type = try memberType(&base, name)
+            expr = .member(base, name)
+            return type
+        case .caseLiteral(let name, var arguments):
+            let type = try caseType(name, &arguments, expected: expected)
+            expr = .caseLiteral(name, arguments)
+            return type
+        case .unary(let op, var operand):
+            let type = try typeOf(&operand, expecting: op == .negate ? expected : .bool)
+            expr = .unary(op, operand)
             switch (op, type) {
             case (.not, .bool), (.not, .unknown): return .bool
             case (.negate, .int), (.negate, .double), (.negate, .filesize), (.negate, .unknown): return type
             default: throw TypeError("'\(op.rawValue)' can't be applied to \(type)")
             }
-        case .binary(let op, let lhs, let rhs):
-            return try binaryExprType(op, lhs, rhs, expected: expected)
-        case .index(let base, let index):
-            return try indexType(base, index)
-        case .annotated(let inner, let type):
-            try expect(inner, type, "the value")
+        case .binary(let op, var lhs, var rhs):
+            let type = try binaryExprType(op, &lhs, &rhs, expected: expected)
+            expr = .binary(op, lhs, rhs)
             return type
-        case .forceUnwrap(let inner):
-            let type = try typeOf(inner)
+        case .index(var base, var index):
+            let type = try indexType(&base, &index)
+            expr = .index(base, index)
+            return type
+        case .annotated(var inner, let type):
+            try expect(&inner, type, "the value")
+            expr = .annotated(inner, type)
+            return type
+        case .forceUnwrap(var inner):
+            let type = try typeOf(&inner)
+            expr = .forceUnwrap(inner)
             if case .optional(let wrapped) = type { return wrapped }
             if type == .unknown { return .unknown }
             throw TypeError("'!' unwraps an optional, but this is \(type)")
-        case .optionalMember(let base, let name):
-            let wrapped = try optionalBase(base)
-            let member = try memberType(of: wrapped, name, baseExpr: nil)
+        case .optionalMember(var base, let name):
+            let wrapped = try optionalBase(&base)
+            expr = .optionalMember(base, name)
+            let member = try memberType(of: wrapped, name)
             if case .optional = member { return member }
             return member == .unknown ? .unknown : .optional(member)
+        case .chosen(var inner, let overload):
+            let type = try typeOf(&inner, expecting: expected)
+            expr = .chosen(inner, overload: overload)
+            return type
+        case .voidValue(var inner):
+            _ = try typeOf(&inner)
+            expr = .voidValue(inner)
+            return .void
         }
     }
 
     /// What `x` in `x?.name` is when it isn't nil.
-    private func optionalBase(_ base: Expr) throws -> TypeAnnotation {
-        let type = try typeOf(base)
+    private func optionalBase(_ base: inout Expr) throws -> TypeAnnotation {
+        let type = try typeOf(&base)
         if case .optional(let wrapped) = type { return wrapped }
         if type == .unknown { return .unknown }
         throw TypeError("'?.' is for optionals; \(type) isn't one: use '.'")
+    }
+
+    /// A function used as a value: an overloaded one is picked by the
+    /// function type wanted, as in `xs.map(double)`.
+    private func functionValue(_ name: String, _ overloads: [Signature], expected: TypeAnnotation?, expr: inout Expr) -> TypeAnnotation {
+        if overloads.count == 1 { return functionType(overloads[0]) }
+        guard let expected, case .functionType = expected else { return .function }
+        let matching = overloads.filter { fits(functionType($0), expected) }
+        guard matching.count == 1 else { return .function }
+        expr = .chosen(expr, overload: matching[0].index)
+        return functionType(matching[0])
     }
 
     private func type(of value: Value) -> TypeAnnotation {
@@ -636,33 +855,43 @@ final class TypeChecker {
         return common
     }
 
-    private func listType(_ items: [Expr], expected: TypeAnnotation?) throws -> TypeAnnotation {
+    private func listType(_ items: inout [Expr], expected: TypeAnnotation?) throws -> TypeAnnotation {
         if case .list(let element)? = expected {
-            for item in items { try expect(item, element, "a list element") }
+            for index in items.indices { try expect(&items[index], element, "a list element") }
             return .list(element)
         }
-        if expected == .any || expected == .unknown { for item in items { _ = try typeOf(item) }; return expected! }
+        if let expected, expected == .any || expected == .unknown {
+            for index in items.indices { _ = try typeOf(&items[index]) }
+            return expected
+        }
         guard !items.isEmpty else { throw TypeError("an empty list needs a type: let xs: [Int] = []") }
         // `[1, 2.5]` is a [Double], as in Swift.
-        let wantsDouble = try items.contains { try typeOf($0) == .double }
-        let types = try items.map { try typeOf($0, expecting: wantsDouble ? .double : nil) }
+        var natural: [TypeAnnotation] = []
+        for index in items.indices { natural.append(try typeOf(&items[index])) }
+        let wantsDouble = natural.contains(.double)
+        var types: [TypeAnnotation] = []
+        for index in items.indices { types.append(wantsDouble ? try typeOf(&items[index], expecting: .double) : natural[index]) }
         guard let element = commonType(types) else {
             throw TypeError("a list's elements must have one type, not \(Set(types.map(\.description)).sorted().joined(separator: " and ")); write its type, like [Any]")
         }
         return .list(element)
     }
 
-    private func dictionaryType(_ entries: [RecordEntry], expected: TypeAnnotation?) throws -> TypeAnnotation {
+    private func dictionaryType(_ entries: inout [RecordEntry], expected: TypeAnnotation?) throws -> TypeAnnotation {
         if case .dictionary(let key, let value)? = expected {
-            for entry in entries {
-                try expect(entry.key, key, "a key")
-                try expect(entry.value, value, "a value")
+            for index in entries.indices {
+                try expect(&entries[index].key, key, "a key")
+                try expect(&entries[index].value, value, "a value")
             }
             return .dictionary(key, value)
         }
         guard !entries.isEmpty else { throw TypeError("an empty dictionary needs a type: let d: [String: Int] = [:]") }
-        let keys = try entries.map { try typeOf($0.key) }
-        let values = try entries.map { try typeOf($0.value) }
+        var keys: [TypeAnnotation] = []
+        var values: [TypeAnnotation] = []
+        for index in entries.indices {
+            keys.append(try typeOf(&entries[index].key))
+            values.append(try typeOf(&entries[index].value))
+        }
         guard let key = commonType(keys) else { throw TypeError("a dictionary's keys must have one type") }
         guard let value = commonType(values) else {
             throw TypeError("a dictionary's values must have one type, not \(Set(values.map(\.description)).sorted().joined(separator: " and ")); for a record, write a tuple, like (name: \"x\", size: 2.mb)")
@@ -670,18 +899,21 @@ final class TypeChecker {
         return .dictionary(key, value)
     }
 
-    // MARK: Closures and calls
+    // MARK: Closures
 
     private func functionType(_ signature: Signature) -> TypeAnnotation {
-        .functionType(signature.parameters.map { $0.variadic ? .list($0.type) : $0.type }, signature.returns)
+        .functionType(signature.parameters.map { $0.variadic ? .list($0.type) : $0.type }, signature.returns,
+                      throws: signature.isThrowing)
     }
 
     /// A closure's type. Parameters without a type take the ones the context
-    /// expects (`filter` expects `(Element) -> Bool`), or aren't known.
-    private func closureType(_ closure: ClosureLiteral, expecting expected: TypeAnnotation?) throws -> TypeAnnotation {
+    /// expects (`filter` expects `(Element) -> Bool`), or aren't known; its
+    /// result is what the context expects, what it says, or what its
+    /// `return`s give; it throws if its body can.
+    private func closureType(_ closure: inout ClosureLiteral, expecting expected: TypeAnnotation?) throws -> TypeAnnotation {
         var expectedParameters: [TypeAnnotation]?
         var expectedResult: TypeAnnotation?
-        if case .functionType(let parameters, let result)? = expected, parameters.count == closure.parameters.count {
+        if case .functionType(let parameters, let result, _)? = expected, parameters.count == closure.parameters.count {
             expectedParameters = parameters
             expectedResult = result
         }
@@ -692,88 +924,137 @@ final class TypeChecker {
             parameterTypes.append(type)
             names[parameter.name] = .variable(type, mutable: false)
         }
-        let returns = closure.returnType ?? expectedResult ?? .unknown
-        returnTypes.append(returns == .void ? .unknown : returns)
-        defer { returnTypes.removeLast() }
+        let declared = closure.returnType ?? (expectedResult == .unknown ? nil : expectedResult)
+        let context = ReturnContext(declared: declared == .void ? nil : declared)
+        let sitesBefore = throwingSites
+        let tryBefore = tryDepth
+        returns.append(context)
+        errorContexts.append(ErrorContext(handled: true, function: nil))
         scopes.append(names)
-        defer { scopes.removeLast() }
-        if let expr = implicitReturn(closure.body) {
-            let type = try typeOf(expr, expecting: returns == .unknown ? nil : returns)
-            if closure.returnType != nil, !fits(type, returns) {
-                throw TypeError("the closure must return \(returns), not \(type)")
-            }
-            return .functionType(parameterTypes, closure.returnType ?? (returns == .unknown ? type : returns))
+        tryDepth = 0 // A `try` outside doesn't reach in.
+        defer {
+            returns.removeLast()
+            errorContexts.removeLast()
+            scopes.removeLast()
+            tryDepth = tryBefore
+            // Throwing is what calling it does, not making it.
+            throwingSites = sitesBefore
         }
-        try checkBlock(closure.body)
-        return .functionType(parameterTypes, closure.returnType ?? returns)
+
+        var result: TypeAnnotation
+        if var expr = implicitReturn(closure.body) {
+            let type = try typeOf(&expr, expecting: declared)
+            closure.body.statements[0] = .chain(Chain(first: .expression(expr)))
+            if let declared, !fits(type, declared) {
+                throw TypeError("the closure must return \(declared), not \(type)")
+            }
+            result = closure.returnType ?? declared ?? type
+        } else {
+            try checkBlock(&closure.body)
+            result = declared ?? commonType(context.seen) ?? (context.seen.isEmpty ? .void : .unknown)
+        }
+        return .functionType(parameterTypes, result, throws: throwingSites > sitesBefore)
     }
 
-    private func callType(_ callee: Expr, _ arguments: [Argument], expected: TypeAnnotation?) throws -> TypeAnnotation {
+    // MARK: Calls
+
+    private func callType(_ callee: inout Expr, _ arguments: inout [Argument], expected: TypeAnnotation?) throws -> TypeAnnotation {
         // `Point(x: 1)`, `Level(rawValue: 2)`, `f(x)`.
         if case .variable(let name) = callee, let symbol = lookup(name) {
             switch symbol {
             case .structType(let info):
                 let candidates = info.initializers.isEmpty ? [info.memberwise] : info.initializers
-                return try resolve(candidates, arguments, name: name)
+                let chosen = try resolve(candidates, &arguments, name: name)
+                if let chosen, !info.initializers.isEmpty { callee = .chosen(callee, overload: chosen.index) }
+                if let chosen, chosen.isThrowing { try throwingSite("\(name).init") }
+                return .named(name)
             case .enumType(let info):
                 guard arguments.count == 1, arguments[0].label == "rawValue" else {
                     throw TypeError("\(name) is made from a raw value: \(name)(rawValue: …)")
                 }
                 guard let rawType = info.rawType else { throw TypeError("\(name) has no raw values") }
-                try expect(arguments[0].value, rawType, "the raw value")
+                try expect(&arguments[0].value, rawType, "the raw value")
                 return .optional(.named(name))
             case .functions(let overloads):
-                return try resolve(overloads, arguments, name: name)
+                return try call(overloads, callee: &callee, &arguments, name: name)
             default:
                 break
             }
         }
         // `x?.f()`: the method's result, or nil.
-        if case .optionalMember(let baseExpr, let name) = callee {
-            let wrapped = try optionalBase(baseExpr)
-            let result = try methodCallType(wrapped, baseExpr: nil, name, arguments)
+        if case .optionalMember(var baseExpr, let name) = callee {
+            let wrapped = try optionalBase(&baseExpr)
+            var member = Expr.member(.annotated(.literal(.nothing), .optional(wrapped)), name)
+            let result = try methodCallType(wrapped, baseExpr: nil, name, &member, &arguments)
+            callee = .optionalMember(baseExpr, name)
             if case .optional = result { return result }
             return result == .unknown || result == .void ? result : .optional(result)
         }
-        if case .member(let baseExpr, let name) = callee {
+        if case .member(var baseExpr, let name) = callee {
             // `Result.failed(code: 2)`: a case with associated values.
             if case .variable(let typeName) = baseExpr, case .enumType(let info)? = lookup(typeName) {
-                return try caseType(name, arguments, expected: .named(info.name))
+                var payload: [Argument]? = arguments
+                let type = try caseType(name, &payload, expected: .named(info.name))
+                arguments = payload ?? []
+                return type
             }
             if case .variable(let module) = baseExpr, case .module? = lookup(module) {
-                for argument in arguments { _ = try typeOf(argument.value, expecting: .unknown) }
+                for index in arguments.indices { _ = try typeOf(&arguments[index].value, expecting: .unknown) }
                 return .unknown
             }
-            return try methodCallType(try typeOf(baseExpr), baseExpr: baseExpr, name, arguments)
+            let base = try typeOf(&baseExpr)
+            callee = .member(baseExpr, name)
+            return try methodCallType(base, baseExpr: baseExpr, name, &callee, &arguments)
         }
-        return try applyType(try typeOf(callee), arguments, name: "the function")
+        let type = try typeOf(&callee)
+        return try apply(type, &arguments, name: "the function")
+    }
+
+    /// A call to a named function: the overload is chosen here.
+    private func call(_ overloads: [Signature], callee: inout Expr, _ arguments: inout [Argument], name: String) throws -> TypeAnnotation {
+        guard let chosen = try resolve(overloads, &arguments, name: name) else {
+            // Which one isn't known until it runs (an argument isn't typed yet).
+            return commonReturn(overloads)
+        }
+        if overloads.count > 1 { callee = .chosen(callee, overload: chosen.index) }
+        if chosen.isThrowing { try throwingSite("'\(name)'") }
+        return chosen.returns
+    }
+
+    private func commonReturn(_ overloads: [Signature]) -> TypeAnnotation {
+        overloads.allSatisfy { $0.returns == overloads[0].returns } ? overloads[0].returns : .unknown
     }
 
     /// `base.name(arguments)` for a receiver of type `base`; `baseExpr` is
     /// where it came from, if it can be changed by a mutating method.
     private func methodCallType(
-        _ base: TypeAnnotation, baseExpr: Expr?, _ name: String, _ arguments: [Argument]
+        _ base: TypeAnnotation, baseExpr: Expr?, _ name: String, _ callee: inout Expr, _ arguments: inout [Argument]
     ) throws -> TypeAnnotation {
         if case .named(let structName) = base, let info = structInfo(named: structName), let methods = info.methods[name] {
-            let returns = try resolve(methods, arguments, name: name)
-            if let baseExpr, methods.allSatisfy(\.isMutating) { try checkMutable(baseExpr, method: name) }
-            return returns
+            guard let chosen = try resolve(methods, &arguments, name: name) else { return commonReturn(methods) }
+            if methods.count > 1 { callee = .chosen(callee, overload: chosen.index) }
+            if let baseExpr, chosen.isMutating { try checkMutable(baseExpr, method: name) }
+            if chosen.isThrowing { try throwingSite("'\(name)'") }
+            return chosen.returns
         }
-        if let sequenceResult = try sequenceMethodType(name, on: base, arguments) {
+        if let sequenceResult = try sequenceMethodType(name, on: base, &arguments) {
             return sequenceResult
         }
-        let member = try memberType(of: base, name, baseExpr: baseExpr)
-        return try applyType(member, arguments, name: name)
+        let member = try memberType(of: base, name)
+        return try apply(member, &arguments, name: name)
     }
 
     /// Calling a value of type `type`.
-    private func applyType(_ type: TypeAnnotation, _ arguments: [Argument], name: String) throws -> TypeAnnotation {
+    private func apply(_ type: TypeAnnotation, _ arguments: inout [Argument], name: String) throws -> TypeAnnotation {
         switch type {
-        case .functionType(let parameters, let result):
-            let signature = Signature(name: name, parameters: parameters.map { Parameter(label: nil, name: "_", type: $0) }, returns: result)
-            return try resolve([signature], arguments, name: name)
+        case .functionType(let parameters, let result, let throwing):
+            let signature = Signature(name: name, parameters: parameters.map { Parameter(label: nil, name: "_", type: $0) },
+                                      returns: result, isThrowing: throwing)
+            _ = try resolve([signature], &arguments, name: name)
+            if throwing { try throwingSite(name) }
+            return result
         case .function, .unknown, .any:
-            for argument in arguments { _ = try typeOf(argument.value, expecting: .unknown) }
+            for index in arguments.indices { _ = try typeOf(&arguments[index].value, expecting: .unknown) }
             return .unknown
         default:
             throw TypeError("\(type) isn't a function")
@@ -798,32 +1079,67 @@ final class TypeChecker {
         }
     }
 
-    /// The result of calling one of `candidates` with `arguments`, by Swift's
-    /// rules for labels, defaults, variadics and trailing closures. When
-    /// several fit, they must agree on the result, or it isn't known until
-    /// the call runs.
-    private func resolve(_ candidates: [Signature], _ arguments: [Argument], name: String) throws -> TypeAnnotation {
-        var results: [TypeAnnotation] = []
+    // MARK: Overloads
+
+    /// The candidate a call uses, by Swift's rules: of those whose labels,
+    /// defaults and types fit, the one whose parameters match the arguments
+    /// most exactly. A tie is ambiguous, unless an argument's type isn't
+    /// known yet, when nil leaves the choice to run time.
+    private func resolve(_ candidates: [Signature], _ arguments: inout [Argument], name: String) throws -> Signature? {
+        var fitting: [(signature: Signature, cost: Int, uncertain: Bool, arguments: [Argument], sites: Int)] = []
         var firstError: TypeError?
+        let sitesBefore = throwingSites
         for candidate in candidates {
+            var attempt = arguments
+            throwingSites = sitesBefore
             do {
-                try match(arguments, to: candidate)
-                results.append(candidate.returns)
+                let (cost, uncertain) = try match(&attempt, to: candidate)
+                fitting.append((candidate, cost, uncertain, attempt, throwingSites))
             } catch let error as TypeError {
                 firstError = firstError ?? error
             }
         }
-        guard !results.isEmpty else {
+        throwingSites = sitesBefore
+        guard let best = fitting.map(\.cost).min() else {
             if candidates.count == 1, let firstError { throw firstError }
-            let list = candidates.map { "  \(name)(" + $0.parameters.map { "\($0.label ?? "_"): \($0.type)" }.joined(separator: ", ") + ")" }
+            let list = candidates.map { "  " + describe($0) }
             throw TypeError("\(name): no overload accepts these arguments; candidates:\n" + list.joined(separator: "\n"))
         }
-        return results.allSatisfy { $0 == results[0] } ? results[0] : .unknown
+        let winners = fitting.filter { $0.cost == best }
+        if winners.count > 1 {
+            if winners.contains(where: \.uncertain) { return nil }
+            throw TypeError("\(name): ambiguous call; these overloads all match:\n"
+                            + winners.map { "  " + describe($0.signature) }.joined(separator: "\n"))
+        }
+        arguments = winners[0].arguments
+        throwingSites = winners[0].sites
+        return winners[0].signature
     }
 
-    private func match(_ arguments: [Argument], to signature: Signature) throws {
+    private func describe(_ signature: Signature) -> String {
+        "\(signature.name)(" + signature.parameters.map { "\($0.label ?? "_"): \($0.type)" }.joined(separator: ", ") + ")"
+    }
+
+    /// Matches `arguments` to `signature`'s parameters by Swift's rules for
+    /// labels, defaults, variadics and trailing closures. The cost counts
+    /// conversions (a literal Int as a Double, a value made optional, an
+    /// Output as its text) and untyped parameters, which match anything.
+    private func match(_ arguments: inout [Argument], to signature: Signature) throws -> (cost: Int, uncertain: Bool) {
         let name = signature.name
+        var cost = 0
+        var uncertain = false
         var index = 0
+        func take(_ parameter: Parameter) throws {
+            let natural = TypeChecker.hasNaturalType(arguments[index].value) ? try typeOf(&arguments[index].value) : nil
+            try expect(&arguments[index].value, parameter.type, "\(name): '\(parameter.name)'")
+            switch (natural, parameter.type) {
+            case (.unknown?, _): uncertain = true
+            case (_, .any), (_, .unknown), (_, .function), (_, .record): cost += 3
+            case (let type?, let wanted) where type != wanted: cost += 1
+            default: break
+            }
+            index += 1
+        }
         for (position, parameter) in signature.parameters.enumerated() {
             let later = signature.parameters[(position + 1)...]
             let trailing = index == arguments.count - 1 && arguments[index].label == nil && parameter.label != nil
@@ -831,13 +1147,9 @@ final class TypeChecker {
                 && { if case .closure = arguments[index].value { true } else { false } }()
             if index < arguments.count, arguments[index].label == parameter.label || trailing {
                 if parameter.variadic {
-                    repeat {
-                        try expect(arguments[index].value, parameter.type, "\(name): '\(parameter.name)'")
-                        index += 1
-                    } while index < arguments.count && arguments[index].label == nil
+                    repeat { try take(parameter) } while index < arguments.count && arguments[index].label == nil
                 } else {
-                    try expect(arguments[index].value, parameter.type, "\(name): '\(parameter.name)'")
-                    index += 1
+                    try take(parameter)
                 }
             } else if parameter.variadic || parameter.hasDefault {
                 continue
@@ -850,11 +1162,25 @@ final class TypeChecker {
             let extra = arguments[index].label.map { "'\($0):'" } ?? "#\(index + 1)"
             throw TypeError("\(name): unexpected argument \(extra)")
         }
+        return (cost, uncertain)
     }
 
+    /// Whether an argument has a type of its own, apart from context: not a
+    /// closure, a `.case`, `nil` or a collection literal, which take theirs
+    /// from the parameter.
+    private static func hasNaturalType(_ expr: Expr) -> Bool {
+        switch expr {
+        case .closure, .caseLiteral, .list, .record, .tuple, .literal(.nothing): false
+        default: true
+        }
+    }
+
+    // MARK: Sequence methods
+
     /// `xs.filter { … }` and the rest, until phase 3 declares them: the
-    /// element type flows through, and closures get it for `$0`.
-    private func sequenceMethodType(_ name: String, on base: TypeAnnotation, _ arguments: [Argument]) throws -> TypeAnnotation? {
+    /// element type flows through, closures get it for `$0`, and a call
+    /// throws if a closure passed to it can (`rethrows`).
+    private func sequenceMethodType(_ name: String, on base: TypeAnnotation, _ arguments: inout [Argument]) throws -> TypeAnnotation? {
         guard shell.sequenceMethods[name] != nil else { return nil }
         let element: TypeAnnotation
         switch base {
@@ -864,45 +1190,43 @@ final class TypeChecker {
         default: return nil
         }
         var closureResult: TypeAnnotation = .unknown
-        for argument in arguments {
-            switch (name, argument.label) {
-            case ("filter", nil), ("count", "where"), ("count", nil):
-                _ = try closureOrValue(argument.value, expecting: .functionType([element], .bool))
-            case ("map", nil):
-                if case .functionType(_, let result) = try closureOrValue(argument.value, expecting: .functionType([element], .unknown)) {
-                    closureResult = result
-                }
-            case ("sorted", "by"), ("sorted", nil):
-                _ = try closureOrValue(argument.value, expecting: .functionType([element, element], .bool))
-            default:
-                _ = try typeOf(argument.value)
+        var closureThrows = false
+        for index in arguments.indices {
+            let wanted: TypeAnnotation? = switch (name, arguments[index].label) {
+            case ("filter", nil), ("count", "where"), ("count", nil): .functionType([element], .bool)
+            case ("map", nil): .functionType([element], .unknown)
+            case ("sorted", "by"), ("sorted", nil): .functionType([element, element], .bool)
+            default: nil
+            }
+            // A closure, or a function by name: `xs.map(double)`.
+            if case .functionType(_, let result, let throwing) = try typeOf(&arguments[index].value, expecting: wanted) {
+                if name == "map" { closureResult = result }
+                closureThrows = closureThrows || throwing
             }
         }
+        if closureThrows { try throwingSite("'\(name)'") }
         switch name {
         case "count": return .int
         case "map": return .list(closureResult)
-        case "select": return .list(.unknown)
-        case "get": return .list(.unknown)
+        case "select", "get": return .list(.unknown)
         default: return .list(element)
         }
     }
 
-    private func closureOrValue(_ expr: Expr, expecting expected: TypeAnnotation) throws -> TypeAnnotation {
-        if case .closure(let closure) = expr { return try closureType(closure, expecting: expected) }
-        return try typeOf(expr)
-    }
-
     // MARK: Members
 
-    private func memberType(_ baseExpr: Expr, _ name: String, expected: TypeAnnotation?) throws -> TypeAnnotation {
+    private func memberType(_ baseExpr: inout Expr, _ name: String) throws -> TypeAnnotation {
         if case .variable(let typeName) = baseExpr, let symbol = lookup(typeName) {
             switch symbol {
             case .enumType(let info):
                 if name == "allCases" {
-                    guard info.cases.allSatisfy({ $0.payload.isEmpty }) else { throw TypeError("\(info.name) has no allCases: some cases have associated values") }
+                    guard info.cases.allSatisfy({ $0.payload.isEmpty }) else {
+                        throw TypeError("\(info.name) has no allCases: some cases have associated values")
+                    }
                     return .list(.named(info.name))
                 }
-                return try caseType(name, nil, expected: .named(info.name))
+                var none: [Argument]?
+                return try caseType(name, &none, expected: .named(info.name))
             case .environment:
                 return .optional(.string)
             case .module:
@@ -911,10 +1235,10 @@ final class TypeChecker {
                 break
             }
         }
-        return try memberType(of: try typeOf(baseExpr), name, baseExpr: baseExpr)
+        return try memberType(of: try typeOf(&baseExpr), name)
     }
 
-    private func memberType(of base: TypeAnnotation, _ name: String, baseExpr: Expr?) throws -> TypeAnnotation {
+    private func memberType(of base: TypeAnnotation, _ name: String) throws -> TypeAnnotation {
         if name == "description" || name == "debugDescription" {
             if case .named(let structName) = base, let info = structInfo(named: structName),
                let property = info.property(name) { return property.type ?? .unknown }
@@ -923,8 +1247,8 @@ final class TypeChecker {
         switch base {
         case .unknown, .any, .record:
             return .unknown
-        case .optional(let wrapped):
-            throw TypeError("\(base) might be nil: unwrap it (if let, ??) before using .\(name)" + (wrapped == .unknown ? "" : ""))
+        case .optional:
+            throw TypeError("\(base) might be nil: unwrap it (if let, ??, ?. or !) before using .\(name)")
         case .named(let typeName):
             if let info = structInfo(named: typeName) {
                 if let property = info.property(name) { return property.type ?? .unknown }
@@ -988,19 +1312,19 @@ final class TypeChecker {
         "Error": ["message": .string, "status": status, "text": .string],
     ]
 
-    private func caseType(_ name: String, _ arguments: [Argument]?, expected: TypeAnnotation?) throws -> TypeAnnotation {
+    private func caseType(_ name: String, _ arguments: inout [Argument]?, expected: TypeAnnotation?) throws -> TypeAnnotation {
         var target = expected
         if case .optional(let wrapped)? = target { target = wrapped }
         guard let target, target != .unknown, target != .any else {
             if target == nil { throw TypeError(".\(name) needs a type here; write the enum's name too, as in Kind.\(name)") }
-            for argument in arguments ?? [] { _ = try typeOf(argument.value) }
+            for index in (arguments ?? []).indices { _ = try typeOf(&arguments![index].value, expecting: .unknown) }
             return .unknown
         }
         guard case .named(let enumName) = target, let info = enumInfo(named: enumName) else {
             throw TypeError(".\(name) is a case, but a \(target) is wanted here")
         }
         guard let payload = info.payload(of: name) else { throw TypeError("\(enumName) has no case '\(name)'") }
-        guard let arguments else {
+        guard arguments != nil else {
             guard payload.isEmpty else {
                 let labels = payload.map { ($0.label ?? "_") + ":" }.joined()
                 throw TypeError("\(enumName).\(name) needs its associated values: \(enumName).\(name)(\(labels))")
@@ -1008,37 +1332,37 @@ final class TypeChecker {
             return .named(enumName)
         }
         guard !payload.isEmpty else { throw TypeError("\(enumName).\(name) has no associated values") }
-        guard arguments.count == payload.count else {
-            throw TypeError("\(enumName).\(name) has \(payload.count) associated values, not \(arguments.count)")
+        guard arguments!.count == payload.count else {
+            throw TypeError("\(enumName).\(name) has \(payload.count) associated values, not \(arguments!.count)")
         }
-        for (index, (argument, value)) in zip(arguments, payload).enumerated() {
-            guard argument.label == value.label else {
-                let wanted = value.label.map { "'\($0):'" } ?? "no label"
+        for index in arguments!.indices {
+            guard arguments![index].label == payload[index].label else {
+                let wanted = payload[index].label.map { "'\($0):'" } ?? "no label"
                 throw TypeError("\(enumName).\(name): value #\(index + 1) needs \(wanted)")
             }
-            try expect(argument.value, value.type, "\(enumName).\(name): value #\(index + 1)")
+            try expect(&arguments![index].value, payload[index].type, "\(enumName).\(name): value #\(index + 1)")
         }
         return .named(enumName)
     }
 
-    private func indexType(_ baseExpr: Expr, _ index: Expr) throws -> TypeAnnotation {
+    private func indexType(_ baseExpr: inout Expr, _ index: inout Expr) throws -> TypeAnnotation {
         if case .variable(let name) = baseExpr, case .environment? = lookup(name) {
-            try expect(index, .string, "an environment variable's name")
+            try expect(&index, .string, "an environment variable's name")
             return .optional(.string)
         }
-        let base = try typeOf(baseExpr)
+        let base = try typeOf(&baseExpr)
         switch base {
         case .list(let element):
-            try expect(index, .int, "a list's index")
+            try expect(&index, .int, "a list's index")
             return element
         case .output:
-            try expect(index, .int, "a line's index")
+            try expect(&index, .int, "a line's index")
             return .string
         case .dictionary(let key, let value):
-            try expect(index, key, "the key")
+            try expect(&index, key, "the key")
             return .optional(value)
         case .unknown, .any, .record:
-            _ = try typeOf(index)
+            _ = try typeOf(&index)
             return .unknown
         default:
             throw TypeError("\(base) can't be indexed")
@@ -1047,20 +1371,20 @@ final class TypeChecker {
 
     // MARK: Operators
 
-    private func binaryExprType(_ op: BinaryOperator, _ lhs: Expr, _ rhs: Expr, expected: TypeAnnotation?) throws -> TypeAnnotation {
+    private func binaryExprType(_ op: BinaryOperator, _ lhs: inout Expr, _ rhs: inout Expr, expected: TypeAnnotation?) throws -> TypeAnnotation {
         switch op {
         case .and, .or:
-            try expect(lhs, .bool, "'\(op.rawValue)''s left side")
-            try expect(rhs, .bool, "'\(op.rawValue)''s right side")
+            try expect(&lhs, .bool, "'\(op.rawValue)''s left side")
+            try expect(&rhs, .bool, "'\(op.rawValue)''s right side")
             return .bool
         case .coalesce:
-            let left = try typeOf(lhs)
+            let left = try typeOf(&lhs)
             guard case .optional(let wrapped) = left else {
                 // Never nil, so the right side is never used; Swift allows it too.
-                _ = try typeOf(rhs, expecting: left)
+                _ = try typeOf(&rhs, expecting: left)
                 return left
             }
-            let right = try typeOf(rhs, expecting: wrapped == .unknown ? expected : wrapped)
+            let right = try typeOf(&rhs, expecting: wrapped == .unknown ? expected : wrapped)
             if wrapped == .unknown { return right }
             // An Output or some text: the Output's text.
             if wrapped == .output, right == .string, Interpreter.isStringExpression(rhs) { return .string }
@@ -1069,26 +1393,31 @@ final class TypeChecker {
             throw TypeError("'??' needs a \(wrapped) on its right, not \(right)")
         case .equal, .notEqual:
             // A `.case` on one side takes the other side's type.
-            let (left, right) = try operandTypes(lhs, rhs)
+            let (left, right) = try operandTypes(&lhs, &rhs)
             guard fits(left, right) || fits(right, left) || left == .output && right == .string || left == .string && right == .output else {
                 throw TypeError("can't compare \(left) with \(right)")
             }
             return .bool
         default:
-            let (left, right) = try operandTypes(lhs, rhs)
-            return try binaryType(op, left, right, lhs: lhs, rhs: rhs)
+            let (left, right) = try operandTypes(&lhs, &rhs)
+            return try binaryType(op, left, right)
         }
     }
 
     /// Both sides' types, letting a literal or `.case` on one side take its
     /// type from the other, as Swift does: `1 + 2.5`, `k == .file`.
-    private func operandTypes(_ lhs: Expr, _ rhs: Expr) throws -> (TypeAnnotation, TypeAnnotation) {
+    private func operandTypes(_ lhs: inout Expr, _ rhs: inout Expr) throws -> (TypeAnnotation, TypeAnnotation) {
         if case .caseLiteral = lhs, !TypeChecker.isContextual(rhs) {
-            let right = try typeOf(rhs)
-            return (try typeOf(lhs, expecting: right), right)
+            let right = try typeOf(&rhs)
+            return (try typeOf(&lhs, expecting: right), right)
         }
-        let left = try typeOf(lhs, expecting: TypeChecker.isIntegerLiteral(lhs) ? try? typeOf(rhs) : nil)
-        let right = try typeOf(rhs, expecting: left)
+        var rightFirst: TypeAnnotation?
+        if TypeChecker.isIntegerLiteral(lhs) {
+            var probe = rhs
+            rightFirst = try? typeOf(&probe)
+        }
+        let left = try typeOf(&lhs, expecting: rightFirst)
+        let right = try typeOf(&rhs, expecting: left)
         if right == .double, TypeChecker.isIntegerLiteral(lhs) { return (.double, .double) }
         return (left, right)
     }
@@ -1105,7 +1434,7 @@ final class TypeChecker {
         }
     }
 
-    private func binaryType(_ op: BinaryOperator, _ left: TypeAnnotation, _ right: TypeAnnotation, lhs: Expr?, rhs: Expr?) throws -> TypeAnnotation {
+    private func binaryType(_ op: BinaryOperator, _ left: TypeAnnotation, _ right: TypeAnnotation) throws -> TypeAnnotation {
         if left == .unknown || right == .unknown {
             switch op {
             case .less, .lessEqual, .greater, .greaterEqual: return .bool
@@ -1170,21 +1499,22 @@ final class TypeChecker {
                 (x.label == nil || y.label == nil || x.label == y.label) && fits(x.type, y.type)
             }
         case (.functionType, .function), (.function, .functionType): return true
-        case (.functionType(let ap, let ar), .functionType(let bp, let br)):
-            return ap.count == bp.count && zip(bp, ap).allSatisfy { fits($0, $1) } && (br == .void || fits(ar, br))
+        case (.functionType(let ap, let ar, let athrows), .functionType(let bp, let br, let bthrows)):
+            // A function that throws can't be passed where one that doesn't is wanted.
+            return ap.count == bp.count && zip(bp, ap).allSatisfy { fits($0, $1) }
+                && (br == .void || fits(ar, br)) && (!athrows || bthrows)
         // A struct's value is a record, as builtins that take any record see it.
         case (.named(let name), .record): return structInfo(named: name) != nil
         case (.tuple, .record): return true
         // An Output is its text where a String is wanted, and its lines
         // where a [String] is.
         case (.output, .string), (.output, .list(.string)): return true
-        case (.list, .record): return false
         default: return false
         }
     }
 
     /// The type of each item when iterating `type`.
-    private func elementType(of type: TypeAnnotation, iterating: Bool) throws -> TypeAnnotation {
+    private func elementType(of type: TypeAnnotation) throws -> TypeAnnotation {
         switch type {
         case .list(let element): return element
         case .output, .string: return .string
@@ -1215,7 +1545,11 @@ final class TypeChecker {
         case .object(is Module):
             return .module
         case .function(let set as OverloadSet):
-            return .functions(set.candidates.map(signature))
+            return .functions(set.candidates.enumerated().map { index, function in
+                var signature = signature(function)
+                signature.index = index
+                return signature
+            })
         default:
             return .variable(shell.staticTypes[name] ?? type(of: binding.value), mutable: binding.mutable)
         }
@@ -1226,7 +1560,8 @@ final class TypeChecker {
         // function without `->` returns nothing.
         var returns = function.returnType ?? (function.isBuiltin ? .unknown : .void)
         if function.plugin != nil && returns == .any { returns = .unknown }
-        return Signature(name: function.name ?? "closure", parameters: function.parameters, returns: returns, isMutating: function.isMutating)
+        return Signature(name: function.name ?? "closure", parameters: function.parameters, returns: returns,
+                         isMutating: function.isMutating, isThrowing: function.isThrowing)
     }
 
     private func structInfo(named name: String) -> StructInfo? {
@@ -1241,12 +1576,21 @@ final class TypeChecker {
 
     private func structInfo(_ type: StructType) -> StructInfo {
         var methods: [String: [Signature]] = [:]
-        for (name, set) in type.methods { methods[name] = set.candidates.map(signature) }
+        for (name, set) in type.methods {
+            methods[name] = set.candidates.enumerated().map { index, method in
+                var signature = signature(method)
+                signature.index = index
+                return signature
+            }
+        }
         return StructInfo(
             name: type.name, stored: type.stored,
             computed: type.computed.mapValues { $0.returnType ?? .unknown },
             methods: methods,
-            initializers: type.initializers?.candidates.map { Signature(name: $0.name ?? type.name, parameters: $0.parameters, returns: .named(type.name)) } ?? [],
+            initializers: type.initializers?.candidates.enumerated().map { index, initializer in
+                Signature(name: initializer.name ?? type.name, parameters: initializer.parameters, returns: .named(type.name),
+                          isMutating: true, isThrowing: initializer.isThrowing, index: index)
+            } ?? [],
             memberwise: Signature(name: type.name, parameters: type.memberwise.parameters, returns: .named(type.name))
         )
     }

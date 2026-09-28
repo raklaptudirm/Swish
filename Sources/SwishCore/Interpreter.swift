@@ -98,13 +98,17 @@ final class Function: Callable, @unchecked Sendable {
     let plugin: String?
     /// A struct's `mutating func` (or `init`), which may change `self`.
     let isMutating: Bool
+    /// `throws`: a call to it needs `try`.
+    let isThrowing: Bool
 
     init(
         name: String?, parameters: [Parameter], returnType: TypeAnnotation?, body: FunctionBody,
-        captured: [Scope] = [], documentation: Documentation? = nil, plugin: String? = nil, isMutating: Bool = false
+        captured: [Scope] = [], documentation: Documentation? = nil, plugin: String? = nil, isMutating: Bool = false,
+        isThrowing: Bool = false
     ) {
         self.plugin = plugin
         self.isMutating = isMutating
+        self.isThrowing = isThrowing
         self.name = name
         self.parameters = parameters
         self.returnType = returnType
@@ -199,7 +203,7 @@ extension Shell {
             // Captures the scope it's bound in, so it can call itself.
             let function = Function(
                 name: decl.name, parameters: decl.parameters, returnType: decl.returnType,
-                body: .swish(decl.body), captured: scopes, documentation: decl.documentation
+                body: .swish(decl.body), captured: scopes, documentation: decl.documentation, isThrowing: decl.isThrowing
             )
             // A second declaration with a different signature overloads the
             // name; one with the same signature replaces the old one.
@@ -303,7 +307,7 @@ extension Shell {
             // A `try?` that caught an error is a failure, so `try? $(…) != nil
             // && …` and `if try? …` work. Other nils, like a function that
             // returns nothing, aren't.
-            if value == .nothing, case .attempt(_, .optional) = expr { return 1 }
+            if case .attempt(_, .optional) = expr { return value == .nothing ? 1 : 0 }
             if context == .condition {
                 throw RuntimeError("condition must be a Bool, not \(value.typeName)")
             }
@@ -483,6 +487,13 @@ extension Shell {
                 body: .swish(literal.body), captured: scopes
             ))
         case .call(let callee, let arguments):
+            // The overload the checker chose, when there's a choice.
+            var callee = callee
+            var overload: Int?
+            if case .chosen(let inner, let index) = callee {
+                callee = inner
+                overload = index
+            }
             let value: Value
             // `x?.f()`: nothing when `x` is nil.
             if case .optionalMember(let baseExpr, let name) = callee {
@@ -499,7 +510,7 @@ extension Shell {
                 // `p.move(by: 1)`: a struct's method, with `p` as `self`.
                 if case .record(let record) = base, record[name] == nil, let type = structType(of: record),
                    let methods = type.methods[name] {
-                    return try callMethod(methods, of: base, at: baseExpr, arguments)
+                    return try callMethod(narrowed(methods, overload), of: base, at: baseExpr, arguments)
                 }
                 // `xs.sorted(by: "size")`: a sequence's method.
                 if let methods = sequenceMethods[name], let items = base.sequenceItems {
@@ -511,7 +522,7 @@ extension Shell {
             }
             // `Point(x: 1, y: 2)`: a new struct.
             if case .object(let type as StructType) = value {
-                return try construct(type, arguments)
+                return try construct(type, arguments, overload: overload)
             }
             // `Level(rawValue: 2)`: the case with that raw value, or nil.
             if case .object(let type as EnumType) = value {
@@ -527,7 +538,7 @@ extension Shell {
             }
             switch value {
             case .function(let set as OverloadSet):
-                let (function, bindings) = try resolve(set) { try self.bind(values, to: $0) }
+                let (function, bindings) = try resolve(narrowed(set, overload)) { try self.bind(values, to: $0) }
                 return try invoke(function, with: bindings)
             case .function(let function as Function):
                 return try invoke(function, with: try bind(values, to: function).bindings)
@@ -543,6 +554,17 @@ extension Shell {
             return .bool(try truth(lhs, for: .and) && truth(rhs, for: .and))
         case .binary(.or, let lhs, let rhs):
             return .bool(try truth(lhs, for: .or) || truth(rhs, for: .or))
+        case .attempt(let operand, .plain):
+            return try evaluate(operand)
+        case .voidValue(let operand):
+            _ = try evaluate(operand)
+            return .record(Record())
+        case .chosen(let inner, let overload):
+            // A function as a value, with the overload the checker picked.
+            if case .function(let set as OverloadSet) = try evaluate(inner) {
+                return .function(narrowed(set, overload))
+            }
+            return try evaluate(inner)
         case .attempt(let operand, .optional):
             do {
                 return try evaluate(operand)
@@ -1189,6 +1211,12 @@ final class OutputCollector: @unchecked Sendable {
         done.wait()
         return String(decoding: bytes, as: UTF8.self)
     }
+}
+
+/// `set` with only the overload the checker chose, when it did.
+func narrowed(_ set: OverloadSet, _ overload: Int?) -> OverloadSet {
+    guard let overload, set.candidates.indices.contains(overload) else { return set }
+    return OverloadSet(name: set.name, candidates: [set.candidates[overload]])
 }
 
 enum Interpreter {

@@ -227,7 +227,7 @@ extension Shell {
                 }
             },
             documentation: Documentation(summary: export.summary ?? "", parameters: docs),
-            plugin: plugin
+            plugin: plugin, isThrowing: export.isThrowing
         )
     }
 }

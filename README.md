@@ -261,7 +261,7 @@ scripts/test.sh     # unit tests, plus pty-driven job-control, editor and backgr
 - [ ] **Static types** ([plan](docs/design/types.md)): checked before anything runs, as in Swift
   - [x] The checker's core: inference, functions and `Void`, structs, enums, optionals with `!`
     and `?.`, tuples, dictionaries, `let x: T`
-  - [ ] Function values and static overloads
+  - [x] Function values, closures' results inferred, static overloads, Swift's rules for `throws`
   - [ ] Generic builtins, key paths, typed pipelines
   - [ ] `Any` casts and `JSON`
   - [ ] Typed plugins

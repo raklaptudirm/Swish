@@ -449,7 +449,7 @@ private func command(_ source: String) throws -> CommandNode? {
     // `try?` covers the `??` too, as in Swift, and marks the $(…) under it.
     guard case .declare(_, _, .attempt(.binary(.coalesce, .substitution(_, throwing: true), _), .optional)) = program.statements[0],
           case .declare(_, _, .binary(.coalesce, .attempt(.substitution(_, throwing: true), .optional), _)) = program.statements[1],
-          case .declare(_, _, .substitution(_, throwing: true)) = program.statements[2],
+          case .declare(_, _, .attempt(.substitution(_, throwing: true), .plain)) = program.statements[2],
           case .declare(_, _, .substitution(_, throwing: false)) = program.statements[3] else {
         Issue.record("\(program.statements)")
         return
@@ -501,7 +501,7 @@ private func command(_ source: String) throws -> CommandNode? {
           case .declare(_, _, .async(.capture(let capture))) = program.statements[1],
           case .chain(let a) = program.statements[2], case .expression(.await(.variable("j"), throwing: false)) = a.first,
           case .chain(let b) = program.statements[3], case .expression(.await(nil, throwing: false)) = b.first,
-          case .chain(let c) = program.statements[4], case .expression(.await(.variable("p"), throwing: true)) = c.first else {
+          case .chain(let c) = program.statements[4], case .expression(.attempt(.await(.variable("p"), throwing: true), .plain)) = c.first else {
         Issue.record("\(program.statements)")
         return
     }

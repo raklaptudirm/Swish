@@ -150,6 +150,23 @@ port ?? 8080                        // unwrap with ??, if let, ! or ?.
 func f() { 42 }                     // no `->`: returns nothing
 ```
 
+### Throwing
+
+Swift's rules: a function that can fail says `throws`, a call to it needs
+`try`, and a `try` needs something to handle what it throws: a `throws`
+function, a `do`/`catch`, or the top level of the prompt or a script.
+
+```swift
+func build() throws {
+    try $(swift build)             // `try $(…)` throws, so build must be `throws`
+}
+try build()                        // the prompt handles it
+func quiet() {
+    do { try build() } catch { echo "failed: \(error.message)" }
+}
+let ok = (try? build()) != nil
+```
+
 ## Structs and assignment
 
 A struct's values are records whose type is the struct, so they're values

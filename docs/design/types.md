@@ -1,6 +1,6 @@
 # Static types
 
-Status: **phase 1 implemented** (see [Phases](#phases)). This is the plan
+Status: **phases 1 and 2 implemented** (see [Phases](#phases)). This is the plan
 for making Swish statically typed,
 as Swift is: every expression, function and pipeline stage has a type
 known before anything runs, and type errors stop a statement (or a whole
@@ -186,8 +186,15 @@ Each phase ends with every test passing and the shell usable.
    their parameter types from `filter`, `map` and the like. Programs,
    pipelines and builtins' results are `unknown` until phase 3, which fits
    anywhere, so nothing is refused for lack of a type.
-2. **Functions as values.** Function types, closures inferring from
-   context, `$0`, static overload resolution, `throws`/`rethrows`.
+2. **Functions as values.** *Done.* Function types (`(Int) throws -> Bool`);
+   closures inferring parameters from context and their result from their
+   `return`s; functions passed by name (an overloaded one picked by the
+   type wanted); static overload resolution, ranked by how exactly the
+   arguments match, with ties an error, and the choice written into the
+   program so the interpreter makes the same one; Swift's rules for
+   `throws`. The checker now hands back the program with its decisions in
+   it (`.chosen` for an overload). User functions can't be `rethrows` yet;
+   the builtins that take closures are.
 3. **Generic builtins and typed pipelines.** Builtin protocols and
    conformance declarations; key paths; the prelude of builtin
    signatures; stage types; method stages resolved statically; command
@@ -219,6 +226,17 @@ Each phase ends with every test passing and the shell usable.
 - **Records vs. tuples at run time:** a tuple is a record without a type
   name (unlabeled elements keyed by position), so tables, `select` and
   JSON treat tuples and structs alike.
+
+- **Throwing follows Swift.** A `throws` function's calls need `try`, and
+  a `try` must be in a `throws` function, a `do` with a `catch`, a closure,
+  or at the top level (the prompt and a script's body handle errors, as
+  Swift's main.swift does). `try? ` and `try!` handle them where they
+  are. Plain `$(…)` still never throws; `try $(…)` and `try make` do, and
+  count as throwing. Commands written as commands (`greet Rak`) aren't
+  checked for `try`: a command's failure is its status.
+- **Keeping plugins loading:** SwishKit keeps every public initializer it
+  has shipped. Adding `isThrowing` to `ExportedFunction` added an
+  initializer beside the old one, so plugins built before it still load.
 
 ## Open questions
 

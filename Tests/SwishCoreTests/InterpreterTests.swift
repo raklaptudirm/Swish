@@ -277,7 +277,7 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
 @Test func overloadErrors() {
     #expect(status("func g(_ x: Int, _ y: Int) {}; func g(_ s: String) {}; g 1 2 3") == 1)
     #expect(status("func g(a: Int) {}; func g(b: Int) {}; g(c: 1)") == 2)
-    #expect(status(#"func g(_ x: Int, y: Int = 0) -> Int { 1 }; func g(_ x: Int, z: Int = 0) -> Int { 2 }; g(1)"#) == 1) // ambiguous
+    #expect(status(#"func g(_ x: Int, y: Int = 0) -> Int { 1 }; func g(_ x: Int, z: Int = 0) -> Int { 2 }; g(1)"#) == 2) // ambiguous
 }
 
 @Test func generatedHelp() throws {
