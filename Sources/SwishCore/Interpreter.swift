@@ -59,21 +59,58 @@ struct Binding {
         case initializing
     }
 
-    var value: Value
+    /// Where the value lives, shared by every scope that has this
+    /// variable: the one it was declared in, and closures that use it.
+    private let cell: Cell
+    var value: Value {
+        get { cell.value }
+        nonmutating set { cell.value = newValue }
+    }
     let mutable: Bool
     /// Declared with `func`, which makes it callable in command mode.
     var isFunction = false
     var special: Special?
+
+    init(value: Value, mutable: Bool, isFunction: Bool = false, special: Special? = nil) {
+        cell = Cell(value)
+        self.mutable = mutable
+        self.isFunction = isFunction
+        self.special = special
+    }
+
+    /// A variable's storage, so a closure can share it without keeping the
+    /// whole scope it's in.
+    private final class Cell {
+        var value: Value
+        init(_ value: Value) { self.value = value }
+    }
 }
 
 /// A reference type so closures share variables with the scope they
 /// captured, as in Swift.
 final class Scope {
     var bindings: [String: Binding]
+    /// For a closure's scope: where it was made, held weakly so it can't
+    /// keep them alive, for names bound there after it was made (a local
+    /// function declared further down).
+    var fallbacks: [WeakScope] = []
 
     init(_ bindings: [String: Binding] = [:]) {
         self.bindings = bindings
     }
+
+    /// The scope binding `name`: this one, or where it was made.
+    func holding(_ name: String) -> Scope? {
+        if bindings[name] != nil { return self }
+        for fallback in fallbacks.reversed() {
+            if let scope = fallback.scope, scope.bindings[name] != nil { return scope }
+        }
+        return nil
+    }
+}
+
+struct WeakScope {
+    weak var scope: Scope?
 }
 
 enum FunctionBody {
@@ -211,7 +248,8 @@ extension Shell {
             // Captures the scope it's bound in, so it can call itself.
             let function = Function(
                 name: decl.name, parameters: decl.parameters, returnType: decl.returnType,
-                body: .swish(decl.body), captured: scopes, documentation: decl.documentation, isThrowing: decl.isThrowing
+                body: .swish(decl.body), captured: captureScopes(decl.names), documentation: decl.documentation,
+                isThrowing: decl.isThrowing
             )
             // A second declaration with a different signature overloads the
             // name; one with the same signature replaces the old one.
@@ -492,7 +530,7 @@ extension Shell {
         case .closure(let literal):
             return .function(Function(
                 name: nil, parameters: literal.parameters, returnType: literal.returnType,
-                body: .swish(literal.body), captured: scopes
+                body: .swish(literal.body), captured: captureScopes(literal.names)
             ))
         case .call(let callee, let arguments):
             // The overload the checker chose, when there's a choice.
@@ -741,10 +779,32 @@ extension Shell {
     }
 
     func lookup(_ name: String) -> Binding? {
+        scopeHolding(name)?.bindings[name]
+    }
+
+    /// The innermost scope binding `name`.
+    func scopeHolding(_ name: String) -> Scope? {
         for scope in scopes.reversed() {
-            if let binding = scope.bindings[name] { return binding }
+            if let holding = scope.holding(name) { return holding }
         }
         return nil
+    }
+
+    /// What a closure or nested function keeps of the scopes it's made in:
+    /// the global ones, and only the local variables its body names, each
+    /// shared with where it's declared. Keeping whole scopes would keep the
+    /// one the closure itself is stored in: a cycle, never freed.
+    func captureScopes(_ names: NamesUsed) -> [Scope] {
+        guard scopes.count > 2 else { return scopes }
+        let local = scopes[2...]
+        let capture = Scope()
+        for name in names.names {
+            if let scope = local.last(where: { $0.holding(name) != nil })?.holding(name) {
+                capture.bindings[name] = scope.bindings[name]
+            }
+        }
+        capture.fallbacks = local.map { WeakScope(scope: $0) } + local.flatMap(\.fallbacks)
+        return Array(scopes[..<2]) + [capture]
     }
 
     /// The functions a command name refers to, if it was declared with `func`.
@@ -1068,6 +1128,14 @@ extension Shell {
         if let receiver {
             argumentScope.bindings["self"] = Binding(
                 value: receiver.value, mutable: receiver.mutable, special: receiver.initializing ? .initializing : nil
+            )
+        }
+        // A nested function reaches itself through the call, not by keeping
+        // the binding it's stored in, which would be a cycle.
+        if let name = function.name, function.captured.count > 2, argumentScope.bindings[name] == nil,
+           case .swish = function.body {
+            argumentScope.bindings[name] = Binding(
+                value: .function(OverloadSet(name: name, candidates: [function])), mutable: false, isFunction: true
             )
         }
         scopes = function.captured + [argumentScope]

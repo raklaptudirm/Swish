@@ -154,6 +154,7 @@ struct FunctionDecl: Equatable, Sendable {
     /// `<T, V: Comparable>` and `where` clauses: each type parameter, and
     /// the protocols it must conform to. Only the prelude has these, for now.
     var generics: [String: [String]] = [:]
+    var names = NamesUsed()
 }
 
 /// Assigning to a variable, or to part of one: `p.x`, `xs[0]`, `r["k"]`.
@@ -187,6 +188,7 @@ struct PropertyDecl: Equatable, Sendable {
     var defaultValue: Expr? = nil
     /// A computed property's body; nil for a stored one.
     var getter: Program? = nil
+    var getterNames = NamesUsed()
 }
 
 /// The `#` comment block directly above a `func`, for `--help`.
@@ -201,6 +203,17 @@ struct ClosureLiteral: Equatable, Sendable {
     var parameters: [Parameter]
     var returnType: TypeAnnotation?
     var body: Program
+    var names = NamesUsed()
+}
+
+/// The names a body mentions, so a closure keeps only the variables it
+/// uses rather than every scope around it (which would keep the scope it's
+/// stored in, and leak). Not part of what the code says, so it doesn't
+/// count toward equality.
+struct NamesUsed: Equatable, Sendable {
+    var names: Set<String> = []
+
+    static func == (lhs: NamesUsed, rhs: NamesUsed) -> Bool { true }
 }
 
 struct Parameter: Equatable, Sendable {
@@ -534,6 +547,16 @@ struct Parser {
     private var prelude = false
     /// Type parameters in scope, innermost last: `T`, or `Element`.
     private var typeParameters: [Set<String>] = []
+    /// The names each body being parsed mentions, innermost last.
+    private var namesUsed: [Set<String>] = []
+    /// What the body just parsed mentioned.
+    private var lastBodyNames = NamesUsed()
+
+    /// A name the body being parsed refers to.
+    private mutating func use(_ name: String) {
+        guard !namesUsed.isEmpty else { return }
+        namesUsed[namesUsed.count - 1].insert(name)
+    }
     /// An `import` came earlier: the functions it brings aren't known until
     /// it runs, so calling an unknown name is left for then.
     private var sawImport = false
@@ -698,6 +721,7 @@ struct Parser {
             assignment.root = "self"
             assignment.path = [.member(name)]
         }
+        use(assignment.root)
         while true {
             if peek() == ".", let next = peek(1), Parser.isIdentifierStart(next) {
                 pos += 1
@@ -967,6 +991,7 @@ struct Parser {
             guard property.mutable else { throw SyntaxError("computed property '\(name)' must be declared with 'var'") }
             guard property.type != nil else { throw SyntaxError("computed property '\(name)' needs a type") }
             property.getter = try parseFunctionBody(parameters: [], anonymous: false).0
+            property.getterNames = lastBodyNames
         } else if peek() == "=" && peek(1) != "=" {
             pos += 1
             property.defaultValue = try parseExpression()
@@ -988,7 +1013,7 @@ struct Parser {
         guard consume("{") else { throw expected("'{'") }
         let (body, _) = try parseFunctionBody(parameters: parameters, anonymous: false)
         return FunctionDecl(name: "init", parameters: parameters, returnType: nil, body: body,
-                            documentation: documentation, isMutating: true, isThrowing: throwing)
+                            documentation: documentation, isMutating: true, isThrowing: throwing, names: lastBodyNames)
     }
 
     /// The names a struct's body declares, found before parsing it so a
@@ -1478,7 +1503,7 @@ struct Parser {
         let (body, _) = try parseFunctionBody(parameters: parameters, anonymous: false)
         return FunctionDecl(
             name: name, parameters: parameters, returnType: returnType, body: body, documentation: documentation,
-            isThrowing: throwing
+            isThrowing: throwing, names: lastBodyNames
         )
     }
 
@@ -1581,7 +1606,7 @@ struct Parser {
         }
         let (body, arity) = try parseFunctionBody(parameters: named?.parameters ?? [], anonymous: named == nil)
         let parameters = named?.parameters ?? (0..<arity).map { Parameter(label: nil, name: "$\($0)") }
-        return ClosureLiteral(parameters: parameters, returnType: named?.returnType, body: body)
+        return ClosureLiteral(parameters: parameters, returnType: named?.returnType, body: body, names: lastBodyNames)
     }
 
     private mutating func parseClosureHead() throws(SyntaxError) -> ([Parameter], TypeAnnotation?) {
@@ -1634,7 +1659,18 @@ struct Parser {
             scopes.removeLast()
             anonymousArity.removeLast()
         }
-        let body = try parseProgram(until: "}")
+        namesUsed.append([])
+        let body: Program
+        do {
+            body = try parseProgram(until: "}")
+        } catch {
+            namesUsed.removeLast()
+            throw error
+        }
+        // What an inner body mentions, the outer one must keep too.
+        let mentioned = namesUsed.removeLast()
+        if !namesUsed.isEmpty { namesUsed[namesUsed.count - 1].formUnion(mentioned) }
+        lastBodyNames = NamesUsed(names: mentioned)
         pos += 1
         return (body, anonymousArity.last! ?? 0)
     }
@@ -1924,6 +1960,8 @@ struct Parser {
             let wordStart = pos
             let word = try parseWord()
             if words.isEmpty {
+                // A command's name may be a function the body calls.
+                if word.count == 1, case .literal(let name) = word[0] { use(name) }
                 mark(.command, from: redirects.isEmpty && environment.isEmpty ? caretStart ?? wordStart : wordStart)
             } else if chars[wordStart] == "-" {
                 mark(.flag, from: wordStart)
@@ -2232,6 +2270,7 @@ struct Parser {
             let name = identifier()!
             pos += name.count
             mark(.variable, from: start)
+            use(name)
             return .dollar(name)
         default:
             return nil
@@ -2503,7 +2542,11 @@ struct Parser {
         guard kind(of: name) != nil || (sawImport && peek() == "(") else {
             throw SyntaxError(peek() == "(" ? "no function named '\(name)'" : "no variable named '\(name)'")
         }
-        if kind(of: name) == .member { return .member(.variable("self"), name) }
+        if kind(of: name) == .member {
+            use("self")
+            return .member(.variable("self"), name)
+        }
+        use(name)
         return .variable(name)
     }
 

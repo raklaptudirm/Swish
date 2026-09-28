@@ -61,21 +61,22 @@ extension Shell {
         for property in decl.properties {
             guard let getter = property.getter else { continue }
             computed[property.name] = Function(
-                name: property.name, parameters: [], returnType: property.type, body: .swish(getter), captured: scopes
+                name: property.name, parameters: [], returnType: property.type, body: .swish(getter),
+                captured: captureScopes(property.getterNames)
             )
         }
         var methods: [String: [Function]] = [:]
         for method in decl.methods {
             methods[method.name, default: []].append(Function(
                 name: method.name, parameters: method.parameters, returnType: method.returnType,
-                body: .swish(method.body), captured: scopes, documentation: method.documentation,
+                body: .swish(method.body), captured: captureScopes(method.names), documentation: method.documentation,
                 isMutating: method.isMutating, isThrowing: method.isThrowing
             ))
         }
         let initializers = decl.initializers.map { initializer in
             Function(
                 name: "\(decl.name).init", parameters: initializer.parameters, returnType: nil,
-                body: .swish(initializer.body), captured: scopes, documentation: initializer.documentation,
+                body: .swish(initializer.body), captured: captureScopes(initializer.names), documentation: initializer.documentation,
                 isMutating: true, isThrowing: initializer.isThrowing
             )
         }
@@ -252,7 +253,7 @@ extension Shell {
     private func update(
         _ root: String, _ path: [Assignment.Step], _ change: (Value, TypeAnnotation?) throws -> Value
     ) throws {
-        guard let scope = scopes.last(where: { $0.bindings[root] != nil }) else {
+        guard let scope = scopeHolding(root) else {
             throw RuntimeError("no variable named '\(root)'")
         }
         let current = scope.bindings[root]!.value
