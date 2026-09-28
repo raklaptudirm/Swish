@@ -78,7 +78,7 @@ expect -re $prompt
 send "exit\r"
 step "exiting with jobs warns first" "there are jobs in the background"
 expect -re $prompt
-send "jobs.last.cancel(); exit 7\r"
+send "jobs.last?.cancel(); exit 7\r"
 expect {
   eof {}
   timeout { exec kill -9 [exp_pid] }

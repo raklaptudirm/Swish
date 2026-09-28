@@ -51,7 +51,8 @@ private func status(_ source: String) -> Int32 {
 }
 
 @Test func enumsSortByDeclarationAndBecomeJSON() throws {
-    #expect(try output("enum K { case b, a }; [K.a, K.b] | sorted") == "b\na\n")
+    #expect(try output("enum K: Comparable { case b, a }; [K.a, K.b] | sorted") == "b\na\n")
+    #expect(try output("enum K { case b, a }; [K.a, K.b] | sorted") == "") // sorting needs Comparable
     #expect(try output(#"enum L: Int { case one = 1 }; enum R { case failed(code: Int) }; L.one | to json; R.failed(code: 2) | to json | tr -d ' \n'"#) == #"1"# + "\n" + #"{"failed":{"code":2}}"#)
 }
 

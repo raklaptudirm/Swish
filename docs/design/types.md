@@ -1,6 +1,6 @@
 # Static types
 
-Status: **phases 1 and 2 implemented** (see [Phases](#phases)). This is the plan
+Status: **phases 1–3 implemented** (see [Phases](#phases)). This is the plan
 for making Swish statically typed,
 as Swift is: every expression, function and pipeline stage has a type
 known before anything runs, and type errors stop a statement (or a whole
@@ -156,8 +156,8 @@ rule of its own: `select name size` on `[FileEntry]` is
 `[(name: String, size: FileSize)]`. The same goes for `from json` (→ `JSON`)
 and `to json` (`Encodable` → `String`).
 
-`ls -l` returns the same `[FileEntry]`; today it drops the record's type
-so every field shows, and instead it will pick the view that shows them all.
+`ls -l` is gone: it dropped the record's type so every field would show,
+which a typed `[FileEntry]` can't do. `ls | table` shows every field.
 
 `--numeric` and `--unique` on `sorted` go: `numeric` exists because lines
 are text (`seq 10 | map { Int($0)! } | sorted` says what it means), and
@@ -195,10 +195,17 @@ Each phase ends with every test passing and the shell usable.
    `throws`. The checker now hands back the program with its decisions in
    it (`.chosen` for an overload). User functions can't be `rethrows` yet;
    the builtins that take closures are.
-3. **Generic builtins and typed pipelines.** Builtin protocols and
-   conformance declarations; key paths; the prelude of builtin
-   signatures; stage types; method stages resolved statically; command
-   arguments checked when literal. `select`'s rule.
+3. **Generic builtins and typed pipelines.** *Done.* Builtin protocols and
+   conformance declarations (`struct P: Equatable`; `==` needs Equatable,
+   `<` and `sorted()` Comparable); key paths (`\.size`, and a field's name
+   on the command line); the prelude (Prelude.swift), in Swish, declaring
+   the builtin types (`FileEntry`, `ProcessEntry`, `Status`, `Error`,
+   `Help`, `Member`) and every builtin's signature, generic where Swift's
+   are, with Swift bodies found by name; stage types, from the input
+   value, programs (lines) and each stage's result; method stages
+   resolved from the input's type and recorded for the interpreter;
+   command lines checked by binding their literal words as the
+   interpreter will. `select`'s rule; `uniqued()`.
 4. **Dynamic data.** Strict `Any` with `as?`, `as!` and `is`; the `JSON`
    type; optional chaining.
 5. **Typed plugins.** `SwishType` v2, member types from `@SwishObject`,
@@ -237,6 +244,15 @@ Each phase ends with every test passing and the shell usable.
 - **Keeping plugins loading:** SwishKit keeps every public initializer it
   has shipped. Adding `isThrowing` to `ExportedFunction` added an
   initializer beside the old one, so plugins built before it still load.
+
+- **Generics in the prelude only, for now:** `func f<T>`, `where`,
+  `rethrows` and `extension Sequence` parse there, and are errors in your
+  code until phase 6.
+- **A variadic can come before labeled parameters,** as in Swift
+  (`ls(_ paths: String..., all: Bool)`), since the label marks its end.
+- **When no overload fits,** and only one of them lined up with the
+  arguments (right labels and count), its error is the one shown, rather
+  than a list of candidates.
 
 ## Open questions
 

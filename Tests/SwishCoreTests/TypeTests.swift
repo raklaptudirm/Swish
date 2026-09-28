@@ -148,3 +148,63 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
     #expect(try output(funcs + "if try? build() { echo yes }; if try? fail() { echo no } else { echo failed }") == "yes\nfailed\n")
     #expect(typeError("let x: Int? = 1; if x { echo y }") == "a condition must be a Bool, not Int?")
 }
+
+// MARK: Phase 3: protocols, key paths, the prelude, typed pipelines
+
+@Test func protocolsAreDeclaredAndChecked() throws {
+    #expect(try output("struct P: Equatable { var x: Int }; P(x: 1) == P(x: 1)") == "true\n")
+    #expect(typeError("struct P { var x: Int }; P(x: 1) == P(x: 1)")?.hasPrefix("'==' needs Equatable values") == true)
+    #expect(typeError("struct P: Equatable { var f: (Int) -> Int }") == "P can't be Equatable: its 'f' is (Int) -> Int, which isn't")
+    #expect(typeError("struct P: Comparable { var x: Int }")?.hasPrefix("P can't be Comparable yet") == true)
+    #expect(typeError("struct P: Frobbable {}")?.hasPrefix("syntax error") == true)
+    // An enum without associated values is Equatable anyway; one with them says so.
+    #expect(typeError("enum K { case a, b }; K.a == .b") == nil)
+    #expect(typeError("enum R { case ok, failed(Int) }; R.ok == .ok")?.hasPrefix("'==' needs Equatable values") == true)
+    #expect(typeError("enum R: Equatable { case ok, failed(Int) }; R.ok == .ok") == nil)
+    #expect(typeError("enum L: Int, Comparable { case low, high }; L.low < .high") == nil)
+}
+
+@Test func keyPaths() throws {
+    #expect(try output(#"let xs = [(n: 2, s: "b"), (n: 1, s: "a")]; xs.sorted(by: \.n).map(\.s); xs.map(\.n)"#) == "[\"a\", \"b\"]\n[2, 1]\n")
+    #expect(typeError(#"let xs = [(n: 2, s: "b")]; xs.sorted(by: \.m)"#) == "(n: Int, s: String) has no element 'm'")
+    #expect(typeError("let k = \\.size")?.hasPrefix("\\.size needs a type here") == true)
+    #expect(typeError("let k = \\FileEntry.size") == nil)
+}
+
+@Test func builtinsHaveTypes() throws {
+    // `ls` gives FileEntries, `ps` ProcessEntries: fields are checked.
+    #expect(typeError("let files = ls(); files.filter { $0.type == .directory }.map(\\.name)") == nil)
+    #expect(typeError("ls().filter { $0.sise > 1.kb }") == "FileEntry has no member 'sise'")
+    #expect(typeError("ls().map { $0.size } + [1]") != nil)
+    // Generic constraints: sorting needs Comparable items, or a field that is.
+    #expect(typeError("[(n: 1)].sorted()") == "sorted needs Element to be Comparable, and (n: Int) isn't")
+    #expect(try output("[3, 1, 3, 2].uniqued().sorted()") == "[1, 2, 3]\n")
+}
+
+@Test func pipelinesAreTypedStageByStage() throws {
+    #expect(typeError("ls | sorted --by sise") == "FileEntry has no member 'sise'")
+    #expect(typeError("ls | filter { $0.size > 1 }") == "'>' can't be applied to FileSize and Int")
+    #expect(typeError("ls | prefix x") == "prefix: <maxLength> must be Int, got 'x'")
+    #expect(typeError("ls | get name | map { $0.count } | filter { $0 > \"a\" }") == "'>' can't be applied to Int and String")
+    #expect(typeError("[(n: 1)] | sorted") == "sorted needs Element to be Comparable, and (n: Int) isn't")
+    // Programs give lines of text.
+    #expect(typeError("printf 'a' | filter { $0.count > 1 }") == nil)
+    #expect(typeError("printf 'a' | filter { $0.size > 1 }") == "String has no member 'size'")
+    // `select` makes a tuple of the fields it picks.
+    #expect(try output("[(n: 2, s: \"b\"), (n: 1, s: \"a\")] | select n | sorted --by n | get n") == "1\n2\n")
+    #expect(typeError("ls | select name size | filter { $0.modified > $0.modified }") == "(name: String, size: FileSize) has no element 'modified'")
+}
+
+@Test func stagesAreResolvedFromTheirInput() throws {
+    let point = #"struct Point { var x: Int; func describe() -> String { "p\(x)" } }; "#
+    #expect(try output(point + "[Point(x: 1), Point(x: 2)] | describe") == "p1\np2\n")
+    // `cancel` on jobs is the method, not /usr/bin/cancel; on text, the program.
+    let shell = Shell()
+    _ = try output("func describe() {}", in: shell)
+    #expect(typeError(point + "[Point(x: 1)] | describe | filter { $0.count > 1 }") == nil)
+}
+
+@Test func comparableEnumsCompareInDeclarationOrder() throws {
+    let level = "enum Level: Int, Comparable { case low, mid, high }; "
+    #expect(try output(level + "Level.low < .high; Level.high <= .mid; [Level.high, .low] | sorted") == "true\nfalse\nlow\nhigh\n")
+}

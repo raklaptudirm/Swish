@@ -100,12 +100,18 @@ final class Function: Callable, @unchecked Sendable {
     let isMutating: Bool
     /// `throws`: a call to it needs `try`.
     let isThrowing: Bool
+    /// `rethrows`: a call throws if a closure passed to it does.
+    let isRethrowing: Bool
+    /// Type parameters and their constraints, for a generic builtin.
+    let generics: [String: [String]]
 
     init(
         name: String?, parameters: [Parameter], returnType: TypeAnnotation?, body: FunctionBody,
         captured: [Scope] = [], documentation: Documentation? = nil, plugin: String? = nil, isMutating: Bool = false,
-        isThrowing: Bool = false
+        isThrowing: Bool = false, isRethrowing: Bool = false, generics: [String: [String]] = [:]
     ) {
+        self.isRethrowing = isRethrowing
+        self.generics = generics
         self.plugin = plugin
         self.isMutating = isMutating
         self.isThrowing = isThrowing
@@ -189,6 +195,8 @@ extension Shell {
 
     private func runReportedErrorsAside(_ statement: Statement) throws -> Int32 {
         switch statement {
+        case .extensionDecl:
+            return 0 // Only the prelude has these; it's read at startup.
         case .declare(let name, let mutable, let expr):
             let value = try evaluate(expr)
             scopes[scopes.count - 1].bindings[name] = Binding(value: value, mutable: mutable)
@@ -514,7 +522,7 @@ extension Shell {
                 }
                 // `xs.sorted(by: "size")`: a sequence's method.
                 if let methods = sequenceMethods[name], let items = base.sequenceItems {
-                    return try callSequenceMethod(methods, on: items, arguments)
+                    return try callSequenceMethod(narrowed(methods, overload), on: items, arguments)
                 }
                 value = try member(name, of: base)
             } else {
@@ -545,6 +553,9 @@ extension Shell {
             case .function(let native as NativeFunction):
                 let function = hostFunction(native.function)
                 return try invoke(function, with: try bind(values, to: function).bindings)
+            case .function(let keyPath as KeyPathValue):
+                guard values.count == 1 else { throw RuntimeError("a key path reads one value") }
+                return try keyPath.read(from: try evaluate(values[0].value), in: self)
             default:
                 throw RuntimeError("\(value.typeName) isn't a function")
             }
@@ -556,6 +567,8 @@ extension Shell {
             return .bool(try truth(lhs, for: .or) || truth(rhs, for: .or))
         case .attempt(let operand, .plain):
             return try evaluate(operand)
+        case .keyPath(_, let path):
+            return .function(KeyPathValue(path: path))
         case .voidValue(let operand):
             _ = try evaluate(operand)
             return .record(Record())
@@ -610,6 +623,16 @@ extension Shell {
             // it so, so the Output gives its text.
             if case .output(let output) = value, Interpreter.isStringExpression(rhs) { return .string(output.text) }
             return value
+        case .binary(let op, let lhs, let rhs) where [.less, .lessEqual, .greater, .greaterEqual].contains(op)
+            && (Shell.isCaseLiteral(lhs) || Shell.isCaseLiteral(rhs)):
+            // `level < .high`: the case comes from the other side's enum.
+            let known = try evaluate(Shell.isCaseLiteral(lhs) ? rhs : lhs)
+            guard case .enumValue(let enumValue) = known else {
+                throw RuntimeError("\(op.rawValue) with a .case needs an enum on the other side, not \(known.typeName)")
+            }
+            guard case .caseLiteral(let name, let arguments) = Shell.isCaseLiteral(lhs) ? lhs : rhs else { preconditionFailure() }
+            let literal = try makeCase(enumValue.type, name, arguments)
+            return Shell.isCaseLiteral(lhs) ? try apply(op, literal, known) : try apply(op, known, literal)
         case .binary(let op, let lhs, let rhs) where op == .closedRange || op == .halfOpenRange:
             let range = try intRange(op, try evaluate(lhs), try evaluate(rhs))
             guard range.count <= 10_000_000 else {
@@ -818,6 +841,9 @@ extension Shell {
         case (_, .date(let a), .date(let b)):
             if op == .subtract { return .double(a.timeIntervalSince(b)) }
             if let result = compare(op, a, b) { return .bool(result) }
+        // A Comparable enum: in the order its cases are declared.
+        case (_, .enumValue(let a), .enumValue(let b)) where a.type === b.type:
+            if let result = compare(op, a.index, b.index) { return .bool(result) }
         default:
             break
         }
@@ -898,13 +924,17 @@ extension Shell {
             let rest = Array(arguments.dropFirst())
             // Methods of the input first (the sequence's, then its items'),
             // then functions, then programs; `foreign` skips to programs.
-            if !command.external, piped, let methods = sequenceMethods[name] {
-                stages.append(.function(methods, rest, redirects: redirects, environment: environment))
-            } else if !command.external, piped, itemsMayHaveMethod(name) {
+            // What the checker found, from the input's type, decides; without
+            // that, the interpreter looks.
+            let resolution = command.resolution
+            if !command.external, piped, resolution == nil || resolution == .sequenceMethod,
+               let methods = sequenceMethods[name] {
+                stages.append(.function(narrowed(methods, command.overload), rest, redirects: redirects, environment: environment))
+            } else if !command.external, piped, resolution == .itemMethod || resolution == nil && itemsMayHaveMethod(name) {
                 stages.append(.method(name, rest, redirects: redirects, environment: environment))
             } else if !command.external, let functions = commandFunctions(named: name) {
-                stages.append(.function(functions, rest, redirects: redirects, environment: environment))
-            } else if !command.external, piped, !Shell.builtinNames.contains(name), findExecutable(name) == nil {
+                stages.append(.function(narrowed(functions, command.overload), rest, redirects: redirects, environment: environment))
+            } else if !command.external, piped, resolution == nil, !Shell.builtinNames.contains(name), findExecutable(name) == nil {
                 // Nothing else by that name: perhaps the items have it, like
                 // a job's `cancel`. Only known once they arrive.
                 stages.append(.method(name, rest, redirects: redirects, environment: environment))
@@ -1084,6 +1114,9 @@ extension Shell {
         case .function(let native as NativeFunction):
             let function = hostFunction(native.function)
             return try invoke(function, with: try bind(unlabeled, to: function).bindings)
+        case .function(let keyPath as KeyPathValue):
+            guard arguments.count == 1 else { throw RuntimeError("a key path reads one value") }
+            return try keyPath.read(from: arguments[0], in: self)
         default:
             throw RuntimeError("\(value.typeName) isn't a function")
         }
@@ -1281,8 +1314,12 @@ extension Value {
             return .string(output.text)
         case (.list(.string), .output(let output)):
             return .list(output.lines.map(Value.string))
+        // A key path is a function of one value, as in Swift, and no other kind.
+        case (.functionType(let parameters, _, _), .function(is KeyPathValue)):
+            return parameters.count == 1 ? self : nil
         case (.any, _), (.unknown, _), (.bool, .bool), (.int, .int), (.double, .double), (.string, .string),
-             (.function, .function), (.functionType, .function), (.record, .record), (.filesize, .filesize),
+             (.function, .function), (.functionType, .function), (.keyPath, .function), (.parameter, _),
+             (.record, .record), (.filesize, .filesize),
              (.date, .date), (.void, .nothing):
             return self
         case (.tuple(let elements), .record(let record)):

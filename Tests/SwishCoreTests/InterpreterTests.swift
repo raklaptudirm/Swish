@@ -312,7 +312,7 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
 
 @Test func which() throws {
     let text = try output("func greet(_ name: String) {}; which greet cd prefix cat")
-    #expect(text.hasPrefix("greet: function greet(_ name: String)\ncd: shell builtin\nprefix: sequence method prefix(@input _ items: [Any], _ maxLength: Int)\n/"))
+    #expect(text.hasPrefix("greet: function greet(_ name: String)\ncd: shell builtin\nprefix: sequence method prefix(@input _ items: [Element], _ maxLength: Int) -> [Element]\n/"))
     #expect(text.hasSuffix("/cat\n"))
     #expect(status("which surely-not-a-command") == 1)
 }
@@ -377,8 +377,8 @@ private func fixture() throws -> String {
     #expect(try output(data + "xs | sorted --by n | get s") == "a\nb\nc\n")
     #expect(try output(data + "xs | sorted -rb s | prefix 2 | get n") == "3\n2\n")
     #expect(try output(data + "xs | reversed | get n; xs | count") == "2\n1\n3\n3\n")
-    #expect(status(data + "xs | sorted") == 1) // records need --by
-    #expect(try output("printf 'b\\n10\\n9\\na\\n' | sorted; printf '10\\n9\\n9\\n' | sorted -nu") == "10\n9\na\nb\n9\n10\n")
+    #expect(status(data + "xs | sorted") == 2) // tuples aren't Comparable: sort them by a field
+    #expect(try output("printf 'b\\n10\\n9\\na\\n' | sorted; printf '10\\n9\\n9\\n10\\n' | uniqued") == "10\n9\na\nb\n10\n9\n")
     #expect(try output("[3, 1.5, 2] | sorted") == "1.5\n2\n3\n")
     #expect(try output("seq 1000000 | prefix 2; yes | prefix 1") == "1\n2\ny\n")
 }

@@ -6,21 +6,33 @@ import SwishKit
 /// the shell: the same flags, help, overloads and streaming as Swish ones.
 extension Shell {
     func installBuiltinFunctions() {
-        let functions = [ls(), ps(), from(), to(), table(), list(), members(), help()]
-        for function in functions {
-            scopes[0].bindings[function.name!] = Binding(
-                value: .function(OverloadSet(name: function.name!, candidates: [function])),
-                mutable: false, isFunction: true
-            )
-        }
-        // `with` is only called with a closure, so it isn't a command.
-        scopes[0].bindings["with"] = Binding(value: .function(OverloadSet(name: "with", candidates: [with()])), mutable: false)
         scopes[0].bindings["env"] = Binding(value: .nothing, mutable: false, special: .environment)
         scopes[0].bindings["FileType"] = Binding(value: .object(Shell.fileType), mutable: false)
         scopes[0].bindings["JobState"] = Binding(value: .object(Shell.jobState), mutable: false)
+        // In declaration order, so `ls | sorted --by type` puts files first.
+        for type in [Shell.fileType, Shell.jobState] {
+            enumConformances[ObjectIdentifier(type)] = ["Equatable", "Hashable", "Comparable"]
+        }
         scopes[0].bindings["jobs"] = Binding(value: .nothing, mutable: false, special: .jobs)
         scopes[0].bindings["args"] = Binding(value: .list([]), mutable: false)
-        installSequenceMethods()
+        installPrelude()
+    }
+
+    /// Each builtin's body, by name, for the prelude's declarations; a
+    /// sequence method's also says how it reads the sequence: each item
+    /// (`filter`), or all of them (`sorted`).
+    func builtinBodies() -> [String: (body: FunctionBody, input: Parameter?)] {
+        var bodies: [String: (body: FunctionBody, input: Parameter?)] = [:]
+        for function in [ls(), ps(), from(), to(), table(), list(), members(), help(), with()] {
+            bodies[function.name!] = (function.body, nil)
+        }
+        for method in [sorted(), filter(), map(), prefix(), reversed(), count(), uniqued(), select(), get()] {
+            let input = method.parameters.first(where: \.isInput)!
+            // Each item is an Element; all of them, a list of Elements.
+            let type: TypeAnnotation = input.type.isList ? .list(.parameter("Element")) : .parameter("Element")
+            bodies["Sequence." + method.name!] = (method.body, Parameter(label: nil, name: input.name, type: type, isInput: true))
+        }
+        return bodies
     }
 
     /// `with(env: ["EDITOR": "vim"]) { git commit }`: runs the closure with
@@ -51,17 +63,10 @@ extension Shell {
             [
                 positional("paths", .string, variadic: true),
                 option("all", .bool, default: .bool(false), short: "a"),
-                option("long", .bool, default: .bool(false), short: "l"),
-            ],
-            docs: [
-                "paths": "files or directories to list (default: the current directory)",
-                "all": "include hidden files",
-                "long": "show every field, not just name, type, size and modified",
             ],
             .native { shell, args in
                 let paths = args.strings("paths")
                 let all = args["all"] == .bool(true)
-                let long = args["long"] == .bool(true)
                 var entries: [Value] = []
                 for path in paths.isEmpty ? ["."] : paths {
                     var isDirectory: ObjCBool = false
@@ -70,7 +75,7 @@ extension Shell {
                         continue
                     }
                     guard isDirectory.boolValue else {
-                        if let entry = shell.fileEntry(named: path, at: path, long: long) { entries.append(entry) }
+                        if let entry = shell.fileEntry(named: path, at: path) { entries.append(entry) }
                         continue
                     }
                     let names: [String]
@@ -82,7 +87,7 @@ extension Shell {
                     }
                     for name in names.sorted() where all || !name.hasPrefix(".") {
                         let fullPath = path == "." ? name : (path as NSString).appendingPathComponent(name)
-                        if let entry = shell.fileEntry(named: name, at: fullPath, long: long) { entries.append(entry) }
+                        if let entry = shell.fileEntry(named: name, at: fullPath) { entries.append(entry) }
                     }
                 }
                 return .list(entries)
@@ -103,7 +108,7 @@ extension Shell {
         var target: String?
     }
 
-    private func fileEntry(named name: String, at path: String, long: Bool) -> Value? {
+    private func fileEntry(named name: String, at path: String) -> Value? {
         var info = stat()
         guard lstat(path, &info) == 0 else {
             reportItemError("ls: \(path): \(errorMessage(errno).lowercased())")
@@ -130,7 +135,8 @@ extension Shell {
         )
         guard case .record(var record) = try? ValueEncoder().encode(entry) else { return nil }
         record["type"] = .enumValue(EnumValue(type: Shell.fileType, name: type))
-        if long { record.typeName = nil } // No view: every field shows.
+        // A nil target is still a field, as the struct declares it.
+        if record["target"] == nil { record["target"] = .nothing }
         return .record(record)
     }
 
@@ -199,15 +205,10 @@ extension Shell {
 
     // MARK: Sequence methods
 
-    /// Methods of every sequence (a list, a stream, or an Output's lines),
-    /// named as Swift's are: `xs.sorted(by: "size")`, and as a pipeline
-    /// stage with the input as the sequence, `ls | sorted --by size`.
-    func installSequenceMethods() {
-        let methods = [sorted(), filter(), map(), prefix(), reversed(), count(), select(), get()]
-        for method in methods {
-            sequenceMethods[method.name!] = OverloadSet(name: method.name!, candidates: [method])
-        }
-    }
+    // Methods of every sequence (a list, a stream, or an Output's lines),
+    // named as Swift's are: `xs.sorted(by: \.size)`, and as a pipeline
+    // stage with the input as the sequence, `ls | sorted --by size`. Their
+    // signatures are in the prelude.
 
     private func filter() -> Function {
         builtin(
@@ -254,74 +255,61 @@ extension Shell {
     private func get() -> Function {
         builtin(
             "get", "The value of one field of each item.",
-            [input("item", .any), positional("field", .string)],
-            docs: ["field": "a record field, or a member like count"],
+            [input("item", .any), positional("key", .any)],
             .native { shell, args in
-                try shell.member(args.strings("field")[0], of: args["item"]!)
+                if case .function(let keyPath as KeyPathValue)? = args["key"] {
+                    return try keyPath.read(from: args["item"]!, in: shell)
+                }
+                return try shell.member(args.strings("key")[0], of: args["item"]!)
             }
         )
     }
 
     private func sorted() -> Function {
         builtin(
-            "sorted", "The items in order: by a field, or by a closure like { $0.size < $1.size }.",
-            [
-                input("items", .list(.any)),
-                option("by", .any, default: .nothing, short: "b"),
-                option("reverse", .bool, default: .bool(false), short: "r"),
-                option("numeric", .bool, default: .bool(false), short: "n"),
-                option("unique", .bool, default: .bool(false), short: "u"),
-            ],
-            docs: [
-                "by": "the field to sort records by, or a closure saying whether $0 comes before $1",
-                "numeric": "compare text as numbers",
-                "unique": "drop items equal to the one before",
-            ],
+            "sorted", "The items in order.",
+            [input("items", .list(.any)), option("by", .any, default: .nothing), option("reverse", .bool, default: .bool(false))],
             .native { shell, args in
                 guard case .list(let items) = args["items"] else { return .list([]) }
                 var ordered: [Value]
-                if case .function = args["by"] {
+                // The prelude's overloads name `by` for what it is: a key path
+                // (`key`) or a comparison (`areInIncreasingOrder`).
+                let by = args["key"] ?? args["areInIncreasingOrder"] ?? args["by"]
+                switch by {
+                case .function(let keyPath as KeyPathValue)?:
+                    // By a field: ties keep their input order.
+                    let keyed = try items.enumerated().map { (key: try keyPath.read(from: $1, in: shell), index: $0, item: $1) }
+                    ordered = keyed.sorted { a, b in
+                        let order = a.key.order(comparedTo: b.key)
+                        return order != .orderedSame ? order == .orderedAscending : a.index < b.index
+                    }.map(\.item)
+                case .function?:
                     ordered = try items.sorted { a, b in
-                        let verdict = try shell.call(args["by"]!, with: [a, b])
+                        let verdict = try shell.call(by!, with: [a, b])
                         guard case .bool(let before) = verdict else {
                             throw RuntimeError("sorted: the closure must return a Bool, not \(verdict.typeName)")
                         }
                         return before
                     }
-                    if args["unique"] == .bool(true) {
-                        ordered = ordered.enumerated().filter { $0.offset == 0 || !ordered[$0.offset - 1].isEqual(to: $0.element) }.map(\.element)
-                    }
-                } else {
-                    let field: String? = switch args["by"] {
-                    case .string(let name)?: name
-                    case .nothing?, nil: nil
-                    case let other?: throw RuntimeError("sorted: by must be a field's name or a closure, not \(other.typeName)")
-                    }
-                    let numeric = args["numeric"] == .bool(true)
-                    let keyed = try items.enumerated().map { index, item in
-                        var key = item
-                        if let field {
-                            key = try shell.member(field, of: item)
-                        } else if case .record = item {
-                            throw RuntimeError("sorted: sorting records needs a field, as in sorted(by: \"size\")")
-                        }
-                        if numeric, case .string(let text) = key {
-                            key = Double(text.trimmingCharacters(in: .whitespaces)).map(Value.double) ?? key
-                        }
-                        return (key: key, index: index, item: item)
-                    }
-                    // Ties keep their input order.
-                    var sortedKeys = keyed.sorted { a, b in
-                        let order = a.key.order(comparedTo: b.key)
-                        return order != .orderedSame ? order == .orderedAscending : a.index < b.index
-                    }
-                    if args["unique"] == .bool(true) {
-                        sortedKeys = sortedKeys.enumerated().filter { $0.offset == 0 || !sortedKeys[$0.offset - 1].key.isEqual(to: $0.element.key) }.map(\.element)
-                    }
-                    ordered = sortedKeys.map(\.item)
+                default:
+                    ordered = items.enumerated().sorted { a, b in
+                        let order = a.element.order(comparedTo: b.element)
+                        return order != .orderedSame ? order == .orderedAscending : a.offset < b.offset
+                    }.map(\.element)
                 }
                 if args["reverse"] == .bool(true) { ordered.reverse() }
                 return .list(ordered)
+            }
+        )
+    }
+
+    private func uniqued() -> Function {
+        builtin(
+            "uniqued", "The items without repeats, first ones kept.", [input("items", .list(.any))],
+            .native { _, args in
+                guard case .list(let items) = args["items"] else { return .list([]) }
+                var seen: Set<Value> = []
+                return .list(items.filter { seen.insert($0).inserted })
             }
         )
     }
@@ -351,10 +339,10 @@ extension Shell {
             docs: ["where": "a closure like { $0.size > 1.mb }"],
             .native { shell, args in
                 guard case .list(let items) = args["items"] else { return .int(0) }
-                guard case .function = args["where"] else { return .int(items.count) }
+                guard let predicate = args["predicate"], case .function = predicate else { return .int(items.count) }
                 var count = 0
                 for item in items {
-                    let verdict = try shell.call(args["where"]!, with: [item])
+                    let verdict = try shell.call(predicate, with: [item])
                     guard case .bool(let matches) = verdict else {
                         throw RuntimeError("count: the predicate must return a Bool, not \(verdict.typeName)")
                     }
@@ -447,7 +435,7 @@ extension Shell {
                 var seen: Set<String> = []
                 func add(_ type: String, _ name: String, _ kind: String) {
                     guard seen.insert("\(type).\(name)").inserted else { return }
-                    rows.append(.record(Record(["type": .string(type), "name": .string(name), "kind": .string(kind)])))
+                    rows.append(.record(Record(["type": .string(type), "name": .string(name), "kind": .string(kind)], typeName: "Member")))
                 }
                 for item in items {
                     switch item {

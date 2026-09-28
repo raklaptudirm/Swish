@@ -42,6 +42,7 @@ extension Shell {
         }
         let type = EnumType(name: decl.name, cases: cases)
         enumPayloadTypes[ObjectIdentifier(type)] = payloadTypes
+        enumConformances[ObjectIdentifier(type)] = decl.conformances
         scopes[scopes.count - 1].bindings[decl.name] = Binding(value: .object(type), mutable: false)
     }
 

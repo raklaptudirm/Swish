@@ -7,6 +7,9 @@ struct TypeError: Error, CustomStringConvertible {
     let message: String
     /// The line of the statement it's in, when there's more than one.
     var line: Int?
+    /// A call's arguments don't line up with a signature's parameters, as
+    /// opposed to lining up with a value of the wrong type.
+    var isArity = false
 
     init(_ message: String) {
         self.message = message
@@ -32,8 +35,13 @@ final class TypeChecker {
         var returns: TypeAnnotation
         var isMutating = false
         var isThrowing = false
+        /// `rethrows`: a call throws if a closure passed to it does.
+        var isRethrowing = false
         /// Its position among the overloads the interpreter will have.
         var index = 0
+        /// Its type parameters and the protocols each must conform to:
+        /// `sorted<V: Comparable>(by:)`, and a sequence method's `Element`.
+        var generics: [String: [String]] = [:]
     }
 
     struct StructInfo {
@@ -43,6 +51,7 @@ final class TypeChecker {
         var methods: [String: [Signature]]
         var initializers: [Signature]
         var memberwise: Signature
+        var conformances: [String] = []
 
         func property(_ name: String) -> PropertyDecl? { stored.first { $0.name == name } }
     }
@@ -52,6 +61,7 @@ final class TypeChecker {
         /// Each case's associated values, in declaration order.
         var cases: [(name: String, payload: [AssociatedValue])]
         var rawType: TypeAnnotation?
+        var conformances: [String] = []
 
         func payload(of name: String) -> [AssociatedValue]? { cases.first { $0.name == name }?.payload }
     }
@@ -202,7 +212,7 @@ final class TypeChecker {
                 throw TypeError("this function must return \(declared)")
             }
             statement = .returnStatement(value)
-        case .fallthroughStatement, .breakStatement, .continueStatement:
+        case .fallthroughStatement, .breakStatement, .continueStatement, .extensionDecl:
             break
         case .chain(var chain):
             try checkChain(&chain, condition: false)
@@ -462,11 +472,23 @@ final class TypeChecker {
                       isMutating: true, isThrowing: initializer.isThrowing, index: index)
         }
         return StructInfo(name: decl.name, stored: stored, computed: computed, methods: methods,
-                          initializers: initializers, memberwise: memberwise)
+                          initializers: initializers, memberwise: memberwise, conformances: decl.conformances)
     }
 
     private func checkStruct(_ decl: inout StructDecl) throws {
         let selfType = TypeAnnotation.named(decl.name)
+        // Equatable, Hashable and Encodable come from the fields, which must
+        // have them too; Comparable would need a `<` of its own.
+        for proto in decl.conformances {
+            if proto == "Comparable" { throw TypeError("\(decl.name) can't be Comparable yet: it would need a '<' of its own") }
+            if proto == "Sequence" { throw TypeError("\(decl.name) can't be a Sequence yet") }
+            guard proto != "CustomStringConvertible" else { continue }
+            for property in decl.properties where property.getter == nil {
+                if let type = property.type, !conforms(type, to: proto) {
+                    throw TypeError("\(decl.name) can't be \(proto): its '\(property.name)' is \(type), which isn't")
+                }
+            }
+        }
         for index in decl.properties.indices {
             let property = decl.properties[index]
             if let getter = property.getter {
@@ -490,10 +512,18 @@ final class TypeChecker {
     }
 
     private func enumInfo(_ decl: EnumDecl) -> EnumInfo {
-        EnumInfo(name: decl.name, cases: decl.cases.map { ($0.name, $0.associated) }, rawType: decl.rawType)
+        EnumInfo(name: decl.name, cases: decl.cases.map { ($0.name, $0.associated) }, rawType: decl.rawType,
+                 conformances: decl.conformances)
     }
 
     private func checkEnum(_ decl: inout EnumDecl) throws {
+        for proto in decl.conformances where proto != "CustomStringConvertible" && proto != "Sequence" {
+            for enumCase in decl.cases {
+                for value in enumCase.associated where !conforms(value.type, to: proto) {
+                    throw TypeError("\(decl.name) can't be \(proto): \(decl.name).\(enumCase.name) holds a \(value.type), which isn't")
+                }
+            }
+        }
         guard let rawType = decl.rawType else { return }
         for index in decl.cases.indices where decl.cases[index].rawValue != nil {
             try expect(&decl.cases[index].rawValue!, rawType, "\(decl.name).\(decl.cases[index].name)'s raw value")
@@ -565,39 +595,263 @@ final class TypeChecker {
 
     // MARK: Pipelines
 
-    /// Commands take text, and what they give isn't typed yet (phase 3);
-    /// the expressions inside them are.
+    /// A pipeline's stages, each typed by what flows into it: the value at
+    /// its start, a program's lines (Strings), or what the stage before
+    /// gives. From that type the checker decides what each name is (a method
+    /// of the sequence, of its items, a function, or a program) and records
+    /// it for the interpreter, and checks the arguments written literally by
+    /// binding them as the interpreter will.
     private func checkPipeline(_ pipeline: inout PipelineNode) throws {
         // `try make`: the command's failure throws, which must be handled.
         if case .some(.none) = pipeline.throwing {
             throwingSites += 1
             try checkHandled("'try \(pipeline.source)'")
         }
-        // What a stage takes isn't typed yet, so an empty `[]` needs no type.
-        if pipeline.input != nil { _ = try typeOf(&pipeline.input!, expecting: .unknown) }
-        for commandIndex in pipeline.commands.indices {
-            var command = pipeline.commands[commandIndex]
-            for wordIndex in command.words.indices {
-                switch command.words[wordIndex] {
-                case .text(var parts):
-                    try checkParts(&parts)
-                    command.words[wordIndex] = .text(parts)
-                case .closure(let closure):
-                    var expr = Expr.closure(closure)
-                    _ = try typeOf(&expr)
-                    if case .closure(let checked) = expr { command.words[wordIndex] = .closure(checked) }
-                }
-            }
-            for index in (command.call ?? []).indices { _ = try typeOf(&command.call![index].value, expecting: .unknown) }
-            for index in command.environment.indices { try checkParts(&command.environment[index].value) }
-            for index in command.redirects.indices {
-                if case .file(var parts, let mode) = command.redirects[index].target {
-                    try checkParts(&parts)
-                    command.redirects[index].target = .file(parts, mode)
-                }
-            }
-            pipeline.commands[commandIndex] = command
+        var flowing: TypeAnnotation?
+        if pipeline.input != nil {
+            // Stages type what flows, so an empty `[]` needs no type.
+            flowing = streamElement(try typeOf(&pipeline.input!, expecting: .unknown))
         }
+        for index in pipeline.commands.indices {
+            var command = pipeline.commands[index]
+            try checkCommandText(&command)
+            flowing = try checkStage(&command, input: flowing)
+            pipeline.commands[index] = command
+        }
+    }
+
+    /// The expressions in a command's words, environment and redirects.
+    private func checkCommandText(_ command: inout CommandNode) throws {
+        for wordIndex in command.words.indices {
+            if case .text(var parts) = command.words[wordIndex] {
+                try checkParts(&parts)
+                command.words[wordIndex] = .text(parts)
+            }
+        }
+        for index in command.environment.indices { try checkParts(&command.environment[index].value) }
+        for index in command.redirects.indices {
+            if case .file(var parts, let mode) = command.redirects[index].target {
+                try checkParts(&parts)
+                command.redirects[index].target = .file(parts, mode)
+            }
+        }
+    }
+
+    /// What a value flowing into a pipeline is, item by item.
+    private func streamElement(_ type: TypeAnnotation) -> TypeAnnotation {
+        switch type {
+        case .list(let element): element
+        case .output: .string
+        default: type
+        }
+    }
+
+    /// Checks one stage, fed items of type `input` (nil at the start), and
+    /// gives the type of what it passes on.
+    private func checkStage(_ command: inout CommandNode, input: TypeAnnotation?) throws -> TypeAnnotation {
+        guard let name = TypeChecker.literalName(command), !command.external else {
+            try checkClosures(&command, expecting: [:])
+            return .string // A program's lines.
+        }
+        let element = input ?? .unknown
+        let known = input != nil && element != .unknown && element != .any
+        if input != nil, let methods = shell.sequenceMethods[name] {
+            command.resolution = .sequenceMethod
+            return try checkSequenceStage(name, methods, &command, element: element)
+        }
+        if input != nil, let result = try checkItemMethodStage(name, &command, element: element) {
+            command.resolution = .itemMethod
+            return result
+        }
+        if known { command.resolution = .other }
+        // A sequence method with nothing piped in, and no function or
+        // program by that name, has nothing to work on.
+        if input == nil, shell.sequenceMethods[name] != nil, lookup(name) == nil, shell.findExecutable(name) == nil {
+            throw TypeError("\(name) is a method of sequences: pipe something into it, as in `ls | \(name)`, or call it on a list, as in `xs.\(name)(…)`")
+        }
+        if case .functions(let overloads)? = lookup(name) {
+            let runtime = shell.commandFunctions(named: name)
+            return try checkFunctionStage(name, overloads, runtime, &command, piped: input != nil)
+        }
+        try checkClosures(&command, expecting: [:])
+        return .string
+    }
+
+    /// The command's name, when it's written out rather than built at run time.
+    private static func literalName(_ command: CommandNode) -> String? {
+        guard case .text(let parts)? = command.words.first, parts.count == 1, case .literal(let name) = parts[0] else { return nil }
+        return name
+    }
+
+    /// `ls | sorted --by size`, or `ls | sorted(by: \.size)`: a method of
+    /// the sequence, with `Element` what flows in.
+    private func checkSequenceStage(
+        _ name: String, _ methods: OverloadSet, _ command: inout CommandNode, element: TypeAnnotation
+    ) throws -> TypeAnnotation {
+        if var call = command.call {
+            var callee = Expr.variable(name)
+            let result = try sequenceMethodType(name, on: .list(element), &callee, &call) ?? .unknown
+            command.call = call
+            if case .chosen(_, let overload) = callee { command.overload = overload }
+            return streamElement(result)
+        }
+        if name == "select" {
+            let fields = TypeChecker.literalWords(command)
+            guard let fields else { return .unknown }
+            var arguments = fields.map { Argument(label: nil, value: .literal(.string($0))) }
+            return streamElement(try selectType(element, arguments: &arguments))
+        }
+        let result = try checkCommandLine(name, methods, sequenceSignatures(methods), &command,
+                                          bindings: ["Element": element], excludingInput: true)
+        return streamElement(result)
+    }
+
+    /// `points | describe`: a method of each item, when their type has one.
+    private func checkItemMethodStage(_ name: String, _ command: inout CommandNode, element: TypeAnnotation) throws -> TypeAnnotation? {
+        guard case .named(let typeName) = element else { return nil }
+        if let info = structInfo(named: typeName), let methods = info.methods[name] {
+            if methods.count == 1 && methods[0].isMutating {
+                throw TypeError("\(typeName).\(name) is mutating, and a piped value can't change: call it on a variable")
+            }
+            if case .object(let type as StructType)? = shell.lookup(typeName)?.value, let set = type.methods[name] {
+                return try checkCommandLine(name, set, methods, &command, bindings: [:], excludingInput: false)
+            }
+            try checkClosures(&command, expecting: [:])
+            return commonReturn(methods)
+        }
+        if let members = TypeChecker.builtinMembers[typeName], case .functionType(_, let result, _)? = members[name] {
+            try checkClosures(&command, expecting: [:])
+            return result
+        }
+        return nil
+    }
+
+    /// A function as a stage: its result per item, or its elements when it
+    /// gives a list.
+    private func checkFunctionStage(
+        _ name: String, _ overloads: [Signature], _ runtime: OverloadSet?, _ command: inout CommandNode, piped: Bool
+    ) throws -> TypeAnnotation {
+        let visible = overloads.map { signature -> Signature in
+            var signature = signature
+            if piped { signature.parameters.removeAll(where: \.isInput) }
+            return signature
+        }
+        if var call = command.call {
+            guard let chosen = try resolve(visible, &call, name: name) else {
+                command.call = call
+                return streamElement(commonReturn(overloads))
+            }
+            command.call = call
+            if overloads.count > 1 { command.overload = chosen.index }
+            return streamElement(chosen.returns)
+        }
+        guard let runtime, runtime.candidates.count == overloads.count else {
+            // Declared in this program, so not bound yet: checked as it runs.
+            try checkClosures(&command, expecting: [:])
+            return streamElement(commonReturn(overloads))
+        }
+        let result = try checkCommandLine(name, runtime, visible, &command, bindings: [:], excludingInput: piped)
+        if name == "to", let format = TypeChecker.literalWords(command)?.first, format == "text" { return .string }
+        return streamElement(result)
+    }
+
+    /// The words after a command's name, when all of them are written out.
+    private static func literalWords(_ command: CommandNode) -> [String]? {
+        var words: [String] = []
+        for word in command.words.dropFirst() {
+            guard case .text(let parts) = word else { return nil }
+            var text = ""
+            for part in parts {
+                guard case .literal(let literal) = part else { return nil }
+                text += literal
+            }
+            words.append(text)
+        }
+        return words
+    }
+
+    /// Binds a command line's arguments as the interpreter will, to find
+    /// the overload it'll use and to catch a wrong flag or value now; then
+    /// types key paths (`--by size`) and closures by what that overload
+    /// wants, and gives its result. A word built at run time (`$x`) leaves
+    /// the choice to run time.
+    private func checkCommandLine(
+        _ name: String, _ set: OverloadSet, _ signatures: [Signature], _ command: inout CommandNode,
+        bindings initial: [String: TypeAnnotation], excludingInput: Bool
+    ) throws -> TypeAnnotation {
+        var arguments: [CommandArgument] = []
+        var placeholders: [(word: Int, function: Function)] = []
+        for (index, word) in command.words.enumerated().dropFirst() {
+            switch word {
+            case .text(let parts):
+                var text = ""
+                for part in parts {
+                    guard case .literal(let literal) = part else {
+                        try checkClosures(&command, expecting: initial)
+                        return commonReturn(signatures.map { var s = $0; s.returns = substitute(s.returns, initial); return s })
+                    }
+                    text += literal
+                }
+                arguments.append(.text(text))
+            case .closure:
+                // Stands in for the closure, to see which parameter it binds.
+                let stand = Function(name: nil, parameters: [], returnType: nil, body: .native { _, _ in .nothing })
+                placeholders.append((index, stand))
+                arguments.append(.value(.function(stand)))
+            }
+        }
+        // `--help` shows help instead of running.
+        if shell.helpRequested(arguments, for: set) { return .string }
+        let function: Function
+        let bound: [String: Value]
+        do {
+            (function, bound) = try shell.resolve(set) { try self.shell.bind(commandLine: arguments, to: $0, excludingInput: excludingInput) }
+        } catch let error as RuntimeError {
+            throw TypeError(error.description)
+        }
+        guard let index = set.candidates.firstIndex(where: { $0 === function }), index < signatures.count else { return .unknown }
+        let signature = signatures[index]
+        var bindings = initial
+        for parameter in signature.parameters {
+            // `--by size`: a key path read from the items.
+            if case .keyPath(let rootPattern, _) = parameter.type, case .function(let keyPath as KeyPathValue)? = bound[parameter.name] {
+                var type = substitute(rootPattern, bindings)
+                let root = type
+                if type != .unknown {
+                    for member in keyPath.path { type = try memberType(of: type, member) }
+                }
+                unify(parameter.type, .keyPath(root, type), &bindings)
+            }
+        }
+        for placeholder in placeholders {
+            guard let parameter = signature.parameters.first(where: {
+                if case .function(let value as Function)? = bound[$0.name] { value === placeholder.function } else { false }
+            }), case .closure(var closure) = command.words[placeholder.word] else { continue }
+            let actual = try closureType(&closure, expecting: substitute(parameter.type, bindings))
+            command.words[placeholder.word] = .closure(closure)
+            guard fits(actual, substitute(parameter.type, bindings)) else {
+                throw TypeError("\(name): '\(parameter.name)' must be \(substitute(parameter.type, bindings)), not \(actual)")
+            }
+            unify(parameter.type, actual, &bindings)
+        }
+        for (parameter, protocols) in signature.generics {
+            guard let bound = bindings[parameter], bound != .unknown else { continue }
+            for proto in protocols where !conforms(bound, to: proto) {
+                throw TypeError("\(name) needs \(parameter) to be \(proto), and \(bound) isn't")
+            }
+        }
+        return substitute(signature.returns, bindings)
+    }
+
+    /// Closures in a command whose parameters aren't known: typed loosely.
+    private func checkClosures(_ command: inout CommandNode, expecting bindings: [String: TypeAnnotation]) throws {
+        for index in command.words.indices {
+            if case .closure(var closure) = command.words[index] {
+                _ = try closureType(&closure, expecting: nil)
+                command.words[index] = .closure(closure)
+            }
+        }
+        for index in (command.call ?? []).indices { _ = try typeOf(&command.call![index].value, expecting: .unknown) }
     }
 
     private func checkParts(_ parts: inout [StringPart]) throws {
@@ -751,7 +1005,13 @@ final class TypeChecker {
             return type
         case .caseLiteral(let name, var arguments):
             let type = try caseType(name, &arguments, expected: expected)
-            expr = .caseLiteral(name, arguments)
+            // Written out with its enum, so running it needs no context.
+            if case .named(let enumName) = type, enumInfo(named: enumName) != nil {
+                let member = Expr.member(.variable(enumName), name)
+                expr = arguments.map { .call(member, $0) } ?? member
+            } else {
+                expr = .caseLiteral(name, arguments)
+            }
             return type
         case .unary(let op, var operand):
             let type = try typeOf(&operand, expecting: op == .negate ? expected : .bool)
@@ -793,7 +1053,37 @@ final class TypeChecker {
             _ = try typeOf(&inner)
             expr = .voidValue(inner)
             return .void
+        case .keyPath(let rootName, let path):
+            return try keyPathType(root: rootName, path, expected: expected)
         }
+    }
+
+    /// `\.size`: its root comes from the type written, or from context
+    /// (`sorted(by:)` on [FileEntry] wants a KeyPath<FileEntry, V>). Where a
+    /// function is wanted, it's one, as in Swift.
+    private func keyPathType(root rootName: String?, _ path: [String], expected: TypeAnnotation?) throws -> TypeAnnotation {
+        var root: TypeAnnotation?
+        if let rootName {
+            guard lookup(rootName) != nil else { throw TypeError("no type named '\(rootName)'") }
+            root = .named(rootName)
+        } else {
+            if case .functionType(let parameters, _, _)? = expected, parameters.count == 1 { root = parameters[0] }
+            if case .keyPath(let wanted, _)? = expected { root = wanted }
+        }
+        if case .functionType(let parameters, _, _)? = expected, parameters.count != 1 {
+            // A key path reads one value; it can't be a function of more.
+            var error = TypeError("\\.\(path.joined(separator: ".")) can't be a function of \(parameters.count) values")
+            error.isArity = true
+            throw error
+        }
+        guard var type = root, type != .unknown else {
+            if expected == .unknown || root == .unknown { return .keyPath(.unknown, .unknown) }
+            throw TypeError("\\.\(path.joined(separator: ".")) needs a type here; write its root, as in \\Type.\(path[0])")
+        }
+        let start = type
+        for name in path { type = try memberType(of: type, name) }
+        if case .functionType? = expected { return .functionType([start], type) }
+        return .keyPath(start, type)
     }
 
     /// What `x` in `x?.name` is when it isn't nil.
@@ -860,14 +1150,17 @@ final class TypeChecker {
             for index in items.indices { try expect(&items[index], element, "a list element") }
             return .list(element)
         }
-        if let expected, expected == .any || expected == .unknown {
+        if expected == .any {
             for index in items.indices { _ = try typeOf(&items[index]) }
-            return expected
+            return .any
+        }
+        if expected == .unknown {
+            // Wherever it goes takes anything: its own type if it has one.
+            return .list(commonType(try elementTypes(&items)) ?? .unknown)
         }
         guard !items.isEmpty else { throw TypeError("an empty list needs a type: let xs: [Int] = []") }
         // `[1, 2.5]` is a [Double], as in Swift.
-        var natural: [TypeAnnotation] = []
-        for index in items.indices { natural.append(try typeOf(&items[index])) }
+        let natural = try elementTypes(&items)
         let wantsDouble = natural.contains(.double)
         var types: [TypeAnnotation] = []
         for index in items.indices { types.append(wantsDouble ? try typeOf(&items[index], expecting: .double) : natural[index]) }
@@ -875,6 +1168,21 @@ final class TypeChecker {
             throw TypeError("a list's elements must have one type, not \(Set(types.map(\.description)).sorted().joined(separator: " and ")); write its type, like [Any]")
         }
         return .list(element)
+    }
+
+    /// The elements' own types; a `.case` or `nil` takes its type from the
+    /// others, as in `[Level.high, .low]`.
+    private func elementTypes(_ items: inout [Expr]) throws -> [TypeAnnotation] {
+        var types = [TypeAnnotation?](repeating: nil, count: items.count)
+        for index in items.indices where TypeChecker.hasNaturalType(items[index]) || !TypeChecker.isContextual(items[index]) {
+            if case .literal(.nothing) = items[index] { continue }
+            types[index] = try typeOf(&items[index])
+        }
+        let known = commonType(types.compactMap { $0 })
+        for index in items.indices where types[index] == nil {
+            types[index] = try typeOf(&items[index], expecting: known.map { .optional($0) } ?? nil)
+        }
+        return types.map { $0! }
     }
 
     private func dictionaryType(_ entries: inout [RecordEntry], expected: TypeAnnotation?) throws -> TypeAnnotation {
@@ -1037,7 +1345,7 @@ final class TypeChecker {
             if chosen.isThrowing { try throwingSite("'\(name)'") }
             return chosen.returns
         }
-        if let sequenceResult = try sequenceMethodType(name, on: base, &arguments) {
+        if let sequenceResult = try sequenceMethodType(name, on: base, &callee, &arguments) {
             return sequenceResult
         }
         let member = try memberType(of: base, name)
@@ -1085,23 +1393,33 @@ final class TypeChecker {
     /// defaults and types fit, the one whose parameters match the arguments
     /// most exactly. A tie is ambiguous, unless an argument's type isn't
     /// known yet, when nil leaves the choice to run time.
-    private func resolve(_ candidates: [Signature], _ arguments: inout [Argument], name: String) throws -> Signature? {
+    private func resolve(
+        _ candidates: [Signature], _ arguments: inout [Argument], name: String, bindings: [String: TypeAnnotation] = [:]
+    ) throws -> Signature? {
         var fitting: [(signature: Signature, cost: Int, uncertain: Bool, arguments: [Argument], sites: Int)] = []
         var firstError: TypeError?
+        // Errors from the overloads the arguments line up with: if there's
+        // one, it says what's wrong better than a list of candidates.
+        var typeErrors: [TypeError] = []
         let sitesBefore = throwingSites
         for candidate in candidates {
             var attempt = arguments
             throwingSites = sitesBefore
             do {
-                let (cost, uncertain) = try match(&attempt, to: candidate)
-                fitting.append((candidate, cost, uncertain, attempt, throwingSites))
+                let (cost, uncertain, returns, throwing) = try match(&attempt, to: candidate, bindings: bindings)
+                var resolved = candidate
+                resolved.returns = returns
+                resolved.isThrowing = throwing
+                fitting.append((resolved, cost, uncertain, attempt, throwingSites))
             } catch let error as TypeError {
                 firstError = firstError ?? error
+                if !error.isArity { typeErrors.append(error) }
             }
         }
         throwingSites = sitesBefore
         guard let best = fitting.map(\.cost).min() else {
             if candidates.count == 1, let firstError { throw firstError }
+            if typeErrors.count == 1 { throw typeErrors[0] }
             let list = candidates.map { "  " + describe($0) }
             throw TypeError("\(name): no overload accepts these arguments; candidates:\n" + list.joined(separator: "\n"))
         }
@@ -1124,15 +1442,26 @@ final class TypeChecker {
     /// labels, defaults, variadics and trailing closures. The cost counts
     /// conversions (a literal Int as a Double, a value made optional, an
     /// Output as its text) and untyped parameters, which match anything.
-    private func match(_ arguments: inout [Argument], to signature: Signature) throws -> (cost: Int, uncertain: Bool) {
+    private func match(
+        _ arguments: inout [Argument], to signature: Signature, bindings initial: [String: TypeAnnotation]
+    ) throws -> (cost: Int, uncertain: Bool, returns: TypeAnnotation, throws: Bool) {
         let name = signature.name
         var cost = 0
         var uncertain = false
         var index = 0
+        // Type parameters, bound as arguments show what they are.
+        var bindings = initial
+        var argumentsThrow = false
         func take(_ parameter: Parameter) throws {
             let natural = TypeChecker.hasNaturalType(arguments[index].value) ? try typeOf(&arguments[index].value) : nil
-            try expect(&arguments[index].value, parameter.type, "\(name): '\(parameter.name)'")
-            switch (natural, parameter.type) {
+            let wanted = substitute(parameter.type, bindings)
+            let actual = try typeOf(&arguments[index].value, expecting: wanted)
+            guard fits(actual, wanted) else {
+                throw TypeError("\(name): '\(parameter.name)' must be \(wanted), not \(actual)")
+            }
+            unify(parameter.type, actual, &bindings)
+            if case .functionType(_, _, true) = actual { argumentsThrow = true }
+            switch (natural, wanted) {
             case (.unknown?, _): uncertain = true
             case (_, .any), (_, .unknown), (_, .function), (_, .record): cost += 3
             case (let type?, let wanted) where type != wanted: cost += 1
@@ -1155,14 +1484,25 @@ final class TypeChecker {
                 continue
             } else {
                 let label = parameter.label.map { "'\($0):'" } ?? "#\(position + 1)"
-                throw TypeError("\(name): missing argument \(label)")
+                var error = TypeError("\(name): missing argument \(label)")
+                error.isArity = true
+                throw error
             }
         }
         guard index == arguments.count else {
             let extra = arguments[index].label.map { "'\($0):'" } ?? "#\(index + 1)"
-            throw TypeError("\(name): unexpected argument \(extra)")
+            var error = TypeError("\(name): unexpected argument \(extra)")
+            error.isArity = true
+            throw error
         }
-        return (cost, uncertain)
+        for (parameter, protocols) in signature.generics {
+            guard let bound = bindings[parameter], bound != .unknown else { continue }
+            for proto in protocols where !conforms(bound, to: proto) {
+                throw TypeError("\(name) needs \(parameter) to be \(proto), and \(bound) isn't")
+            }
+        }
+        let throwing = signature.isThrowing || signature.isRethrowing && argumentsThrow
+        return (cost, uncertain, substitute(signature.returns, bindings), throwing)
     }
 
     /// Whether an argument has a type of its own, apart from context: not a
@@ -1170,47 +1510,60 @@ final class TypeChecker {
     /// from the parameter.
     private static func hasNaturalType(_ expr: Expr) -> Bool {
         switch expr {
-        case .closure, .caseLiteral, .list, .record, .tuple, .literal(.nothing): false
+        case .closure, .caseLiteral, .list, .record, .tuple, .literal(.nothing), .keyPath: false
         default: true
         }
     }
 
     // MARK: Sequence methods
 
-    /// `xs.filter { … }` and the rest, until phase 3 declares them: the
-    /// element type flows through, closures get it for `$0`, and a call
-    /// throws if a closure passed to it can (`rethrows`).
-    private func sequenceMethodType(_ name: String, on base: TypeAnnotation, _ arguments: inout [Argument]) throws -> TypeAnnotation? {
-        guard shell.sequenceMethods[name] != nil else { return nil }
-        let element: TypeAnnotation
-        switch base {
-        case .list(let type): element = type
-        case .output: element = .string
-        case .unknown, .any: element = .unknown
-        default: return nil
+    /// `xs.filter { … }` and the rest: the prelude's `extension Sequence`,
+    /// with `Element` the receiver's items' type.
+    private func sequenceMethodType(
+        _ name: String, on base: TypeAnnotation, _ callee: inout Expr, _ arguments: inout [Argument]
+    ) throws -> TypeAnnotation? {
+        guard let methods = shell.sequenceMethods[name], let element = sequenceElement(base) else { return nil }
+        if name == "select" { return try selectType(element, arguments: &arguments) }
+        let candidates = sequenceSignatures(methods)
+        guard let chosen = try resolve(candidates, &arguments, name: name, bindings: ["Element": element]) else {
+            return commonReturn(candidates)
         }
-        var closureResult: TypeAnnotation = .unknown
-        var closureThrows = false
+        if candidates.count > 1 { callee = .chosen(callee, overload: chosen.index) }
+        if chosen.isThrowing { try throwingSite("'\(name)'") }
+        return chosen.returns
+    }
+
+    /// A sequence method's signature as it's called: without the `@input`
+    /// the sequence comes in by.
+    private func sequenceSignatures(_ methods: OverloadSet) -> [Signature] {
+        methods.candidates.enumerated().map { index, method in
+            var signature = signature(method)
+            signature.parameters.removeAll(where: \.isInput)
+            signature.index = index
+            return signature
+        }
+    }
+
+    /// The type of a sequence's items, for its methods; nil if it isn't one.
+    private func sequenceElement(_ type: TypeAnnotation) -> TypeAnnotation? {
+        switch type {
+        case .list(let element): element
+        case .output: .string
+        case .unknown, .any: .unknown
+        default: nil
+        }
+    }
+
+    /// `select name size` on [FileEntry]: [(name: String, size: FileSize)],
+    /// a tuple of the fields picked, which Swift's generics can't say.
+    private func selectType(_ element: TypeAnnotation, arguments: inout [Argument]) throws -> TypeAnnotation {
+        var fields: [TypeAnnotation.TupleElement] = []
         for index in arguments.indices {
-            let wanted: TypeAnnotation? = switch (name, arguments[index].label) {
-            case ("filter", nil), ("count", "where"), ("count", nil): .functionType([element], .bool)
-            case ("map", nil): .functionType([element], .unknown)
-            case ("sorted", "by"), ("sorted", nil): .functionType([element, element], .bool)
-            default: nil
-            }
-            // A closure, or a function by name: `xs.map(double)`.
-            if case .functionType(_, let result, let throwing) = try typeOf(&arguments[index].value, expecting: wanted) {
-                if name == "map" { closureResult = result }
-                closureThrows = closureThrows || throwing
-            }
+            try expect(&arguments[index].value, .string, "select: a field's name")
+            guard case .literal(.string(let field)) = arguments[index].value else { return .list(.unknown) }
+            fields.append(.init(label: field, type: element == .unknown ? .unknown : try memberType(of: element, field)))
         }
-        if closureThrows { try throwingSite("'\(name)'") }
-        switch name {
-        case "count": return .int
-        case "map": return .list(closureResult)
-        case "select", "get": return .list(.unknown)
-        default: return .list(element)
-        }
+        return .list(.tuple(fields))
     }
 
     // MARK: Members
@@ -1278,7 +1631,7 @@ final class TypeChecker {
         switch base {
         case .output:
             members = ["text": .string, "lines": .list(.string), "count": .int, "isEmpty": .bool,
-                       "first": .optional(.string), "last": .optional(.string), "status": TypeChecker.status]
+                       "first": .optional(.string), "last": .optional(.string), "status": .named("Status")]
         case .list(let element):
             members = ["count": .int, "isEmpty": .bool, "first": .optional(element), "last": .optional(element)]
         case .dictionary(let key, let value):
@@ -1299,17 +1652,12 @@ final class TypeChecker {
         return elements.first { $0.label == name }?.type
     }
 
-    static let status = TypeAnnotation.tuple([
-        .init(label: "code", type: .optional(.int)), .init(label: "signal", type: .optional(.int)), .init(label: "succeeded", type: .bool),
-    ])
-
     /// The members of the shell's own types that aren't structs.
     static let builtinMembers: [String: [String: TypeAnnotation]] = [
         "Job": [
             "id": .int, "command": .string, "state": .named("JobState"), "pids": .list(.int), "output": .optional(.output),
             "resume": .functionType([], .void), "cancel": .functionType([], .void),
         ],
-        "Error": ["message": .string, "status": status, "text": .string],
     ]
 
     private func caseType(_ name: String, _ arguments: inout [Argument]?, expected: TypeAnnotation?) throws -> TypeAnnotation {
@@ -1397,6 +1745,13 @@ final class TypeChecker {
             guard fits(left, right) || fits(right, left) || left == .output && right == .string || left == .string && right == .output else {
                 throw TypeError("can't compare \(left) with \(right)")
             }
+            // Anything optional compares with a `nil` literal, as in Swift.
+            if case .literal(.nothing) = rhs { return .bool }
+            if case .literal(.nothing) = lhs { return .bool }
+            let compared = left == .unknown ? right : left
+            guard conforms(compared, to: "Equatable") else {
+                throw TypeError("'\(op.rawValue)' needs Equatable values, and \(compared) isn't: declare it, as in struct \(compared): Equatable")
+            }
             return .bool
         default:
             let (left, right) = try operandTypes(&lhs, &rhs)
@@ -1445,7 +1800,7 @@ final class TypeChecker {
         let fail = TypeError("'\(op.rawValue)' can't be applied to \(left) and \(right)")
         switch op {
         case .less, .lessEqual, .greater, .greaterEqual:
-            guard left == right, [.int, .double, .string, .filesize, .date].contains(left) else { throw fail }
+            guard left == right, conforms(left, to: "Comparable") else { throw fail }
             return .bool
         case .closedRange, .halfOpenRange:
             guard left == .int, right == .int else { throw fail }
@@ -1498,7 +1853,11 @@ final class TypeChecker {
             return a.count == b.count && zip(a, b).allSatisfy { x, y in
                 (x.label == nil || y.label == nil || x.label == y.label) && fits(x.type, y.type)
             }
-        case (.functionType, .function), (.function, .functionType): return true
+        case (.parameter, _), (_, .parameter): return true
+        case (.keyPath(let ar, let av), .keyPath(let br, let bv)): return fits(br, ar) && fits(av, bv)
+        case (.keyPath(let root, let value), .functionType(let parameters, let result, _)):
+            return parameters.count == 1 && fits(parameters[0], root) && fits(value, result)
+        case (.functionType, .function), (.function, .functionType), (.keyPath, .function): return true
         case (.functionType(let ap, let ar, let athrows), .functionType(let bp, let br, let bthrows)):
             // A function that throws can't be passed where one that doesn't is wanted.
             return ap.count == bp.count && zip(bp, ap).allSatisfy { fits($0, $1) }
@@ -1510,6 +1869,109 @@ final class TypeChecker {
         // where a [String] is.
         case (.output, .string), (.output, .list(.string)): return true
         default: return false
+        }
+    }
+
+    // MARK: Protocols
+
+    /// Whether `type` conforms to `proto`: as in Swift for the builtin types;
+    /// a struct or enum by declaring it (an enum without associated values
+    /// is Equatable and Hashable anyway, as in Swift).
+    func conforms(_ type: TypeAnnotation, to proto: String) -> Bool {
+        switch type {
+        case .unknown, .parameter, .record: return true
+        case .any, .function, .functionType, .void: return proto == "CustomStringConvertible"
+        case .keyPath: return proto == "Equatable" || proto == "Hashable" || proto == "CustomStringConvertible"
+        default: break
+        }
+        switch proto {
+        case "CustomStringConvertible":
+            return true
+        case "Sequence":
+            switch type {
+            case .list, .dictionary, .output, .string: return true
+            default: return false
+            }
+        case "Comparable":
+            switch type {
+            case .int, .double, .string, .filesize, .date: return true
+            case .named(let name):
+                if let info = enumInfo(named: name) {
+                    return info.conformances.contains("Comparable") && info.cases.allSatisfy { $0.payload.isEmpty }
+                }
+                return false
+            default: return false
+            }
+        case "Equatable", "Hashable", "Encodable":
+            switch type {
+            case .int, .double, .bool, .string, .filesize, .date: return true
+            case .output: return proto == "Equatable"
+            case .optional(let wrapped), .list(let wrapped): return conforms(wrapped, to: proto)
+            case .dictionary(let key, let value): return conforms(key, to: "Hashable") && conforms(value, to: proto)
+            // Tuples compare with `==`, but aren't Hashable or Encodable.
+            case .tuple(let elements): return proto == "Equatable" && elements.allSatisfy { conforms($0.type, to: proto) }
+            case .named(let name):
+                if let info = structInfo(named: name) {
+                    return info.conformances.contains(proto) || proto == "Equatable" && info.conformances.contains("Hashable")
+                }
+                if let info = enumInfo(named: name) {
+                    if info.conformances.contains(proto) || proto == "Equatable" && info.conformances.contains("Hashable") { return true }
+                    // Without associated values, an enum is Equatable and Hashable already.
+                    return proto != "Encodable" && info.cases.allSatisfy { $0.payload.isEmpty }
+                }
+                return false
+            default:
+                return false
+            }
+        default:
+            return false
+        }
+    }
+
+    // MARK: Generics
+
+    /// `type` with its type parameters replaced by what they're bound to;
+    /// one not bound yet isn't known.
+    private func substitute(_ type: TypeAnnotation, _ bindings: [String: TypeAnnotation]) -> TypeAnnotation {
+        switch type {
+        case .parameter(let name): return bindings[name] ?? .unknown
+        case .list(let element): return .list(substitute(element, bindings))
+        case .optional(let wrapped): return .optional(substitute(wrapped, bindings))
+        case .dictionary(let key, let value): return .dictionary(substitute(key, bindings), substitute(value, bindings))
+        case .tuple(let elements): return .tuple(elements.map { .init(label: $0.label, type: substitute($0.type, bindings)) })
+        case .keyPath(let root, let value): return .keyPath(substitute(root, bindings), substitute(value, bindings))
+        case .functionType(let parameters, let result, let throwing):
+            return .functionType(parameters.map { substitute($0, bindings) }, substitute(result, bindings), throws: throwing)
+        default: return type
+        }
+    }
+
+    /// Binds the type parameters in `pattern` by matching it with `actual`,
+    /// the type an argument turned out to have.
+    private func unify(_ pattern: TypeAnnotation, _ actual: TypeAnnotation, _ bindings: inout [String: TypeAnnotation]) {
+        switch (pattern, actual) {
+        case (_, .unknown):
+            return
+        case (.parameter(let name), _):
+            if bindings[name] == nil || bindings[name] == .unknown { bindings[name] = actual }
+        case (.list(let p), .list(let a)), (.optional(let p), .optional(let a)):
+            unify(p, a, &bindings)
+        case (.optional(let p), _):
+            unify(p, actual, &bindings)
+        case (.dictionary(let pk, let pv), .dictionary(let ak, let av)):
+            unify(pk, ak, &bindings)
+            unify(pv, av, &bindings)
+        case (.keyPath(let pr, let pv), .keyPath(let ar, let av)):
+            unify(pr, ar, &bindings)
+            unify(pv, av, &bindings)
+        case (.keyPath(let pr, let pv), .functionType(let parameters, let result, _)) where parameters.count == 1:
+            unify(pr, parameters[0], &bindings)
+            unify(pv, result, &bindings)
+        case (.functionType(let pp, let pr, _), .functionType(let ap, let ar, _)) where pp.count == ap.count:
+            for (p, a) in zip(pp, ap) { unify(p, a, &bindings) }
+            unify(pr, ar, &bindings)
+        default:
+            return
         }
     }
 
@@ -1561,7 +2023,8 @@ final class TypeChecker {
         var returns = function.returnType ?? (function.isBuiltin ? .unknown : .void)
         if function.plugin != nil && returns == .any { returns = .unknown }
         return Signature(name: function.name ?? "closure", parameters: function.parameters, returns: returns,
-                         isMutating: function.isMutating, isThrowing: function.isThrowing)
+                         isMutating: function.isMutating, isThrowing: function.isThrowing,
+                         isRethrowing: function.isRethrowing, generics: function.generics)
     }
 
     private func structInfo(named name: String) -> StructInfo? {
@@ -1591,7 +2054,8 @@ final class TypeChecker {
                 Signature(name: initializer.name ?? type.name, parameters: initializer.parameters, returns: .named(type.name),
                           isMutating: true, isThrowing: initializer.isThrowing, index: index)
             } ?? [],
-            memberwise: Signature(name: type.name, parameters: type.memberwise.parameters, returns: .named(type.name))
+            memberwise: Signature(name: type.name, parameters: type.memberwise.parameters, returns: .named(type.name)),
+            conformances: type.conformances
         )
     }
 
@@ -1607,6 +2071,7 @@ final class TypeChecker {
         case .double?: .double
         default: nil
         }
-        return EnumInfo(name: type.name, cases: cases, rawType: rawType)
+        return EnumInfo(name: type.name, cases: cases, rawType: rawType,
+                        conformances: shell.enumConformances[ObjectIdentifier(type)] ?? [])
     }
 }

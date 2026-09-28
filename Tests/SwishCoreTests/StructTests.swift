@@ -33,7 +33,8 @@ struct Point {
     // Records underneath: tables, filters, JSON; and values like Swift's.
     #expect(try output(point + "[Point(x: 5), Point(x: 1)] | filter { $0.x > 1 }") == "x  y\n5  0\n")
     #expect(try output(point + "Point(x: 1) | to json | tr -d ' \\n'") == #"{"x":1,"y":0}"#)
-    #expect(try output(point + "Point(x: 1) == Point(x: 1, y: 0)") == "true\n")
+    #expect(try output("struct P: Equatable { var x: Int; var y = 0 }; P(x: 1) == P(x: 1, y: 0); P(x: 1) != P(x: 2)") == "true\ntrue\n")
+    #expect(try output(point + "Point(x: 1) == Point(x: 1, y: 0)") == "") // `==` needs Equatable
     #expect(try output(point + "var a = Point(x: 1); var b = a; b.x = 9; a.x") == "1\n")
 }
 

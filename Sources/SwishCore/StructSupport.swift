@@ -14,10 +14,13 @@ final class StructType: SwishObject, @unchecked Sendable {
     /// Custom initializers; without any, the memberwise one.
     let initializers: OverloadSet?
     let memberwise: Function
+    /// The protocols it declares: `struct Point: Equatable`.
+    let conformances: [String]
 
     init(name: String, stored: [PropertyDecl], computed: [String: Function], methods: [String: OverloadSet],
-         initializers: OverloadSet?, memberwise: Function) {
+         initializers: OverloadSet?, memberwise: Function, conformances: [String] = []) {
         self.name = name
+        self.conformances = conformances
         self.stored = stored
         self.computed = computed
         self.methods = methods
@@ -91,7 +94,7 @@ extension Shell {
             name: decl.name, stored: stored, computed: computed,
             methods: methods.mapValues { OverloadSet(name: $0[0].name!, candidates: $0) },
             initializers: initializers.isEmpty ? nil : OverloadSet(name: "\(decl.name).init", candidates: initializers),
-            memberwise: memberwise
+            memberwise: memberwise, conformances: decl.conformances
         )
         scopes[scopes.count - 1].bindings[decl.name] = Binding(value: .object(type), mutable: false)
     }

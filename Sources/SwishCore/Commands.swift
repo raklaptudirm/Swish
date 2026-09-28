@@ -28,6 +28,22 @@ extension Function {
     }
 }
 
+/// `\.size` or `\.status.code`: reads the path of members from a value.
+/// Where a function is wanted it's one, as in Swift: `xs.map(\.name)`.
+final class KeyPathValue: Callable, @unchecked Sendable {
+    let path: [String]
+
+    init(path: [String]) {
+        self.path = path
+    }
+
+    var description: String { "\\." + path.joined(separator: ".") }
+
+    func read(from value: Value, in shell: Shell) throws -> Value {
+        try path.reduce(value) { try shell.member($1, of: $0) }
+    }
+}
+
 /// One argument to a command: text, or a value like the closure in
 /// `where { $0.size > 1.mb }`.
 enum CommandArgument: CustomStringConvertible {
@@ -54,7 +70,7 @@ extension TypeAnnotation {
     /// Whether a closure can be passed for it.
     var acceptsFunction: Bool {
         switch self {
-        case .function, .any: true
+        case .function, .functionType, .any: true
         case .optional(let wrapped): wrapped.acceptsFunction
         default: false
         }
@@ -285,7 +301,9 @@ extension Shell {
 
     func converted(_ text: String, to type: TypeAnnotation, for what: String, of function: String) throws -> Value {
         let value: Value? = switch type {
-        case .any, .unknown, .string: .string(text)
+        case .any, .unknown, .parameter, .string: .string(text)
+        // `sorted --by size`: a field's name is its key path.
+        case .keyPath: .function(KeyPathValue(path: text.split(separator: ".").map(String.init)))
         case .int: Int(text).map(Value.int)
         case .double: Double(text).map(Value.double)
         case .bool: ["true": true, "false": false][text].map(Value.bool)

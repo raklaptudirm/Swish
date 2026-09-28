@@ -262,13 +262,14 @@ scripts/test.sh     # unit tests, plus pty-driven job-control, editor and backgr
   - [x] The checker's core: inference, functions and `Void`, structs, enums, optionals with `!`
     and `?.`, tuples, dictionaries, `let x: T`
   - [x] Function values, closures' results inferred, static overloads, Swift's rules for `throws`
-  - [ ] Generic builtins, key paths, typed pipelines
+  - [x] Protocols (`Equatable`, `Comparable`, …), key paths, generic builtins declared in a
+    Swish prelude, typed pipelines with stages resolved from their input
   - [ ] `Any` casts and `JSON`
   - [ ] Typed plugins
 - [x] **Methods as stages**: after a `|`, a name is a method of what's piped in: the sequence's
   (`sorted`, `filter`, `map`, `prefix`, `reversed`, `count`, `select`, `get`, as in Swift, also
-  `xs.sorted(by: "size")`), then each item's (`points | describe`, `jobs | cancel`); stages
-  written as calls, `ls | sorted(by: "size")`; trailing closures for labeled parameters
+  `xs.sorted(by: \.size)`), then each item's (`points | describe`, `jobs | cancel`); stages
+  written as calls, `ls | sorted(by: \.size)`; trailing closures for labeled parameters
 - [x] **Structs**: typed records with the memberwise init or custom `init`s, computed
   properties, methods and `mutating`; assignment into values (`p.x = 1`, `xs[0] += 5`)
 - [x] **Callables**: command lines derived from signatures, `@input` streaming, `@flag`,

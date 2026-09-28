@@ -103,7 +103,7 @@ pipeline turns values into text, and only if nothing else consumed them.
 - **Views** are registered per type and pick default columns and a layout
   (table for lists of similar records, key/value list for a single record).
   `ls` records carry every field (permissions, owner, dates, path, …) but
-  show `name`, `type`, `size` and `modified`; `ls -l` shows them all.
+  show `name`, `type`, `size` and `modified`; `ls | table` shows them all.
 - Explicit formatters (`table`, `list`, `to text`, `to json`) override the
   view. They return lines of text, so their output can go on to external
   programs.

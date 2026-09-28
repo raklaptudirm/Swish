@@ -67,6 +67,11 @@ step "^C stops a loop running in the shell itself" {\[130\]}
 send "func greet(_ name: String) { echo \"hi \\(name)\" }\r"
 send "greet Rak\r"
 step "functions persist between prompts" "\nhi Rak\r\n"
+# Entries at the prompt are type-checked before they run, as scripts are.
+send "let n: Int = \"a\"\r"
+step "the prompt checks types" "the value must be Int, not String"
+send "\[(n: 1)\] | sorted\r"
+step "pipelines at the prompt are typed" "sorted needs Element to be Comparable"
 send "exit 7\r"
 # A shell that doesn't exit (a failed step left it busy) is killed, so a
 # failure can't hang the suite.

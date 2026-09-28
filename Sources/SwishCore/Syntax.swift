@@ -26,6 +26,9 @@ enum Statement: Equatable, Sendable {
     case doCatch(body: Program, errorName: String, handler: Program?)
     case enumDecl(EnumDecl)
     case structDecl(StructDecl)
+    /// `extension Sequence { func filter(…) … }`: the prelude's methods of
+    /// every sequence.
+    case extensionDecl(name: String, methods: [FunctionDecl])
     /// `import Tools from "./Tools"`: builds a Swift package and loads the
     /// functions it exports.
     case importPlugin(name: String, path: Expr)
@@ -81,6 +84,8 @@ struct EnumDecl: Equatable, Sendable {
     var name: String
     var rawType: TypeAnnotation?
     var cases: [EnumCaseDecl]
+    /// `enum Level: Int, Comparable`: the protocols after any raw type.
+    var conformances: [String] = []
 }
 
 struct EnumCaseDecl: Equatable, Sendable {
@@ -144,6 +149,11 @@ struct FunctionDecl: Equatable, Sendable {
     var isMutating = false
     /// `throws`: calling it needs `try`.
     var isThrowing = false
+    /// `rethrows`: it throws only if a closure passed to it does.
+    var isRethrowing = false
+    /// `<T, V: Comparable>` and `where` clauses: each type parameter, and
+    /// the protocols it must conform to. Only the prelude has these, for now.
+    var generics: [String: [String]] = [:]
 }
 
 /// Assigning to a variable, or to part of one: `p.x`, `xs[0]`, `r["k"]`.
@@ -166,6 +176,8 @@ struct StructDecl: Equatable, Sendable {
     var properties: [PropertyDecl]
     var methods: [FunctionDecl]
     var initializers: [FunctionDecl]
+    /// `struct Point: Equatable, Hashable`.
+    var conformances: [String] = []
 }
 
 struct PropertyDecl: Equatable, Sendable {
@@ -226,6 +238,10 @@ indirect enum TypeAnnotation: Hashable, Sendable, CustomStringConvertible {
     case dictionary(TypeAnnotation, TypeAnnotation)
     /// `(name: String, Int)`.
     case tuple([TupleElement])
+    /// A generic parameter, like `Element` or `T` in a builtin's signature.
+    case parameter(String)
+    /// `KeyPath<Root, Value>`, what `\.size` is.
+    case keyPath(TypeAnnotation, TypeAnnotation)
     /// Any function: a closure whose signature isn't known yet.
     case function
     /// `(Int, String) -> Bool`, or `(Int) throws -> Bool`.
@@ -260,7 +276,8 @@ indirect enum TypeAnnotation: Hashable, Sendable, CustomStringConvertible {
         case .function: "function"
         case .functionType(let parameters, let result, let throwing):
             "(" + parameters.map(\.description).joined(separator: ", ") + ")" + (throwing ? " throws" : "") + " -> \(result)"
-        case .named(let name): name
+        case .named(let name), .parameter(let name): name
+        case .keyPath(let root, let value): "KeyPath<\(root), \(value)>"
         case .optional(let wrapped):
             if case .functionType = wrapped { "(\(wrapped))?" } else { "\(wrapped)?" }
         case .unknown: "_"
@@ -290,6 +307,21 @@ struct CommandNode: Equatable, Sendable {
     var environment: [EnvironmentAssignment] = []
     /// `sorted(by: "size")` after a `|`: arguments written as a call.
     var call: [Argument]? = nil
+    /// What the checker found the name to be, from the type of what's piped
+    /// in; nil when it couldn't tell, and the interpreter looks.
+    var resolution: StageResolution? = nil
+    /// For a stage written as a call, the overload the checker chose.
+    var overload: Int? = nil
+}
+
+/// What a pipeline stage's name is, given what flows into it.
+enum StageResolution: Equatable, Sendable {
+    /// A method of the sequence: `ls | sorted`.
+    case sequenceMethod
+    /// A method of each item: `points | describe`.
+    case itemMethod
+    /// Neither: a function or a program, looked up as for the first command.
+    case other
 }
 
 struct EnvironmentAssignment: Equatable, Sendable {
@@ -385,6 +417,9 @@ indirect enum Expr: Equatable, Sendable {
     /// A function, method or initializer, with the overload the checker
     /// chose: the candidate at that position. Only the checker makes these.
     case chosen(Expr, overload: Int)
+    /// `\.size` or `\FileEntry.size`: a key path, its root type given or
+    /// taken from context.
+    case keyPath(root: String?, path: [String])
     /// A call returning Void, as a value: `()` once it's run, so `try?`
     /// can tell success (`()`) from failure (nil). Only the checker makes these.
     case voidValue(Expr)
@@ -494,6 +529,11 @@ struct Parser {
     private let chars: [Character]
     private var pos = 0
     private var scopes: [[String: NameKind]]
+    /// Parsing the prelude: builtins' declarations, which may be generic and
+    /// have no bodies (their bodies are in Swift).
+    private var prelude = false
+    /// Type parameters in scope, innermost last: `T`, or `Element`.
+    private var typeParameters: [Set<String>] = []
     /// An `import` came earlier: the functions it brings aren't known until
     /// it runs, so calling an unknown name is left for then.
     private var sawImport = false
@@ -525,6 +565,13 @@ struct Parser {
 
     static func parse(_ source: String, bound: [String: NameKind]) throws(SyntaxError) -> Program {
         var parser = Parser(source, bound: bound)
+        return try parser.parseProgram(until: nil)
+    }
+
+    /// The prelude: builtins' types and signatures (see Prelude.swift).
+    static func parsePrelude(_ source: String, bound: [String: NameKind]) throws(SyntaxError) -> Program {
+        var parser = Parser(source, bound: bound)
+        parser.prelude = true
         return try parser.parseProgram(until: nil)
     }
 
@@ -617,6 +664,8 @@ struct Parser {
             return try parseImport()
         case "struct":
             return .structDecl(try parseStruct())
+        case "extension" where prelude:
+            return try parseExtension()
         case "fallthrough":
             guard switchDepth > 0 else { throw SyntaxError("'fallthrough' outside a switch") }
             keyword("fallthrough")
@@ -755,10 +804,19 @@ struct Parser {
         mark(.type, from: nameStart)
         skipSpaces()
         var rawType: TypeAnnotation?
+        var conformances: [String] = []
         if consume(":") {
-            rawType = try parseType()
-            guard [.int, .string, .double].contains(rawType!) else {
-                throw SyntaxError("an enum's raw values can be Int, String or Double, not \(rawType!)")
+            // A raw type first, if any, then protocols.
+            skipSpaces()
+            if let word = identifier(), !Parser.protocols.contains(word) {
+                rawType = try parseType()
+                guard [.int, .string, .double].contains(rawType!) else {
+                    throw SyntaxError("an enum's raw values can be Int, String or Double, not \(rawType!)")
+                }
+                skipSpaces()
+                if consume(",") { conformances = try parseConformances() }
+            } else {
+                conformances = try parseConformances()
             }
             skipSpaces()
         }
@@ -815,7 +873,7 @@ struct Parser {
             throw SyntaxError("duplicate case '\(enumCase.name)' in enum \(name)")
         }
         scopes[scopes.count - 1][name] = .type
-        return EnumDecl(name: name, rawType: rawType, cases: cases)
+        return EnumDecl(name: name, rawType: rawType, cases: cases, conformances: conformances)
     }
 
     /// `import Name from "path"`. The functions it brings aren't known until
@@ -847,6 +905,11 @@ struct Parser {
         let name = try parseName(after: "'struct'")
         mark(.type, from: nameStart)
         skipSpaces()
+        var conformances: [String] = []
+        if consume(":") {
+            conformances = try parseConformances()
+            skipSpaces()
+        }
         guard consume("{") else { throw expected("'{'") }
         // Bound first, so members can use the type.
         scopes[scopes.count - 1][name] = .type
@@ -855,7 +918,7 @@ struct Parser {
         scopes.append(members)
         defer { scopes.removeLast() }
 
-        var decl = StructDecl(name: name, properties: [], methods: [], initializers: [])
+        var decl = StructDecl(name: name, properties: [], methods: [], initializers: [], conformances: conformances)
         while true {
             skipSeparators()
             skipSpaces(newlines: true)
@@ -965,6 +1028,27 @@ struct Parser {
             }
             index += 1
         }
+        return names
+    }
+
+    /// The protocols a type can conform to, for now all builtin.
+    static let protocols: Set = ["Equatable", "Hashable", "Comparable", "CustomStringConvertible", "Encodable", "Sequence"]
+
+    /// `Equatable, Hashable` after a type's `:`.
+    private mutating func parseConformances() throws(SyntaxError) -> [String] {
+        var names: [String] = []
+        repeat {
+            skipSpaces()
+            let start = pos
+            guard let name = identifier() else { throw expected("a protocol") }
+            guard Parser.protocols.contains(name) else {
+                throw SyntaxError("unknown protocol '\(name)'; Swish has \(Parser.protocols.sorted().joined(separator: ", "))")
+            }
+            pos += name.count
+            mark(.type, from: start)
+            names.append(name)
+            skipSpaces()
+        } while consume(",")
         return names
     }
 
@@ -1347,14 +1431,46 @@ struct Parser {
         mark(.command, from: nameStart)
         guard name != "_" else { throw SyntaxError("a function needs a name") }
         skipSpaces()
+        var generics: [String: [String]] = [:]
+        if peek() == "<" {
+            guard prelude else { throw SyntaxError("generic functions of your own come later; Swish's builtins are generic for now") }
+            generics = try parseGenericParameters()
+        }
+        typeParameters.append(Set(generics.keys))
+        defer { typeParameters.removeLast() }
         guard peek() == "(" else { throw expected("'(' after '\(name)'") }
         let parameters = try parseParameters(named: true)
         skipSpaces()
         let throwing = parseThrows()
+        var rethrowing = false
+        if prelude && identifier() == "rethrows" {
+            keyword("rethrows")
+            skipSpaces()
+            rethrowing = true
+        }
         var returnType: TypeAnnotation?
         if consume("->") {
             returnType = try parseType()
             skipSpaces()
+        }
+        if prelude && identifier() == "where" {
+            // `where Element: Comparable`
+            keyword("where")
+            repeat {
+                skipSpaces()
+                let parameter = try parseName(after: "'where'")
+                skipSpaces()
+                guard consume(":") else { throw expected("':' in a where clause") }
+                generics[parameter, default: []] += try parseConformances()
+                skipSpaces()
+            } while consume(",")
+        }
+        // In the prelude, a builtin's body is in Swift.
+        if prelude && peek() != "{" {
+            return FunctionDecl(
+                name: name, parameters: parameters, returnType: returnType, body: Program(statements: []),
+                documentation: documentation, isThrowing: throwing, isRethrowing: rethrowing, generics: generics
+            )
         }
         guard consume("{") else { throw expected("'{'") }
         // Bound before the body is parsed, so the function can call itself.
@@ -1364,6 +1480,49 @@ struct Parser {
             name: name, parameters: parameters, returnType: returnType, body: body, documentation: documentation,
             isThrowing: throwing
         )
+    }
+
+    /// `<T, V: Comparable>`: type parameters and their constraints.
+    private mutating func parseGenericParameters() throws(SyntaxError) -> [String: [String]] {
+        pos += 1
+        var generics: [String: [String]] = [:]
+        repeat {
+            skipSpaces()
+            let start = pos
+            let name = try parseName(after: "'<'")
+            mark(.type, from: start)
+            skipSpaces()
+            generics[name] = consume(":") ? try parseConformances() : []
+            skipSpaces()
+        } while consume(",")
+        guard consume(">") else { throw expected("'>'") }
+        skipSpaces()
+        return generics
+    }
+
+    /// `extension Sequence { … }`: methods every sequence has, with its
+    /// items' type as `Element`.
+    private mutating func parseExtension() throws(SyntaxError) -> Statement {
+        keyword("extension")
+        skipSpaces()
+        let name = try parseName(after: "'extension'")
+        guard name == "Sequence" else { throw SyntaxError("only Sequence can be extended, for now") }
+        skipSpaces()
+        guard consume("{") else { throw expected("'{'") }
+        typeParameters.append(["Element"])
+        defer { typeParameters.removeLast() }
+        var methods: [FunctionDecl] = []
+        while true {
+            skipSeparators()
+            skipSpaces(newlines: true)
+            guard peek() != nil else { throw .incomplete("expected '}'") }
+            if consume("}") { break }
+            guard identifier() == "func" else { throw expected("'func'") }
+            var method = try parseFunction(method: true)
+            method.generics["Element", default: []] += []
+            methods.append(method)
+        }
+        return .extensionDecl(name: name, methods: methods)
     }
 
     /// `throws` after a signature's parameters.
@@ -1579,8 +1738,10 @@ struct Parser {
             if parameter.name != "_" && !seen.insert(parameter.name).inserted {
                 throw SyntaxError("duplicate parameter '\(parameter.name)'")
             }
-            if parameter.variadic && index != parameters.count - 1 {
-                throw SyntaxError("a variadic parameter must come last")
+            // As in Swift, what follows a variadic must have a label, so it's
+            // clear where the variadic ends.
+            if parameter.variadic && index + 1 < parameters.count && parameters[index + 1].label == nil {
+                throw SyntaxError("the parameter after a variadic needs a label")
             }
             if parameter.variadic && parameter.defaultValue != nil {
                 throw SyntaxError("a variadic parameter can't have a default value")
@@ -1649,6 +1810,16 @@ struct Parser {
         guard let name = identifier() else { throw expected("a type") }
         mark(.type, from: pos, to: pos + name.count)
         pos += name.count
+        if typeParameters.contains(where: { $0.contains(name) }) { return .parameter(name) }
+        if name == "KeyPath" && consume("<") {
+            let root = try parseType()
+            skipSpaces()
+            guard consume(",") else { throw expected("',' in KeyPath<Root, Value>") }
+            let value = try parseType()
+            skipSpaces()
+            guard consume(">") else { throw expected("'>'") }
+            return .keyPath(root, value)
+        }
         let type: TypeAnnotation
         switch name {
         case "Int": type = .int
@@ -2290,6 +2461,25 @@ struct Parser {
         case "$":
             guard let expr = try parseDollar() else { throw unexpected(c) }
             return expr
+        case "\\" where peek(1) == "." || peek(1).map(Parser.isIdentifierStart) ?? false:
+            // `\.size.bytes`, or with its root, `\FileEntry.size`.
+            let start = pos
+            pos += 1
+            var root: String?
+            if let name = identifier() {
+                root = name
+                pos += name.count
+            }
+            var path: [String] = []
+            while peek() == ".", let next = peek(1), Parser.isIdentifierStart(next) || Parser.isDigit(next) {
+                pos += 1
+                var name = identifier() ?? ""
+                if name.isEmpty { while let d = peek(), Parser.isDigit(d) { name.append(d); pos += 1 } } else { pos += name.count }
+                path.append(name)
+            }
+            guard !path.isEmpty else { throw expected("a member after '\\'") }
+            mark(.variable, from: start)
+            return .keyPath(root: root, path: path)
         default:
             break
         }

@@ -31,6 +31,8 @@ public final class Shell {
     var jobs: [Job] = []
     /// Each enum's associated value types, by case, for checking them.
     var enumPayloadTypes: [ObjectIdentifier: [String: [TypeAnnotation]]] = [:]
+    /// The protocols each enum declares.
+    var enumConformances: [ObjectIdentifier: [String]] = [:]
     /// The return types of the functions being run, innermost last, so a
     /// returned `.case` knows its enum.
     var returnTypes: [TypeAnnotation?] = []
@@ -96,7 +98,8 @@ public final class Shell {
                     report("syntax error: \(error)")
                     lastStatus = 2
                 case .success(let program):
-                    runReportingErrors(program)
+                    // Checked first, as everywhere else: a type error runs nothing.
+                    if let program = typeCheck(program) { runReportingErrors(program) }
                 }
                 pending = ""
             }

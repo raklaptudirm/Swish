@@ -8,7 +8,7 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 @Test func helpListsEveryFunction() throws {
     let listing = try output("help")
     #expect(listing.hasPrefix("name "))
-    let source = { (name: String) in try output(#"help | filter { $0.name == "\#(name)" } | get source"#) }
+    let source = { (name: String) in try output(#"help | filter { $0.name == "\#(name)" } | prefix 1 | get source"#) }
     #expect(try source("ls") == "builtin\n")
     #expect(try source("cd") == "shell\n")
     #expect(try source("sorted") == "Sequence\n")

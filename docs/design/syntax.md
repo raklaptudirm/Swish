@@ -150,6 +150,21 @@ port ?? 8080                        // unwrap with ??, if let, ! or ?.
 func f() { 42 }                     // no `->`: returns nothing
 ```
 
+### Protocols and key paths
+
+A struct or enum says which of the builtin protocols it conforms to, and
+Swift's rules follow: `==` needs `Equatable`, `<` and `sorted()` need
+`Comparable`. An enum without associated values is `Equatable` and
+`Hashable` already.
+
+```swift
+struct Point: Equatable, Hashable { var x: Int; var y: Int }
+enum Level: Int, Comparable { case low, high }
+
+ls | sorted --by size              // a field's name is a key path, checked against FileEntry
+files.sorted(by: \.modified).map(\.name)
+```
+
 ### Throwing
 
 Swift's rules: a function that can fail says `throws`, a call to it needs
@@ -281,7 +296,7 @@ jobs                              // id  state    command
 jobs | filter { $0.state == .stopped } | select id command
 await                             // the most recent job: the ^Z'd vim, say
 await jobs[0]                     // another one
-jobs.last.resume()                // carry a stopped job on in the background
+jobs.last?.resume()               // carry a stopped job on in the background
 ```
 
 `await` replaces `fg`: it gives the job the terminal (and the terminal

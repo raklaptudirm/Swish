@@ -122,7 +122,7 @@ input as `self`: `x | name args` is `x.name(args)`. Lookup goes:
 1. **The sequence's methods.** A stream, list, or an Output's lines has
    Swift's sequence methods: `sorted`, `filter`, `map`, `prefix`,
    `reversed` and `count`, plus `select` and `get` for records. They're
-   also called as methods on values: `xs.sorted(by: "size")`,
+   also called as methods on values: `xs.sorted(by: \.size)`,
    `xs.filter { $0 > 1 }.map { $0 * 2 }`. `prefix` and `filter` stream,
    so `yes | prefix 3` ends.
 2. **Each item's methods,** when a struct in scope declares one by that
@@ -138,7 +138,7 @@ Methods come before functions so a `func sorted` can't silently change
 `ls | sorted`. Without a `|` there's nothing for a method to work on, so
 `sorted` alone is an error that says so.
 
-A stage can also be written as a call: `ls | sorted(by: "type")`,
+A stage can also be written as a call: `ls | sorted(by: \.type)`,
 `points | scaled(by: 2)`. Its arguments bind by Swift's rules, and the
 input fills the `@input` parameter as it does for a command. In both
 syntaxes a trailing closure can fill a labeled parameter, as in Swift:
