@@ -1,8 +1,8 @@
 # Plugins
 
-Status: **implemented** for local packages (`import Tools from "./Tools"`);
-URLs, versions and bridges for packages that don't use SwishKit are
-milestone 9.
+Status: **implemented** for local packages (`import Tools from "./Tools"`).
+Packages that don't use SwishKit, from URLs or the SDK, are planned in
+[swift-interop.md](swift-interop.md).
 
 A plugin is a Swift package that depends on SwishKit and marks what it
 exports. `import` builds it, loads its library into the shell, and its

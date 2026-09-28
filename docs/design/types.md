@@ -165,7 +165,8 @@ are text (`seq 10 | map { Int($0)! } | sorted` says what it means), and
 
 ### Plugins
 
-`SwishType` grows to match the type language (function types, tuples,
+Phase 5 now uses packages without annotations ([swift-interop.md](swift-interop.md)).
+For `@SwishExport` plugins, `SwishType` grows to match the type language (function types, tuples,
 dictionaries, nominal types by name), and the ABI version goes to 2.
 `@SwishObject` also emits each member's type. An exported struct used as a
 result needs its fields' types: a `@SwishStruct` macro reads them from its
@@ -208,8 +209,11 @@ Each phase ends with every test passing and the shell usable.
    interpreter will. `select`'s rule; `uniqued()`.
 4. **Dynamic data.** Strict `Any` with `as?`, `as!` and `is`; the `JSON`
    type; optional chaining.
-5. **Typed plugins.** `SwishType` v2, member types from `@SwishObject`,
-   `@SwishStruct`, ABI version 2.
+5. **Swift packages as they are.** See [swift-interop.md](swift-interop.md):
+   any package or SDK module, typed from its symbol graph, with glue
+   generated and compiled for the declarations used; Swift values Swish
+   has no type for are live objects of their real Swift type. This
+   replaces typed plugins; `@SwishExport` stays for shaping command lines.
 6. **Later:** `func f<T: P>`, `protocol` declarations, `extension` on your
    types and the builtin ones.
 

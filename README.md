@@ -265,7 +265,8 @@ scripts/test.sh     # unit tests, plus pty-driven job-control, editor and backgr
   - [x] Protocols (`Equatable`, `Comparable`, …), key paths, generic builtins declared in a
     Swish prelude, typed pipelines with stages resolved from their input
   - [ ] `Any` casts and `JSON`
-  - [ ] Typed plugins
+  - [ ] Swift packages as they are: typed from their symbol graphs, glue generated for what's used
+    ([design](docs/design/swift-interop.md))
 - [x] **Methods as stages**: after a `|`, a name is a method of what's piped in: the sequence's
   (`sorted`, `filter`, `map`, `prefix`, `reversed`, `count`, `select`, `get`, as in Swift, also
   `xs.sorted(by: \.size)`), then each item's (`points | describe`, `jobs | cancel`); stages
@@ -290,5 +291,5 @@ scripts/test.sh     # unit tests, plus pty-driven job-control, editor and backgr
 - [x] **Plugin ABI**: `@SwishExport` functions with `@Flag`/`@Input`, `SwishEnum` enums,
   `@SwishObject` classes and `Encodable` results; exports found by symbol, no list to keep;
   `import Name from "path"` builds, loads and registers a local package
-- [ ] **`import` from anywhere**: `import Package from "url"`, with SwiftPM resolution, generated
-  bridges for packages that don't use SwishKit, and cached dylibs
+- [ ] **`import` from anywhere**: now part of static types' phase 5: any package or SDK module,
+  from a URL or path, without annotations
