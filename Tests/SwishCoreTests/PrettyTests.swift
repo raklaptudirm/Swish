@@ -17,7 +17,9 @@ private let wide = PrettyPrinter(width: .max)
 }
 
 @Test func whatDoesNotFitBreaksOverLines() {
-    let value = Value.record(Record(["name": .string("swish"), "tags": .list([.string("shell"), .string("swift")])]))
+    let value = Value.dictionary(ValueDictionary([
+        (.string("name"), .string("swish")), (.string("tags"), .list([.string("shell"), .string("swift")])),
+    ]))
     #expect(PrettyPrinter(width: 30).format(value) == """
     [
       "name": "swish",

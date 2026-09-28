@@ -2,12 +2,12 @@
 import Testing
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
-    try shell.capturing { shell.execute(source) }
+    try onLargeStack { try shell.capturing { shell.execute(source) } }
 }
 
 private func status(_ source: String) -> Int32 {
     let shell = Shell()
-    _ = try? shell.capturing { shell.execute(source) }
+    _ = try? onLargeStack { try shell.capturing { shell.execute(source) } }
     return shell.lastStatus
 }
 
@@ -66,13 +66,13 @@ private func status(_ source: String) -> Int32 {
 }
 
 @Test func jobMembers() throws {
-    #expect(try output("let j = async sleep 0.1; j.command; j.pids.count; j.output == nil; await j; j.output.status.code") == "\"sleep 0.1\"\n1\ntrue\n0\n")
+    #expect(try output("let j = async sleep 0.1; j.command; j.pids.count; j.output == nil; await j; j.output!.status.code") == "\"sleep 0.1\"\n1\ntrue\n0\n")
     let names = try output("let j = async sleep 0.1; j | members | get name; await j")
     #expect(names == "id\ncommand\nstate\npids\noutput\nresume\ncancel\n")
 }
 
 @Test func whatAsyncAndAwaitRefuse() {
-    #expect(status("await 5") == 1)
+    #expect(status("await 5") == 2)
     #expect(status("func f() {}; async f") == 1) // Swish functions can't run in the background yet
     #expect(status("async 1 + 2") == 2)
 }

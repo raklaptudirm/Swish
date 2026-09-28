@@ -2,7 +2,7 @@
 import Testing
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
-    try shell.capturing { shell.execute(source) }
+    try onLargeStack { try shell.capturing { shell.execute(source) } }
 }
 
 /// A fresh directory with a few files, by absolute path, since tests run

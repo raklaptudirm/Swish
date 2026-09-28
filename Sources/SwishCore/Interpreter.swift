@@ -133,9 +133,11 @@ final class Function: Callable, @unchecked Sendable {
         if case .swish = body { false } else { true }
     }
 
-    /// A body that is a single expression returns its value, as in Swift.
+    /// A body that is a single expression returns its value, as in Swift:
+    /// a closure's, or a function's that says what it returns. A function
+    /// without `->` returns nothing.
     var implicitReturn: Expr? {
-        guard case .swish(let body) = body, body.statements.count == 1,
+        guard name == nil || returnType != nil, case .swish(let body) = body, body.statements.count == 1,
               case .chain(let chain) = body.statements[0], chain.links.isEmpty,
               case .expression(let expr) = chain.first else { return nil }
         return expr
@@ -432,13 +434,30 @@ extension Shell {
         case .list(let elements):
             return .list(try elements.map(evaluate))
         case .record(let entries):
-            var record = Record()
+            // `["a": 1]`: a dictionary, as in Swift.
+            var dictionary = ValueDictionary()
             for entry in entries {
-                let key = try evaluate(entry.key)
-                guard case .string(let name) = key else {
-                    throw RuntimeError("record keys must be Strings, not \(key.typeName)")
-                }
-                record[name] = try evaluate(entry.value)
+                dictionary[try evaluate(entry.key)] = try evaluate(entry.value)
+            }
+            return .dictionary(dictionary)
+        case .forceUnwrap(let inner):
+            let value = try evaluate(inner)
+            guard value != .nothing else { throw RuntimeError("unwrapped nil with '!'") }
+            return value
+        case .optionalMember(let base, let name):
+            let value = try evaluate(base)
+            return value == .nothing ? .nothing : try member(name, of: value)
+        case .annotated(let inner, let type):
+            let value = try evaluate(inner, expecting: type)
+            guard let conforming = conform(value, to: type) else {
+                throw RuntimeError("expected \(type), not \(value.typeName)")
+            }
+            return conforming
+        case .tuple(let elements):
+            // `(name: "x", 2)`: unlabeled elements are keyed by position.
+            var record = Record()
+            for (index, element) in elements.enumerated() {
+                record[element.label ?? String(index)] = try evaluate(element.value)
             }
             return .record(record)
         case .caseLiteral(let name, _):
@@ -465,6 +484,12 @@ extension Shell {
             ))
         case .call(let callee, let arguments):
             let value: Value
+            // `x?.f()`: nothing when `x` is nil.
+            if case .optionalMember(let baseExpr, let name) = callee {
+                let base = try evaluate(baseExpr)
+                if base == .nothing { return .nothing }
+                return try evaluate(.call(.member(.literal(base), name), arguments))
+            }
             if case .member(let baseExpr, let name) = callee {
                 let base = try evaluate(baseExpr)
                 // `Result.failed(code: 2)`: a case with associated values.
@@ -558,7 +583,11 @@ extension Shell {
             return .output(output)
         case .binary(.coalesce, let lhs, let rhs):
             let value = try evaluate(lhs)
-            return value == .nothing ? try evaluate(rhs) : value
+            if value == .nothing { return try evaluate(rhs) }
+            // `(try? $(git config x)) ?? "vi"` is a String: the checker types
+            // it so, so the Output gives its text.
+            if case .output(let output) = value, Interpreter.isStringExpression(rhs) { return .string(output.text) }
+            return value
         case .binary(let op, let lhs, let rhs) where op == .closedRange || op == .halfOpenRange:
             let range = try intRange(op, try evaluate(lhs), try evaluate(rhs))
             guard range.count <= 10_000_000 else {
@@ -894,6 +923,11 @@ extension Shell {
             if case .record(let record) = value, let field = record[name] { return field }
             return .string(name == "description" ? value.description : value.debugDescription)
         }
+        // `pair.1`: a tuple's element by position, labeled or not.
+        if case .record(let record) = value, record.typeName == nil, record[name] == nil,
+           let position = Int(name), position >= 0, position < record.count {
+            return Array(record)[position].value
+        }
         if case .record(let record) = value, record[name] == nil, let type = structType(of: record),
            let found = try structMember(name, of: record, type) {
             return found
@@ -911,6 +945,10 @@ extension Shell {
         case (.record(let record), "isEmpty"): return .bool(record.count == 0)
         case (.record(let record), "keys"): return .list(record.keys.map(Value.string))
         case (.record(let record), "values"): return .list(record.map(\.value))
+        case (.dictionary(let dictionary), "count"): return .int(dictionary.count)
+        case (.dictionary(let dictionary), "isEmpty"): return .bool(dictionary.count == 0)
+        case (.dictionary(let dictionary), "keys"): return .list(dictionary.keys)
+        case (.dictionary(let dictionary), "values"): return .list(dictionary.values)
         case (.list(let list), "count"): return .int(list.count)
         case (.list(let list), "isEmpty"): return .bool(list.isEmpty)
         case (.list(let list), "first"): return list.first ?? .nothing
@@ -928,6 +966,9 @@ extension Shell {
     }
 
     private func element(of base: Value, at index: Value) throws -> Value {
+        if case .dictionary(let dictionary) = base {
+            return dictionary[index] ?? .nothing
+        }
         if case .record(let record) = base, case .string(let key) = index {
             return record[key] ?? .nothing
         }
@@ -1150,6 +1191,16 @@ final class OutputCollector: @unchecked Sendable {
     }
 }
 
+enum Interpreter {
+    /// A string literal, interpolated or not.
+    static func isStringExpression(_ expr: Expr) -> Bool {
+        switch expr {
+        case .literal(.string), .string: true
+        default: false
+        }
+    }
+}
+
 extension Value {
     var typeName: String {
         switch self {
@@ -1159,7 +1210,8 @@ extension Value {
         case .double: "Double"
         case .string: "String"
         case .list: "List"
-        case .record: "Record"
+        case .record(let record): record.typeName ?? "Tuple"
+        case .dictionary: "Dictionary"
         case .filesize: "FileSize"
         case .date: "Date"
         case .output: "Output"
@@ -1201,9 +1253,26 @@ extension Value {
             return .string(output.text)
         case (.list(.string), .output(let output)):
             return .list(output.lines.map(Value.string))
-        case (.any, _), (.bool, .bool), (.int, .int), (.double, .double), (.string, .string), (.function, .function),
-             (.record, .record), (.filesize, .filesize), (.date, .date):
+        case (.any, _), (.unknown, _), (.bool, .bool), (.int, .int), (.double, .double), (.string, .string),
+             (.function, .function), (.functionType, .function), (.record, .record), (.filesize, .filesize),
+             (.date, .date), (.void, .nothing):
             return self
+        case (.tuple(let elements), .record(let record)):
+            guard record.count == elements.count else { return nil }
+            var converted = Record(typeName: record.typeName)
+            for (index, (element, field)) in zip(elements, record).enumerated() {
+                guard element.label == nil || element.label == field.key || field.key == String(index),
+                      let value = field.value.conforming(to: element.type) else { return nil }
+                converted[element.label ?? field.key] = value
+            }
+            return .record(converted)
+        case (.dictionary(let keyType, let valueType), .dictionary(let dictionary)):
+            var converted = ValueDictionary()
+            for (key, value) in dictionary {
+                guard let k = key.conforming(to: keyType), let v = value.conforming(to: valueType) else { return nil }
+                converted[k] = v
+            }
+            return .dictionary(converted)
         case (.double, .int(let n)):
             return .double(Double(n))
         case (.optional, .nothing):

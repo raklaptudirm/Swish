@@ -2,12 +2,12 @@
 import Testing
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
-    try shell.capturing { shell.execute(source) }
+    try onLargeStack { try shell.capturing { shell.execute(source) } }
 }
 
 private func status(_ source: String) -> Int32 {
     let shell = Shell()
-    _ = try? shell.capturing { shell.execute(source) }
+    _ = try? onLargeStack { try shell.capturing { shell.execute(source) } }
     return shell.lastStatus
 }
 
@@ -16,8 +16,8 @@ private func status(_ source: String) -> Int32 {
 @Test func plainCases() throws {
     let kind = "enum Kind { case file, directory };"
     #expect(try output(kind + "let k = Kind.directory; k; k == .directory; k != .file; Kind.allCases") == "Kind.directory\ntrue\ntrue\n[Kind.file, Kind.directory]\n")
-    #expect(status(kind + "Kind.socket") == 1)
-    #expect(status(kind + "Kind.file == \"file\"") == 1) // compare with a case, not a String
+    #expect(status(kind + "Kind.socket") == 2)
+    #expect(status(kind + "Kind.file == \"file\"") == 2) // compare with a case, not a String
 }
 
 @Test func rawValues() throws {
@@ -25,22 +25,22 @@ private func status(_ source: String) -> Int32 {
     #expect(try output(#"enum Code: String { case ok, bad = "BAD" }; Code.ok.rawValue; Code.bad.rawValue"#) == "\"ok\"\n\"BAD\"\n")
     #expect(status("enum L: Int { case a = 1, b = 1 }") == 1) // raw values are unique
     #expect(status("enum L { case a = 1 }") == 1)             // raw values need a raw type
-    #expect(status("enum K { case a }; K.a.rawValue") == 1)
+    #expect(status("enum K { case a }; K.a.rawValue") == 2)
 }
 
 @Test func associatedValues() throws {
     let result = "enum Result { case ok, failed(code: Int, String) };"
     #expect(try output(result + #"Result.failed(code: 2, "boom")"#) == #"Result.failed(code: 2, "boom")"# + "\n")
-    #expect(status(result + "Result.failed") == 1)                  // needs its values
-    #expect(status(result + #"Result.failed(2, "boom")"#) == 1)    // and their labels
-    #expect(status(result + #"Result.failed(code: "x", "boom")"#) == 1) // and types
-    #expect(status(result + "Result.allCases") == 1)                // not CaseIterable
+    #expect(status(result + "Result.failed") == 2)                  // needs its values
+    #expect(status(result + #"Result.failed(2, "boom")"#) == 2)    // and their labels
+    #expect(status(result + #"Result.failed(code: "x", "boom")"#) == 2) // and types
+    #expect(status(result + "Result.allCases") == 2)                // not CaseIterable
 }
 
 @Test func caseLiteralsTakeTheirTypeFromContext() throws {
     let kind = "enum K { case a, b };"
     #expect(try output(kind + "func f(_ k: K) -> K { k }; f(.b); func g() -> K { .a }; g(); func h(kind: K = .b) -> K { kind }; h") == "K.b\nK.a\nb\n")
-    #expect(status(kind + "let x = .a") == 1) // nothing to take a type from
+    #expect(status(kind + "let x = .a") == 2) // nothing to take a type from
 }
 
 @Test func enumParametersOnTheCommandLine() throws {

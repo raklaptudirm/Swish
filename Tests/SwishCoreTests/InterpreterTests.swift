@@ -4,12 +4,12 @@ import Testing
 
 /// Runs `source` in `shell`, returning what it wrote to standard output.
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
-    try shell.capturing { shell.execute(source) }
+    try onLargeStack { try shell.capturing { shell.execute(source) } }
 }
 
 private func status(_ source: String) -> Int32 {
     let shell = Shell()
-    _ = try? shell.capturing { shell.execute(source) }
+    _ = try? onLargeStack { try shell.capturing { shell.execute(source) } }
     return shell.lastStatus
 }
 
@@ -66,7 +66,7 @@ private func status(_ source: String) -> Int32 {
 }
 
 @Test func conditionsMustBeBool() {
-    #expect(status("if 1 { echo x }") == 1)
+    #expect(status("if 1 { echo x }") == 2)
 }
 
 @Test func variablesAndScopes() throws {
@@ -83,7 +83,7 @@ private func status(_ source: String) -> Int32 {
 
 @Test func runtimeErrorsStopTheInput() throws {
     #expect(try output("let c = 1; c = 2; echo unreachable") == "")
-    #expect(status("let c = 1; c = 2") == 1)
+    #expect(status("let c = 1; c = 2") == 2)
     #expect(status("1 / 0") == 1)
     #expect(status("[1][5]") == 1)
     #expect(status("(undefined)") == 2) // an unknown name in an expression
@@ -146,12 +146,12 @@ private func withVariable(_ name: String, _ value: Any) -> Shell {
 
 @Test func argumentErrors() {
     let f = "func f(_ x: Int, label: String = \"d\") -> Int { x };"
-    #expect(status(f + "f()") == 1)
-    #expect(status(f + "f(\"s\")") == 1)
-    #expect(status(f + "f(1, other: \"x\")") == 1)
-    #expect(status(f + "f(1, 2)") == 1)
-    #expect(status("func f() -> Int { \"no\" }; f()") == 1)
-    #expect(status("func f() -> Int { echo hi }; f()") == 1)
+    #expect(status(f + "f()") == 2)
+    #expect(status(f + "f(\"s\")") == 2)
+    #expect(status(f + "f(1, other: \"x\")") == 2)
+    #expect(status(f + "f(1, 2)") == 2)
+    #expect(status("func f() -> Int { \"no\" }; f()") == 2)
+    #expect(status("func f() -> Int { echo hi }; f()") == 2)
 }
 
 @Test func functionsDontDisplay() throws {
@@ -166,7 +166,7 @@ private func withVariable(_ name: String, _ value: Any) -> Shell {
 
 @Test func closuresCaptureByReference() throws {
     #expect(try output("func counter() -> (Int) -> Int { var c = 0; return { c = c + $0; return c } }; let next = counter(); next(1); next(5)") == "1\n6\n")
-    #expect(try output("var fs = []; for i in 1...3 { fs = fs + [{ i * 10 }] }; fs[0](); fs[2]()") == "10\n30\n")
+    #expect(try output("var fs: [() -> Int] = []; for i in 1...3 { fs = fs + [{ i * 10 }] }; fs[0](); fs[2]()") == "10\n30\n")
 }
 
 // MARK: Command-mode calls
@@ -276,7 +276,7 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
 
 @Test func overloadErrors() {
     #expect(status("func g(_ x: Int, _ y: Int) {}; func g(_ s: String) {}; g 1 2 3") == 1)
-    #expect(status("func g(a: Int) {}; func g(b: Int) {}; g(c: 1)") == 1)
+    #expect(status("func g(a: Int) {}; func g(b: Int) {}; g(c: 1)") == 2)
     #expect(status(#"func g(_ x: Int, y: Int = 0) -> Int { 1 }; func g(_ x: Int, z: Int = 0) -> Int { 2 }; g(1)"#) == 1) // ambiguous
 }
 
@@ -320,10 +320,10 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
 // MARK: Structured data
 
 @Test func recordsAndMembers() throws {
-    let r = #"let r = ["name": "x", "size": 2.mb];"#
-    #expect(try output(r + "r.name; r.size * 2; r.count; r[\"name\"]; r.keys") == "\"x\"\n4.0 MB\n2\n\"x\"\n[\"name\", \"size\"]\n")
-    #expect(try output(r + "r") == #"["name": "x", "size": 2.0 MB]"# + "\n")
-    #expect(status(r + "r.nope") == 1)
+    let r = #"let r = (name: "x", size: 2.mb);"#
+    #expect(try output(r + "r.name; r.size * 2; r.1") == "\"x\"\n4.0 MB\n2.0 MB\n")
+    #expect(try output(r + "r") == #"(name: "x", size: 2.0 MB)"# + "\n")
+    #expect(status(r + "r.nope") == 2)
     #expect(try output(#""a\nb".lines.count; [1, 2].last; "abc".count"#) == "2\n2\n3\n")
 }
 
@@ -333,8 +333,8 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
 }
 
 @Test func listsOfRecordsDisplayAsTables() throws {
-    #expect(try output(#"[["n": 5, "s": "a"], ["n": 100, "t": "b"]]"#) == "  n  s  t\n  5  a\n100     b\n")
-    #expect(try output(#"[["n": 5], ["n": 100]] | filter { $0.n > 10 }"#) == "  n\n100\n")
+    #expect(try output(#"let rows: [Any] = [(n: 5, s: "a"), (n: 100, t: "b")]; rows"#) == "  n  s  t\n  5  a\n100     b\n")
+    #expect(try output(#"[(n: 5), (n: 100)] | filter { $0.n > 10 }"#) == "  n\n100\n")
 }
 
 /// A directory with known files, for `ls`. (Built with commands, since
@@ -373,7 +373,7 @@ private func fixture() throws -> String {
 }
 
 @Test func sortingAndSlicing() throws {
-    let data = #"let xs = [["n": 3, "s": "c"], ["n": 1, "s": "a"], ["n": 2, "s": "b"]];"#
+    let data = #"let xs = [(n: 3, s: "c"), (n: 1, s: "a"), (n: 2, s: "b")];"#
     #expect(try output(data + "xs | sorted --by n | get s") == "a\nb\nc\n")
     #expect(try output(data + "xs | sorted -rb s | prefix 2 | get n") == "3\n2\n")
     #expect(try output(data + "xs | reversed | get n; xs | count") == "2\n1\n3\n3\n")
@@ -404,7 +404,7 @@ private func fixture() throws -> String {
 }
 
 @Test func textConversions() throws {
-    let data = #"let xs = [["a": 1, "b": "x"], ["a": 22, "b": "y"]];"#
+    let data = #"let xs = [(a: 1, b: "x"), (a: 22, b: "y")];"#
     #expect(try output(data + "xs | to text | tr a-z A-Z") == " A  B\n 1  X\n22  Y\n")
     #expect(try output(data + "xs | list") == "a  1\nb  x\n\na  22\nb  y\n")
 }
@@ -412,7 +412,7 @@ private func fixture() throws -> String {
 @Test func recordsReachProgramsAsRows() throws {
     // As displayed, minus the header, and never cut short.
     let long = String(repeating: "x", count: 60)
-    #expect(try output(#"[["a": 1, "b": "x y"], ["a": 22, "b": "\#(long)"]] | cat"#) == " 1  x y\n22  \(long)\n")
+    #expect(try output(#"[(a: 1, b: "x y"), (a: 22, b: "\#(long)")] | cat"#) == " 1  x y\n22  \(long)\n")
     #expect(try output(#"[["a": 1]] | to json | tr -d ' \n'"#) == #"{"a":1}"#)
     #expect(status("func f() {}; [f] | cat") == 1) // functions have no text form
 }
@@ -534,9 +534,9 @@ private func fixture() throws -> String {
     #expect(try output("$(echo x).text + \"y\"") == "\"xy\"\n")
     // `description` is every value's textual form, as in Swift; `.text` is
     // the Output's data.
-    #expect(try output(#"$(echo x).description == $(echo x).text; 1.5.kb.description; ["a": 1].description"#) == "true\n\"1.5 KB\"\n\"{a: 1}\"\n")
-    #expect(try output(#"["description": "mine"].description"#) == "\"mine\"\n")
-    #expect(status("$(echo x) + \"y\"") == 1) // other String operations go through .text
+    #expect(try output(#"$(echo x).description == $(echo x).text; 1.5.kb.description; ["a": 1].description"#) == "true\n\"1.5 KB\"\n\"[\\\"a\\\": 1]\"\n")
+    #expect(try output(#"(description: "mine", n: 1).description"#) == "\"mine\"\n")
+    #expect(status("$(echo x) + \"y\"") == 2) // other String operations go through .text
     #expect(try output("$(printf '3\\n1\\n2') | sorted") == "1\n2\n3\n")
 }
 
@@ -595,7 +595,7 @@ private func fixture() throws -> String {
 
 @Test func bareValuesShowTheirDebugDescription() throws {
     #expect(try output(#"let r = $(echo Hello); r"#) == #"Output(text: "Hello", status: Status(code: 0, signal: nil, succeeded: true))"# + "\n")
-    #expect(try output(#""tab\there"; [1, "x", nil]; ["k": "v"].debugDescription"#) == #""tab\there""# + "\n" + #"[1, "x", nil]"# + "\n" + #""[\"k\": \"v\"]""# + "\n")
+    #expect(try output(#""tab\there"; let xs: [Any] = [1, "x", nil]; xs; ["k": "v"].debugDescription"#) == #""tab\there""# + "\n" + #"[1, "x", nil]"# + "\n" + #""[\"k\": \"v\"]""# + "\n")
     #expect(try output(#"enum E { case a, b(code: Int, String) }; E.b(code: 2, "no"); "\(E.b(code: 2, "no"))""#)
         == #"E.b(code: 2, "no")"# + "\n" + #""b(code: 2, no)""# + "\n")
     // Interpolation, commands and pipelines use the plain text.

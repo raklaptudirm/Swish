@@ -65,7 +65,7 @@ private final class Node {
     #expect(record == Record(["a": .int(1), "b": .int(2)]))
     record["b"] = nil
     #expect(record.keys == ["a"])
-    #expect(Value.record(record).description == "{a: 1}")
+    #expect(Value.record(record).description == "(a: 1)")
 }
 
 @Test func formatsFileSizes() {

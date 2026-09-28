@@ -28,10 +28,10 @@ extension Shell {
     private func with() -> Function {
         builtin(
             "with", "Runs a closure with environment variables set.",
-            [option("env", .record), positional("body", .function)],
+            [option("env", .dictionary(.string, .string)), positional("body", .function)],
             .native { shell, args in
-                guard case .record(let variables) = args["env"] else { return .nothing }
-                let pairs = variables.map { ($0.key, $0.value.description) }
+                guard case .dictionary(let variables) = args["env"] else { return .nothing }
+                let pairs = variables.map { ($0.key.description, $0.value.description) }
                 return try shell.withEnvironment(pairs) { try shell.call(args["body"]!, with: []) }
             }
         )
@@ -560,7 +560,7 @@ extension SwishKit.Value {
         case .string, .output: 5
         case .list: 6
         case .enumValue: 6
-        case .record: 7
+        case .record, .dictionary: 7
         case .object, .function: 8
         @unknown default: 9
         }

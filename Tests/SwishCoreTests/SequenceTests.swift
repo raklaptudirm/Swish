@@ -2,16 +2,16 @@
 import Testing
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
-    try shell.capturing { shell.execute(source) }
+    try onLargeStack { try shell.capturing { shell.execute(source) } }
 }
 
 private func status(_ source: String) -> Int32 {
     let shell = Shell()
-    _ = try? shell.capturing { shell.execute(source) }
+    _ = try? onLargeStack { try shell.capturing { shell.execute(source) } }
     return shell.lastStatus
 }
 
-private let data = #"let xs = [["n": 2, "s": "b"], ["n": 1, "s": "a"], ["n": 3, "s": "c"]]; "#
+private let data = #"let xs = [(n: 2, s: "b"), (n: 1, s: "a"), (n: 3, s: "c")]; "#
 
 @Test func sequenceMethodsAsStages() throws {
     // Command syntax, call syntax and trailing closures, all after a `|`.
@@ -38,7 +38,7 @@ private let data = #"let xs = [["n": 2, "s": "b"], ["n": 1, "s": "a"], ["n": 3, 
     #expect(status(point + "Point(x: 1) | bump") == 1)
     // Objects' methods too, found when the items arrive.
     let shell = Shell()
-    #expect(try output("async sleep 5; jobs | cancel; let j = jobs.first; await j; j.state", in: shell) == "[1] running  sleep 5\nJobState.cancelled\n")
+    #expect(try output("async sleep 5; jobs | cancel; let j = jobs.first; await j!; j!.state", in: shell) == "[1] running  sleep 5\nJobState.cancelled\n")
 }
 
 @Test func methodsComeFirstAfterAPipe() throws {

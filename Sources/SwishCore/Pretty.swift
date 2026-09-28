@@ -34,6 +34,10 @@ struct PrettyPrinter {
         case .list(let items):
             .group(open: [("[", nil)], items: items.map { ([], node(for: $0)) }, close: "]")
         case .record(let record): node(for: record)
+        case .dictionary(let dictionary):
+            dictionary.count == 0 ? .segments([("[:]", nil)]) : .group(open: [("[", nil)], items: dictionary.map { key, value in
+                ([keySegment(key), (": ", nil)], node(for: value))
+            }, close: "]")
         case .output(let output):
             .group(open: [("Output", Style.type), ("(", nil)], items: [
                 (label("text"), .string(output.text)),
@@ -52,15 +56,17 @@ struct PrettyPrinter {
         }
     }
 
+    /// A struct's value, `Point(x: 1)`, or a tuple, `(name: "x", 2)`.
     private func node(for record: Record) -> Node {
-        if let typeName = record.typeName {
-            return .group(open: [(typeName, Style.type), ("(", nil)],
-                          items: record.map { (label($0.key), node(for: $0.value)) }, close: ")")
-        }
-        guard record.count > 0 else { return .segments([("[:]", nil)]) }
-        return .group(open: [("[", nil)], items: record.map { key, value in
-            ([(Value.quoted(key), Style.string), (": ", nil)], node(for: value))
-        }, close: "]")
+        let open: [Segment] = record.typeName.map { [($0, Style.type), ("(", nil)] } ?? [("(", nil)]
+        return .group(open: open, items: record.map { field in
+            (Record.isPosition(field.key) ? [] : label(field.key), node(for: field.value))
+        }, close: ")")
+    }
+
+    private func keySegment(_ key: Value) -> Segment {
+        if case .string(let text) = key { return (Value.quoted(text), Style.string) }
+        return (key.debugDescription, Style.constant)
     }
 
     private func node(for value: EnumValue) -> Node {

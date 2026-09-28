@@ -135,6 +135,21 @@ too: `ls` gives each entry a `FileType` (`.file`, `.directory`, `.symlink`,
 `.other`), so `ls | filter { $0.type == .directory }`, and a job's `state` is
 a `JobState` (`.running`, `.stopped`, `.done`, `.cancelled`).
 
+## Types
+
+Swish is statically typed, as Swift is: each entry at the prompt, and a
+whole script, is checked before any of it runs, and a type error runs
+nothing (see [types.md](types.md)).
+
+```swift
+let xs: [Int] = []                  // a type where the value can't say
+let t = (name: "x", size: 2.mb)     // a tuple: the anonymous record
+let d = ["a": 1, "b": 2]            // a Dictionary, [String: Int]
+let port: Int? = nil
+port ?? 8080                        // unwrap with ??, if let, ! or ?.
+func f() { 42 }                     // no `->`: returns nothing
+```
+
 ## Structs and assignment
 
 A struct's values are records whose type is the struct, so they're values

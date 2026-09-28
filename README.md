@@ -258,6 +258,13 @@ scripts/test.sh     # unit tests, plus pty-driven job-control, editor and backgr
   `do`/`catch`, `env`, `//` comments, scripts with `args` and `main`
 - [x] **Enums and switch**: cases, raw and associated values, `.case` resolved by context,
   `switch` with Swift's patterns, `if case`; `FileType` from `ls`, enum parameters on the command line
+- [ ] **Static types** ([plan](docs/design/types.md)): checked before anything runs, as in Swift
+  - [x] The checker's core: inference, functions and `Void`, structs, enums, optionals with `!`
+    and `?.`, tuples, dictionaries, `let x: T`
+  - [ ] Function values and static overloads
+  - [ ] Generic builtins, key paths, typed pipelines
+  - [ ] `Any` casts and `JSON`
+  - [ ] Typed plugins
 - [x] **Methods as stages**: after a `|`, a name is a method of what's piped in: the sequence's
   (`sorted`, `filter`, `map`, `prefix`, `reversed`, `count`, `select`, `get`, as in Swift, also
   `xs.sorted(by: "size")`), then each item's (`points | describe`, `jobs | cancel`); stages

@@ -44,6 +44,15 @@ enum JSON {
             guard record.count > 0 else { return "{}" }
             let fields = try record.map { inner + quoted($0.key) + ": " + (try text($0.value, indent: inner)) }
             return "{\n" + fields.joined(separator: ",\n") + "\n\(indent)}"
+        case .dictionary(let dictionary):
+            guard dictionary.count > 0 else { return "{}" }
+            let fields = try dictionary.map { key, value in
+                guard case .string(let name) = key else {
+                    throw RuntimeError("to json: an object's keys are Strings, not \(key.typeName)")
+                }
+                return inner + quoted(name) + ": " + (try text(value, indent: inner))
+            }
+            return "{\n" + fields.joined(separator: ",\n") + "\n\(indent)}"
         case .function:
             throw RuntimeError("to json: a function has no JSON form")
         case .object(let object):

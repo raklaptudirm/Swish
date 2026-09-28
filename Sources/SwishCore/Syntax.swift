@@ -5,6 +5,13 @@ import SwishKit
 
 struct Program: Equatable, Sendable {
     var statements: [Statement]
+    /// Each statement's line in the source, 1-based, for error messages.
+    var lines: [Int] = []
+
+    /// Programs are equal by what they say, wherever it was written.
+    static func == (lhs: Program, rhs: Program) -> Bool {
+        lhs.statements == rhs.statements
+    }
 }
 
 enum Statement: Equatable, Sendable {
@@ -201,15 +208,36 @@ struct Parameter: Equatable, Sendable {
     var hasDefault: Bool { defaultValue != nil || externalDefault != nil }
 }
 
-indirect enum TypeAnnotation: Equatable, Sendable, CustomStringConvertible {
+/// A type, as written in a declaration and as the checker works it out.
+indirect enum TypeAnnotation: Hashable, Sendable, CustomStringConvertible {
     case any, bool, int, double, string
-    case record, filesize, date, output
-    /// An enum declared in Swish or by the shell, like `FileType`.
+    /// A record whose fields aren't known: a builtin's row, until the
+    /// builtins declare their types.
+    case record
+    case filesize, date, output
+    /// `()`: what a function without `->` returns.
+    case void
+    /// A struct or enum, declared in Swish or by the shell, like `FileType`.
     case named(String)
     case list(TypeAnnotation)
+    /// `[K: V]`.
+    case dictionary(TypeAnnotation, TypeAnnotation)
+    /// `(name: String, Int)`.
+    case tuple([TupleElement])
+    /// Any function: a closure whose signature isn't known yet.
     case function
+    /// `(Int, String) -> Bool`.
+    case functionType([TypeAnnotation], TypeAnnotation)
     /// `T?`: a T, or nil.
     case optional(TypeAnnotation)
+    /// Not known yet: what a program prints, or a builtin that hasn't
+    /// declared its type. It fits anywhere, and anything fits it.
+    case unknown
+
+    struct TupleElement: Hashable, Sendable {
+        var label: String?
+        var type: TypeAnnotation
+    }
 
     var description: String {
         switch self {
@@ -222,10 +250,18 @@ indirect enum TypeAnnotation: Equatable, Sendable, CustomStringConvertible {
         case .filesize: "FileSize"
         case .date: "Date"
         case .output: "Output"
+        case .void: "Void"
         case .list(let element): "[\(element)]"
+        case .dictionary(let key, let value): "[\(key): \(value)]"
+        case .tuple(let elements):
+            "(" + elements.map { ($0.label.map { "\($0): " } ?? "") + $0.type.description }.joined(separator: ", ") + ")"
         case .function: "function"
+        case .functionType(let parameters, let result):
+            "(" + parameters.map(\.description).joined(separator: ", ") + ") -> \(result)"
         case .named(let name): name
-        case .optional(let wrapped): "\(wrapped)?"
+        case .optional(let wrapped):
+            if case .functionType = wrapped { "(\(wrapped))?" } else { "\(wrapped)?" }
+        case .unknown: "_"
         }
     }
 }
@@ -336,6 +372,14 @@ indirect enum Expr: Equatable, Sendable {
     case unary(UnaryOperator, Expr)
     case binary(BinaryOperator, Expr, Expr)
     case index(Expr, Expr)
+    /// `(name: "x", 2)`: a tuple, labeled or not.
+    case tuple([Argument])
+    /// `let x: T = e`: the value, of the type written.
+    case annotated(Expr, TypeAnnotation)
+    /// `x!`: the optional's value; nil stops with an error.
+    case forceUnwrap(Expr)
+    /// `x?.name`: nil if `x` is, and its member otherwise.
+    case optionalMember(Expr, String)
 }
 
 indirect enum AsyncTarget: Equatable, Sendable {
@@ -443,6 +487,8 @@ struct Parser {
     /// An `import` came earlier: the functions it brings aren't known until
     /// it runs, so calling an unknown name is left for then.
     private var sawImport = false
+    /// Where each line starts, for `line(at:)`.
+    private var lineStarts: [Int] = [0]
     /// Inside (), [] and \( ), newlines don't end an expression.
     private var bracketDepth = 0
     private var loopDepth = 0
@@ -498,12 +544,14 @@ struct Parser {
     private init(_ source: String, bound: [String: NameKind]) {
         chars = Array(source.replacingOccurrences(of: "\r\n", with: "\n"))
         scopes = [bound]
+        for (index, c) in chars.enumerated() where c == "\n" { lineStarts.append(index + 1) }
     }
 
     // MARK: Statements
 
     private mutating func parseProgram(until terminator: Character?) throws(SyntaxError) -> Program {
         var statements: [Statement] = []
+        var lines: [Int] = []
         while true {
             skipSeparators()
             guard let c = peek() else {
@@ -511,12 +559,24 @@ struct Parser {
                 break
             }
             if c == terminator { break }
+            lines.append(line(at: pos))
             statements.append(try parseStatement())
             skipSpaces()
             guard let next = peek(), next != terminator else { continue }
             guard next == ";" || next == "\n" else { throw unexpected(next) }
         }
-        return Program(statements: statements)
+        return Program(statements: statements, lines: lines)
+    }
+
+    /// The 1-based line `index` is on.
+    private func line(at index: Int) -> Int {
+        var low = 0
+        var high = lineStarts.count
+        while low + 1 < high {
+            let middle = (low + high) / 2
+            if lineStarts[middle] <= index { low = middle } else { high = middle }
+        }
+        return low + 1
     }
 
     private mutating func parseStatement() throws(SyntaxError) -> Statement {
@@ -1044,9 +1104,15 @@ struct Parser {
         let name = try parseName(after: "'\(keyword)'")
         mark(.variable, from: nameStart)
         skipSpaces()
+        var type: TypeAnnotation?
+        if consume(":") {
+            type = try parseType()
+            skipSpaces()
+        }
         guard peek() == "=" && peek(1) != "=" else { throw expected("'=' after '\(name)'") }
         pos += 1
-        let value = try parseExpression()
+        var value = try parseExpression()
+        if let type { value = .annotated(value, type) }
         scopes[scopes.count - 1][name] = .variable
         return .declare(name: name, mutable: keyword == "var", value: value)
     }
@@ -1511,23 +1577,46 @@ struct Parser {
         if consume("[") {
             let element = try parseType()
             skipSpaces()
+            if consume(":") {
+                let value = try parseType()
+                skipSpaces()
+                guard consume("]") else { throw expected("']'") }
+                return .dictionary(element, value)
+            }
             guard consume("]") else { throw expected("']'") }
             return .list(element)
         }
         if consume("(") {
+            // A tuple, `(name: String, Int)`; or a function's parameters,
+            // `(Int) -> Bool`; or just parentheses, `(Int)`.
+            var elements: [TypeAnnotation.TupleElement] = []
             skipSpaces()
             if !consume(")") {
                 while true {
-                    _ = try parseType()
+                    skipSpaces()
+                    var label: String?
+                    if let word = identifier(), peek(word.count) == ":" {
+                        label = word
+                        pos += word.count + 1
+                    }
+                    elements.append(.init(label: label, type: try parseType()))
                     skipSpaces()
                     if consume(")") { break }
                     guard consume(",") else { throw expected("',' or ')'") }
                 }
             }
+            let afterParentheses = (pos, spans.count)
             skipSpaces()
-            guard consume("->") else { throw expected("'->' in a function type") }
-            _ = try parseType()
-            return .function
+            if consume("->") {
+                guard elements.allSatisfy({ $0.label == nil }) else {
+                    throw SyntaxError("a function type's parameters have no labels")
+                }
+                return .functionType(elements.map(\.type), try parseType())
+            }
+            rewind(to: afterParentheses)
+            if elements.isEmpty { return .void }
+            if elements.count == 1 && elements[0].label == nil { return elements[0].type }
+            return .tuple(elements)
         }
         guard let name = identifier() else { throw expected("a type") }
         mark(.type, from: pos, to: pos + name.count)
@@ -1543,6 +1632,7 @@ struct Parser {
         case "Date": type = .date
         case "Output": type = .output
         case "Any", "Value": type = .any
+        case "Void": type = .void
         default:
             guard kind(of: name) == .type else { throw SyntaxError("unknown type '\(name)'") }
             type = .named(name)
@@ -2043,6 +2133,23 @@ struct Parser {
                     rewind(to: beforeClosure)
                 }
                 expr = .call(expr, arguments)
+            } else if peek() == "!", peek(1) != "=" {
+                pos += 1
+                expr = .forceUnwrap(expr)
+            } else if peek() == "?", peek(1) == ".", let next = peek(2), Parser.isIdentifierStart(next) {
+                pos += 2
+                let name = identifier()!
+                pos += name.count
+                expr = .optionalMember(expr, name)
+            } else if peek() == ".", let next = peek(1), Parser.isDigit(next) {
+                // `pair.0`: a tuple's element by position.
+                pos += 1
+                var digits = ""
+                while let c = peek(), Parser.isDigit(c) {
+                    digits.append(c)
+                    pos += 1
+                }
+                expr = .member(expr, digits)
             } else if peek() == ".", let next = peek(1), Parser.isIdentifierStart(next) {
                 pos += 1
                 let name = identifier()!
@@ -2119,14 +2226,27 @@ struct Parser {
         case "'":
             return .literal(.string(try parseRawString()))
         case "(":
+            // `(x)` groups; `(a, b)` and `(name: x)` are tuples; `()` is Void.
             pos += 1
             bracketDepth += 1
             defer { bracketDepth -= 1 }
             skipSpaces()
-            let expr = try parseExpression()
-            skipSpaces()
-            guard consume(")") else { throw expected("')'") }
-            return expr
+            if consume(")") { return .tuple([]) }
+            var elements: [Argument] = []
+            while true {
+                skipSpaces()
+                var label: String?
+                if let word = identifier(), peek(word.count) == ":", peek(word.count + 1) != ":" {
+                    label = word
+                    pos += word.count + 1
+                }
+                elements.append(Argument(label: label, value: try parseExpression()))
+                skipSpaces()
+                if consume(")") { break }
+                guard consume(",") else { throw expected("',' or ')'") }
+            }
+            if elements.count == 1 && elements[0].label == nil { return elements[0].value }
+            return .tuple(elements)
         case "[":
             return try parseList()
         case "{":

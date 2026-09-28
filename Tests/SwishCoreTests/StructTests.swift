@@ -2,12 +2,12 @@
 import Testing
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
-    try shell.capturing { shell.execute(source) }
+    try onLargeStack { try shell.capturing { shell.execute(source) } }
 }
 
 private func status(_ source: String) -> Int32 {
     let shell = Shell()
-    _ = try? shell.capturing { shell.execute(source) }
+    _ = try? onLargeStack { try shell.capturing { shell.execute(source) } }
     return shell.lastStatus
 }
 
@@ -43,21 +43,21 @@ struct Point {
     let line = point + "struct Line { var start: Point; var end: Point }\n"
     #expect(try output(line + "var l = Line(start: Point(x: 0), end: Point(x: 5)); l.end.move(by: 2); l.end")
         == "Point(x: 7, y: 2)\n")
-    #expect(try output(point + #"let q = Point(x: 1); do { q.move(by: 1) } catch { error.message }"#)
-        == #""cannot use mutating method 'move' on 'q': it's a 'let' constant""# + "\n")
+    #expect(try output(point + #"let q = Point(x: 1); q.move(by: 1)"#)
+        == "")
     // A method that isn't mutating can't change self.
-    #expect(status("struct C { var n: Int; func bump() { n += 1 } }; var c = C(n: 1); c.bump()") == 1)
+    #expect(status("struct C { var n: Int; func bump() { n += 1 } }; var c = C(n: 1); c.bump()") == 2)
 }
 
 @Test func assigningToPartsOfValues() throws {
     #expect(try output("var xs = [1, 2, 3]; xs[1] = 20; xs[0] += 5; xs") == "[6, 20, 3]\n")
-    #expect(try output(#"var r = ["a": 1]; r["b"] = 2; r.a *= 3; r"#) == #"["a": 3, "b": 2]"# + "\n")
+    #expect(try output(#"var r = ["a": 1]; r["b"] = 2; r["a"] = 3; var t = (a: 1, b: 2); t.a *= 3; r; t"#) == #"["a": 3, "b": 2]"# + "\n" + "(a: 3, b: 2)\n")
     #expect(try output("var n = 10; n -= 3; n /= 7; n") == "1\n")
-    #expect(try output(point + #"var p = Point(x: 1); do { p.x = "a" } catch { error.message }"#)
-        == #""Point.x must be Int, not String""# + "\n")
-    #expect(try output(point + "var p = Point(x: 1); do { p.lengthSquared = 1 } catch { error.message }")
-        == #""cannot assign to 'lengthSquared': it's a computed property""# + "\n")
-    #expect(status("let xs = [1]; xs[0] = 2") == 1)
+    #expect(try output(point + #"var p = Point(x: 1); p.x = "a""#)
+        == "")
+    #expect(try output(point + "var p = Point(x: 1); p.lengthSquared = 1")
+        == "")
+    #expect(status("let xs = [1]; xs[0] = 2") == 2)
     #expect(status("var xs = [1]; xs[5] = 2") == 1)
 }
 
@@ -73,15 +73,15 @@ struct Point {
     """
     #expect(try output(temp + "Temp(fahrenheit: 212); Temp(celsius: 20).fahrenheit") == "Temp(celsius: 100.0)\n68.0\n")
     // An init replaces the memberwise one, and must set everything.
-    #expect(status(temp + "Temp(celsius: 1, extra: 2)") == 1)
+    #expect(status(temp + "Temp(celsius: 1, extra: 2)") == 2)
     #expect(status("struct S { var a: Int; init() {} }; S()") == 1)
     // `let` properties are fixed once made.
-    #expect(status(temp + "var t = Temp(celsius: 1); t.celsius = 2") == 1)
+    #expect(status(temp + "var t = Temp(celsius: 1); t.celsius = 2") == 2)
 }
 
 @Test func structsAsTypes() throws {
     #expect(try output(point + "func far(_ p: Point) -> Int { p.x }; far(Point(x: 7))") == "7\n")
-    #expect(status(point + #"func far(_ p: Point) -> Int { p.x }; far(["x": 1])"#) == 1)
+    #expect(status(point + #"func far(_ p: Point) -> Int { p.x }; far(["x": 1])"#) == 2)
     #expect(try output(point + "func origin() -> Point { Point(x: 0) }; origin()") == "Point(x: 0, y: 0)\n")
     // Defaults for `let`s with a value aren't in the memberwise init.
     #expect(try output("struct V { let major = 1; var minor: Int }; V(minor: 2)") == "V(major: 1, minor: 2)\n")

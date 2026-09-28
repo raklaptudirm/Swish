@@ -1,6 +1,7 @@
 # Static types
 
-Status: **planned**. This is the plan for making Swish statically typed,
+Status: **phase 1 implemented** (see [Phases](#phases)). This is the plan
+for making Swish statically typed,
 as Swift is: every expression, function and pipeline stage has a type
 known before anything runs, and type errors stop a statement (or a whole
 script) before it starts.
@@ -176,12 +177,15 @@ encoded.
 
 Each phase ends with every test passing and the shell usable.
 
-1. **Types and the checker's core.** The type representation; source
-   positions in the AST; checking literals, variables, operators,
-   functions (with `Void` returns), structs, enums, optionals, arrays;
-   errors before running. New values: tuples and dictionaries. Programs,
-   pipelines and closures are typed loosely (as `Any`-tolerant) until
-   phase 3, so nothing that works today stops working.
+1. **Types and the checker's core.** *Done.* The type representation;
+   each statement's line, for errors (columns later); checking literals,
+   variables, operators, functions (with `Void` returns and "must return on
+   every path"), structs, enums, optionals (with `!` and `?.`, brought
+   forward from phase 4), arrays; errors before running. New values:
+   tuples and dictionaries, and `let x: T = …`. Closures already take
+   their parameter types from `filter`, `map` and the like. Programs,
+   pipelines and builtins' results are `unknown` until phase 3, which fits
+   anywhere, so nothing is refused for lack of a type.
 2. **Functions as values.** Function types, closures inferring from
    context, `$0`, static overload resolution, `throws`/`rethrows`.
 3. **Generic builtins and typed pipelines.** Builtin protocols and
@@ -204,6 +208,17 @@ Each phase ends with every test passing and the shell usable.
 - `sorted(by: "size")` becomes `sorted(by: \.size)`; `--numeric` and
   `--unique` go.
 - Member access on `Any` needs a cast; on parsed JSON it gives `JSON?`.
+
+## Decided while building phase 1
+
+- **Type errors aren't catchable.** They're found before anything runs,
+  so `do`/`catch` can't see them, as in Swift. Their status is 2, like a
+  syntax error's.
+- **`(try? $(cmd)) ?? "default"` is a String:** the Output's text or the
+  default, since that's what it's always meant.
+- **Records vs. tuples at run time:** a tuple is a record without a type
+  name (unlabeled elements keyed by position), so tables, `select` and
+  JSON treat tuples and structs alike.
 
 ## Open questions
 

@@ -11,8 +11,11 @@ public enum Value: Sendable {
     case double(Double)
     case string(String)
     case list([Value])
-    /// Named fields in order, like a row of a table.
+    /// Named fields in order, like a row of a table: a struct's value (with
+    /// its type's name), or a tuple (without).
     case record(Record)
+    /// `["a": 1]`: keys to values, kept in the order they were added.
+    case dictionary(ValueDictionary)
     /// A size in bytes, shown as `1.2 MB`.
     case filesize(Int64)
     case date(Date)
@@ -147,16 +150,72 @@ public struct Record: Sendable, Hashable, Sequence {
     }
 }
 
-extension Record: CustomDebugStringConvertible {
-    /// As its type would print, `Status(code: 0, …)`, or as a literal,
-    /// `["name": "x"]`, for a record without one.
+extension Record: CustomStringConvertible, CustomDebugStringConvertible {
+    /// As its type would print, `Status(code: 0, …)`, or as a tuple,
+    /// `(name: "x", 2)`, for a record without one; a tuple's unlabeled
+    /// elements are keyed by position.
     public var debugDescription: String {
-        if let typeName {
-            return "\(typeName)(" + map { "\($0.key): \($0.value.debugDescription)" }.joined(separator: ", ") + ")"
-        }
-        guard count > 0 else { return "[:]" }
-        return "[" + map { "\(Value.quoted($0.key)): \($0.value.debugDescription)" }.joined(separator: ", ") + "]"
+        (typeName ?? "") + "(" + map { field in
+            (Record.isPosition(field.key) ? "" : "\(field.key): ") + field.value.debugDescription
+        }.joined(separator: ", ") + ")"
     }
+
+    /// What interpolation shows: like `debugDescription`, with text unquoted.
+    public var description: String {
+        (typeName ?? "") + "(" + map { field in
+            (Record.isPosition(field.key) ? "" : "\(field.key): ") + field.value.description
+        }.joined(separator: ", ") + ")"
+    }
+
+    /// `0`, `1`, …: the key of a tuple element without a label.
+    public static func isPosition(_ key: String) -> Bool {
+        !key.isEmpty && key.allSatisfy(\.isNumber)
+    }
+}
+
+/// A dictionary's entries, in the order their keys were first added.
+public struct ValueDictionary: Sendable, Hashable, Sequence, CustomStringConvertible, CustomDebugStringConvertible {
+    public private(set) var keys: [Value] = []
+    private var storage: [Value: Value] = [:]
+
+    public init() {}
+
+    public init(_ entries: [(Value, Value)]) {
+        for (key, value) in entries { self[key] = value }
+    }
+
+    public subscript(key: Value) -> Value? {
+        get { storage[key] }
+        set {
+            if let newValue {
+                if storage.updateValue(newValue, forKey: key) == nil { keys.append(key) }
+            } else if storage.removeValue(forKey: key) != nil {
+                keys.removeAll { $0 == key }
+            }
+        }
+    }
+
+    public var count: Int { keys.count }
+    public var values: [Value] { keys.map { storage[$0]! } }
+
+    public func makeIterator() -> some IteratorProtocol<(key: Value, value: Value)> {
+        keys.lazy.map { (key: $0, value: storage[$0]!) }.makeIterator()
+    }
+
+    public static func == (lhs: ValueDictionary, rhs: ValueDictionary) -> Bool {
+        lhs.storage == rhs.storage
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(storage)
+    }
+
+    public var debugDescription: String {
+        guard count > 0 else { return "[:]" }
+        return "[" + map { "\($0.key.debugDescription): \($0.value.debugDescription)" }.joined(separator: ", ") + "]"
+    }
+
+    public var description: String { debugDescription }
 }
 
 /// Encodes as a `.filesize` value through `ValueEncoder`, and as a plain
@@ -189,6 +248,7 @@ extension Value: Hashable {
         case (.string(let a), .string(let b)): a == b
         case (.list(let a), .list(let b)): a == b
         case (.record(let a), .record(let b)): a == b
+        case (.dictionary(let a), .dictionary(let b)): a == b
         case (.filesize(let a), .filesize(let b)): a == b
         case (.date(let a), .date(let b)): a == b
         case (.output(let a), .output(let b)): a == b
@@ -208,6 +268,7 @@ extension Value: Hashable {
         case .string(let value): hasher.combine(value)
         case .list(let values): hasher.combine(values)
         case .record(let record): hasher.combine(record)
+        case .dictionary(let dictionary): hasher.combine(dictionary)
         case .filesize(let bytes): hasher.combine(bytes)
         case .date(let date): hasher.combine(date)
         case .output(let output): hasher.combine(output)
@@ -227,7 +288,8 @@ extension Value: CustomStringConvertible {
         case .double(let value): String(value)
         case .string(let value): value
         case .list(let values): "[" + values.map(\.description).joined(separator: ", ") + "]"
-        case .record(let record): "{" + record.map { "\($0.key): \($0.value)" }.joined(separator: ", ") + "}"
+        case .record(let record): record.description
+        case .dictionary(let dictionary): dictionary.description
         case .filesize(let bytes): Value.formatFileSize(bytes)
         case .date(let date): Value.dateFormatter.string(from: date)
         case .output(let output): output.text
@@ -270,6 +332,7 @@ extension Value: CustomDebugStringConvertible {
         case .string(let value): Value.quoted(value)
         case .list(let values): "[" + values.map(\.debugDescription).joined(separator: ", ") + "]"
         case .record(let record): record.debugDescription
+        case .dictionary(let dictionary): dictionary.debugDescription
         case .output(let output): output.debugDescription
         case .enumValue(let value): value.debugDescription
         case .object(let object): object.debugDescription

@@ -29,3 +29,21 @@ func errorMessage(_ code: Int32) -> String {
 func env(_ name: String) -> String? {
     getenv(name).map { String(cString: $0) }
 }
+
+/// Runs `body` on a thread with a large stack and waits for it. Swish code
+/// recurses in the interpreter, so the shell runs on such a thread (see
+/// main.swift); tests use this to do the same from their small-stack threads.
+func onLargeStack<T>(_ body: @escaping () throws -> T) throws -> T {
+    // The caller waits for the thread, so nothing runs at the same time.
+    nonisolated(unsafe) var result: Result<T, any Error>?
+    nonisolated(unsafe) let body = body
+    let done = DispatchSemaphore(value: 0)
+    let thread = Thread {
+        result = Result { try body() }
+        done.signal()
+    }
+    thread.stackSize = 256 << 20
+    thread.start()
+    done.wait()
+    return try result!.get()
+}

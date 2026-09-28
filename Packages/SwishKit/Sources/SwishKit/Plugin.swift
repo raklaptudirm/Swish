@@ -259,6 +259,7 @@ extension Value {
         case .string: "String"
         case .list: "List"
         case .record(let record): record.typeName ?? "Record"
+        case .dictionary: "Dictionary"
         case .filesize: "FileSize"
         case .date: "Date"
         case .output: "Output"

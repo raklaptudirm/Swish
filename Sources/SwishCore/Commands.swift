@@ -285,7 +285,7 @@ extension Shell {
 
     func converted(_ text: String, to type: TypeAnnotation, for what: String, of function: String) throws -> Value {
         let value: Value? = switch type {
-        case .any, .string: .string(text)
+        case .any, .unknown, .string: .string(text)
         case .int: Int(text).map(Value.int)
         case .double: Double(text).map(Value.double)
         case .bool: ["true": true, "false": false][text].map(Value.bool)
@@ -294,7 +294,7 @@ extension Shell {
         case .output: .output(CommandOutput(text: text, code: 0))
         case .named(let name): enumType(named: name).flatMap { enumCase(fromText: text, $0) }
         case .date: (try? Date(text, strategy: .iso8601)).map(Value.date)
-        case .record, .list, .function: nil
+        case .record, .list, .function, .functionType, .void, .dictionary, .tuple: nil
         }
         guard let value else {
             throw RuntimeError("\(function): \(what) must be \(type), got '\(text)'")

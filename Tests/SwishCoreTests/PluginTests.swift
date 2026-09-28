@@ -2,7 +2,7 @@
 import Testing
 
 private func output(_ source: String, in shell: Shell) throws -> String {
-    try shell.capturing { shell.execute(source) }
+    try onLargeStack { try shell.capturing { shell.execute(source) } }
 }
 
 /// The example plugin, `Examples/Tools`, from this file's path.
@@ -31,7 +31,9 @@ private let tools = "/" + #filePath.split(separator: "/").dropLast(3).joined(sep
 
     // Errors: thrown by the plugin, and arguments of the wrong type.
     #expect(try output(#"do { fail("nope") } catch { error.message }"#, in: shell) == #""fail: nope""# + "\n")
-    #expect(try output(#"do { greet(5) } catch { error.message }"#, in: shell).contains("greet"))
+    // A wrong argument is found before anything runs, like any type error.
+    _ = try output("greet(5)", in: shell)
+    #expect(shell.lastStatus == 2)
 
     // Help from the signature and doc comment; a default only Swift knows.
     let help = try output("greet --help; counter --help", in: shell)

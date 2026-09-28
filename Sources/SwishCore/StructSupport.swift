@@ -292,6 +292,12 @@ extension Shell {
             }
             items[position] = try updated(items[position], rest, type: nil, change)
             return .list(items)
+        case (.index(let indexExpr), .dictionary(var dictionary)):
+            let key = try evaluate(indexExpr)
+            let current = dictionary[key] ?? .nothing
+            let value = try rest.isEmpty ? change(current, type) : updated(current, rest, type: nil, change)
+            dictionary[key] = value == .nothing ? nil : value
+            return .dictionary(dictionary)
         case (.index(let indexExpr), .record(var record)):
             let key = try evaluate(indexExpr)
             guard case .string(let name) = key else { throw RuntimeError("a record is indexed by String, not \(key.typeName)") }
