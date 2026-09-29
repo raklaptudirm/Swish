@@ -1,23 +1,63 @@
-# Using Swift packages as they are
+# Swish types are Swift types
 
 Status: **planned**, as phase 5 of [static types](types.md). It replaces
 "typed plugins" there and the old milestone 9 (URLs, versions, bridges).
 
-Any Swift package, and the SDK's modules, used from Swish with nothing
-written for Swish: no `@SwishExport`, no wrapper package.
+Decided:
+
+- **One type system: Swift's.** The checker has no types of its own.
+  `Int`, `String`, `[T]`, `Date`, `URL` are the standard library's and
+  Foundation's, with every member Swift gives them; a package's types are
+  its own; Swish's own (`FileSize`, `Output`, `FileEntry`, `Job`) are
+  declared in Swift, in SwishKit, and read the same way.
+- **Representation: generated Swift twins.** The interpreter keeps its own
+  representation of values; at the boundary with Swift, values convert,
+  and a struct or enum declared in Swish gets a generated Swift twin, so it
+  can go where Swift wants a real type (`decode(Config.self, …)`,
+  `Set<Point>`).
+
+Any Swift package or SDK module is used from Swish with nothing written for
+Swish: no `@SwishExport`, no wrapper package.
 
 ```swift
+"a,b,c".split(separator: ",")              // Swift's own String and Sequence methods
+Date().addingTimeInterval(3600)
+
 import Foundation
 let url = URL(string: "https://swift.org")!
-url.host                                   // "swift.org"
-url.appendingPathComponent("docs")          // a URL: a live Swift value
+url.appendingPathComponent("docs").host    // "swift.org"
+
+struct Config: Decodable { var name: String; var port: Int }
+let config = try JSONDecoder().decode(Config.self, from: Data($(cat config.json).text.utf8))
 
 import Yams from "https://github.com/jpsim/Yams"
-let config = try Yams.load(yaml: $(cat config.yml).text)
+let doc = try Yams.load(yaml: $(cat config.yml).text)
 ```
 
 `@SwishExport` stays: it's the way to shape a command line (`@Flag`,
 `@Input`, doc comments as `--help`) for a package written for Swish.
+
+## One type system
+
+- **The standard library and Foundation are read, not written down.** The
+  checker's hand-written members (`count`, `lines`, `first` and the like)
+  and most of the prelude give way to Swift's own declarations, read from
+  their symbol graphs. So `filter`, `map`, `sorted(by:)`, `contains`,
+  `split`, `uppercased()` and the rest are Swift's, with Swift's
+  signatures and overloads.
+- **Swish's own types are Swift declarations,** in SwishKit: `FileSize`,
+  `Output`, `Status`, `FileEntry`, `ProcessEntry`, `Job`, `Member`,
+  `Help`. What only a shell needs (`sorted(by:)` with a key path, `get`,
+  `select`, `uniqued()`, `prefix` with a default) are Swift extensions
+  there too. The prelude keeps only what isn't Swift: which builtins are
+  commands, and their command lines (`@flag`, `@input`).
+- **Types declared in Swish** are ordinary types to the checker: a Swish
+  `struct Config: Decodable` is a `Config` that is `Decodable`, and can be
+  passed where Swift wants one.
+- **What Swish adds to Swift's rules:** commands and pipelines (their
+  stages typed as now), `$(…)`, an `Output` being its text where a String
+  is wanted, and literal command-line words converted to their
+  parameters' types.
 
 ## Why glue is still compiled
 
@@ -26,49 +66,68 @@ function or method by name. So calling Swift from an interpreter takes
 compiled glue: a thunk per function that converts arguments, calls it and
 converts the result back. Swish writes and compiles that glue itself.
 
+Compiling Swish itself to Swift (so every value would be a native Swift
+value) would remove the conversions, but costs a compile per entry at the
+prompt and a second execution engine; the twins below get the same result
+for types at the boundary without it. It remains possible later, for
+scripts, reusing the twins.
+
 ## How
 
 1. **Resolve and build.** `import Name from "url"` (or a path, or an SDK
    module with no `from`) resolves the package with SwiftPM, pinned in a
    lock file beside the script or in the shell's state directory, and
-   builds it.
+   builds it. The standard library and Foundation are always there.
 2. **Read its declarations.** `swift package dump-symbol-graph` (for
-   packages) or `swift-symbolgraph-extract` (for SDK modules) gives every
-   public declaration with its full Swift signature: parameters, labels,
-   generics and constraints, `throws`, `async`, doc comments. The checker
-   loads these as it loads the prelude, so calls are checked against
-   Swift's real signatures, and `help` and completion know them.
-   Both tools come with the Command Line Tools. A graph can be large
-   (Foundation's is 44 MB of JSON), so it's read once into a compact index,
-   cached beside the built package, and looked up by name as names are used.
+   packages) or `swift-symbolgraph-extract` (for SDK modules and the
+   standard library) gives every public declaration with its full Swift
+   signature: parameters, labels, generics and constraints, `throws`,
+   `async`, doc comments. The checker loads these as it loads the
+   prelude, so calls are checked against Swift's real signatures, and
+   `help` and completion know them. Both tools come with the Command Line
+   Tools. A graph can be large (Foundation's is 44 MB of JSON), so it's
+   read once into a compact index, cached, and looked up by name as names
+   are used.
 3. **Generate glue for what's used.** After checking, the shell knows each
    declaration the program touches, with concrete generic arguments
    (`JSONDecoder().decode(Config.self, from:)`). It writes a Swift file
-   with a thunk for each, like the ones `@SwishExport` generates, and
-   compiles it into a dylib against the package.
-4. **Cache it.** Dylibs are cached by the symbols they bridge, the
-   package's version and the compiler's. The first use of an API pays one
+   with a thunk for each, and a twin for each Swish type that crosses, and
+   compiles it into a dylib against the packages.
+4. **Cache it.** Dylibs are cached by the symbols and twins they hold, the
+   packages' versions and the compiler's. The first use of an API pays one
    compile (a second or two, with a progress hint as for "Building…");
    after that it loads at once, in any shell.
 
 ## Values across the boundary
 
-- **Values Swish has convert:** numbers, `String`, `Bool`, `Date`,
-  arrays, dictionaries, optionals, tuples, and enums without associated
-  values (as Swish enums of the same name and cases).
-- **Everything else is a live object:** a boxed Swift value with its real
-  Swift type (`URL`, `Data`, `Yams.Node`). Its properties and methods are
-  bridged on demand like any other declaration, and it passes back into
-  Swift unchanged. An `Encodable` one becomes a record with `to json` or
-  `select`; a value type is copied as Swift copies it.
-- **Swish values into Swift generics:** a Swish struct crosses as a
-  record, so it can be `Codable` data; it can't conform to arbitrary Swift
-  protocols.
+- **Values with a Swish representation convert:** numbers, `String`,
+  `Bool`, `Date`, arrays, dictionaries, optionals, tuples, and the values of
+  Swish-declared structs and enums (through their twins).
+- **Swift twins:** for a struct or enum declared in Swish that crosses
+  into Swift, the glue declares a Swift type with the same name, fields
+  (or cases), types and conformances (`Equatable`, `Hashable`, `Codable`,
+  `Comparable` for enums), and converts values to and from it at the call.
+  Methods stay in Swish; a Swift API that calls one (a `Comparable` twin's
+  `<`) is out of scope at first.
+- **Everything else is held as it is:** a Swift value the interpreter has
+  no representation for (`URL`, `Data`, `Yams.Node`) is kept as the Swift
+  value, of its Swift type, and passes back into Swift unchanged. To the
+  checker and to you it's just a `URL`.
 - **Closures:** a Swish closure passed where Swift wants one is wrapped by
   the thunk, so `swiftArray.map { … }` works.
+
+## Steps
+
+1. **The standard library's members on Swish values**, from its symbol
+   graph and generated glue, replacing the hand-written member tables.
+2. **Swish's own types in SwishKit**, read the same way; the prelude
+   shrinks to command lines.
+3. **Packages and SDK modules** imported by URL, path or name.
+4. **Twins** for Swish types that cross into Swift.
 
 ## Not at first
 
 `inout` parameters, operators, protocols with associated types as values
-(`some Collection`), subclassing Swift classes from Swish, and async
-beyond waiting for it to finish.
+(`some Collection`), Swift calling back into a Swish type's methods,
+subclassing Swift classes from Swish, and async beyond waiting for it to
+finish.
