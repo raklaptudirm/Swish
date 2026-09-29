@@ -236,6 +236,12 @@ final class TypeChecker {
             statement = .returnStatement(value)
         case .fallthroughStatement, .breakStatement, .continueStatement, .extensionDecl:
             break
+        case .deferBlock(var body):
+            // Nothing thrown can leave a `defer`, as in Swift.
+            errorContexts.append(ErrorContext(handled: false, function: "defer"))
+            try checkBlock(&body, newScope: true)
+            errorContexts.removeLast()
+            statement = .deferBlock(body)
         case .chain(var chain):
             try checkChain(&chain, condition: false)
             statement = .chain(chain)
@@ -890,6 +896,9 @@ final class TypeChecker {
     /// A plain `try` covers something that throws: it has to be handled.
     private func checkHandled(_ what: String) throws {
         guard let context = errorContexts.last, !context.handled else { return }
+        if context.function == "defer" {
+            throw TypeError("\(what) can throw, but nothing thrown can leave a defer: use do/catch, try? or try!")
+        }
         let place = context.function.map { "\($0) isn't 'throws'" } ?? "nothing catches it"
         throw TypeError("\(what) can throw, but \(place): mark it 'throws', or use do/catch, try? or try!")
     }
@@ -1152,6 +1161,8 @@ final class TypeChecker {
             case .check:
                 return .bool
             }
+        case .filePath:
+            return .string
         case .keyPath(let rootName, let path):
             return try keyPathType(root: rootName, path, expected: expected)
         }

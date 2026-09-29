@@ -42,6 +42,8 @@ public final class Shell {
     /// The running script's directory, which relative `import` paths start
     /// from; nil at the prompt, where they start from the working directory.
     var scriptDirectory: String?
+    /// The running script's path, for `#filePath`.
+    var scriptPath: String?
     /// Imported plugins: each module's name, and the package it came from.
     var plugins: [String: String] = [:]
     /// Methods every sequence has, like `sorted` and `filter`.
@@ -118,12 +120,17 @@ public final class Shell {
             return 127
         }
         scopes[0].bindings["args"] = Binding(value: .list(arguments.map(Value.string)), mutable: false)
+        scriptPath = URL(fileURLWithPath: path).standardizedFileURL.path
         scriptDirectory = URL(fileURLWithPath: path).standardizedFileURL.deletingLastPathComponent().path
         // Parsed whole, so doc comments reach their functions and a syntax
         // error anywhere stops the script before any of it runs; then run a
         // statement at a time, so a runtime error only abandons its own.
         let program: Program
-        switch parse(String(decoding: data, as: UTF8.self)) {
+        var source = String(decoding: data, as: UTF8.self)
+        // `#!/usr/bin/env swish`, so it runs as a program; the line stays,
+        // blank, so line numbers do too.
+        if source.hasPrefix("#!") { source = String(source.drop { $0 != "\n" }) }
+        switch parse(source) {
         case .failure(let error):
             report("\(path): syntax error: \(error)")
             return 2
@@ -133,7 +140,15 @@ public final class Shell {
         // Checked whole too: a type error anywhere runs none of it.
         guard let program = typeCheck(program, file: path) else { return lastStatus }
         var status: Int32 = 0
+        // A top-level `defer` runs when the script ends: after `main`, or
+        // when a `try!` stops it.
+        var deferred: [Program] = []
+        defer { runDeferred(deferred) }
         for statement in program.statements {
+            if case .deferBlock(let body) = statement {
+                deferred.append(body)
+                continue
+            }
             runReportingErrors(Program(statements: [statement]))
             status = lastStatus
             if scriptStopped { return status }

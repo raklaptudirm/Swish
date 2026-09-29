@@ -1,0 +1,18 @@
+#!/usr/bin/env swish
+// Regenerates Sources/SwishCore/Bridge/StandardLibrary.swift from the
+// standard library's symbol graph, for the toolchain in use. Run it after
+// changing swish-bridge or the Swift toolchain:
+//
+//   swift build && .build/debug/swish scripts/generate-bridge.swish
+
+let root = $(dirname "\(#filePath)").text + "/.."
+cd $root
+
+let graphs = $(mktemp -d).text
+defer { rm -rf $graphs }
+
+let sdk = $(xcrun --show-sdk-path).text
+let extract = $(xcrun --find swift-symbolgraph-extract).text
+// try! stops the script if a step fails, as `set -e` would.
+try! $extract -module-name Swift -target arm64-apple-macosx14.0 -sdk $sdk -output-dir $graphs
+try! swift run -c release swish-bridge "\(graphs)/Swift.symbols.json" Sources/SwishCore/Bridge/StandardLibrary.swift

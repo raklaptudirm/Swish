@@ -207,7 +207,7 @@ Swish needs macOS and Swift 6.
 swift build -c release
 .build/release/swish                  # start the shell
 .build/release/swish -c 'ls | count'  # run one line
-.build/release/swish script.sw a b    # run a script, with arguments
+.build/release/swish script.swish a b    # run a script, with arguments
 ```
 
 <details>
@@ -217,7 +217,7 @@ swift build -c release
 swift build
 .build/debug/swish
 scripts/test.sh     # unit tests, plus pty-driven job-control, editor and background-job tests
-scripts/generate-bridge.sh   # regenerate the standard library bridge (after a toolchain update)
+.build/debug/swish scripts/generate-bridge.swish   # regenerate the standard library bridge (after a toolchain update)
 ```
 
 `scripts/test.sh` works with just the Command Line Tools installed, where
@@ -232,7 +232,7 @@ scripts/generate-bridge.sh   # regenerate the standard library bridge (after a t
 | `Sources/swish` | The executable. |
 | `Tests/Interactive` | `expect` scripts that drive the shell through a real terminal. |
 | `Examples/Tools` | An example plugin, which the tests import. |
-| `Sources/swish-bridge` | Reads Swift's symbol graphs and generates the glue that bridges the standard library (`scripts/generate-bridge.sh`). |
+| `Sources/swish-bridge` | Reads Swift's symbol graphs and generates the glue that bridges the standard library (`scripts/generate-bridge.swish`, a Swish script). |
 
 </details>
 
@@ -257,7 +257,7 @@ scripts/generate-bridge.sh   # regenerate the standard library bridge (after a t
   `resume()`, `cancel()`, per-job terminal modes, notices before the prompt
 - [x] **The language**: two-mode parsing, `let`/`var`, operators, lists, ranges, `if`/`if let`,
   `??`, loops, `func`, closures and trailing closures, `$(…)` as `Output`, `try`/`try?`/`try!`,
-  `do`/`catch`, `env`, `//` comments, scripts with `args` and `main`
+  `do`/`catch`, `env`, `//` comments, scripts with `args`, `main`, `defer` and `#filePath`
 - [x] **Enums and switch**: cases, raw and associated values, `.case` resolved by context,
   `switch` with Swift's patterns, `if case`; `FileType` from `ls`, enum parameters on the command line
 - [ ] **Static types** ([plan](docs/design/types.md)): checked before anything runs, as in Swift

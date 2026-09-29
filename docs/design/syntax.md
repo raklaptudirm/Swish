@@ -242,7 +242,7 @@ p.x *= 2
 
 ## Scripts
 
-`swish script.sw a b c` runs a script. It's parsed whole, so a syntax error
+`swish script.swish a b c` runs a script. It's parsed whole, so a syntax error
 anywhere stops it before anything runs; then it runs a statement at a
 time, and a runtime error only abandons its own statement, unless it was
 under `try!`.
@@ -257,6 +257,22 @@ it's called with them as its command line, so the script gets flags,
 func main(_ name: String, loud: Bool = false) {
     if loud { echo "HI \(name)" } else { echo "hi \(name)" }
 }
+```
+
+A `#!` first line is skipped. `#filePath` is the running script's path
+(`"<prompt>"` at the prompt), so a script can find files beside it:
+`let here = $(dirname "\(#filePath)").text`.
+
+`defer { … }` runs its block when the enclosing block, function or script
+ends, however it ends: normally, by `return`, `break` or a thrown error.
+Several run last-first. A script's top-level `defer`s run when the script
+ends, after `main` and after a `try!` stops it. Nothing leaves a `defer`:
+it can't `return`, `break` or `continue`, and whatever throws in it must
+be handled there.
+
+```swift
+let dir = $(mktemp -d).text
+defer { rm -rf $dir }
 ```
 
 POSIX's `$1` and `$@` would collide with closures' `$0`, `$1`, so there

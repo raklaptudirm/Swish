@@ -196,7 +196,7 @@ reach into closures or function bodies, which decide for themselves.
 `try?` and `try!` also catch other runtime errors, like an index out of
 range or division by zero. Those always throw, with or without `try`:
 they're bugs rather than outcomes. `try!` stops a script (`swish
-script.sw`, or input piped in) with the failure's status, where any other
+script.swish`, or input piped in) with the failure's status, where any other
 error only abandons its statement; at the prompt it's a plain error.
 
 Without `try`, a failure is easy to miss: outside a repository,

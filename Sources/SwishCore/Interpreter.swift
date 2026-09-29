@@ -208,12 +208,35 @@ extension Shell {
 
     func run(_ program: Program) throws -> Int32 {
         var status: Int32 = 0
+        // `defer` blocks run as the block ends, however it ends.
+        var deferred: [Program] = []
+        defer { runDeferred(deferred) }
         for statement in program.statements {
+            if case .deferBlock(let body) = statement {
+                deferred.append(body)
+                continue
+            }
             try checkInterrupt()
             status = try run(statement)
             lastStatus = status
         }
         return status
+    }
+
+    /// Deferred blocks, last first. One that fails is reported; the rest
+    /// still run, as nothing can leave a `defer`.
+    func runDeferred(_ blocks: [Program]) {
+        let status = lastStatus
+        for body in blocks.reversed() {
+            do {
+                _ = try runBlock(body)
+            } catch let error as RuntimeError {
+                report("error: \(error)")
+            } catch {
+                report("error: \(error)")
+            }
+        }
+        lastStatus = status
     }
 
     func runBlock(_ program: Program, declaring bindings: [String: Binding] = [:]) throws -> Int32 {
@@ -234,6 +257,8 @@ extension Shell {
         switch statement {
         case .extensionDecl:
             return 0 // Only the prelude has these; it's read at startup.
+        case .deferBlock:
+            return 0 // Collected by the block that holds it.
         case .declare(let name, let mutable, let expr):
             let value = try evaluate(expr)
             scopes[scopes.count - 1].bindings[name] = Binding(value: value, mutable: mutable)
@@ -610,6 +635,8 @@ extension Shell {
             return try evaluate(operand)
         case .bridged(let typeName, let member, let receiver, let arguments):
             return try runBridged(typeName, member, receiver: receiver, arguments)
+        case .filePath:
+            return .string(scriptPath ?? "<prompt>")
         case .cast(let inner, let type, let kind):
             let value = try evaluate(inner)
             let converted = conform(value, to: type)

@@ -32,6 +32,9 @@ enum Statement: Equatable, Sendable {
     /// `import Tools from "./Tools"`: builds a Swift package and loads the
     /// functions it exports.
     case importPlugin(name: String, path: Expr)
+    /// `defer { … }`: runs when the block it's in ends, however it ends,
+    /// last deferred first. At a script's top level, when the script ends.
+    case deferBlock(Program)
     /// Carries on into the next case of a switch.
     case fallthroughStatement
     case returnStatement(Expr?)
@@ -438,6 +441,8 @@ indirect enum Expr: Equatable, Sendable {
     case bridged(type: String, member: Int, receiver: Expr?, arguments: [Argument])
     /// `x as? T`, `x as! T`, `x is T`, or `x as T`.
     case cast(Expr, TypeAnnotation, CastKind)
+    /// `#filePath`: the path of the script it's in.
+    case filePath
     /// `\.size` or `\FileEntry.size`: a key path, its root type given or
     /// taken from context.
     case keyPath(root: String?, path: [String])
@@ -538,9 +543,9 @@ struct Parser {
         "let", "var", "if", "else", "true", "false", "nil",
         "for", "in", "while", "func", "return", "break", "continue", "try", "do", "catch",
         "async", "await", "enum", "switch", "case", "default", "fallthrough", "import", "struct", "throws",
-        "as", "is",
+        "as", "is", "defer",
     ]
-    private static let statementKeywords: Set = ["let", "var", "func", "return", "break", "continue", "do", "catch", "enum", "fallthrough", "import", "struct"]
+    private static let statementKeywords: Set = ["let", "var", "func", "return", "break", "continue", "do", "catch", "enum", "fallthrough", "import", "struct", "defer"]
     private static let precedence: [[BinaryOperator]] = [
         [.or],
         [.and],
@@ -707,6 +712,14 @@ struct Parser {
             return try parseImport()
         case "struct":
             return .structDecl(try parseStruct())
+        case "defer":
+            keyword("defer")
+            skipSpaces()
+            // Nothing leaves a `defer`: it can't return, break or continue.
+            let saved = (functionDepth, loopDepth, switchDepth)
+            (functionDepth, loopDepth, switchDepth) = (0, 0, 0)
+            defer { (functionDepth, loopDepth, switchDepth) = saved }
+            return .deferBlock(try parseBlock())
         case "extension" where prelude:
             return try parseExtension()
         case "fallthrough":
@@ -1357,6 +1370,7 @@ struct Parser {
     private func startsExpression(_ c: Character) -> Bool {
         if Parser.isDigit(c) || "\"'([!-".contains(c) { return true }
         if c == "$" && peek(1) == "(" { return true }
+        if c == "#" && startsWith("#filePath") { return true }
         // `.directory`, a case; `./script` is still a command.
         if c == ".", let next = peek(1), Parser.isIdentifierStart(next) { return true }
         if c == "$", let next = peek(1), Parser.isDigit(next), anonymousArity.last ?? nil != nil { return true }
@@ -2556,6 +2570,10 @@ struct Parser {
         case "$":
             guard let expr = try parseDollar() else { throw unexpected(c) }
             return expr
+        case "#" where startsWith("#filePath"):
+            mark(.keyword, from: pos, to: pos + 9)
+            pos += 9
+            return .filePath
         case "\\" where peek(1) == "." || peek(1).map(Parser.isIdentifierStart) ?? false:
             // `\.size.bytes`, or with its root, `\FileEntry.size`.
             let start = pos

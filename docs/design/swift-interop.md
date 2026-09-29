@@ -123,7 +123,7 @@ scripts, reusing the twins.
    graph and generated glue, replacing the hand-written member tables.
    *First slice built:* `swish-bridge` (Sources/swish-bridge) reads the
    graph and writes Sources/SwishCore/Bridge/StandardLibrary.swift;
-   `scripts/generate-bridge.sh` reruns it. It bridges `String`,
+   `scripts/generate-bridge.swish` reruns it. It bridges `String`,
    `Substring`, `Character`, `Int`, `Double`, `Bool` and `Array`: every
    member whose signature uses only those, their generic parameters, and
    `Equatable`/`Hashable`/`Comparable` constraints (244 of them, including
