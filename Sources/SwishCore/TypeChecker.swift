@@ -75,6 +75,8 @@ final class TypeChecker {
         case module
         /// `env`: the environment.
         case environment
+        /// A Swift type by name, bridged: `String`, `Int`.
+        case swiftType(String)
     }
 
     /// Where `return` goes: the declared result, or, for a closure that
@@ -857,7 +859,7 @@ final class TypeChecker {
         for (parameter, protocols) in signature.generics {
             guard let bound = bindings[parameter], bound != .unknown else { continue }
             for proto in protocols where !conforms(bound, to: proto) {
-                throw TypeError("\(name) needs \(parameter) to be \(proto), and \(bound) isn't")
+                throw TypeError("\(name) needs \(parameter) to be \(proto.hasPrefix("=") ? String(proto.dropFirst()) : proto), and \(bound) isn't")
             }
         }
         return substitute(signature.returns, bindings)
@@ -920,6 +922,17 @@ final class TypeChecker {
             switch value {
             case .int where expected == .double || expected == .optional(.double):
                 return .double // `let x: Double = 1`
+            case .string(let text) where expected == .named("Character") || expected == .named("Substring"):
+                // A literal is a Character or a Substring where one is wanted, as
+                // in Swift: made with its initializer.
+                guard case .named(let name)? = expected else { return .string }
+                if name == "Character" && text.count != 1 {
+                    throw TypeError("a Character is one character, not \(text.count)")
+                }
+                if let index = bridgedInitializer(name, from: .string) {
+                    expr = .bridged(type: name, member: index, receiver: nil, arguments: [Argument(label: nil, value: .literal(value))])
+                }
+                return .named(name)
             case .nothing:
                 if let expected, case .optional = expected { return expected }
                 return .optional(.unknown)
@@ -942,7 +955,7 @@ final class TypeChecker {
                 return functionValue(name, overloads, expected: expected, expr: &expr)
             case .environment:
                 return .dictionary(.string, .string)
-            case .structType, .enumType, .module:
+            case .structType, .enumType, .module, .swiftType:
                 return .unknown
             }
         case .dollar(let name):
@@ -1017,9 +1030,33 @@ final class TypeChecker {
             return type
         case .call(var callee, var arguments):
             let type = try callType(&callee, &arguments, expected: expected)
-            expr = .call(callee, arguments)
+            // A bridged member stands for the whole call.
+            if case .bridged = callee { expr = callee } else { expr = .call(callee, arguments) }
             return type
+        case .bridged:
+            return .unknown // Only made by the checker, after typing.
         case .member(var base, let name):
+            // `Int.max`: a static member of a Swift type.
+            if case .variable(let typeName) = base, case .swiftType? = lookup(typeName) {
+                guard let (type, bridged) = try bridgedProperty(typeName, receiver: nil, bindings: [:], name) else {
+                    throw TypeError("\(typeName) has no member '\(name)'")
+                }
+                expr = bridged
+                return type
+            }
+            if !TypeChecker.namesSomething(base, in: self) {
+                let baseType = try typeOf(&base)
+                // Swift's own members, on the values that are Swift types.
+                if let (bridgedType, bindings) = bridged(baseType),
+                   let (type, bridgedExpr) = try bridgedProperty(bridgedType.name, receiver: base, bindings: bindings, name) {
+                    expr = bridgedExpr
+                    return type
+                }
+                lastMemberBase = nil
+                let type = try memberType(of: baseType, name)
+                expr = lastMemberBase == TypeChecker.json ? TypeChecker.jsonAccess(base, name) : .member(base, name)
+                return type
+            }
             lastMemberBase = nil
             let type = try memberType(&base, name)
             // JSON's fields are looked up when it runs, nil if missing.
@@ -1068,6 +1105,12 @@ final class TypeChecker {
             throw TypeError("'!' unwraps an optional, but this is \(type)")
         case .optionalMember(var base, let name):
             let wrapped = try optionalBase(&base)
+            if let (bridgedType, bindings) = bridged(wrapped),
+               let (type, bridgedExpr) = try bridgedProperty(bridgedType.name, receiver: base, bindings: bindings, name) {
+                expr = bridgedExpr
+                if case .optional = type { return type }
+                return .optional(type)
+            }
             expr = wrapped == TypeChecker.json ? TypeChecker.jsonAccess(base, name) : .optionalMember(base, name)
             let member = try memberType(of: wrapped, name)
             if case .optional = member { return member }
@@ -1182,6 +1225,7 @@ final class TypeChecker {
                 .tuple(record.map { .init(label: Record.isPosition($0.key) ? nil : $0.key, type: type(of: $0.value)) })
             }
         case .enumValue(let value): .named(value.type.name)
+        case .object(let box as SwiftValue): .named(box.typeName)
         case .object(is Job): .named("Job")
         case .object: .unknown
         case .function: .function
@@ -1341,16 +1385,27 @@ final class TypeChecker {
                 return .optional(.named(name))
             case .functions(let overloads):
                 return try call(overloads, callee: &callee, &arguments, name: name)
+            case .swiftType(let typeName):
+                // `String(sub)`: an initializer.
+                let (type, bridgedExpr) = try bridgedCall(typeName, kind: .initializer, isStatic: true, receiver: nil, bindings: [:], name: "init", &arguments)
+                callee = bridgedExpr
+                return type
             default:
                 break
             }
+        }
+        if case .member(.variable(let typeName), let name) = callee, case .swiftType? = lookup(typeName) {
+            let (type, bridgedExpr) = try bridgedCall(typeName, kind: .method, isStatic: true, receiver: nil, bindings: [:], name: name, &arguments)
+            callee = bridgedExpr
+            return type
         }
         // `x?.f()`: the method's result, or nil.
         if case .optionalMember(var baseExpr, let name) = callee {
             let wrapped = try optionalBase(&baseExpr)
             var member = Expr.member(.annotated(.literal(.nothing), .optional(wrapped)), name)
-            let result = try methodCallType(wrapped, baseExpr: nil, name, &member, &arguments)
-            callee = .optionalMember(baseExpr, name)
+            let result = try methodCallType(wrapped, baseExpr: baseExpr, name, &member, &arguments)
+            // A bridged method on nil is nil (runBridged checks).
+            if case .bridged = member { callee = member } else { callee = .optionalMember(baseExpr, name) }
             if case .optional = result { return result }
             return result == .unknown || result == .void ? result : .optional(result)
         }
@@ -1401,9 +1456,25 @@ final class TypeChecker {
             if chosen.isThrowing { try throwingSite("'\(name)'") }
             return chosen.returns
         }
+        // Swift's own methods first; then what the prelude adds for shells,
+        // like `sorted(by: \.size)`.
+        var bridgedError: TypeError?
+        if let (bridgedType, bindings) = bridged(base), bridgedType.members.contains(where: { $0.kind == .method && !$0.isStatic && $0.name == name }) {
+            var attempt = arguments
+            do {
+                let (type, bridgedExpr) = try bridgedCall(bridgedType.name, kind: .method, isStatic: false, receiver: baseExpr,
+                                                          bindings: bindings, name: name, &attempt)
+                arguments = attempt
+                callee = bridgedExpr
+                return type
+            } catch let error as TypeError {
+                bridgedError = error
+            }
+        }
         if let sequenceResult = try sequenceMethodType(name, on: base, &callee, &arguments) {
             return sequenceResult
         }
+        if let bridgedError { throw bridgedError }
         let member = try memberType(of: base, name)
         return try apply(member, &arguments, name: name)
     }
@@ -1556,7 +1627,7 @@ final class TypeChecker {
         for (parameter, protocols) in signature.generics {
             guard let bound = bindings[parameter], bound != .unknown else { continue }
             for proto in protocols where !conforms(bound, to: proto) {
-                throw TypeError("\(name) needs \(parameter) to be \(proto), and \(bound) isn't")
+                throw TypeError("\(name) needs \(parameter) to be \(proto.hasPrefix("=") ? String(proto.dropFirst()) : proto), and \(bound) isn't")
             }
         }
         let throwing = signature.isThrowing || signature.isRethrowing && argumentsThrow
@@ -1604,7 +1675,8 @@ final class TypeChecker {
 
     /// The type of a sequence's items, for its methods; nil if it isn't one.
     private func sequenceElement(_ type: TypeAnnotation) -> TypeAnnotation? {
-        switch type {
+        if case .named(let name) = type, let element = Bridge.types[name]?.associatedTypes["Element"] { return element }
+        return switch type {
         case .list(let element): element
         case .output: .string
         case TypeChecker.json: TypeChecker.json // An array's elements, or the value itself.
@@ -1623,6 +1695,78 @@ final class TypeChecker {
             fields.append(.init(label: field, type: element == .unknown ? .unknown : try memberType(of: element, field)))
         }
         return .list(.tuple(fields))
+    }
+
+    // MARK: Swift's members
+
+    /// The Swift type a Swish type is, with its generic parameters bound:
+    /// `[Int]` is Array with Element Int.
+    private func bridged(_ type: TypeAnnotation) -> (BridgedType, [String: TypeAnnotation])? {
+        let found: (String, [String: TypeAnnotation])? = switch type {
+        case .string: ("String", [:])
+        case .int: ("Int", [:])
+        case .double: ("Double", [:])
+        case .bool: ("Bool", [:])
+        case .list(let element): ("Array", ["Element": element])
+        case .named(let name): (name, [:])
+        default: nil
+        }
+        guard let (name, bindings) = found, let bridgedType = Bridge.types[name] else { return nil }
+        return (bridgedType, bindings)
+    }
+
+    /// A bridged property, `"abc".count` or `Int.max`, as a lookup the
+    /// interpreter runs; nil if the type has no such property.
+    private func bridgedProperty(
+        _ typeName: String, receiver: Expr?, bindings: [String: TypeAnnotation], _ name: String
+    ) throws -> (TypeAnnotation, Expr)? {
+        guard let bridgedType = Bridge.types[typeName],
+              let index = bridgedType.members.firstIndex(where: {
+                  $0.kind == .property && $0.name == name && $0.isStatic == (receiver == nil)
+              }) else { return nil }
+        let type = substitute(bridgedType.members[index].returns, bindings)
+        return (type, .bridged(type: typeName, member: index, receiver: receiver, arguments: []))
+    }
+
+    /// A bridged method or initializer called with `arguments`: the overload
+    /// is chosen here, and the call written as the member it is.
+    private func bridgedCall(
+        _ typeName: String, kind: BridgedMember.Kind, isStatic: Bool, receiver: Expr?, bindings: [String: TypeAnnotation],
+        name: String, _ arguments: inout [Argument]
+    ) throws -> (TypeAnnotation, Expr) {
+        guard let bridgedType = Bridge.types[typeName] else { throw TypeError("no Swift type named \(typeName)") }
+        let candidates = bridgedType.members.enumerated().filter {
+            $0.element.kind == kind && $0.element.name == name && $0.element.isStatic == isStatic
+        }.map { index, member in
+            Signature(name: kind == .initializer ? typeName : name, parameters: member.parameters, returns: member.returns,
+                      isThrowing: member.isThrowing, isRethrowing: member.isRethrowing, index: index, generics: member.generics)
+        }
+        guard !candidates.isEmpty else {
+            throw TypeError(kind == .initializer ? "\(typeName) can't be made this way from Swish yet" : "\(typeName) has no member '\(name)'")
+        }
+        var chosen = try resolve(candidates, &arguments, name: candidates[0].name, bindings: bindings)
+        if chosen == nil, candidates.count == 1 { chosen = candidates[0] }
+        guard let chosen else {
+            throw TypeError("\(candidates[0].name): which overload isn't clear until the arguments' types are known")
+        }
+        if chosen.isThrowing { try throwingSite("'\(name)'") }
+        return (chosen.returns, .bridged(type: typeName, member: chosen.index, receiver: receiver, arguments: arguments))
+    }
+
+    /// The initializer of `typeName` taking one unlabeled `from`, if any.
+    private func bridgedInitializer(_ typeName: String, from type: TypeAnnotation) -> Int? {
+        Bridge.types[typeName]?.members.firstIndex {
+            $0.kind == .initializer && $0.parameters.count == 1 && $0.parameters[0].label == nil && $0.parameters[0].type == type
+        }
+    }
+
+    /// Whether `expr` is a name that isn't a value: a type, `env`, a module.
+    private static func namesSomething(_ expr: Expr, in checker: TypeChecker) -> Bool {
+        guard case .variable(let name) = expr else { return false }
+        switch checker.lookup(name) {
+        case .enumType?, .environment?, .module?, .swiftType?, .structType?: return true
+        default: return false
+        }
     }
 
     // MARK: Members
@@ -1685,6 +1829,7 @@ final class TypeChecker {
                 guard let type = members[name] else { throw TypeError("\(typeName) has no member '\(name)'") }
                 return type
             }
+            if Bridge.types[typeName] != nil { throw TypeError("\(typeName) has no member '\(name)'") }
             return .unknown
         case .tuple(let elements):
             guard let element = tupleElement(name, of: elements) else { throw TypeError("\(base) has no element '\(name)'") }
@@ -1957,7 +2102,13 @@ final class TypeChecker {
     /// a struct or enum by declaring it (an enum without associated values
     /// is Equatable and Hashable anyway, as in Swift).
     func conforms(_ type: TypeAnnotation, to proto: String) -> Bool {
+        // `=String`: a bridged member for one element type only
+        // (`joined(separator:)` where Element == String).
+        if proto.hasPrefix("=") { return type == .unknown || type.description == String(proto.dropFirst()) }
         if type == TypeChecker.json { return true }
+        if case .named(let name) = type, let bridgedType = Bridge.types[name] {
+            return proto == "CustomStringConvertible" || bridgedType.conformances.contains(proto)
+        }
         switch type {
         case .unknown, .parameter, .record: return true
         case .any, .function, .functionType, .void: return proto == "CustomStringConvertible"
@@ -2057,6 +2208,7 @@ final class TypeChecker {
 
     /// The type of each item when iterating `type`.
     private func elementType(of type: TypeAnnotation) throws -> TypeAnnotation {
+        if case .named(let name) = type, let element = Bridge.types[name]?.associatedTypes["Element"] { return element }
         switch type {
         case .list(let element): return element
         case .output, .string: return .string
@@ -2086,6 +2238,8 @@ final class TypeChecker {
             return .enumType(enumInfo(type))
         case .object(is Module):
             return .module
+        case .object(let type as BridgedTypeName):
+            return .swiftType(type.name)
         case .function(let set as OverloadSet):
             return .functions(set.candidates.enumerated().map { index, function in
                 var signature = signature(function)

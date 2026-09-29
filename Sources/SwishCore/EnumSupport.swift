@@ -112,6 +112,8 @@ extension Shell {
         case .named(let name):
             // Parsed JSON is whatever it parsed as.
             if name == "JSON" { return value }
+            // A Swift value, boxed, is of its Swift type.
+            if case .object(let box as SwiftValue) = value, box.typeName == name { return value }
             if case .record(let record) = value, record.typeName == name, structType(named: name) != nil {
                 return value
             }

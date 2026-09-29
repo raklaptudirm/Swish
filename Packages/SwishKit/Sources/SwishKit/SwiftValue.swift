@@ -1,0 +1,53 @@
+import Foundation
+
+/// A Swift value Swish has no form of its own for, like a `Substring`, a
+/// `Character` or a `URL`, kept as it is. Its type is its Swift type, to
+/// the checker and to you; its members are bridged (see
+/// docs/design/swift-interop.md). It compares, hashes and sorts as the Swift
+/// value does, when its type can.
+public final class SwiftValue: SwishObject, @unchecked Sendable {
+    public let value: Any
+    /// Its Swift type, as Swish writes it: `Substring`.
+    public let typeName: String
+    private let hashable: AnyHashable?
+    private let lessThan: ((Any) -> Bool)?
+
+    private init(_ value: Any, typeName: String, hashable: AnyHashable?, lessThan: ((Any) -> Bool)?) {
+        self.value = value
+        self.typeName = typeName
+        self.hashable = hashable
+        self.lessThan = lessThan
+    }
+
+    public static func make<T>(_ value: T, as typeName: String) -> Value {
+        .object(SwiftValue(value, typeName: typeName, hashable: nil, lessThan: nil))
+    }
+
+    public static func make<T: Hashable>(_ value: T, as typeName: String) -> Value {
+        .object(SwiftValue(value, typeName: typeName, hashable: AnyHashable(value), lessThan: nil))
+    }
+
+    public static func make<T: Hashable & Comparable>(_ value: T, as typeName: String) -> Value {
+        .object(SwiftValue(value, typeName: typeName, hashable: AnyHashable(value), lessThan: { other in
+            (other as? T).map { value < $0 } ?? false
+        }))
+    }
+
+    /// The Swift value in `value`, which must be one of type `T`.
+    public static func unbox<T>(_ type: T.Type, _ value: Value) throws -> T {
+        if case .object(let box as SwiftValue) = value, let unboxed = box.value as? T { return unboxed }
+        throw SwishError("expected \(T.self), not \(value.typeName)")
+    }
+
+    /// Whether it sorts before `other`, if its type is Comparable.
+    public func isLess(than other: SwiftValue) -> Bool? {
+        lessThan.map { $0(other.value) }
+    }
+
+    public var identity: AnyHashable { hashable ?? AnyHashable(ObjectIdentifier(self)) }
+    public var memberNames: [String] { [] }
+    public func member(_ name: String) -> Value? { nil }
+    public var fields: Record? { nil }
+    public var description: String { String(describing: value) }
+    public var debugDescription: String { String(reflecting: value) }
+}

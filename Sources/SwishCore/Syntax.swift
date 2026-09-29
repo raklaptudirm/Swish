@@ -432,6 +432,10 @@ indirect enum Expr: Equatable, Sendable {
     /// A function, method or initializer, with the overload the checker
     /// chose: the candidate at that position. Only the checker makes these.
     case chosen(Expr, overload: Int)
+    /// A member of a Swift type, bridged (Bridge.swift): the member the
+    /// checker chose, by its position among its type's, with `self` if it
+    /// isn't static. Only the checker makes these.
+    case bridged(type: String, member: Int, receiver: Expr?, arguments: [Argument])
     /// `x as? T`, `x as! T`, `x is T`, or `x as T`.
     case cast(Expr, TypeAnnotation, CastKind)
     /// `\.size` or `\FileEntry.size`: a key path, its root type given or

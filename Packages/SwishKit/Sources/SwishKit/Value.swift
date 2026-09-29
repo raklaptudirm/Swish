@@ -41,9 +41,14 @@ public protocol SwishObject: AnyObject, Sendable, CustomStringConvertible, Custo
     /// Its data as a record, which tables, `select` and `to json` use; nil
     /// for an object that isn't data, like an enum type.
     var fields: Record? { get }
+    /// What equality and hashing go by: the object itself, by default; a
+    /// boxed Swift value's own value, when it's Hashable.
+    var identity: AnyHashable { get }
 }
 
 extension SwishObject {
+    public var identity: AnyHashable { AnyHashable(ObjectIdentifier(self)) }
+
     /// Every member that isn't a method, in `memberNames` order.
     public var fields: Record? {
         var record = Record(typeName: typeName)
@@ -253,7 +258,7 @@ extension Value: Hashable {
         case (.date(let a), .date(let b)): a == b
         case (.output(let a), .output(let b)): a == b
         case (.enumValue(let a), .enumValue(let b)): a == b
-        case (.object(let a), .object(let b)): a === b
+        case (.object(let a), .object(let b)): a === b || a.identity == b.identity
         case (.function(let a), .function(let b)): a === b
         default: false
         }
@@ -273,7 +278,7 @@ extension Value: Hashable {
         case .date(let date): hasher.combine(date)
         case .output(let output): hasher.combine(output)
         case .enumValue(let value): hasher.combine(value)
-        case .object(let object): hasher.combine(ObjectIdentifier(object))
+        case .object(let object): hasher.combine(object.identity)
         case .function(let function): hasher.combine(ObjectIdentifier(function))
         }
     }

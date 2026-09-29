@@ -217,6 +217,7 @@ swift build -c release
 swift build
 .build/debug/swish
 scripts/test.sh     # unit tests, plus pty-driven job-control, editor and background-job tests
+scripts/generate-bridge.sh   # regenerate the standard library bridge (after a toolchain update)
 ```
 
 `scripts/test.sh` works with just the Command Line Tools installed, where
@@ -231,6 +232,7 @@ scripts/test.sh     # unit tests, plus pty-driven job-control, editor and backgr
 | `Sources/swish` | The executable. |
 | `Tests/Interactive` | `expect` scripts that drive the shell through a real terminal. |
 | `Examples/Tools` | An example plugin, which the tests import. |
+| `Sources/swish-bridge` | Reads Swift's symbol graphs and generates the glue that bridges the standard library (`scripts/generate-bridge.sh`). |
 
 </details>
 

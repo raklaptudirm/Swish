@@ -1,6 +1,7 @@
 # Swish types are Swift types
 
-Status: **planned**, as phase 5 of [static types](types.md). It replaces
+Status: **in progress**, as phase 5 of [static types](types.md): step 1's
+first slice is built (see [Steps](#steps)). It replaces
 "typed plugins" there and the old milestone 9 (URLs, versions, bridges).
 
 Decided:
@@ -120,6 +121,20 @@ scripts, reusing the twins.
 
 1. **The standard library's members on Swish values**, from its symbol
    graph and generated glue, replacing the hand-written member tables.
+   *First slice built:* `swish-bridge` (Sources/swish-bridge) reads the
+   graph and writes Sources/SwishCore/Bridge/StandardLibrary.swift;
+   `scripts/generate-bridge.sh` reruns it. It bridges `String`,
+   `Substring`, `Character`, `Int`, `Double`, `Bool` and `Array`: every
+   member whose signature uses only those, their generic parameters, and
+   `Equatable`/`Hashable`/`Comparable` constraints (244 of them, including
+   inherited `Sequence` and `Collection` methods, and `[String].joined`
+   through its `Element == String` constraint). Generic code is compiled
+   once, with Swish's values standing in for every generic parameter.
+   Swift's members come before the prelude's; the prelude's shell
+   additions (`sorted(by: \.size)`, `prefix` with a default, `select`,
+   `get`, `uniqued`) remain. Left for the next slices: mutating methods,
+   `Dictionary`, `Set`, `Optional`'s members, `Range`, `ArraySlice` and
+   other result types, operators, Foundation.
 2. **Swish's own types in SwishKit**, read the same way; the prelude
    shrinks to command lines.
 3. **Packages and SDK modules** imported by URL, path or name.

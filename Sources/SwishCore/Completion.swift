@@ -202,6 +202,7 @@ extension Shell {
             if binding.isFunction { return .function }
             if case .object(is EnumType) = binding.value { return .type }
             if case .object(is StructType) = binding.value { return .type }
+            if case .object(is BridgedTypeName) = binding.value { return .type }
             return .variable
         }
     }

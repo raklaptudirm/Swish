@@ -17,6 +17,10 @@ extension Shell {
         scopes[0].bindings["args"] = Binding(value: .list([]), mutable: false)
         installPrelude()
         installJSONAccess()
+        // Swift's types by name, for their initializers and static members.
+        for name in Bridge.types.keys {
+            scopes[0].bindings[name] = Binding(value: .object(BridgedTypeName(name)), mutable: false)
+        }
     }
 
     /// What the checker writes JSON access into: `json.name` is
@@ -562,6 +566,9 @@ extension SwishKit.Value {
         case (.int, .int), (.int, .double), (.double, .int), (.double, .double): return compare(asDouble!, other.asDouble!)
         case (.string(let a), .string(let b)): return a.compare(b)
         case (.enumValue(let a), .enumValue(let b)) where a.type === b.type: return compare(a.index, b.index)
+        case (.object(let a as SwiftValue), .object(let b as SwiftValue)):
+            if let less = a.isLess(than: b) { return less ? .orderedAscending : b.isLess(than: a) == true ? .orderedDescending : .orderedSame }
+            return compare(a.typeName, b.typeName)
         case (.output(let a), _): return Value.string(a.text).order(comparedTo: other)
         case (_, .output(let b)): return order(comparedTo: .string(b.text))
         case (.filesize(let a), .filesize(let b)): return compare(a, b)

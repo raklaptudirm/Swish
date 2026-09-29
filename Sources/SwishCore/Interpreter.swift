@@ -608,6 +608,8 @@ extension Shell {
             return .bool(try truth(lhs, for: .or) || truth(rhs, for: .or))
         case .attempt(let operand, .plain):
             return try evaluate(operand)
+        case .bridged(let typeName, let member, let receiver, let arguments):
+            return try runBridged(typeName, member, receiver: receiver, arguments)
         case .cast(let inner, let type, let kind):
             let value = try evaluate(inner)
             let converted = conform(value, to: type)
