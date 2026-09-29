@@ -77,7 +77,9 @@ couldn't name functions that use `@Flag` or `@Input`.
 
 Instead each `@SwishExport` also defines a C symbol, `swish_export_greet`,
 that returns its description. On import the shell lists the library's
-symbols with that prefix (`nm -gU`) and calls each one. Enums are learned
+symbols with that prefix and calls each one. It reads them from the file
+itself, as `nm -gU` would: a Mach-O's symbol table on macOS, an ELF's
+dynamic symbols on Linux. Enums are learned
 from the parameters that use them. There's nothing to keep in sync, and a
 typo can't leave something out.
 
@@ -86,13 +88,14 @@ typo can't leave something out.
 1. **Resolve the path.** `~` is expanded. A relative path starts from the
    script's directory, or from the working directory at the prompt.
 2. **Build.** `swift build -c release --product Name` builds a dynamic
-   library, `libName.dylib`. If the library is newer than the manifest and
+   library, `libName.dylib` (`libName.so` on Linux). If the library is newer than the manifest and
    everything under `Sources/`, the build is skipped: asking SwiftPM takes
    a second or two even when there's nothing to do. Build errors are shown
    as the compiler's `error:` lines.
 3. **Load.** `dlopen` the library and call each export symbol. The plugin
-   links SwishKit as `@rpath/libSwishKit.dylib`, the install name the
-   shell's own copy has, so dyld uses the one already loaded, and a Swift
+   links SwishKit as `@rpath/libSwishKit.dylib` (`libSwishKit.so` on
+   Linux), the name the shell's own copy has, so the loader uses the one
+   already loaded, and a Swift
    type means the same thing on both sides. A plugin whose objects aren't
    the shell's `NativeFunction` loaded a second copy, and is refused.
 4. **Check the ABI version** each export was built with. SwishKit is built

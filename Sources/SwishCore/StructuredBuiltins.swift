@@ -1,4 +1,3 @@
-import Darwin
 import Foundation
 import SwishKit
 
@@ -151,29 +150,21 @@ extension Shell {
     }
 
     private func fileEntry(named name: String, at path: String) -> Value? {
-        var info = stat()
-        guard lstat(path, &info) == 0 else {
-            reportItemError("ls: \(path): \(errorMessage(errno).lowercased())")
+        let status: FileStatus
+        do {
+            status = try FileStatus(path)
+        } catch {
+            reportItemError("ls: \(path): \(errorMessage(error.code).lowercased())")
             return nil
         }
-        let kind = info.st_mode & S_IFMT
-        let (type, letter) = switch kind {
-        case S_IFDIR: ("directory", "d")
-        case S_IFLNK: ("symlink", "l")
-        case S_IFREG: ("file", "-")
-        default: ("other", "?")
-        }
-        let permissions = letter
-            + [S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IWGRP, S_IXGRP, S_IROTH, S_IWOTH, S_IXOTH].enumerated().map { index, bit in
-                info.st_mode & bit != 0 ? ["r", "w", "x"][index % 3] : "-"
-            }.joined()
+        let (type, letter) = status.isDirectory ? ("directory", "d") : status.isSymlink ? ("symlink", "l")
+            : status.isFile ? ("file", "-") : ("other", "?")
         let entry = FileEntry(
-            name: name, type: type, size: FileSize(bytes: info.st_size),
-            modified: date(info.st_mtimespec), permissions: permissions,
-            owner: getpwuid(info.st_uid).map { String(cString: $0.pointee.pw_name) } ?? String(info.st_uid),
-            created: date(info.st_birthtimespec), accessed: date(info.st_atimespec),
+            name: name, type: type, size: FileSize(bytes: status.size),
+            modified: status.modified, permissions: letter + status.permissions, owner: userName(status.owner),
+            created: status.created ?? status.modified, accessed: status.accessed,
             path: path,
-            target: kind == S_IFLNK ? try? FileManager.default.destinationOfSymbolicLink(atPath: path) : nil
+            target: status.isSymlink ? try? FileManager.default.destinationOfSymbolicLink(atPath: path) : nil
         )
         guard case .record(var record) = try? ValueEncoder().encode(entry) else { return nil }
         record["type"] = .enumValue(EnumValue(type: Shell.fileType, name: type))
@@ -182,67 +173,17 @@ extension Shell {
         return .record(record)
     }
 
-    private func date(_ time: timespec) -> Date {
-        Date(timeIntervalSince1970: TimeInterval(time.tv_sec) + TimeInterval(time.tv_nsec) / 1e9)
-    }
-
     private func ps() -> Function {
         builtin(
             "ps", "Lists running processes as records. Memory and CPU time are only known for your own processes.", [],
             .native { _, _ in
-                // sysctl lists every process without privileges; proc_pidinfo
-                // adds detail, but only for processes we're allowed to inspect.
-                var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_ALL]
-                var size = 0
-                guard sysctl(&mib, 3, nil, &size, nil, 0) == 0 else {
-                    throw RuntimeError("ps: \(errorMessage(errno))")
+                do {
+                    return .list(try runningProcesses().map { try ValueEncoder().encode($0) })
+                } catch let error as Errno {
+                    throw RuntimeError("ps: \(errorMessage(error.code))")
                 }
-                let stride = MemoryLayout<kinfo_proc>.stride
-                var processes = [kinfo_proc](repeating: kinfo_proc(), count: size / stride + 64)
-                size = processes.count * stride
-                guard sysctl(&mib, 3, &processes, &size, nil, 0) == 0 else {
-                    throw RuntimeError("ps: \(errorMessage(errno))")
-                }
-                var timebase = mach_timebase_info()
-                mach_timebase_info(&timebase)
-                let secondsPerTick = Double(timebase.numer) / Double(timebase.denom) / 1e9
-
-                var entries: [Value] = []
-                for process in processes.prefix(size / stride).sorted(by: { $0.kp_proc.p_pid < $1.kp_proc.p_pid }) {
-                    let pid = process.kp_proc.p_pid
-                    let uid = process.kp_eproc.e_ucred.cr_uid
-                    // p_comm is cut to 16 bytes; pbi_name, when we can read it, isn't.
-                    var name = withUnsafeBytes(of: process.kp_proc.p_comm) { String(decoding: $0.prefix { $0 != 0 }, as: UTF8.self) }
-                    var bsd = proc_bsdinfo()
-                    if proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &bsd, Int32(MemoryLayout<proc_bsdinfo>.size)) > 0 {
-                        let full = withUnsafeBytes(of: bsd.pbi_name) { String(decoding: $0.prefix { $0 != 0 }, as: UTF8.self) }
-                        if !full.isEmpty { name = full }
-                    }
-                    var task = proc_taskinfo()
-                    let hasTask = proc_pidinfo(pid, PROC_PIDTASKINFO, 0, &task, Int32(MemoryLayout<proc_taskinfo>.size)) > 0
-                    let entry = ProcessEntry(
-                        pid: Int(pid), ppid: Int(process.kp_eproc.e_ppid), name: name,
-                        user: getpwuid(uid).map { String(cString: $0.pointee.pw_name) } ?? String(uid),
-                        memory: hasTask ? FileSize(bytes: Int64(task.pti_resident_size)) : nil,
-                        cpuTime: hasTask ? (Double(task.pti_total_user + task.pti_total_system) * secondsPerTick * 100).rounded() / 100 : nil,
-                        threads: hasTask ? Int(task.pti_threadnum) : nil
-                    )
-                    entries.append(try ValueEncoder().encode(entry))
-                }
-                return .list(entries)
             }
         )
-    }
-
-    private struct ProcessEntry: Encodable {
-        var pid: Int
-        var ppid: Int
-        var name: String
-        var user: String
-        var memory: FileSize?
-        /// Seconds.
-        var cpuTime: Double?
-        var threads: Int?
     }
 
     // MARK: Sequence methods

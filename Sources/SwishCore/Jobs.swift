@@ -1,4 +1,3 @@
-import CShim
 import Foundation
 import SwishKit
 
@@ -121,11 +120,12 @@ struct Exit {
     let signal: Int32?
 
     init(_ raw: Int32) {
-        if swish_wifexited(raw) != 0 {
-            status = swish_wexitstatus(raw)
+        let wait = WaitStatus(raw)
+        if wait.exited {
+            status = wait.exitCode
             signal = nil
-        } else if swish_wifsignaled(raw) != 0 {
-            signal = swish_wtermsig(raw)
+        } else if wait.signaled {
+            signal = wait.signal
             status = 128 + signal!
         } else {
             status = 1
@@ -262,7 +262,7 @@ extension Shell {
             for pid in job.running {
                 var raw: Int32 = 0
                 guard waitpid(pid, &raw, WNOHANG | WUNTRACED) == pid else { continue }
-                if swish_wifstopped(raw) != 0 {
+                if WaitStatus(raw).stopped {
                     stopped = true
                     continue
                 }

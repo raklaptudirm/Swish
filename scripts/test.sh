@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 # With only the Command Line Tools installed, swift-testing isn't on the
 # default search paths.
 flags=""
-if [ "$(xcode-select -p)" = /Library/Developer/CommandLineTools ]; then
+if command -v xcode-select >/dev/null && [ "$(xcode-select -p)" = /Library/Developer/CommandLineTools ]; then
     fw=/Library/Developer/CommandLineTools/Library/Developer/Frameworks
     lib=/Library/Developer/CommandLineTools/Library/Developer/usr/lib
     flags="-Xswiftc -F$fw -Xlinker -F$fw -Xlinker -rpath -Xlinker $fw -Xlinker -rpath -Xlinker $lib"

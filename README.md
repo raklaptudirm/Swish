@@ -201,7 +201,8 @@ over lines when they're wide.
 
 ## Getting started
 
-Swish needs macOS and Swift 6.
+Swish needs Swift 6 on macOS or Linux. It's all Swift: what differs between the two (starting
+programs, `ps`, file details, plugin libraries) is in `Sources/SwishCore/Platform`.
 
 ```sh
 swift build -c release
@@ -222,13 +223,13 @@ scripts/test.sh     # unit tests, plus pty-driven job-control, editor and backgr
 
 `scripts/test.sh` works with just the Command Line Tools installed, where
 `swift test` alone can't find the Testing framework. The terminal tests need
-`expect`, which macOS ships.
+`expect`, which macOS ships (on Linux, install it from your package manager).
 
 | Path | What |
 |---|---|
-| `Packages/SwishKit` | `Value` and the plugin API, with the `@SwishExport` and `@SwishObject` macros. A separate package so it links as a **dylib** shared by the shell and every plugin. |
-| `Sources/CShim` | `posix_spawn` with process groups and terminal handoff, plus the wait-status macros Swift can't import. |
+| `Packages/SwishKit` | `Value` and the plugin API, with the `@SwishExport` and `@SwishObject` macros. A separate package so it links as a **dynamic library** shared by the shell and every plugin. |
 | `Sources/SwishCore` | Parser, interpreter, pipelines, job control, builtins, line editor. |
+| `Sources/SwishCore/Platform` | What differs between macOS and Linux: `posix_spawn` with process groups and terminal handoff, `ps`, file status, and reading a plugin library's exports. |
 | `Sources/swish` | The executable. |
 | `Tests/Interactive` | `expect` scripts that drive the shell through a real terminal. |
 | `Examples/Tools` | An example plugin, which the tests import. |

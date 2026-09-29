@@ -1,4 +1,3 @@
-import CShim
 import Foundation
 import SwishKit
 
@@ -468,7 +467,7 @@ extension Shell {
     }
 
     func checkInterrupt() throws {
-        if swish_take_interrupt() != 0 { throw Interrupted() }
+        if takeInterrupt() { throw Interrupted() }
     }
 
     // MARK: Expressions

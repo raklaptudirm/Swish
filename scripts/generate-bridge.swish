@@ -11,8 +11,15 @@ cd $root
 let graphs = $(mktemp -d).text
 defer { rm -rf $graphs }
 
-let sdk = $(xcrun --show-sdk-path).text
-let extract = $(xcrun --find swift-symbolgraph-extract).text
+// The checked-in file is made on macOS; Linux's standard library has the
+// same members, and a file made there differs only in what's left out.
+let machine = $(uname -m).text
 // try! stops the script if a step fails, as `set -e` would.
-try! $extract -module-name Swift -target arm64-apple-macosx14.0 -sdk $sdk -output-dir $graphs
+if $(uname).text == "Darwin" {
+    let sdk = $(xcrun --show-sdk-path).text
+    let extract = $(xcrun --find swift-symbolgraph-extract).text
+    try! $extract -module-name Swift -target "\(machine)-apple-macosx14.0" -sdk $sdk -output-dir $graphs
+} else {
+    try! swift-symbolgraph-extract -module-name Swift -target "\(machine)-unknown-linux-gnu" -output-dir $graphs
+}
 try! swift run -c release swish-bridge "\(graphs)/Swift.symbols.json" Sources/SwishCore/Bridge/StandardLibrary.swift

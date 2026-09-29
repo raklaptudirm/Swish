@@ -40,7 +40,7 @@ extension Shell {
     /// its path. SwiftPM only rebuilds what changed, so an import of a
     /// package that's up to date is quick.
     private func build(_ name: String, at package: String) throws -> String {
-        let built = package + "/.build/release/lib\(name).dylib"
+        let built = package + "/.build/release/" + dynamicLibraryName(name)
         if isUpToDate(built, package: package) { return built }
         let showProgress = interactive && isatty(STDERR_FILENO) != 0
         if showProgress { writeAll(STDERR_FILENO, "Building \(name)…".styled(Style.dim)) }
@@ -57,10 +57,10 @@ extension Shell {
         }
         // SwiftPM links `.build/release` to the platform's directory; asking
         // it costs another second, so only when that's missing.
-        var library = package + "/.build/release/lib\(name).dylib"
+        var library = built
         if !FileManager.default.fileExists(atPath: library) {
             let binPath = try runSwift(["build", "-c", "release", "--package-path", package, "--show-bin-path"])
-            library = binPath.output.trimmingCharacters(in: .whitespacesAndNewlines) + "/lib\(name).dylib"
+            library = binPath.output.trimmingCharacters(in: .whitespacesAndNewlines) + "/" + dynamicLibraryName(name)
         }
         guard FileManager.default.fileExists(atPath: library) else {
             throw RuntimeError("import \(name): the package has no dynamic library named \(name); declare .library(name: \"\(name)\", type: .dynamic, targets: [\"\(name)\"])")
@@ -115,13 +115,7 @@ extension Shell {
         guard let handle = dlopen(library, RTLD_NOW | RTLD_LOCAL) else {
             throw RuntimeError("import \(name): \(String(cString: dlerror()))")
         }
-        let symbols = try run("/usr/bin/nm", ["-gUj", library]).output
-            .split(separator: "\n")
-            .compactMap { line -> String? in
-                // C symbols carry a leading underscore on Darwin.
-                let symbol = line.hasPrefix("_") ? line.dropFirst() : Substring(line)
-                return symbol.hasPrefix(swishExportSymbolPrefix) ? String(symbol) : nil
-            }
+        let symbols = try exportedSymbols(ofLibrary: library).filter { $0.hasPrefix(swishExportSymbolPrefix) }
         typealias Entry = @convention(c) () -> UnsafeMutableRawPointer
         var functions: [ExportedFunction] = []
         for symbol in symbols.sorted() {

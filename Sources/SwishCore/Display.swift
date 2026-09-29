@@ -51,7 +51,8 @@ extension Shell {
 /// The width of the terminal `fd` is, if it is one.
 func terminalWidth(_ fd: Int32) -> Int? {
     var size = winsize()
-    guard isatty(fd) != 0, ioctl(fd, TIOCGWINSZ, &size) == 0, size.ws_col > 0 else { return nil }
+    // TIOCGWINSZ is a UInt on macOS and an Int32 on Linux.
+    guard isatty(fd) != 0, ioctl(fd, UInt(TIOCGWINSZ), &size) == 0, size.ws_col > 0 else { return nil }
     return Int(size.ws_col)
 }
 

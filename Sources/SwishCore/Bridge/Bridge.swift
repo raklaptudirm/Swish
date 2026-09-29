@@ -109,6 +109,12 @@ func bridgeDictionary(_ value: Value) throws -> [Value: Value] {
     return result
 }
 
+/// A dictionary's (key, value) pairs, in its order.
+func bridgeDictionaryPairs(_ value: Value) throws -> [(key: Value, value: Value)] {
+    guard case .dictionary(let dictionary) = value else { throw SwishError("expected a dictionary, not \(value.typeName)") }
+    return dictionary.map { (key: $0.key, value: $0.value) }
+}
+
 /// Swift's dictionary as Swish's, which keeps an order: the receiver's, as
 /// far as it goes, then the other keys in order.
 func bridgeDictionary(_ dictionary: [Value: Value], order receiver: Value?) -> Value {

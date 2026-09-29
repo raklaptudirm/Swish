@@ -1,4 +1,3 @@
-import CShim
 import Foundation
 import SwishKit
 
@@ -239,7 +238,7 @@ public final class Shell {
     /// A runtime error abandons the rest of the input, unlike a failing
     /// command, which only sets the status.
     private func runReportingErrors(_ program: Program) {
-        _ = swish_take_interrupt() // Drop a stale ^C from while the prompt was up.
+        _ = takeInterrupt() // Drop a stale ^C from while the prompt was up.
         do {
             lastStatus = try run(program)
         } catch is Interrupted {
@@ -286,10 +285,10 @@ public final class Shell {
         while tcgetpgrp(terminal) != getpgrp() {
             kill(-getpgrp(), SIGTTIN)
         }
-        for signal in [SIGQUIT, SIGTSTP, SIGTTIN, SIGTTOU] {
-            Foundation.signal(signal, SIG_IGN)
+        for jobSignal in [SIGQUIT, SIGTSTP, SIGTTIN, SIGTTOU] {
+            signal(jobSignal, SIG_IGN)
         }
-        swish_catch_interrupts()
+        catchInterrupts()
         _ = setpgid(0, 0) // Fails harmlessly if we're already a session leader.
         shellPgid = getpgrp()
         tcsetpgrp(terminal, shellPgid)

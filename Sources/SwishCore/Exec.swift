@@ -1,4 +1,3 @@
-import CShim
 import Foundation
 import SwishKit
 
@@ -197,7 +196,7 @@ extension Shell {
                 job.running.removeFirst()
                 continue
             }
-            if swish_wifstopped(raw) != 0 {
+            if WaitStatus(raw).stopped {
                 if interactive {
                     var modes = termios()
                     tcgetattr(terminal, &modes)
@@ -221,11 +220,12 @@ extension Shell {
     /// A job's status from `waitpid`'s, reporting the signal that ended it,
     /// unless `quiet` (a job you cancelled ended as you asked).
     private func decode(_ raw: Int32, quiet: Bool = false) -> Int32 {
-        if swish_wifexited(raw) != 0 {
-            return swish_wexitstatus(raw)
+        let status = WaitStatus(raw)
+        if status.exited {
+            return status.exitCode
         }
-        if swish_wifsignaled(raw) != 0 {
-            let signal = swish_wtermsig(raw)
+        if status.signaled {
+            let signal = status.signal
             lastSignalStatus = 128 + signal
             switch signal {
             case SIGINT: if interactive { writeAll(STDERR_FILENO, "\n") }
@@ -247,8 +247,7 @@ extension Shell {
         // is also a target, as in `>&2 2> file`, is copied out of the way
         // first, so the order the child applies them in can't matter.
         let changed = descriptors.map.filter { $0.key != $0.value }
-        var targets: [Int32] = []
-        var sources: [Int32] = []
+        var mapped: [(target: Int32, source: Int32)] = []
         var copies: [Int32] = []
         for (target, source) in changed {
             var source = source
@@ -256,17 +255,15 @@ extension Shell {
                 source = fcntl(source, F_DUPFD_CLOEXEC, 10)
                 copies.append(source)
             }
-            targets.append(target)
-            sources.append(source)
+            mapped.append((target, source))
         }
         defer { copies.forEach { close($0) } }
 
-        let cArgs = argv.map { strdup($0) } + [nil]
-        defer { cArgs.forEach { free($0) } }
-        let pid = swish_spawn(path, cArgs, pgid, targets, sources, Int32(targets.count), interactive && foreground ? terminal : -1)
-        guard pid < 0 else { return .success(pid) }
-
-        let code = -pid
+        let code: Int32
+        switch spawnProcess(path, argv, pgid: pgid, descriptors: mapped, terminal: interactive && foreground ? terminal : nil) {
+        case .success(let pid): return .success(pid)
+        case .failure(let error): code = error.code
+        }
         let status: Int32 = code == ENOENT ? 127 : 126
         return .failure(SpawnFailure(message: "\(name): \(errorMessage(code).lowercased())", status: status))
     }

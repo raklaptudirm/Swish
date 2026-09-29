@@ -1,4 +1,3 @@
-import Darwin
 import Foundation
 
 /// Filename patterns: `*`, `[a-z]`, and `**` for any depth of directories.
@@ -55,7 +54,7 @@ enum Glob {
                     let path = join(base, unescape(segment))
                     if needsDirectory ? isDirectory(path) : exists(path) { next.append(path) }
                 } else {
-                    for name in entries(of: base) where fnmatch(segment, name, FNM_PERIOD) == 0 {
+                    for name in entries(of: base) where matches(Array(segment), Array(name)) {
                         let path = join(base, name)
                         if !needsDirectory || isDirectory(path) { next.append(path) }
                     }
@@ -100,9 +99,74 @@ enum Glob {
         return result
     }
 
+    /// Whether `name` matches one segment of a pattern: `*` any run of
+    /// characters, `[a-z]` or `[!a-z]` one, `\` makes the next literal. A
+    /// leading dot has to be matched by a dot.
+    static func matches(_ pattern: [Character], _ name: [Character]) -> Bool {
+        if name.first == ".", pattern.first != "." && !(pattern.first == "\\" && pattern.dropFirst().first == ".") {
+            return false
+        }
+        // Where to go back to after a mismatch: just after the last `*`,
+        // with it taking one more character.
+        var p = 0, n = 0
+        var star: (pattern: Int, name: Int)?
+        while n < name.count {
+            if p < pattern.count, pattern[p] == "*" {
+                star = (p + 1, n)
+                p += 1
+                continue
+            }
+            if p < pattern.count {
+                let (matched, next) = matchOne(pattern, at: p, name[n])
+                if matched {
+                    p = next
+                    n += 1
+                    continue
+                }
+            }
+            guard let back = star else { return false }
+            star = (back.pattern, back.name + 1)
+            p = back.pattern
+            n = back.name + 1
+        }
+        while p < pattern.count, pattern[p] == "*" { p += 1 }
+        return p == pattern.count
+    }
+
+    /// Whether the pattern element at `index` matches `character`, and the
+    /// index after it.
+    private static func matchOne(_ pattern: [Character], at index: Int, _ character: Character) -> (Bool, Int) {
+        switch pattern[index] {
+        case "\\" where index + 1 < pattern.count:
+            return (pattern[index + 1] == character, index + 2)
+        case "[":
+            var i = index + 1
+            let negated = i < pattern.count && (pattern[i] == "!" || pattern[i] == "^")
+            if negated { i += 1 }
+            var matched = false
+            var first = true
+            while i < pattern.count, pattern[i] != "]" || first {
+                first = false
+                var low = pattern[i]
+                if low == "\\", i + 1 < pattern.count { i += 1; low = pattern[i] }
+                if i + 2 < pattern.count, pattern[i + 1] == "-", pattern[i + 2] != "]" {
+                    if low <= character && character <= pattern[i + 2] { matched = true }
+                    i += 3
+                } else {
+                    if low == character { matched = true }
+                    i += 1
+                }
+            }
+            // An unclosed `[` is just a bracket.
+            guard i < pattern.count else { return (character == "[", index + 1) }
+            return (matched != negated, i + 1)
+        default:
+            return (pattern[index] == character, index + 1)
+        }
+    }
+
     private static func exists(_ path: String) -> Bool {
-        var info = stat()
-        return lstat(path, &info) == 0
+        (try? FileManager.default.attributesOfItem(atPath: path)) != nil
     }
 
     private static func isDirectory(_ path: String) -> Bool {
@@ -111,7 +175,6 @@ enum Glob {
     }
 
     private static func isSymlink(_ path: String) -> Bool {
-        var info = stat()
-        return lstat(path, &info) == 0 && info.st_mode & S_IFMT == S_IFLNK
+        (try? FileManager.default.attributesOfItem(atPath: path))?[.type] as? FileAttributeType == .typeSymbolicLink
     }
 }

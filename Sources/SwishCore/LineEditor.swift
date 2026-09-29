@@ -522,8 +522,7 @@ final class LineEditor {
     }
 
     private func terminalWidth() -> Int {
-        var size = winsize()
-        return ioctl(output, TIOCGWINSZ, &size) == 0 && size.ws_col > 0 ? Int(size.ws_col) : 80
+        SwishCore.terminalWidth(output) ?? 80
     }
 
     private func writeOut(_ text: String) {

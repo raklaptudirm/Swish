@@ -32,6 +32,18 @@ private func scratch() throws -> String {
     #expect(Glob.expand(Glob.escape("\(d)/with space") + "/*") == ["\(d)/with space/z.txt"])
 }
 
+@Test func globMatching() {
+    func matches(_ pattern: String, _ name: String) -> Bool { Glob.matches(Array(pattern), Array(name)) }
+    #expect(matches("*.txt", "a.txt") && matches("a*b*c", "aXbYbc") && matches("*", "x"))
+    #expect(!matches("*.txt", "a.md") && !matches("a*b", "ac"))
+    #expect(matches("[a-c]x", "bx") && !matches("[!a-c]x", "bx") && matches("[^a-c]x", "dx") && matches("[]]", "]"))
+    #expect(matches("?", "?") && !matches("?", "a")) // `?` is literal
+    #expect(matches(#"\*"#, "*") && !matches(#"\*"#, "a"))
+    // A leading dot is matched only by a dot.
+    #expect(!matches("*", ".hidden") && !matches("[.]h", ".h") && matches(".*", ".hidden"))
+    #expect(matches("[ab", "[ab")) // An unclosed class is literal.
+}
+
 @Test func wildcardDetection() {
     #expect(Glob.hasWildcards("*.txt"))
     #expect(Glob.hasWildcards("a[bc]"))
