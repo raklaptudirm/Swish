@@ -438,8 +438,8 @@ extension Shell {
     }
 
     /// Iterates lists, ranges lazily (so `for i in 1...1_000_000_000` never
-    /// builds the list), and strings by character, as in Swift; command
-    /// output is iterated with `.lines`.
+    /// builds a list), strings by character, as in Swift, the Swift
+    /// sequences Swish holds, and command output by line.
     private func forEachElement(of sequence: Expr, _ body: (Value) throws -> Bool) throws {
         if case .binary(let op, let lower, let upper) = sequence, op == .closedRange || op == .halfOpenRange {
             for i in try intRange(op, try evaluate(lower), try evaluate(upper)) {
@@ -448,15 +448,12 @@ extension Shell {
             return
         }
         let value = try evaluate(sequence)
-        let elements: [Value]
-        switch value {
-        case .list(let list):
-            elements = list
-        case .string(let text):
-            elements = text.map { .string(String($0)) }
-        case .output(let output):
-            elements = output.lines.map(Value.string)
-        default:
+        let elements: AnyIterator<Value>
+        if case .string(let text) = value {
+            elements = AnyIterator(text.lazy.map { .string(String($0)) }.makeIterator())
+        } else if let items = Shell.items(of: value) {
+            elements = items
+        } else {
             throw RuntimeError("can't iterate over \(value.typeName)")
         }
         for element in elements {
@@ -715,11 +712,7 @@ extension Shell {
             let literal = try makeCase(enumValue.type, name, arguments)
             return Shell.isCaseLiteral(lhs) ? try apply(op, literal, known) : try apply(op, known, literal)
         case .binary(let op, let lhs, let rhs) where op == .closedRange || op == .halfOpenRange:
-            let range = try intRange(op, try evaluate(lhs), try evaluate(rhs))
-            guard range.count <= 10_000_000 else {
-                throw RuntimeError("range of \(range.count) elements is too large to make a list; loop over it directly")
-            }
-            return .list(range.map(Value.int))
+            return try makeRange(op, try evaluate(lhs), try evaluate(rhs))
         case .binary(let op, let lhs, let rhs):
             return try apply(op, try evaluate(lhs), try evaluate(rhs))
         case .index(let base, let index):
@@ -1066,6 +1059,7 @@ extension Shell {
             return try makeCase(type, name, nil) // Says what values it needs.
         }
         if case .object(let object) = value, name != "description" && name != "debugDescription" {
+            if object is SwiftValue, let property = try bridgedProperty(name, of: value) { return property }
             guard let member = object.member(name) else {
                 throw RuntimeError("\(object.typeName) has no member '\(name)'")
             }
@@ -1100,22 +1094,16 @@ extension Shell {
         case (.record(let record), "isEmpty"): return .bool(record.count == 0)
         case (.record(let record), "keys"): return .list(record.keys.map(Value.string))
         case (.record(let record), "values"): return .list(record.map(\.value))
-        case (.dictionary(let dictionary), "count"): return .int(dictionary.count)
-        case (.dictionary(let dictionary), "isEmpty"): return .bool(dictionary.count == 0)
         case (.dictionary(let dictionary), "keys"): return .list(dictionary.keys)
         case (.dictionary(let dictionary), "values"): return .list(dictionary.values)
-        case (.list(let list), "count"): return .int(list.count)
-        case (.list(let list), "isEmpty"): return .bool(list.isEmpty)
-        case (.list(let list), "first"): return list.first ?? .nothing
-        case (.list(let list), "last"): return list.last ?? .nothing
-        case (.string(let text), "count"): return .int(text.count)
-        case (.string(let text), "isEmpty"): return .bool(text.isEmpty)
         case (.string(let text), "lines"):
             return .list(text.isEmpty ? [] : text.split(separator: "\n", omittingEmptySubsequences: false).map { .string(String($0)) })
         case (.filesize(let bytes), "bytes"): return .int(Int(bytes))
         case (.record(let record), _):
             throw RuntimeError("\(record.typeName ?? "Record") has no field '\(name)'")
         default:
+            // Swift's own properties, as a key path like `\.count` reads them.
+            if let property = try bridgedProperty(name, of: value) { return property }
             throw RuntimeError("\(value.typeName) has no member '\(name)'")
         }
     }

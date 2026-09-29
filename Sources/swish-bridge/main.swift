@@ -4,7 +4,7 @@
 //
 //   swish-bridge <Swift.symbols.json> <output.swift>
 //
-// scripts/generate-bridge.sh runs it on the standard library. A member is
+// scripts/generate-bridge.swish runs it on the standard library. A member is
 // bridged only if every type in its signature is one Swish can pass or hold
 // (see `supported`); the rest are left out, and counted on stderr.
 import Foundation
@@ -21,7 +21,7 @@ struct Availability: Decodable {
     let obsoleted: Version?
     let introduced: Version?
 }
-struct Constraint: Decodable { let kind: String; let lhs: String; let rhs: String }
+struct Constraint: Decodable { var kind: String; var lhs: String; var rhs: String }
 struct Symbol: Decodable {
     struct Kind: Decodable { let identifier: String }
     struct Identifier: Decodable { let precise: String }
@@ -38,19 +38,26 @@ struct Symbol: Decodable {
     let accessLevel: String
     let docComment: Doc?
 }
-struct Relationship: Decodable { let kind: String; let source: String; let target: String; let targetFallback: String? }
+struct Relationship: Decodable {
+    let kind: String; let source: String; let target: String; let targetFallback: String?
+    let swiftConstraints: [Constraint]?
+}
 struct Graph: Decodable { let symbols: [Symbol]; let relationships: [Relationship] }
 
 // MARK: Swift types
 
 indirect enum SType: Equatable {
+    struct Element: Equatable { let label: String?; let type: SType }
     case named(String, [SType])
     case member(SType, String)
     case array(SType)
     case dictionary(SType, SType)
     case optional(SType)
     case function([SType], SType, throwing: Bool)
-    case tuple([SType])
+    case tuple([Element])
+    /// A parameter `S` where `S: Sequence, S.Element == E`: any sequence of
+    /// E, which the glue passes as an array.
+    case someSequence(SType)
 }
 
 struct Unsupported: Error { let reason: String }
@@ -93,6 +100,17 @@ struct Reader {
         return String(chars[pos..<end])
     }
 
+    /// `P & Q`, where `~Copyable` (a suppressed conformance) says nothing.
+    mutating func protocols() throws -> [String] {
+        var protocols: [String] = []
+        repeat {
+            let suppressed = consume("~")
+            guard let name = identifier() else { throw Unsupported(reason: "constraint") }
+            if !suppressed { protocols.append(name) }
+        } while consume("&")
+        return protocols
+    }
+
     mutating func type() throws -> SType {
         var result: SType
         pos = skipSpacesCopy()
@@ -112,13 +130,14 @@ struct Reader {
                 result = .array(element)
             }
         } else if consume("(") {
-            var elements: [SType] = []
+            var elements: [SType.Element] = []
             if !consume(")") {
                 repeat {
-                    // A tuple's labels are dropped; a function's parameters have none.
+                    // A tuple's labels are kept; a function's parameters have none.
                     let save = pos
-                    if let _ = identifier(), consume(":") {} else { pos = save }
-                    elements.append(try type())
+                    var label: String?
+                    if let name = identifier(), consume(":") { label = name } else { pos = save }
+                    elements.append(.init(label: label, type: try type()))
                 } while consume(",")
                 guard consume(")") else { throw Unsupported(reason: "tuple") }
             }
@@ -130,9 +149,9 @@ struct Reader {
             }
             if consume("async") { throw Unsupported(reason: "async") }
             if consume("->") {
-                result = .function(elements, try type(), throwing: throwing)
-            } else if elements.count == 1 {
-                result = elements[0]
+                result = .function(elements.map(\.type), try type(), throwing: throwing)
+            } else if elements.count == 1 && elements[0].label == nil {
+                result = elements[0].type
             } else {
                 result = .tuple(elements)
             }
@@ -171,23 +190,53 @@ struct Parameter {
     let defaultText: String?
 }
 
+/// A member's declaration, as far as its text says; its constraints come
+/// from the symbol graph.
 struct Declaration {
     enum Kind { case method, property, initializer }
-    /// `throws(E)`: E, a generic parameter only for the error.
-    var typedError: String? = nil
-    /// `where Element == String`: a parameter fixed to a type.
-    var fixed: [String: SType] = [:]
     let kind: Kind
     let name: String
     let isStatic: Bool
     let isMutating: Bool
     let isFailable: Bool
+    /// Its own generic parameters, with the protocols written beside them.
     let generics: [String: [String]]
-    let sameTypes: Bool
     let parameters: [Parameter]
     let returns: SType?
     let throwing: Bool
     let rethrowing: Bool
+    /// `throws(E)`: E, a generic parameter only for the error.
+    let typedError: String?
+    /// Its `where` clause, which the graph doesn't always give separately.
+    var constraints: [Constraint] = []
+}
+
+/// `A: P & Q, B == C`, as the graph writes constraints.
+func whereConstraints(_ text: String) -> [Constraint] {
+    var parts: [String] = []
+    var depth = 0
+    var current = ""
+    for c in text {
+        if "(<[".contains(c) { depth += 1 }
+        if ")>]".contains(c) { depth -= 1 }
+        if c == "," && depth == 0 { parts.append(current); current = ""; continue }
+        current.append(c)
+    }
+    parts.append(current)
+    var constraints: [Constraint] = []
+    for part in parts {
+        if let range = part.range(of: "==") {
+            constraints.append(Constraint(kind: "sameType", lhs: part[..<range.lowerBound].trimmingCharacters(in: .whitespaces),
+                                          rhs: part[range.upperBound...].trimmingCharacters(in: .whitespaces)))
+        } else if let colon = part.firstIndex(of: ":") {
+            let lhs = part[..<colon].trimmingCharacters(in: .whitespaces)
+            for proto in part[part.index(after: colon)...].split(separator: "&") {
+                let name = proto.trimmingCharacters(in: .whitespaces)
+                if !name.hasPrefix("~") { constraints.append(Constraint(kind: "conformance", lhs: lhs, rhs: name)) }
+            }
+        }
+    }
+    return constraints
 }
 
 func parseDeclaration(_ text: String) throws -> Declaration {
@@ -221,22 +270,13 @@ func parseDeclaration(_ text: String) throws -> Declaration {
         if reader.pos == save { break }
     }
     var generics: [String: [String]] = [:]
-    var sameTypes = false
     var typedError: String?
-    var fixed: [String: SType] = [:]
     func genericParameters(_ reader: inout Reader) throws {
         guard reader.consume("<") else { return }
         repeat {
             guard let name = reader.identifier() else { throw Unsupported(reason: "generic parameter") }
             if reader.consume("...") { throw Unsupported(reason: "variadic generics") }
-            var protocols: [String] = []
-            if reader.consume(":") {
-                repeat {
-                    guard let proto = reader.identifier() else { throw Unsupported(reason: "constraint") }
-                    protocols.append(proto)
-                } while reader.consume("&")
-            }
-            generics[name, default: []] += protocols
+            generics[name, default: []] += reader.consume(":") ? try reader.protocols() : []
         } while reader.consume(",")
         guard reader.consume(">") else { throw Unsupported(reason: "generics") }
     }
@@ -285,24 +325,6 @@ func parseDeclaration(_ text: String) throws -> Declaration {
         }
         return (false, false)
     }
-    func whereClause(_ reader: inout Reader) throws {
-        guard reader.consume("where") else { return }
-        repeat {
-            let lhs = try reader.type()
-            if reader.consume("==") {
-                let rhs = try reader.type()
-                if case .named(let name, []) = lhs { fixed[name] = rhs } else { sameTypes = true }
-                continue
-            }
-            guard reader.consume(":") else { throw Unsupported(reason: "where") }
-            var protocols: [String] = []
-            repeat {
-                guard let proto = reader.identifier() else { throw Unsupported(reason: "where protocol") }
-                protocols.append(proto)
-            } while reader.consume("&")
-            if case .named(let name, []) = lhs { generics[name, default: []] += protocols } else { sameTypes = true }
-        } while reader.consume(",")
-    }
 
     if reader.consume("func") {
         guard let name = reader.identifier() else { throw Unsupported(reason: "operator") }
@@ -310,19 +332,17 @@ func parseDeclaration(_ text: String) throws -> Declaration {
         let parameters = try parameterList(&reader)
         let (throwing, rethrowing) = try effects(&reader)
         let returns = reader.consume("->") ? try reader.type() : nil
-        try whereClause(&reader)
         var declaration = Declaration(kind: .method, name: name, isStatic: isStatic, isMutating: isMutating, isFailable: false,
-                                      generics: generics, sameTypes: sameTypes, parameters: parameters, returns: returns,
-                                      throwing: throwing, rethrowing: rethrowing)
-        declaration.typedError = typedError
-        declaration.fixed = fixed
+                                      generics: generics, parameters: parameters, returns: returns,
+                                      throwing: throwing, rethrowing: rethrowing, typedError: typedError)
+        if reader.consume("where") { declaration.constraints = whereConstraints(String(reader.chars[reader.pos...])) }
         return declaration
     }
     if reader.consume("var") || reader.consume("let") {
         guard let name = reader.identifier(), reader.consume(":") else { throw Unsupported(reason: "property") }
         let type = try reader.type()
         return Declaration(kind: .property, name: name, isStatic: isStatic, isMutating: false, isFailable: false,
-                           generics: [:], sameTypes: false, parameters: [], returns: type, throwing: false, rethrowing: false)
+                           generics: [:], parameters: [], returns: type, throwing: false, rethrowing: false, typedError: nil)
     }
     if reader.consume("init") {
         let failable = reader.consume("?")
@@ -330,10 +350,11 @@ func parseDeclaration(_ text: String) throws -> Declaration {
         try genericParameters(&reader)
         let parameters = try parameterList(&reader)
         let (throwing, rethrowing) = try effects(&reader)
-        try whereClause(&reader)
-        return Declaration(kind: .initializer, name: "init", isStatic: true, isMutating: false, isFailable: failable,
-                           generics: generics, sameTypes: sameTypes, parameters: parameters, returns: nil,
-                           throwing: throwing, rethrowing: rethrowing)
+        var declaration = Declaration(kind: .initializer, name: "init", isStatic: true, isMutating: false, isFailable: failable,
+                                      generics: generics, parameters: parameters, returns: nil,
+                                      throwing: throwing, rethrowing: rethrowing, typedError: typedError)
+        if reader.consume("where") { declaration.constraints = whereConstraints(String(reader.chars[reader.pos...])) }
+        return declaration
     }
     throw Unsupported(reason: "kind")
 }
@@ -350,77 +371,155 @@ nonisolated(unsafe) let leaves: [String: (annotation: String, from: (String) -> 
     "Substring": (#".named("Substring")"#, { "try SwiftValue.unbox(Substring.self, \($0))" }, { #"SwiftValue.make(\#($0), as: "Substring")"# }),
 ]
 
+/// Generic types Swish holds as they are, boxed (`SwiftValue`), with Swish's
+/// values for their generic parameters: a `Set<Int>` is a `Set<Value>`.
+let boxes: Set = ["Set", "ArraySlice", "Range", "ClosedRange"]
+
 /// The protocols a type conforms to, as far as the checker needs to know.
 let knownProtocols: Set = ["Equatable", "Hashable", "Comparable", "CustomStringConvertible", "Encodable", "Sequence"]
 /// What Swish's values (the stand-in for every generic parameter) can be.
 let valueProtocols: Set = ["Equatable", "Hashable", "Comparable"]
+/// Constraints every Swish value meets, so they say nothing.
+let alwaysMet: Set = ["Copyable", "Escapable", "Sendable", "SendableMetatype"]
 
 struct BridgedType {
+    /// `String`, `Set`.
     let name: String
+    /// Its generic parameters, all of them.
+    let parameters: [String]
+    /// Those not fixed to a type (by `where Element == String`).
     var genericParameters: [String]
+    var fixed: [String: SType] = [:]
     var associated: [String: SType] = [:]
-    var conformances: Set<String> = []
+    /// The protocols it conforms to that the checker knows, each with what
+    /// its generic parameters must be for it.
+    var conformances: [String: [String: [String]]] = [:]
     /// Every protocol it conforms to, for constraints like `Self: FixedWidthInteger`.
     var allConformances: Set<String> = []
-}
 
-/// A type as the members of `owner` see it: `Self` and associated types
-/// replaced. Nil when it can't be bridged.
-func resolve(_ type: SType, in owner: BridgedType, generics: Set<String>) -> SType? {
-    switch type {
-    case .named("Self", []):
-        return owner.genericParameters.isEmpty ? .named(owner.name, []) : .named(owner.name, owner.genericParameters.map { .named($0, []) })
-    case .member(.named("Self", []), let associated), .member(.named(owner.name, _), let associated):
-        // `Self.Element` on Array is its generic parameter.
-        if owner.genericParameters.contains(associated) { return .named(associated, []) }
-        guard let target = owner.associated[associated] else { return nil }
-        return resolve(target, in: owner, generics: generics)
-    case .named(let name, let arguments):
-        if generics.contains(name) || owner.genericParameters.contains(name) { return arguments.isEmpty ? type : nil }
-        if arguments.isEmpty, let target = owner.associated[name] { return resolve(target, in: owner, generics: generics) }
-        if name == "Void" { return .tuple([]) }
-        let resolved = arguments.compactMap { resolve($0, in: owner, generics: generics) }
-        guard resolved.count == arguments.count else { return nil }
-        if name == "Array", resolved.count == 1 { return .array(resolved[0]) }
-        if name == "Optional", resolved.count == 1 { return .optional(resolved[0]) }
-        return .named(name, resolved)
-    case .member:
-        return nil
-    case .array(let element): return resolve(element, in: owner, generics: generics).map(SType.array)
-    case .optional(let wrapped): return resolve(wrapped, in: owner, generics: generics).map(SType.optional)
-    case .dictionary: return nil
-    case .tuple(let elements): return elements.isEmpty ? type : nil
-    case .function(let parameters, let result, let throwing):
-        let resolved = parameters.compactMap { resolve($0, in: owner, generics: generics) }
-        guard resolved.count == parameters.count, let result = resolve(result, in: owner, generics: generics) else { return nil }
-        return .function(resolved, result, throwing: throwing)
+    init(name: String, parameters: [String]) {
+        self.name = name
+        self.parameters = parameters
+        self.genericParameters = parameters
     }
 }
 
+/// What a member's types are resolved against.
+struct Context {
+    var owner: BridgedType
+    /// The member's own generic parameters, and the owner's.
+    var generics: Set<String>
+    /// Its parameters that are sequences, with their elements.
+    var sequences: [String: SType] = [:]
+}
+
+/// The type a member's `Self` is.
+func selfType(_ owner: BridgedType) -> SType {
+    let arguments = owner.parameters.map { owner.fixed[$0] ?? .named($0, []) }
+    switch owner.name {
+    case "Array": return .array(arguments[0])
+    case "Optional": return .optional(arguments[0])
+    case "Dictionary": return .dictionary(arguments[0], arguments[1])
+    default: return .named(owner.name, arguments)
+    }
+}
+
+/// A type as a member of the context's owner sees it: `Self`, associated
+/// types and sequence parameters replaced. Nil when it can't be bridged.
+func resolve(_ type: SType, _ context: Context) -> SType? {
+    let owner = context.owner
+    switch type {
+    case .named("Self", []):
+        return selfType(owner)
+    case .named(let name, let arguments):
+        if arguments.isEmpty, let element = context.sequences[name] { return resolve(element, context).map(SType.someSequence) }
+        if context.generics.contains(name) || owner.genericParameters.contains(name) { return arguments.isEmpty ? type : nil }
+        if arguments.isEmpty, let target = owner.associated[name] { return resolve(target, context) }
+        if name == "Void" { return .tuple([]) }
+        let resolved = arguments.compactMap { resolve($0, context) }
+        guard resolved.count == arguments.count else { return nil }
+        if name == "Array", resolved.count == 1 { return .array(resolved[0]) }
+        if name == "Optional", resolved.count == 1 { return .optional(resolved[0]) }
+        if name == "Dictionary", resolved.count == 2 { return .dictionary(resolved[0], resolved[1]) }
+        return .named(name, resolved)
+    case .member(let base, let name):
+        // `S.Element`, for a sequence parameter S.
+        if case .named(let parameter, []) = base, let element = context.sequences[parameter] {
+            return name == "Element" ? resolve(element, context) : nil
+        }
+        guard let resolvedBase = resolve(base, context) else { return nil }
+        // `Self.Element`: a generic parameter (on Array) or an associated type.
+        if resolvedBase == selfType(owner) {
+            if owner.genericParameters.contains(name) { return .named(name, []) }
+            if let target = owner.associated[name] { return resolve(target, context) }
+        }
+        // `Bound.Stride`, with Bound fixed to Int: Int's own.
+        if case .named(let leaf, []) = resolvedBase, let other = types[leaf], let target = other.associated[name] {
+            return resolve(target, Context(owner: other, generics: []))
+        }
+        return nil
+    case .array(let element): return resolve(element, context).map(SType.array)
+    case .optional(let wrapped): return resolve(wrapped, context).map(SType.optional)
+    case .dictionary(let key, let value):
+        guard let key = resolve(key, context), let value = resolve(value, context) else { return nil }
+        return .dictionary(key, value)
+    case .tuple(let elements):
+        let resolved = elements.compactMap { element in resolve(element.type, context).map { SType.Element(label: element.label, type: $0) } }
+        return resolved.count == elements.count ? .tuple(resolved) : nil
+    case .function(let parameters, let result, let throwing):
+        let resolved = parameters.compactMap { resolve($0, context) }
+        guard resolved.count == parameters.count, let result = resolve(result, context) else { return nil }
+        return .function(resolved, result, throwing: throwing)
+    case .someSequence:
+        return type
+    }
+}
+
+/// A leaf type or a generic parameter: what can be in a box or a dictionary.
+func isSimple(_ type: SType, generics: Set<String>) -> Bool {
+    guard case .named(let name, []) = type else { return false }
+    return leaves[name] != nil || generics.contains(name)
+}
+
 /// Whether Swish can hold or pass `type`: its values, the leaf types above,
-/// generic parameters (as Swish values), and arrays, optionals and closures
-/// of those. Closures only as parameters.
+/// generic parameters (as Swish values), boxes, and arrays, dictionaries,
+/// optionals, tuples and closures of those. Closures only as parameters.
 func supported(_ type: SType, generics: Set<String>, asParameter: Bool) -> Bool {
     switch type {
-    case .named(let name, []): return leaves[name] != nil || generics.contains(name)
-    case .array(let element), .optional(let element): return supported(element, generics: generics, asParameter: false)
-    case .tuple(let elements): return elements.isEmpty
+    case .named(let name, let arguments):
+        if arguments.isEmpty { return isSimple(type, generics: generics) }
+        return boxes.contains(name) && arguments.allSatisfy { isSimple($0, generics: generics) }
+    case .array(let element), .optional(let element), .someSequence(let element):
+        return supported(element, generics: generics, asParameter: false)
+    case .dictionary(let key, let value):
+        return isSimple(key, generics: generics) && isSimple(value, generics: generics)
+    case .tuple(let elements):
+        return elements.allSatisfy { element in
+            if case .function = element.type { return false }
+            return supported(element.type, generics: generics, asParameter: false)
+        }
     case .function(let parameters, let result, _):
         return asParameter && parameters.allSatisfy { supported($0, generics: generics, asParameter: false) }
             && supported(result, generics: generics, asParameter: false)
-    default: return false
+    case .member:
+        return false
     }
 }
 
 func annotation(_ type: SType) -> String {
     switch type {
-    case .named(let name, []): return leaves[name]?.annotation ?? ".parameter(\"\(name)\")"
+    case .named(let name, []): return leaves[name]?.annotation ?? ".parameter(\(quoted(name)))"
+    case .named(let name, let arguments): return ".generic(\(quoted(name)), [\(arguments.map(annotation).joined(separator: ", "))])"
     case .array(let element): return ".list(\(annotation(element)))"
     case .optional(let wrapped): return ".optional(\(annotation(wrapped)))"
-    case .tuple: return ".void"
+    case .dictionary(let key, let value): return ".dictionary(\(annotation(key)), \(annotation(value)))"
+    case .someSequence(let element): return ".someSequence(\(annotation(element)))"
+    case .tuple(let elements):
+        if elements.isEmpty { return ".void" }
+        return ".tuple([" + elements.map { ".init(label: \($0.label.map(quoted) ?? "nil"), type: \(annotation($0.type)))" }.joined(separator: ", ") + "])"
     case .function(let parameters, let result, let throwing):
         return ".functionType([\(parameters.map(annotation).joined(separator: ", "))], \(annotation(result)), throws: \(throwing))"
-    default: fatalError("unsupported \(type)")
+    case .member: fatalError("unsupported \(type)")
     }
 }
 
@@ -428,31 +527,64 @@ func annotation(_ type: SType) -> String {
 func spelling(_ type: SType) -> String {
     switch type {
     case .named(let name, []): return leaves[name] != nil ? name : "Value"
-    case .array(let element): return "[\(spelling(element))]"
+    case .named(let name, let arguments):
+        return "\(name)<\(arguments.map(spelling).joined(separator: ", "))>"
+    case .array(let element), .someSequence(let element): return "[\(spelling(element))]"
     case .optional(let wrapped): return "\(spelling(wrapped))?"
-    case .tuple: return "Void"
+    case .dictionary(let key, let value): return "[\(spelling(key)): \(spelling(value))]"
+    case .tuple(let elements):
+        if elements.isEmpty { return "Void" }
+        return "(" + elements.map { ($0.label.map { "\($0): " } ?? "") + spelling($0.type) }.joined(separator: ", ") + ")"
     case .function(let parameters, let result, let throwing):
         return "(\(parameters.map(spelling).joined(separator: ", ")))\(throwing ? " throws" : "") -> \(spelling(result))"
-    default: fatalError("unsupported \(type)")
+    case .member: fatalError("unsupported \(type)")
     }
+}
+
+/// A box's type as Swish holds it: its generic parameters all Swish values.
+func canonical(_ name: String, _ arguments: [SType]) -> String {
+    spelling(.named(name, arguments.map { _ in .named("Value", []) }))
+}
+
+/// Whether a type is a leaf, which converts, rather than a Swish value.
+func isLeaf(_ type: SType) -> Bool {
+    if case .named(let name, []) = type { return leaves[name] != nil }
+    return false
 }
 
 /// Swift code turning the Swish value `value` into a `type`.
 func fromSwish(_ value: String, _ type: SType) -> String {
     switch type {
     case .named(let name, []): return leaves[name]?.from(value) ?? value
-    case .array(let element):
-        if case .named(let name, []) = element, leaves[name] == nil { return "try bridgeList(\(value))" }
-        return "try bridgeList(\(value)).map { \(fromSwish("$0", element)) }"
+    case .named(let name, let arguments):
+        let box = "try SwiftValue.unbox(\(canonical(name, arguments)).self, \(value))"
+        guard arguments.contains(where: isLeaf) else { return box }
+        switch name {
+        case "Range", "ClosedRange": return "try bridge\(name)(\(value)) { \(fromSwish("$0", arguments[0])) }"
+        default: return "\(spelling(type))(\(box).map { \(fromSwish("$0", arguments[0])) })"
+        }
+    case .array(let element), .someSequence(let element):
+        let items = if case .array = type { "try bridgeList(\(value))" } else { "try bridgeSequence(\(value))" }
+        if case .named(let name, []) = element, leaves[name] == nil { return items }
+        return "\(items).map { \(fromSwish("$0", element)) }"
     case .optional(let wrapped): return "(\(value) == .nothing ? nil : \(fromSwish(value, wrapped)))"
+    case .dictionary(let key, let value2):
+        guard isLeaf(key) || isLeaf(value2) else { return "try bridgeDictionary(\(value))" }
+        return "try Dictionary(uniqueKeysWithValues: bridgeDictionary(\(value)).map { (\(fromSwish("$0.key", key)), \(fromSwish("$0.value", value2))) })"
+    case .tuple(let elements):
+        let labels = elements.map { $0.label.map(quoted) ?? "nil" }.joined(separator: ", ")
+        let parts = elements.enumerated().map { index, element in
+            (element.label.map { "\($0): " } ?? "") + fromSwish("t[\(index)]", element.type)
+        }
+        return "try bridgeTuple(\(value), [\(labels)]) { t in (\(parts.joined(separator: ", "))) }"
     case .function(let parameters, let result, _):
         let names = parameters.indices.map { "a\($0)" }
         let arguments = zip(names, parameters).map { toSwish($0, $1) }.joined(separator: ", ")
         let typed = zip(names, parameters).map { "\($0): \(spelling($1))" }.joined(separator: ", ")
         let call = "try bridgeClosure(shell, \(value))([\(arguments)])"
-        if case .tuple = result { return "{ (\(typed)) throws -> Void in _ = \(call) }" }
+        if case .tuple(let elements) = result, elements.isEmpty { return "{ (\(typed)) throws -> Void in _ = \(call) }" }
         return "{ (\(typed)) throws -> \(spelling(result)) in \(fromSwish(call, result)) }"
-    default: fatalError("unsupported \(type)")
+    case .member: fatalError("unsupported \(type)")
     }
 }
 
@@ -460,12 +592,31 @@ func fromSwish(_ value: String, _ type: SType) -> String {
 func toSwish(_ swift: String, _ type: SType) -> String {
     switch type {
     case .named(let name, []): return leaves[name]?.to(swift) ?? swift
+    case .named(let name, let arguments):
+        let typeName = quoted(name)
+        guard arguments.contains(where: isLeaf) else { return "SwiftValue.make(\(swift), as: \(typeName))" }
+        let bound = arguments[0]
+        switch name {
+        case "Range", "ClosedRange":
+            return "bridgeBox(\(swift), as: \(typeName)) { r in \(canonical(name, arguments))(uncheckedBounds: (lower: \(toSwish("r.lowerBound", bound)), upper: \(toSwish("r.upperBound", bound)))) }"
+        default:
+            return "bridgeBox(\(swift), as: \(typeName)) { \(canonical(name, arguments))($0.map { \(toSwish("$0", bound)) }) }"
+        }
     case .array(let element):
         if case .named(let name, []) = element, leaves[name] == nil { return ".list(\(swift))" }
         return ".list(\(swift).map { \(toSwish("$0", element)) })"
     case .optional(let wrapped): return "(\(swift).map { \(toSwish("$0", wrapped)) } ?? .nothing)"
-    case .tuple: return ".nothing"
-    default: fatalError("unsupported \(type)")
+    case .dictionary(let key, let value):
+        // In the receiver's order, as far as it goes.
+        guard isLeaf(key) || isLeaf(value) else { return "bridgeDictionary(\(swift), order: args[\"self\"])" }
+        return "bridgeDictionary(Dictionary(uniqueKeysWithValues: \(swift).map { (\(toSwish("$0.key", key)), \(toSwish("$0.value", value))) }), order: args[\"self\"])"
+    case .tuple(let elements):
+        if elements.isEmpty { return ".nothing" }
+        let parts = elements.enumerated().map { index, element in
+            "(\(element.label.map(quoted) ?? "nil"), \(toSwish("t.\(index)", element.type)))"
+        }
+        return "bridgeTuple(\(swift)) { t in [\(parts.joined(separator: ", "))] }"
+    case .someSequence, .function, .member: fatalError("unsupported \(type)")
     }
 }
 
@@ -494,37 +645,78 @@ let graph = try JSONDecoder().decode(Graph.self, from: Data(contentsOf: URL(file
 
 /// The types bridged, with their generic parameters.
 let bridgedTypeNames: [(String, [String])] = [
-    ("String", []), ("Substring", []), ("Character", []), ("Int", []), ("Double", []), ("Bool", []), ("Array", ["Element"]),
+    ("String", []), ("Substring", []), ("Character", []), ("Int", []), ("Double", []), ("Bool", []),
+    ("Array", ["Element"]), ("ArraySlice", ["Element"]), ("Set", ["Element"]), ("Dictionary", ["Key", "Value"]),
+    ("Optional", ["Wrapped"]), ("Range", ["Bound"]), ("ClosedRange", ["Bound"]),
 ]
-var typeIDs: [String: String] = [:]
-for symbol in graph.symbols where symbol.pathComponents.count == 1 && symbol.kind.identifier == "swift.struct" {
-    typeIDs[symbol.pathComponents[0]] = symbol.identifier.precise
+/// Members Swish has its own way: the textual form of the types it
+/// formats, and a dictionary's keys and values, which are arrays in its
+/// order, since Swish's dictionaries keep one (Swift's views would be in
+/// no order at all).
+let swishOwn: [String: Set<String>] = [
+    "Array": ["description", "debugDescription"],
+    "Optional": ["description", "debugDescription"],
+    "Dictionary": ["description", "debugDescription", "keys", "values"],
+]
+
+var typeIDs: [[String]: String] = [:]
+for symbol in graph.symbols where symbol.kind.identifier == "swift.struct" || symbol.kind.identifier == "swift.enum" {
+    typeIDs[symbol.pathComponents] = symbol.identifier.precise
 }
+let symbolsByID = Dictionary(graph.symbols.map { ($0.identifier.precise, $0) }, uniquingKeysWith: { first, _ in first })
+
+/// Range and ClosedRange are sequences, and have most of their members,
+/// only when `Bound: Strideable` with a SignedInteger stride: for Swish,
+/// when Bound is Int.
+func strideFix(_ constraint: Constraint) -> Bool {
+    constraint.kind == "conformance" && constraint.rhs == "Strideable" && constraint.lhs == "Bound"
+}
+
 nonisolated(unsafe) var types: [String: BridgedType] = [:]
 for (name, parameters) in bridgedTypeNames {
-    var type = BridgedType(name: name, genericParameters: parameters)
+    var type = BridgedType(name: name, parameters: parameters)
     for symbol in graph.symbols where symbol.pathComponents.count == 2 && symbol.pathComponents[0] == name
         && symbol.kind.identifier == "swift.typealias" {
         let text = (symbol.declarationFragments ?? []).map(\.spelling).joined()
         guard let equals = text.range(of: "=") else { continue }
         var reader = Reader(String(text[equals.upperBound...]))
-        if let target = try? reader.type() { type.associated[symbol.pathComponents[1]] = target }
+        if let target = try? reader.type() { type.associated[symbol.pathComponents.last!] = target }
     }
-    let id = typeIDs[name]
+    types[name] = type
+}
+for (name, _) in bridgedTypeNames {
+    var type = types[name]!
+    let id = typeIDs[[name]]
     for relationship in graph.relationships where relationship.kind == "conformsTo" && relationship.source == id {
-        let proto = relationship.targetFallback.map { String($0.split(separator: ".").last!) }
-            ?? graph.symbols.first { $0.identifier.precise == relationship.target }?.pathComponents.last ?? ""
+        var proto = relationship.targetFallback.map { String($0.split(separator: ".").last!) }
+            ?? symbolsByID[relationship.target]?.pathComponents.last ?? ""
         type.allConformances.insert(proto)
-        if knownProtocols.contains(proto) { type.conformances.insert(proto) }
-        if proto == "Collection" || proto == "BidirectionalCollection" { type.conformances.insert("Sequence") }
+        if proto == "Collection" || proto == "BidirectionalCollection" { proto = "Sequence" }
+        guard knownProtocols.contains(proto) else { continue }
+        // What the generic parameters must be for it, if Swish can say.
+        var needs: [String: [String]] = [:]
+        var sayable = true
+        for constraint in relationship.swiftConstraints ?? [] where !alwaysMet.contains(constraint.rhs) {
+            if strideFix(constraint) { needs["Bound"] = ["=Int"]; continue }
+            if constraint.lhs.contains(".") { continue } // Bound.Stride, with Bound an Int
+            if valueProtocols.contains(constraint.rhs) || constraint.rhs == "Encodable" {
+                if needs[constraint.lhs] != ["=Int"] { needs[constraint.lhs, default: []].append(constraint.rhs) }
+            } else {
+                sayable = false
+            }
+        }
+        guard sayable else { continue }
+        // Of a conformance declared more than once, the least demanding.
+        if let existing = type.conformances[proto], existing.values.map(\.count).reduce(0, +) <= needs.values.map(\.count).reduce(0, +) { continue }
+        type.conformances[proto] = needs.mapValues { Array(Set($0)).sorted() }
     }
     types[name] = type
 }
 
-/// Whether a leaf type conforms to `proto`, for constraints on concrete types.
+/// Whether a concrete type conforms to `proto`, for constraints on them.
 func conforms(_ type: SType, _ proto: String) -> Bool {
     guard case .named(let name, []) = type else { return false }
-    return types[name]?.conformances.contains(proto) ?? false
+    return types[name]?.allConformances.contains(proto) ?? false
 }
 
 func available(_ symbol: Symbol) -> Bool {
@@ -540,162 +732,156 @@ func available(_ symbol: Symbol) -> Bool {
     return true
 }
 
-var output = """
-// Generated by swish-bridge from the Swift standard library's symbol graph.
-// Don't edit: run scripts/generate-bridge.sh.
-import Foundation
-import SwishKit
+func parseType(_ text: String) throws -> SType {
+    var reader = Reader(text)
+    return try reader.type()
+}
 
-extension Bridge {
-    nonisolated(unsafe) static let standardLibrary: [BridgedType] = [
+/// `S.Element` for a sequence parameter S: S.
+func sequenceParameter(_ type: SType, _ sequences: Set<String>) -> String? {
+    if case .member(.named(let parameter, []), "Element") = type, sequences.contains(parameter) { return parameter }
+    return nil
+}
 
-"""
-var skipped: [String: Int] = [:]
-var bridgedCount = 0
+/// The Swift for one member: its signature and glue.
+func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Constraint] = []) throws -> (key: String, code: String) {
+    let text = (symbol.declarationFragments ?? []).map(\.spelling).joined()
+    let declaration = try parseDeclaration(text)
+    if declaration.isMutating { throw Unsupported(reason: "mutating") }
+    var owner = original
+    let constraints = conditions + (symbol.swiftExtension?.constraints ?? []) + (symbol.swiftGenerics?.constraints ?? [])
+        + declaration.constraints
+    var ownGenerics = declaration.generics
+    if let error = declaration.typedError { ownGenerics.removeValue(forKey: error) }
 
-for (name, _) in bridgedTypeNames {
-    let owner = types[name]!
-    var seen: Set<String> = []
-    var members: [String] = []
-    for symbol in graph.symbols where symbol.pathComponents.count == 2 && symbol.pathComponents[0] == name {
-        let kinds = ["swift.method", "swift.property", "swift.init", "swift.type.method", "swift.type.property"]
-        guard kinds.contains(symbol.kind.identifier), symbol.accessLevel == "public", available(symbol) else { continue }
-        let title = symbol.pathComponents[1]
-        guard !title.hasPrefix("_"), title.first?.isLetter ?? false else { continue }
-        let text = (symbol.declarationFragments ?? []).map(\.spelling).joined()
-        do {
-            let declaration = try parseDeclaration(text)
-            if declaration.isMutating { throw Unsupported(reason: "mutating") }
-            if declaration.sameTypes { throw Unsupported(reason: "same-type constraint") }
-            // `where Element == String`: the member is for that element only, so
-            // it's bridged with Element fixed to it.
-            var owner = owner
-            var fixed = declaration.fixed
-            for constraint in symbol.swiftExtension?.constraints ?? [] where constraint.kind == "sameType" {
-                var reader = Reader(constraint.rhs)
-                let rhs = try reader.type()
-                let lhs = constraint.lhs.replacingOccurrences(of: "Self.", with: "")
-                guard owner.genericParameters.contains(lhs), case .named(let leaf, []) = rhs, leaves[leaf] != nil else {
-                    throw Unsupported(reason: "same-type constraint")
-                }
-                fixed[lhs] = rhs
-            }
-            for (parameter, type) in fixed {
-                guard owner.genericParameters.contains(parameter), case .named(let leaf, []) = type, leaves[leaf] != nil else {
-                    throw Unsupported(reason: "same-type constraint")
-                }
-                owner.associated[parameter] = type
-                owner.genericParameters.removeAll { $0 == parameter }
-            }
-            var declarationGenerics = declaration.generics
-            if let error = declaration.typedError { declarationGenerics.removeValue(forKey: error) }
-            let methodGenerics = Set(declarationGenerics.keys).subtracting(owner.genericParameters).subtracting(fixed.keys)
-            let allGenerics = methodGenerics.union(owner.genericParameters)
-            // Constraints from the member and from the extension it's in.
-            var constraints = declarationGenerics
-            for constraint in (symbol.swiftExtension?.constraints ?? []) + (symbol.swiftGenerics?.constraints ?? []) {
-                if constraint.kind == "sameType" && (fixed[constraint.lhs.replacingOccurrences(of: "Self.", with: "")] != nil) { continue }
-                if constraint.kind == "conformance" && constraint.lhs == declaration.typedError { continue }
-                guard constraint.kind == "conformance" else { throw Unsupported(reason: "same-type constraint") }
-                var reader = Reader(constraint.lhs)
-                let lhs = try reader.type()
-                guard let resolved = resolve(lhs, in: owner, generics: allGenerics) else { throw Unsupported(reason: "constraint on \(constraint.lhs)") }
-                if case .named(let parameter, []) = resolved, allGenerics.contains(parameter) {
-                    constraints[parameter, default: []].append(constraint.rhs)
-                } else if case .named(owner.name, _) = resolved {
-                    guard owner.allConformances.contains(constraint.rhs) || constraint.rhs == "Copyable" || constraint.rhs == "Escapable" else {
-                        throw Unsupported(reason: "Self: \(constraint.rhs)")
-                    }
-                } else if !conforms(resolved, constraint.rhs) && constraint.rhs != "Copyable" && constraint.rhs != "Escapable" {
-                    throw Unsupported(reason: "\(constraint.lhs): \(constraint.rhs)")
-                }
-            }
-            var generics: [String: [String]] = [:]
-            for (parameter, protocols) in constraints {
-                let relevant = protocols.filter { $0 != "Copyable" && $0 != "Escapable" }
-                guard relevant.allSatisfy(valueProtocols.contains) else { throw Unsupported(reason: "constraint \(relevant)") }
-                generics[parameter] = Array(Set(relevant)).sorted()
-            }
-            // A parameter fixed by `where Element == String` must be that type,
-            // which the checker checks as a constraint written `=String`.
-            for (parameter, type) in fixed {
-                if case .named(let leaf, []) = type { generics[parameter] = ["=" + leaf] }
-            }
-            for parameter in methodGenerics where generics[parameter] == nil { generics[parameter] = [] }
-            for parameter in owner.genericParameters where generics[parameter] == nil { generics[parameter] = [] }
+    // Its generic parameters that are sequences: `S: Sequence`.
+    var sequenceNames = Set(ownGenerics.filter { $0.value.contains("Sequence") }.keys)
+    for constraint in constraints where constraint.kind == "conformance" && constraint.rhs == "Sequence"
+        && ownGenerics[constraint.lhs] != nil { sequenceNames.insert(constraint.lhs) }
+    var sequences: [String: SType] = [:]
+    var fixed: [String: SType] = [:]
+    for constraint in constraints where strideFix(constraint) && owner.genericParameters.contains("Bound") {
+        fixed["Bound"] = .named("Int", [])
+    }
+    for constraint in constraints where constraint.kind == "sameType" {
+        let lhs = try parseType(constraint.lhs), rhs = try parseType(constraint.rhs)
+        if let parameter = sequenceParameter(lhs, sequenceNames) { sequences[parameter] = rhs; continue }
+        if let parameter = sequenceParameter(rhs, sequenceNames) { sequences[parameter] = lhs; continue }
+        // `where Element == String`: the member is for that element only, so
+        // it's bridged with Element fixed to it.
+        let name = constraint.lhs.replacingOccurrences(of: "Self.", with: "")
+        guard owner.genericParameters.contains(name), isLeaf(rhs) else { throw Unsupported(reason: "same-type constraint") }
+        fixed[name] = rhs
+    }
+    for (parameter, type) in fixed {
+        owner.associated[parameter] = type
+        owner.fixed[parameter] = type
+        owner.genericParameters.removeAll { $0 == parameter }
+    }
+    // A sequence whose elements aren't said: its own generic parameter.
+    for parameter in sequenceNames where sequences[parameter] == nil {
+        sequences[parameter] = .named("\(parameter).Element", [])
+        ownGenerics["\(parameter).Element"] = []
+    }
+    let methodGenerics = Set(ownGenerics.keys).subtracting(sequenceNames).subtracting(owner.genericParameters)
+    let allGenerics = methodGenerics.union(owner.genericParameters)
+    let context = Context(owner: owner, generics: allGenerics, sequences: sequences)
 
-            var parameters: [(Parameter, SType)] = []
-            for parameter in declaration.parameters {
-                guard let type = resolve(parameter.type, in: owner, generics: allGenerics),
-                      supported(type, generics: allGenerics, asParameter: true) else {
-                    throw Unsupported(reason: "parameter \(parameter.type)")
-                }
-                parameters.append((parameter, type))
-            }
-            var returns: SType = .tuple([])
-            if declaration.kind == .initializer {
-                returns = .named(name, owner.genericParameters.map { .named($0, []) })
-                if name == "Array" { returns = .array(.named("Element", [])) }
-                if declaration.isFailable { returns = .optional(returns) }
-            } else if let declared = declaration.returns {
-                guard let type = resolve(declared, in: owner, generics: allGenerics),
-                      supported(type, generics: allGenerics, asParameter: false) else {
-                    throw Unsupported(reason: "result \(declared)")
-                }
-                returns = type
-            }
-            // A method-level generic parameter that isn't in a parameter can't be
-            // inferred by the glue.
-            for parameter in methodGenerics {
-                let mentioned = parameters.contains { "\($0.1)".contains("\"\(parameter)\"") }
-                if !mentioned { throw Unsupported(reason: "uninferrable generic \(parameter)") }
-            }
+    // Constraints from the member and from the extension it's in.
+    var needs: [String: [String]] = ownGenerics.filter { !sequenceNames.contains($0.key) }
+    for constraint in constraints where constraint.kind == "conformance" {
+        if constraint.lhs == declaration.typedError || alwaysMet.contains(constraint.rhs) { continue }
+        if sequenceNames.contains(constraint.lhs) && constraint.rhs == "Sequence" { continue }
+        guard let resolved = resolve(try parseType(constraint.lhs), context) else {
+            throw Unsupported(reason: "constraint on \(constraint.lhs)")
+        }
+        if case .named(let parameter, []) = resolved, allGenerics.contains(parameter) {
+            needs[parameter, default: []].append(constraint.rhs)
+        } else if resolved == selfType(owner) {
+            guard owner.allConformances.contains(constraint.rhs) else { throw Unsupported(reason: "Self: \(constraint.rhs)") }
+        } else if !conforms(resolved, constraint.rhs) {
+            throw Unsupported(reason: "\(constraint.lhs): \(constraint.rhs)")
+        }
+    }
+    var generics: [String: [String]] = [:]
+    for (parameter, protocols) in needs {
+        let relevant = Set(protocols).subtracting(alwaysMet)
+        guard relevant.allSatisfy(valueProtocols.contains) else { throw Unsupported(reason: "constraint \(relevant.sorted())") }
+        generics[parameter] = relevant.sorted()
+    }
+    // A parameter fixed by `where Element == String` must be that type,
+    // which the checker checks as a constraint written `=String`.
+    for (parameter, type) in fixed {
+        if case .named(let leaf, []) = type { generics[parameter] = ["=" + leaf] }
+    }
+    for parameter in allGenerics where generics[parameter] == nil { generics[parameter] = [] }
 
-            let key = "\(declaration.kind) \(declaration.isStatic) \(declaration.name)(" + parameters.map { "\($0.0.label ?? "_"):\(annotation($0.1))" }.joined(separator: ",") + ")"
-            guard seen.insert(key).inserted else { continue }
+    var parameters: [(Parameter, SType)] = []
+    for parameter in declaration.parameters {
+        guard let type = resolve(parameter.type, context), supported(type, generics: allGenerics, asParameter: true) else {
+            throw Unsupported(reason: "parameter \(parameter.type)")
+        }
+        parameters.append((parameter, type))
+    }
+    var returns: SType = .tuple([])
+    if declaration.kind == .initializer {
+        returns = selfType(owner)
+        if declaration.isFailable { returns = .optional(returns) }
+    } else if let declared = declaration.returns {
+        guard let type = resolve(declared, context), supported(type, generics: allGenerics, asParameter: false) else {
+            throw Unsupported(reason: "result \(declared)")
+        }
+        if case .someSequence = type { throw Unsupported(reason: "result \(declared)") }
+        returns = type
+    }
+    // A method-level generic parameter that isn't in a parameter can't be
+    // inferred by the glue.
+    for parameter in methodGenerics {
+        let mentioned = parameters.contains { annotation($0.1).contains("\"\(parameter)\"") }
+        if !mentioned { throw Unsupported(reason: "uninferrable generic \(parameter)") }
+    }
 
-            // The signature.
-            let parameterCode = parameters.map { parameter, type in
-                var fields = ["label: \(parameter.label.map(quoted) ?? "nil")", "name: \(quoted(parameter.name))", "type: \(annotation(type))"]
-                if let text = parameter.defaultText {
-                    if let literal = literalDefault(text) { fields.append("defaultValue: \(literal)") }
-                    else { fields.append("externalDefault: \(quoted(text))") }
-                }
-                return "Parameter(\(fields.joined(separator: ", ")))"
-            }
-            // The glue.
-            let arguments = parameters.map { parameter, type -> String in
-                let value = "args[\(quoted(parameter.name))]"
-                var expr = fromSwish("\(value)!", type)
-                if let text = parameter.defaultText, literalDefault(text) == nil {
-                    expr = "(\(value) == nil ? \(text) : \(fromSwish("\(value)!", type)))"
-                }
-                return (parameter.label.map { "\($0): " } ?? "") + expr
-            }.joined(separator: ", ")
-            // Array's elements are Swish values, unless fixed to a type (`joined`).
-            let receiverType: SType = name == "Array"
-                ? .array(resolve(.named("Element", []), in: owner, generics: allGenerics) ?? .named("Element", []))
-                : .named(name, [])
-            let swiftType = name == "Array" ? "Array<Value>" : name
-            let target: String
-            switch declaration.kind {
-            case .initializer: target = "\(swiftType)(\(arguments))"
-            case .method: target = (declaration.isStatic ? swiftType : "receiver") + ".\(declaration.name)(\(arguments))"
-            case .property: target = (declaration.isStatic ? swiftType : "receiver") + ".\(declaration.name)"
-            }
-            let tryPrefix = declaration.throwing || declaration.rethrowing ? "try " : ""
-            var body = ""
-            if !declaration.isStatic && declaration.kind != .initializer {
-                body += "let receiver = \(fromSwish("args[\"self\"]!", receiverType))\n                "
-            }
-            if case .tuple = returns {
-                body += "\(tryPrefix)\(target)\n                return .nothing"
-            } else {
-                body += "let result = \(tryPrefix)\(target)\n                return \(toSwish("result", returns))"
-            }
-            let kind = declaration.kind == .initializer ? ".initializer" : declaration.kind == .property ? ".property" : ".method"
-            let genericsCode = generics.isEmpty ? "[:]" : "[" + generics.sorted { $0.key < $1.key }.map { "\(quoted($0.key)): [\($0.value.map(quoted).joined(separator: ", "))]" }.joined(separator: ", ") + "]"
-            members.append("""
+    let key = "\(declaration.kind) \(declaration.isStatic) \(declaration.name)(" + parameters.map { "\($0.0.label ?? "_"):\(annotation($0.1))" }.joined(separator: ",") + ")"
+
+    // The signature.
+    let parameterCode = parameters.map { parameter, type in
+        var fields = ["label: \(parameter.label.map(quoted) ?? "nil")", "name: \(quoted(parameter.name))", "type: \(annotation(type))"]
+        if let text = parameter.defaultText {
+            if let literal = literalDefault(text) { fields.append("defaultValue: \(literal)") }
+            else { fields.append("externalDefault: \(quoted(text))") }
+        }
+        return "Parameter(\(fields.joined(separator: ", ")))"
+    }
+    // The glue.
+    let arguments = parameters.map { parameter, type -> String in
+        let value = "args[\(quoted(parameter.name))]"
+        var expr = fromSwish("\(value)!", type)
+        if let text = parameter.defaultText, literalDefault(text) == nil {
+            expr = "(\(value) == nil ? \(text) : \(fromSwish("\(value)!", type)))"
+        }
+        return (parameter.label.map { "\($0): " } ?? "") + expr
+    }.joined(separator: ", ")
+    let receiverType = selfType(owner)
+    let swiftType = spelling(receiverType)
+    let target: String
+    switch declaration.kind {
+    case .initializer: target = "\(swiftType)(\(arguments))"
+    case .method: target = (declaration.isStatic ? swiftType : "receiver") + ".\(declaration.name)(\(arguments))"
+    case .property: target = (declaration.isStatic ? swiftType : "receiver") + ".\(declaration.name)"
+    }
+    let tryPrefix = declaration.throwing || declaration.rethrowing ? "try " : ""
+    var body = ""
+    if !declaration.isStatic && declaration.kind != .initializer {
+        body += "let receiver: \(swiftType) = \(fromSwish("args[\"self\"]!", receiverType))\n                "
+    }
+    if case .tuple(let elements) = returns, elements.isEmpty {
+        body += "\(tryPrefix)\(target)\n                return .nothing"
+    } else {
+        body += "let result = \(tryPrefix)\(target)\n                return \(toSwish("result", returns))"
+    }
+    let kind = declaration.kind == .initializer ? ".initializer" : declaration.kind == .property ? ".property" : ".method"
+    let genericsCode = generics.isEmpty ? "[:]" : "[" + generics.sorted { $0.key < $1.key }.map { "\(quoted($0.key)): [\($0.value.map(quoted).joined(separator: ", "))]" }.joined(separator: ", ") + "]"
+    return (key, """
                 BridgedMember(
                     kind: \(kind), name: \(quoted(declaration.name)), isStatic: \(declaration.isStatic),
                     parameters: [\(parameterCode.joined(separator: ", "))],
@@ -707,20 +893,72 @@ for (name, _) in bridgedTypeNames {
                     }
                 ),
 """)
-            bridgedCount += 1
+}
+
+var output = """
+// Generated by swish-bridge from the Swift standard library's symbol graph.
+// Don't edit: run scripts/generate-bridge.swish.
+import Foundation
+import SwishKit
+
+extension Bridge {
+    nonisolated(unsafe) static let standardLibrary: [BridgedType] = [
+
+"""
+var skipped: [String: Int] = [:]
+var counts: [String: Int] = [:]
+
+for (name, _) in bridgedTypeNames {
+    let owner = types[name]!
+    var seen: Set<String> = []
+    var members: [String] = []
+    let kinds = ["swift.method", "swift.property", "swift.init", "swift.type.method", "swift.type.property"]
+    // Its own members, then, for a range, those of the collection protocols
+    // it conforms to when Bound is Int, which the graph doesn't list.
+    var candidates = graph.symbols.filter {
+        $0.pathComponents.count == 2 && $0.pathComponents[0] == name
+    }.map { ($0, [Constraint]()) }
+    if name == "Range" || name == "ClosedRange" {
+        let conditions = [Constraint(kind: "conformance", lhs: "Bound", rhs: "Strideable"),
+                          Constraint(kind: "conformance", lhs: "Bound.Stride", rhs: "SignedInteger")]
+        let protocols: Set = ["Sequence", "Collection", "BidirectionalCollection", "RandomAccessCollection"]
+        // A member the type has itself shadows the protocol's default.
+        let own = Set(candidates.map { $0.0.pathComponents.last! })
+        candidates += graph.symbols.filter {
+            $0.pathComponents.count == 2 && protocols.contains($0.pathComponents[0]) && !own.contains($0.pathComponents[1])
+        }.map { ($0, conditions) }
+    }
+    for (symbol, conditions) in candidates {
+        guard kinds.contains(symbol.kind.identifier), symbol.accessLevel == "public", available(symbol) else { continue }
+        let title = symbol.pathComponents.last!
+        guard !title.hasPrefix("_"), title.first?.isLetter ?? false else { continue }
+        if swishOwn[name]?.contains(title) ?? false { continue }
+        do {
+            let (key, code) = try bridge(symbol, of: owner, given: conditions)
+            guard seen.insert(key).inserted else { continue }
+            members.append(code)
+            counts[name, default: 0] += 1
         } catch let unsupported as Unsupported {
+            // SWISH_BRIDGE_DEBUG=Set: why each of a type's members is left out.
+            if ProcessInfo.processInfo.environment["SWISH_BRIDGE_DEBUG"] == name {
+                FileHandle.standardError.write(Data("\(title): \(unsupported.reason)\n".utf8))
+            }
             skipped[unsupported.reason.split(separator: " ").first.map(String.init) ?? "?", default: 0] += 1
         }
     }
+    let context = Context(owner: owner, generics: Set(owner.genericParameters))
     let associated = owner.associated.compactMap { key, value -> String? in
-        guard let resolved = resolve(value, in: owner, generics: Set(owner.genericParameters)),
-              supported(resolved, generics: Set(owner.genericParameters), asParameter: false) else { return nil }
+        guard let resolved = resolve(value, context), supported(resolved, generics: context.generics, asParameter: false) else { return nil }
         return "\(quoted(key)): \(annotation(resolved))"
     }.sorted()
+    let conformances = owner.conformances.sorted { $0.key < $1.key }.map { proto, needs in
+        let needsCode = needs.isEmpty ? "[:]" : "[" + needs.sorted { $0.key < $1.key }.map { "\(quoted($0.key)): [\($0.value.map(quoted).joined(separator: ", "))]" }.joined(separator: ", ") + "]"
+        return "\(quoted(proto)): \(needsCode)"
+    }
     output += """
         BridgedType(
-            name: \(quoted(name)), genericParameters: [\(owner.genericParameters.map(quoted).joined(separator: ", "))],
-            conformances: [\(owner.conformances.sorted().map(quoted).joined(separator: ", "))],
+            name: \(quoted(name)), genericParameters: [\(owner.parameters.map(quoted).joined(separator: ", "))],
+            conformances: [\(conformances.isEmpty ? ":" : conformances.joined(separator: ", "))],
             associatedTypes: [\(associated.isEmpty ? ":" : associated.joined(separator: ", "))],
             members: [
 \(members.joined(separator: "\n"))
@@ -731,4 +969,5 @@ for (name, _) in bridgedTypeNames {
 }
 output += "    ]\n}\n"
 try output.write(to: URL(fileURLWithPath: arguments[2]), atomically: true, encoding: .utf8)
-FileHandle.standardError.write(Data("bridged \(bridgedCount) members; left out: \(skipped.sorted { $0.value > $1.value }.prefix(12).map { "\($0.key) \($0.value)" }.joined(separator: ", "))\n".utf8))
+let total = counts.values.reduce(0, +)
+FileHandle.standardError.write(Data("bridged \(total) members (\(bridgedTypeNames.map { "\($0.0) \(counts[$0.0] ?? 0)" }.joined(separator: ", "))); left out: \(skipped.sorted { $0.value > $1.value }.prefix(12).map { "\($0.key) \($0.value)" }.joined(separator: ", "))\n".utf8))

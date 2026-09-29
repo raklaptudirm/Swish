@@ -6,6 +6,12 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
     try onLargeStack { try shell.capturing { shell.execute(source) } }
 }
 
+private func status(_ source: String) -> Int32 {
+    let shell = Shell()
+    _ = try? onLargeStack { try shell.capturing { shell.execute(source) } }
+    return shell.lastStatus
+}
+
 private func typeError(_ source: String) -> String? {
     let shell = Shell()
     guard case .success(let program) = Result(catching: { try Parser.parse(source, bound: shell.globalNames()) }) else {
@@ -42,4 +48,45 @@ private func typeError(_ source: String) -> String? {
 
 @Test func boxedValuesCompareAndSort() throws {
     #expect(try output(#"let parts = "c,a,b".split(separator: ","); parts.sorted(); parts.contains("a")"#) == #"["a", "b", "c"]"# + "\ntrue\n")
+}
+
+@Test func rangesAreSwiftRanges() throws {
+    #expect(try output("let r = 1...5; r; r.count; r.contains(3); r.map { $0 * 2 }; r.filter { $0 % 2 == 0 }")
+        == "ClosedRange(1...5)\n5\ntrue\n[2, 4, 6, 8, 10]\n[2, 4]\n")
+    #expect(try output("0..<3; (0..<3).lowerBound; Array(0..<3); (1...3) | map { $0 * 10 }") == "Range(0..<3)\n0\n[0, 1, 2]\n10\n20\n30\n")
+    #expect(try output("for i in 0..<2 { i }; let r = 5...6; for i in r { i }") == "0\n1\n5\n6\n")
+    // Any bounds that compare make a range; only Int bounds make a sequence.
+    #expect(try output("(1.0...2.0).contains(1.5); (\"a\"...\"f\").contains(\"c\")") == "true\ntrue\n")
+    #expect(typeError("for x in 1.0...2.0 {}") == "can't iterate over ClosedRange<Double>: it isn't a Sequence")
+    #expect(typeError("let r: [Int] = 1...3") == "the value must be [Int], not ClosedRange<Int>")
+    #expect(status("let r = 3...1") == 1)
+}
+
+@Test func setsAreSwiftSets() throws {
+    #expect(try output("let s = Set([3, 1, 2, 3]); s.count; s.contains(2); s.sorted(); s.union([9]).sorted()")
+        == "3\ntrue\n[1, 2, 3]\n[1, 2, 3, 9]\n")
+    // `some Sequence<Int>`: a list, a range or another set.
+    #expect(try output("let s = Set([1, 2]); s.isSubset(of: 1...5); s.intersection(Set([2, 3])); Set(\"hello\").count")
+        == "true\nSet([2])\n4\n")
+    #expect(try output("let s: Set<String> = Set([\"a\"]); s.contains(\"a\"); Set([1]) == Set([1])") == "true\ntrue\n")
+    #expect(typeError("Set([1]).union([\"a\"])") == "union: 'other' must be some Sequence<Int>, not [String]")
+    #expect(try output("Set([2, 1]) | sorted") == "1\n2\n")
+}
+
+@Test func dictionariesAndOptionalsHaveSwiftsMembers() throws {
+    let d = #"let d = ["b": 2, "a": 1]; "#
+    // Results keep the dictionary's order; keys and values are arrays in it.
+    #expect(try output(d + "d.filter { $0.value > 1 }; d.mapValues { $0 * 10 }; d.map { $0.key }; d.keys; d.values")
+        == #"["b": 2]"# + "\n" + #"["b": 20, "a": 10]"# + "\n" + #"["b", "a"]"# + "\n" + #"["b", "a"]"# + "\n[2, 1]\n")
+    #expect(try output(d + "d.count; d.isEmpty; d.sorted { $0.key < $1.key }.map { $0.value }; d.first?.key") == "2\nfalse\n[1, 2]\n\"b\"\n")
+    #expect(try output(#"Dictionary(uniqueKeysWithValues: [("x", 1), ("y", 2)])"#) == #"["x": 1, "y": 2]"# + "\n")
+    #expect(try output("let o: Int? = 4; o.map { $0 + 1 }; let n: Int? = nil; n.map { $0 + 1 } ?? 0") == "5\n0\n")
+    #expect(typeError("let n: Int? = nil; n.count") == "Int? might be nil: unwrap it (if let, ??, ?. or !) before using .count")
+}
+
+@Test func slicesAndKeyPathsUseSwiftsMembers() throws {
+    #expect(try output("[1, 2, 3, 4].dropFirst(); [1, 2, 3].split(separator: 2); Array([1, 2, 3].suffix(2))")
+        == "ArraySlice([2, 3, 4])\n[ArraySlice([1]), ArraySlice([3])]\n[2, 3]\n")
+    #expect(try output(#"[[1, 2], [3]] | map(\.count); ["ab"] | map(\.isEmpty); [1, 2].last"#) == "2\n1\nfalse\n2\n")
+    #expect(try output("[[1, 2], [3]].flatMap { $0 }; [1, 2].elementsEqual([1, 2])") == "[1, 2, 3]\ntrue\n")
 }

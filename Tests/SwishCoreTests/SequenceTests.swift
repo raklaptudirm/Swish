@@ -24,7 +24,7 @@ private let data = #"let xs = [(n: 2, s: "b"), (n: 1, s: "a"), (n: 3, s: "c")]; 
 
 @Test func sequenceMethodsOnValues() throws {
     #expect(try output(data + #"xs.sorted(by: \.s).map { $0.n }"#) == "[1, 2, 3]\n")
-    #expect(try output("[3, 1, 2].sorted(); [3, 1, 2].sorted { $0 > $1 }; [3, 1, 2].prefix(2)") == "[1, 2, 3]\n[3, 2, 1]\n[3, 1]\n")
+    #expect(try output("[3, 1, 2].sorted(); [3, 1, 2].sorted { $0 > $1 }; [3, 1, 2].prefix(2)") == "[1, 2, 3]\n[3, 2, 1]\nArraySlice([3, 1])\n")
     #expect(try output("[1, 2, 3].count(where: { $0 > 1 }); [1, 2, 3].count") == "2\n3\n")
     // An Output's lines are a sequence too.
     #expect(try output(#"$(printf "b\na").sorted()"#) == #"["a", "b"]"# + "\n")

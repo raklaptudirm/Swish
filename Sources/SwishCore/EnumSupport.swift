@@ -120,6 +120,13 @@ extension Shell {
             guard case .enumValue(let enumValue) = value, let expected = enumType(named: name),
                   enumValue.type === expected else { return nil }
             return value
+        case .generic(let name, _):
+            // A Swift value, boxed, is of its Swift type.
+            if case .object(let box as SwiftValue) = value, box.typeName == name { return value }
+            return nil
+        case .someSequence:
+            // Any sequence; the glue takes its items.
+            return value
         case .optional(let wrapped):
             return value == .nothing ? value : conform(value, to: wrapped)
         case .list(let element):

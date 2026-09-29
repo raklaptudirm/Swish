@@ -19,21 +19,22 @@ final class ValueStream {
         ValueStream { nil }
     }
 
-    /// A list flows as its elements, nothing as no items, anything else as
-    /// a single item.
+    /// A list flows as its elements, as does a generic Swift sequence
+    /// (a Set, a range of Ints); nothing as no items, anything else as a
+    /// single item.
     static func elements(of value: Value) -> ValueStream {
-        let items: [Value] = switch value {
-        case .nothing: []
-        case .list(let list): list
-        case .output(let output): output.lines.map(Value.string)
-        default: [value]
+        let items: AnyIterator<Value>
+        switch value {
+        case .nothing:
+            return .empty
+        case .list, .output:
+            items = Shell.items(of: value)!
+        case .object(let box as SwiftValue) where Bridge.types[box.typeName]?.genericParameters.isEmpty == false:
+            items = Shell.items(of: value) ?? AnyIterator([value].makeIterator())
+        default:
+            items = AnyIterator([value].makeIterator())
         }
-        var index = 0
-        return ValueStream {
-            guard index < items.count else { return nil }
-            defer { index += 1 }
-            return items[index]
-        }
+        return ValueStream { items.next() }
     }
 
     /// Lines of an external program's output, read as they arrive.

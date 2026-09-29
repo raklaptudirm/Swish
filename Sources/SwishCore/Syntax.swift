@@ -264,6 +264,11 @@ indirect enum TypeAnnotation: Hashable, Sendable, CustomStringConvertible {
     case functionType([TypeAnnotation], TypeAnnotation, throws: Bool = false)
     /// `T?`: a T, or nil.
     case optional(TypeAnnotation)
+    /// A generic Swift type Swish holds as it is: `Set<Int>`, `ClosedRange<Int>`.
+    case generic(String, [TypeAnnotation])
+    /// What a Swift parameter `S: Sequence` with `S.Element == E` takes:
+    /// any sequence of E, as `some Sequence<E>` says.
+    case someSequence(TypeAnnotation)
     /// Not known yet: what a program prints, or a builtin that hasn't
     /// declared its type. It fits anywhere, and anything fits it.
     case unknown
@@ -293,6 +298,8 @@ indirect enum TypeAnnotation: Hashable, Sendable, CustomStringConvertible {
         case .functionType(let parameters, let result, let throwing):
             "(" + parameters.map(\.description).joined(separator: ", ") + ")" + (throwing ? " throws" : "") + " -> \(result)"
         case .named(let name), .parameter(let name): name
+        case .generic(let name, let arguments): "\(name)<\(arguments.map(\.description).joined(separator: ", "))>"
+        case .someSequence(let element): "some Sequence<\(element)>"
         case .keyPath(let root, let value): "KeyPath<\(root), \(value)>"
         case .optional(let wrapped):
             if case .functionType = wrapped { "(\(wrapped))?" } else { "\(wrapped)?" }
@@ -1889,6 +1896,25 @@ struct Parser {
             skipSpaces()
             guard consume(">") else { throw expected("'>'") }
             return .keyPath(root, value)
+        }
+        if peek() == "<", let generic = Bridge.types[name], !generic.genericParameters.isEmpty {
+            // `Set<Int>`, `Array<Int>`, `Dictionary<String, Int>`.
+            pos += 1
+            var arguments: [TypeAnnotation] = []
+            repeat {
+                arguments.append(try parseType())
+                skipSpaces()
+            } while consume(",")
+            guard consume(">") else { throw expected("'>'") }
+            guard arguments.count == generic.genericParameters.count else {
+                throw SyntaxError("\(name) takes \(generic.genericParameters.count) generic argument\(generic.genericParameters.count == 1 ? "" : "s")")
+            }
+            switch name {
+            case "Array": return .list(arguments[0])
+            case "Optional": return .optional(arguments[0])
+            case "Dictionary": return .dictionary(arguments[0], arguments[1])
+            default: return .generic(name, arguments)
+            }
         }
         let type: TypeAnnotation
         switch name {

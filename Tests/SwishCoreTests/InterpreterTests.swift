@@ -120,7 +120,8 @@ private func withVariable(_ name: String, _ value: Any) -> Shell {
 
 @Test func rangesAreLazyInLoops() throws {
     #expect(try output("for i in 1...9_000_000_000_000 { if i == 2 { break } }; echo done") == "done\n")
-    #expect(status("let r = 1...9_000_000_000_000") == 1)
+    // A range is a ClosedRange, not a list, so it's never built.
+    #expect(try output("let r = 1...9_000_000_000_000; r.count") == "9000000000000\n")
     #expect(status("for i in 3...1 {}") == 1)
 }
 

@@ -670,6 +670,7 @@ final class TypeChecker {
         switch type {
         case .list(let element): element
         case .output: .string
+        case .generic: bridgedElement(type) ?? type
         default: type
         }
     }
@@ -1236,7 +1237,12 @@ final class TypeChecker {
                 .tuple(record.map { .init(label: Record.isPosition($0.key) ? nil : $0.key, type: type(of: $0.value)) })
             }
         case .enumValue(let value): .named(value.type.name)
-        case .object(let box as SwiftValue): .named(box.typeName)
+        case .object(let box as SwiftValue):
+            if let parameters = Bridge.types[box.typeName]?.genericParameters, !parameters.isEmpty {
+                .generic(box.typeName, parameters.map { _ in .unknown })
+            } else {
+                .named(box.typeName)
+            }
         case .object(is Job): .named("Job")
         case .object: .unknown
         case .function: .function
@@ -1687,6 +1693,7 @@ final class TypeChecker {
     /// The type of a sequence's items, for its methods; nil if it isn't one.
     private func sequenceElement(_ type: TypeAnnotation) -> TypeAnnotation? {
         if case .named(let name) = type, let element = Bridge.types[name]?.associatedTypes["Element"] { return element }
+        if case .generic = type { return bridgedElement(type) }
         return switch type {
         case .list(let element): element
         case .output: .string
@@ -1719,11 +1726,44 @@ final class TypeChecker {
         case .double: ("Double", [:])
         case .bool: ("Bool", [:])
         case .list(let element): ("Array", ["Element": element])
+        case .optional(let wrapped): ("Optional", ["Wrapped": wrapped])
+        case .dictionary(let key, let value): ("Dictionary", ["Key": key, "Value": value])
         case .named(let name): (name, [:])
+        case .generic(let name, let arguments):
+            (name, Dictionary(uniqueKeysWithValues: zip(Bridge.types[name]?.genericParameters ?? [], arguments)))
         default: nil
         }
         guard let (name, bindings) = found, let bridgedType = Bridge.types[name] else { return nil }
         return (bridgedType, bindings)
+    }
+
+    /// Whether a bridged type, with its generic parameters bound, conforms
+    /// to `proto`: a ClosedRange<Int> is a Sequence, a ClosedRange<Double>
+    /// isn't.
+    private func bridgedConforms(_ bridgedType: BridgedType, _ bindings: [String: TypeAnnotation], to proto: String) -> Bool {
+        guard let needs = bridgedType.conformances[proto] else { return proto == "CustomStringConvertible" }
+        return needs.allSatisfy { parameter, protocols in
+            protocols.allSatisfy { conforms(bindings[parameter] ?? .unknown, to: $0) }
+        }
+    }
+
+    /// The Element of a bridged Swift type that's a Sequence: Int for a
+    /// ClosedRange<Int>, Character for a Substring; nil if it isn't one.
+    private func bridgedElement(_ type: TypeAnnotation) -> TypeAnnotation? {
+        guard let (bridgedType, bindings) = bridged(type), bridgedConforms(bridgedType, bindings, to: "Sequence") else { return nil }
+        guard let element = bridgedType.associatedTypes["Element"]
+            ?? (bridgedType.genericParameters.contains("Element") ? .parameter("Element") : nil) else { return nil }
+        return substitute(element, bindings)
+    }
+
+    /// What a Swift parameter taking any sequence gets from a value of
+    /// `type`: a String's Characters, a dictionary's (key, value) pairs.
+    private func anySequenceElement(_ type: TypeAnnotation) -> TypeAnnotation? {
+        switch type {
+        case .string: .named("Character")
+        case .unknown: .unknown
+        default: (try? elementType(of: type)) ?? nil
+        }
     }
 
     /// A bridged property, `"abc".count` or `Int.max`, as a lookup the
@@ -1815,6 +1855,11 @@ final class TypeChecker {
                let property = info.property(name) { return property.type ?? .unknown }
             return .string
         }
+        // Swift's own properties, as in `\.count`.
+        if let (bridgedType, bindings) = bridged(base),
+           let property = bridgedType.members.first(where: { $0.kind == .property && !$0.isStatic && $0.name == name }) {
+            return substitute(property.returns, bindings)
+        }
         switch base {
         case .unknown, .record:
             return .unknown
@@ -1853,12 +1898,11 @@ final class TypeChecker {
         case .output:
             members = ["text": .string, "lines": .list(.string), "count": .int, "isEmpty": .bool,
                        "first": .optional(.string), "last": .optional(.string), "status": .named("Status")]
-        case .list(let element):
-            members = ["count": .int, "isEmpty": .bool, "first": .optional(element), "last": .optional(element)]
         case .dictionary(let key, let value):
-            members = ["count": .int, "isEmpty": .bool, "keys": .list(key), "values": .list(value)]
+            // Arrays in the dictionary's order, not Swift's unordered views.
+            members = ["keys": .list(key), "values": .list(value)]
         case .string:
-            members = ["count": .int, "isEmpty": .bool, "lines": .list(.string)]
+            members = ["lines": .list(.string)]
         case .filesize:
             members = ["bytes": .int]
         default:
@@ -2028,7 +2072,8 @@ final class TypeChecker {
         if left == .unknown || right == .unknown {
             switch op {
             case .less, .lessEqual, .greater, .greaterEqual: return .bool
-            case .closedRange, .halfOpenRange: return .list(.int)
+            case .closedRange, .halfOpenRange:
+                return .generic(op == .closedRange ? "ClosedRange" : "Range", [left == .unknown ? right : left])
             default: return left == .unknown ? right : left
             }
         }
@@ -2038,8 +2083,8 @@ final class TypeChecker {
             guard left == right, conforms(left, to: "Comparable") else { throw fail }
             return .bool
         case .closedRange, .halfOpenRange:
-            guard left == .int, right == .int else { throw fail }
-            return .list(.int)
+            guard left == right, conforms(left, to: "Comparable") else { throw fail }
+            return .generic(op == .closedRange ? "ClosedRange" : "Range", [left])
         case .add:
             switch (left, right) {
             case (.int, .int), (.double, .double), (.string, .string), (.filesize, .filesize): return left
@@ -2084,6 +2129,12 @@ final class TypeChecker {
         case (_, .optional(let wrapped)): return fits(actual, wrapped)
         case (.list(let a), .list(let b)): return fits(a, b)
         case (.dictionary(let ak, let av), .dictionary(let bk, let bv)): return fits(ak, bk) && fits(av, bv)
+        case (.generic(let a, let aa), .generic(let b, let ba)):
+            return a == b && aa.count == ba.count && zip(aa, ba).allSatisfy { fits($0, $1) }
+        // Any sequence of the right elements, for a Swift `S: Sequence`.
+        case (_, .someSequence(let element)):
+            guard let actualElement = anySequenceElement(actual) else { return false }
+            return fits(actualElement, element)
         case (.tuple(let a), .tuple(let b)):
             return a.count == b.count && zip(a, b).allSatisfy { x, y in
                 (x.label == nil || y.label == nil || x.label == y.label) && fits(x.type, y.type)
@@ -2118,7 +2169,10 @@ final class TypeChecker {
         if proto.hasPrefix("=") { return type == .unknown || type.description == String(proto.dropFirst()) }
         if type == TypeChecker.json { return true }
         if case .named(let name) = type, let bridgedType = Bridge.types[name] {
-            return proto == "CustomStringConvertible" || bridgedType.conformances.contains(proto)
+            return bridgedConforms(bridgedType, [:], to: proto)
+        }
+        if case .generic = type, let (bridgedType, bindings) = bridged(type) {
+            return bridgedConforms(bridgedType, bindings, to: proto)
         }
         switch type {
         case .unknown, .parameter, .record: return true
@@ -2180,6 +2234,8 @@ final class TypeChecker {
         case .list(let element): return .list(substitute(element, bindings))
         case .optional(let wrapped): return .optional(substitute(wrapped, bindings))
         case .dictionary(let key, let value): return .dictionary(substitute(key, bindings), substitute(value, bindings))
+        case .generic(let name, let arguments): return .generic(name, arguments.map { substitute($0, bindings) })
+        case .someSequence(let element): return .someSequence(substitute(element, bindings))
         case .tuple(let elements): return .tuple(elements.map { .init(label: $0.label, type: substitute($0.type, bindings)) })
         case .keyPath(let root, let value): return .keyPath(substitute(root, bindings), substitute(value, bindings))
         case .functionType(let parameters, let result, let throwing):
@@ -2203,6 +2259,12 @@ final class TypeChecker {
         case (.dictionary(let pk, let pv), .dictionary(let ak, let av)):
             unify(pk, ak, &bindings)
             unify(pv, av, &bindings)
+        case (.generic(let p, let ps), .generic(let a, let as_)) where p == a && ps.count == as_.count:
+            for (p, a) in zip(ps, as_) { unify(p, a, &bindings) }
+        case (.tuple(let ps), .tuple(let as_)) where ps.count == as_.count:
+            for (p, a) in zip(ps, as_) { unify(p.type, a.type, &bindings) }
+        case (.someSequence(let p), _):
+            if let element = anySequenceElement(actual) { unify(p, element, &bindings) }
         case (.keyPath(let pr, let pv), .keyPath(let ar, let av)):
             unify(pr, ar, &bindings)
             unify(pv, av, &bindings)
@@ -2220,6 +2282,10 @@ final class TypeChecker {
     /// The type of each item when iterating `type`.
     private func elementType(of type: TypeAnnotation) throws -> TypeAnnotation {
         if case .named(let name) = type, let element = Bridge.types[name]?.associatedTypes["Element"] { return element }
+        if case .generic = type {
+            guard let element = bridgedElement(type) else { throw TypeError("can't iterate over \(type): it isn't a Sequence") }
+            return element
+        }
         switch type {
         case .list(let element): return element
         case .output, .string: return .string

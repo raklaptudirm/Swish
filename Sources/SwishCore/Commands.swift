@@ -312,7 +312,7 @@ extension Shell {
         case .output: .output(CommandOutput(text: text, code: 0))
         case .named(let name): enumType(named: name).flatMap { enumCase(fromText: text, $0) }
         case .date: (try? Date(text, strategy: .iso8601)).map(Value.date)
-        case .record, .list, .function, .functionType, .void, .dictionary, .tuple: nil
+        case .record, .list, .function, .functionType, .void, .dictionary, .tuple, .generic, .someSequence: nil
         }
         guard let value else {
             throw RuntimeError("\(function): \(what) must be \(type), got '\(text)'")

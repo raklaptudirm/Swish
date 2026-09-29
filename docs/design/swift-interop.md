@@ -121,20 +121,41 @@ scripts, reusing the twins.
 
 1. **The standard library's members on Swish values**, from its symbol
    graph and generated glue, replacing the hand-written member tables.
-   *First slice built:* `swish-bridge` (Sources/swish-bridge) reads the
-   graph and writes Sources/SwishCore/Bridge/StandardLibrary.swift;
+   *Built so far:* `swish-bridge` (Sources/swish-bridge) reads the graph
+   and writes Sources/SwishCore/Bridge/StandardLibrary.swift;
    `scripts/generate-bridge.swish` reruns it. It bridges `String`,
-   `Substring`, `Character`, `Int`, `Double`, `Bool` and `Array`: every
-   member whose signature uses only those, their generic parameters, and
-   `Equatable`/`Hashable`/`Comparable` constraints (244 of them, including
-   inherited `Sequence` and `Collection` methods, and `[String].joined`
-   through its `Element == String` constraint). Generic code is compiled
-   once, with Swish's values standing in for every generic parameter.
-   Swift's members come before the prelude's; the prelude's shell
-   additions (`sorted(by: \.size)`, `prefix` with a default, `select`,
-   `get`, `uniqued`) remain. Left for the next slices: mutating methods,
-   `Dictionary`, `Set`, `Optional`'s members, `Range`, `ArraySlice` and
-   other result types, operators, Foundation.
+   `Substring`, `Character`, `Int`, `Double`, `Bool`, `Array`,
+   `ArraySlice`, `Set`, `Dictionary`, `Optional`, `Range` and
+   `ClosedRange` (553 members). A member is bridged if every type in its
+   signature is one of those, a generic parameter, a tuple or a closure of
+   them, and its constraints are ones Swish can check:
+   - **Generic code is compiled once**, with Swish's values standing in
+     for every generic parameter: a `Set<Int>` is held as a `Set<Value>`.
+   - **Same-type constraints** fix a parameter (`[String].joined` through
+     `Element == String`), or say what a sequence parameter holds:
+     `union<S: Sequence>(_:) where S.Element == Element` takes
+     `some Sequence<Element>`, so a list, a range, a set or a String's
+     Characters.
+   - **Conditional conformances** are checked with their conditions: a
+     `ClosedRange` is a Sequence, with `map`, `filter` and the rest, only
+     when `Bound: Strideable` with a signed stride, which for Swish means
+     `Int`. So `1...5` is a `ClosedRange<Int>` (lazy, not a list) and
+     `(1.0...2.0).contains(1.5)` works but `for x in 1.0...2.0` doesn't
+     type-check. (The graph doesn't list a range's collection members, so
+     they're read from the protocols, where the type has none of its own.)
+   - **Values keep Swish's form where it has one:** arrays, dictionaries,
+     optionals and tuples convert at the call; `Set`, `ArraySlice` and
+     ranges are held boxed, as the Swift values.
+   - **Swish's dictionaries keep their order,** so what a Swift method
+     gives back (`filter`, `mapValues`, `merging`) keeps the receiver's
+     order, and `keys` and `values` stay Swish's: arrays in that order,
+     not Swift's unordered views.
+   Key paths (`\.count`) read the same bridged properties. Swift's members
+   come before the prelude's; the prelude's shell additions
+   (`sorted(by: \.size)`, `prefix` with a default, `select`, `get`,
+   `uniqued`) remain. Left for the next slices: mutating methods,
+   operators (`reduce(0, +)`), `Slice` and the other lazy and view types
+   (`enumerated()`, `lazy`, a Set's `dropFirst`), indices, Foundation.
 2. **Swish's own types in SwishKit**, read the same way; the prelude
    shrinks to command lines.
 3. **Packages and SDK modules** imported by URL, path or name.

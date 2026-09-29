@@ -268,7 +268,9 @@ scripts/test.sh     # unit tests, plus pty-driven job-control, editor and backgr
     Swish prelude, typed pipelines with stages resolved from their input
   - [x] `Any` casts (`as?`, `as!`, `is`), the `JSON` type, optional subscripts
   - [ ] Swish types are Swift types: one type system read from Swift's symbol graphs, any package
-    usable as it is, generated Swift twins for Swish types ([design](docs/design/swift-interop.md))
+    usable as it is, generated Swift twins for Swish types ([design](docs/design/swift-interop.md));
+    so far the standard library's non-mutating members on `String`, `Int`, `Double`, `Bool`,
+    `Array`, `Set`, `Dictionary`, `Optional` and ranges, with `1...5` a real `ClosedRange<Int>`
 - [x] **Methods as stages**: after a `|`, a name is a method of what's piped in: the sequence's
   (`sorted`, `filter`, `map`, `prefix`, `reversed`, `count`, `select`, `get`, as in Swift, also
   `xs.sorted(by: \.size)`), then each item's (`points | describe`, `jobs | cancel`); stages
