@@ -110,6 +110,8 @@ extension Shell {
     func conform(_ value: Value, to type: TypeAnnotation) -> Value? {
         switch type {
         case .named(let name):
+            // Parsed JSON is whatever it parsed as.
+            if name == "JSON" { return value }
             if case .record(let record) = value, record.typeName == name, structType(named: name) != nil {
                 return value
             }

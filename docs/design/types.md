@@ -1,6 +1,6 @@
 # Static types
 
-Status: **phases 1–3 implemented** (see [Phases](#phases)). This is the plan
+Status: **phases 1–4 implemented** (see [Phases](#phases)). This is the plan
 for making Swish statically typed,
 as Swift is: every expression, function and pipeline stage has a type
 known before anything runs, and type errors stop a statement (or a whole
@@ -29,7 +29,7 @@ func double(@input _ n: Int) -> Int { n * 2 }
 seq 5 | double                                // lines → Int, converted per item as today
 [Point(x: 1)] | describe                      // Point.describe, chosen before running
 
-let config = $(cat config.json) | from json   // JSON
+let config = from("json", $(cat config.json).lines)   // JSON
 config.server?.port?.int ?? 8080
 ```
 
@@ -62,7 +62,7 @@ config.server?.port?.int ?? 8080
 | Key path | `KeyPath<Root, Value>`, written `\.size` | New. |
 | Nominal | structs, enums, `Job`, `Output`, plugin classes | Struct fields and methods are typed already; builtins get declared types (`FileEntry`, `ProcessEntry`). |
 | Any | `Any` | Only `as?`, `as!`, `is`, and passing it along. |
-| JSON | `JSON` | An enum (`.object`, `.array`, `.string`, `.number`, `.bool`, `.null`) with subscripts and member access returning `JSON?`, and `.string`, `.int`, `.double`, `.bool`, `.array` accessors. |
+| JSON | `JSON` | What `from json` gives. A field (`json.name`, `json["name"]`) or element (`json[0]`) is a `JSON?`; `.string`, `.int`, `.double`, `.bool`, `.array`, `.object` read it as that type (nil if it isn't), and `.isNull` is true for a null or missing value. |
 
 **Protocols** (builtin, for now): `Equatable`, `Hashable`, `Comparable`,
 `CustomStringConvertible`, `Encodable`, `Sequence`. The basic types conform
@@ -207,13 +207,17 @@ Each phase ends with every test passing and the shell usable.
    resolved from the input's type and recorded for the interpreter;
    command lines checked by binding their literal words as the
    interpreter will. `select`'s rule; `uniqued()`.
-4. **Dynamic data.** Strict `Any` with `as?`, `as!` and `is`; the `JSON`
-   type; optional chaining.
-5. **Swift packages as they are.** See [swift-interop.md](swift-interop.md):
-   any package or SDK module, typed from its symbol graph, with glue
-   generated and compiled for the declarations used; Swift values Swish
-   has no type for are live objects of their real Swift type. This
-   replaces typed plugins; `@SwishExport` stays for shaping command lines.
+4. **Dynamic data.** *Done.* Strict `Any`: no members, indexing, calls or
+   operators until it's cast with `as?`, `as!` or `is` (or widened with
+   `as`), at Swift's precedence; the `JSON` type, whose field and element
+   lookups the checker writes into lookups that give nil when missing;
+   optional subscripts (`xs?[0]`), beside `?.` from phase 1.
+5. **Swish types are Swift types.** See [swift-interop.md](swift-interop.md):
+   one type system, Swift's, read from symbol graphs (the standard
+   library, Foundation, SwishKit for Swish's own types, and any package);
+   glue generated and compiled for the declarations used; generated Swift
+   twins for Swish-declared types that cross into Swift. This replaces
+   typed plugins; `@SwishExport` stays for shaping command lines.
 6. **Later:** `func f<T: P>`, `protocol` declarations, `extension` on your
    types and the builtin ones.
 

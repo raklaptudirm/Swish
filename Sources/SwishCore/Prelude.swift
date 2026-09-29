@@ -62,6 +62,11 @@ extension Shell {
         let kind: String
     }
 
+    /// Parsed JSON: read by field (json.name, json["name"]) or element
+    /// (json[0]), each giving JSON?, and as a type with .string, .int,
+    /// .double, .bool, .array, .object and .isNull.
+    struct JSON {}
+
     /// Lists directory contents.
     /// - Parameter paths: files or directories to list (default: the current directory)
     /// - Parameter all: include hidden files
@@ -72,7 +77,7 @@ extension Shell {
 
     /// Parses text into values.
     /// - Parameter format: json
-    func from(_ format: String, @input _ text: [String]) -> Any
+    func from(_ format: String, @input _ text: [String]) -> JSON
 
     /// Converts the input to text: json, or text for how it would be displayed.
     /// - Parameter format: json or text

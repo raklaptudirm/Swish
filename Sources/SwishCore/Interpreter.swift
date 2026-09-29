@@ -497,6 +497,9 @@ extension Shell {
         case .optionalMember(let base, let name):
             let value = try evaluate(base)
             return value == .nothing ? .nothing : try member(name, of: value)
+        case .optionalIndex(let base, let index):
+            let value = try evaluate(base)
+            return value == .nothing ? .nothing : try element(of: value, at: try evaluate(index))
         case .annotated(let inner, let type):
             let value = try evaluate(inner, expecting: type)
             guard let conforming = conform(value, to: type) else {
@@ -605,6 +608,17 @@ extension Shell {
             return .bool(try truth(lhs, for: .or) || truth(rhs, for: .or))
         case .attempt(let operand, .plain):
             return try evaluate(operand)
+        case .cast(let inner, let type, let kind):
+            let value = try evaluate(inner)
+            let converted = conform(value, to: type)
+            switch kind {
+            case .conditional: return converted ?? .nothing
+            case .check: return .bool(converted != nil)
+            case .upcast: return converted ?? value
+            case .forced:
+                guard let converted else { throw RuntimeError("'as!' failed: a \(value.typeName) isn't a \(type)") }
+                return converted
+            }
         case .keyPath(_, let path):
             return .function(KeyPathValue(path: path))
         case .voidValue(let operand):

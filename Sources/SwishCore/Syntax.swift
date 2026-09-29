@@ -427,9 +427,13 @@ indirect enum Expr: Equatable, Sendable {
     case forceUnwrap(Expr)
     /// `x?.name`: nil if `x` is, and its member otherwise.
     case optionalMember(Expr, String)
+    /// `x?[i]`: nil if `x` is, and its element otherwise.
+    case optionalIndex(Expr, Expr)
     /// A function, method or initializer, with the overload the checker
     /// chose: the candidate at that position. Only the checker makes these.
     case chosen(Expr, overload: Int)
+    /// `x as? T`, `x as! T`, `x is T`, or `x as T`.
+    case cast(Expr, TypeAnnotation, CastKind)
     /// `\.size` or `\FileEntry.size`: a key path, its root type given or
     /// taken from context.
     case keyPath(root: String?, path: [String])
@@ -451,6 +455,17 @@ enum TryKind: Equatable, Sendable {
     case optional
     /// `try!`: a runtime error stops the whole script, not just the line.
     case forced
+}
+
+enum CastKind: Equatable, Sendable {
+    /// `as?`: the value as that type, or nil.
+    case conditional
+    /// `as!`: the value as that type, or an error.
+    case forced
+    /// `is`: whether it's that type.
+    case check
+    /// `as`: the same value, seen as a type it already fits.
+    case upcast
 }
 
 enum UnaryOperator: String, Sendable {
@@ -519,6 +534,7 @@ struct Parser {
         "let", "var", "if", "else", "true", "false", "nil",
         "for", "in", "while", "func", "return", "break", "continue", "try", "do", "catch",
         "async", "await", "enum", "switch", "case", "default", "fallthrough", "import", "struct", "throws",
+        "as", "is",
     ]
     private static let statementKeywords: Set = ["let", "var", "func", "return", "break", "continue", "do", "catch", "enum", "fallthrough", "import", "struct"]
     private static let precedence: [[BinaryOperator]] = [
@@ -2311,7 +2327,7 @@ struct Parser {
 
     private mutating func parseBinary(level: Int) throws(SyntaxError) -> Expr {
         guard level < Parser.precedence.count else { return try parseUnary() }
-        var lhs = try parseBinary(level: level + 1)
+        var lhs = try parseOperand(level: level)
         var chained = false
         while true {
             skipSpaces()
@@ -2324,7 +2340,34 @@ struct Parser {
             }
             pos += op.rawValue.count
             skipSpaces(newlines: true)
-            lhs = .binary(op, lhs, try parseBinary(level: level + 1))
+            lhs = .binary(op, lhs, try parseOperand(level: level))
+        }
+    }
+
+    /// An operand of `level`'s operators. `??`'s may be cast, as Swift's
+    /// precedence has it: `x ?? y as? Int` is `x ?? (y as? Int)`.
+    private mutating func parseOperand(level: Int) throws(SyntaxError) -> Expr {
+        var expr = try parseBinary(level: level + 1)
+        guard Parser.precedence[level] == [.coalesce] else { return expr }
+        while true {
+            let before = (pos, spans.count)
+            skipSpaces()
+            let start = pos
+            let kind: CastKind
+            switch identifier() {
+            case "as":
+                pos += 2
+                kind = consume("?") ? .conditional : consume("!") ? .forced : .upcast
+            case "is":
+                pos += 2
+                kind = .check
+            default:
+                rewind(to: before)
+                return expr
+            }
+            mark(.keyword, from: start)
+            skipSpaces()
+            expr = .cast(expr, try parseType(), kind)
         }
     }
 
@@ -2374,6 +2417,15 @@ struct Parser {
             } else if peek() == "!", peek(1) != "=" {
                 pos += 1
                 expr = .forceUnwrap(expr)
+            } else if peek() == "?", peek(1) == "[" {
+                pos += 2
+                bracketDepth += 1
+                skipSpaces()
+                let index = try parseExpression()
+                skipSpaces()
+                guard consume("]") else { throw expected("']'") }
+                bracketDepth -= 1
+                expr = .optionalIndex(expr, index)
             } else if peek() == "?", peek(1) == ".", let next = peek(2), Parser.isIdentifierStart(next) {
                 pos += 2
                 let name = identifier()!

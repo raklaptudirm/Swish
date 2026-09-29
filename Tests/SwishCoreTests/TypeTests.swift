@@ -208,3 +208,35 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
     let level = "enum Level: Int, Comparable { case low, mid, high }; "
     #expect(try output(level + "Level.low < .high; Level.high <= .mid; [Level.high, .low] | sorted") == "true\nfalse\nlow\nhigh\n")
 }
+
+// MARK: Phase 4: Any and JSON
+
+@Test func anyNeedsACast() throws {
+    #expect(try output("let x: Any = 5; x as? Int; x as? String; x is Int; (x as! Int) + 1") == "5\ntrue\n6\n")
+    #expect(typeError("let x: Any = 5; x.count")?.hasPrefix("an Any has no members") == true)
+    #expect(typeError("let x: Any = 5; x + 1") == "'+' can't be applied to Any and Int")
+    #expect(typeError("let x: Any = [1]; x[0]")?.hasPrefix("an Any can't be indexed") == true)
+    #expect(typeError("let x = 5; x as String")?.hasPrefix("'as' can't make a Int a String") == true)
+    #expect(typeError("let x = 5; let y = x as Any") == nil)
+    let shell = Shell()
+    _ = try output(#"let a: Any = "s"; a as! Int"#, in: shell)
+    #expect(shell.lastStatus == 1) // at run time, as in Swift
+    // Casts bind tighter than ??, looser than ranges, as in Swift.
+    #expect(try output(#"let a: Any = "s"; a as? Int ?? 0"#) == "0\n")
+}
+
+@Test func jsonIsReadByFieldAndElement() throws {
+    let json = #"let j = from("json", ['{"server": {"port": 8080}, "tags": ["a", "b"], "on": true}']); "#
+    #expect(try output(json + #"j.server?.port?.int ?? 1; j.missing?.port?.int ?? 1; j["tags"]?[1]?.string; j.tags?.array?.count; j.on?.bool"#)
+        == "8080\n1\n\"b\"\n2\ntrue\n")
+    // A missing field and a JSON null are both nil, so isNull is true for either.
+    #expect(try output(json + "j.server?.port?.string == nil; j.nothing?.isNull") == "true\ntrue\n")
+    #expect(typeError(json + "j.server + 1") != nil)          // a JSON? isn't a number
+    #expect(typeError(json + "j.server?.port?.int! + 1") == nil)
+    // A document of records flows through a pipeline as JSON items.
+    #expect(try output(#"echo '[{"n": 1}, {"n": 2}]' | from json | get n"#) == "1\n2\n")
+}
+
+@Test func optionalSubscripts() throws {
+    #expect(try output("let xs: [Int]? = [1, 2]; xs?[1]; let none: [Int]? = nil; none?[0] == nil") == "2\ntrue\n")
+}

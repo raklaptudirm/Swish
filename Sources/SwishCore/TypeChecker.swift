@@ -97,6 +97,26 @@ final class TypeChecker {
     }
 
     private unowned let shell: Shell
+    /// The type whose member was last looked up, so a JSON field can be
+    /// written into a lookup that runs.
+    private var lastMemberBase: TypeAnnotation?
+
+    /// Parsed JSON: any of its values, read by field (`json.name`,
+    /// `json["name"]`) or position (`json[0]`), each giving `JSON?`.
+    static let json = TypeAnnotation.named("JSON")
+
+    /// What a JSON value is, when it's that: `json.port?.int`.
+    static let jsonAccessors: [String: TypeAnnotation] = [
+        "string": .optional(.string), "int": .optional(.int), "double": .optional(.double), "bool": .optional(.bool),
+        "array": .optional(.list(json)), "object": .optional(.dictionary(.string, json)), "isNull": .bool,
+    ]
+
+    /// `json.name` as it runs: a lookup that gives nil for a missing field,
+    /// or the value as one of the accessors' types.
+    static func jsonAccess(_ base: Expr, _ name: String) -> Expr {
+        let function = jsonAccessors[name] != nil ? "$jsonAs" : "$json"
+        return .call(.variable(function), [Argument(label: nil, value: base), Argument(label: nil, value: .literal(.string(name)))])
+    }
     /// What the program declares, innermost last, on top of the shell's names.
     private var scopes: [[String: Symbol]] = [[:]]
     private var returns: [ReturnContext] = []
@@ -1000,8 +1020,10 @@ final class TypeChecker {
             expr = .call(callee, arguments)
             return type
         case .member(var base, let name):
+            lastMemberBase = nil
             let type = try memberType(&base, name)
-            expr = .member(base, name)
+            // JSON's fields are looked up when it runs, nil if missing.
+            expr = lastMemberBase == TypeChecker.json ? TypeChecker.jsonAccess(base, name) : .member(base, name)
             return type
         case .caseLiteral(let name, var arguments):
             let type = try caseType(name, &arguments, expected: expected)
@@ -1026,8 +1048,13 @@ final class TypeChecker {
             expr = .binary(op, lhs, rhs)
             return type
         case .index(var base, var index):
+            lastMemberBase = nil
             let type = try indexType(&base, &index)
-            expr = .index(base, index)
+            if lastMemberBase == TypeChecker.json {
+                expr = .call(.variable("$json"), [Argument(label: nil, value: base), Argument(label: nil, value: index)])
+            } else {
+                expr = .index(base, index)
+            }
             return type
         case .annotated(var inner, let type):
             try expect(&inner, type, "the value")
@@ -1041,10 +1068,22 @@ final class TypeChecker {
             throw TypeError("'!' unwraps an optional, but this is \(type)")
         case .optionalMember(var base, let name):
             let wrapped = try optionalBase(&base)
-            expr = .optionalMember(base, name)
+            expr = wrapped == TypeChecker.json ? TypeChecker.jsonAccess(base, name) : .optionalMember(base, name)
             let member = try memberType(of: wrapped, name)
             if case .optional = member { return member }
             return member == .unknown ? .unknown : .optional(member)
+        case .optionalIndex(var base, var index):
+            let wrapped = try optionalBase(&base)
+            if wrapped == TypeChecker.json {
+                _ = try typeOf(&index)
+                expr = .call(.variable("$json"), [Argument(label: nil, value: base), Argument(label: nil, value: index)])
+                return .optional(TypeChecker.json)
+            }
+            // Typed as `base![index]` would be, then made optional.
+            let element = try indexType(of: wrapped, &index)
+            expr = .optionalIndex(base, index)
+            if case .optional = element { return element }
+            return element == .unknown ? .unknown : .optional(element)
         case .chosen(var inner, let overload):
             let type = try typeOf(&inner, expecting: expected)
             expr = .chosen(inner, overload: overload)
@@ -1053,6 +1092,23 @@ final class TypeChecker {
             _ = try typeOf(&inner)
             expr = .voidValue(inner)
             return .void
+        case .cast(var inner, let type, let kind):
+            let actual = try typeOf(&inner, expecting: kind == .upcast ? type : nil)
+            expr = .cast(inner, type, kind)
+            switch kind {
+            case .upcast:
+                guard fits(actual, type) else {
+                    throw TypeError("'as' can't make a \(actual) a \(type); 'as?' or 'as!' check it when it runs")
+                }
+                return type
+            case .conditional:
+                if case .optional = type { return type }
+                return .optional(type)
+            case .forced:
+                return type
+            case .check:
+                return .bool
+            }
         case .keyPath(let rootName, let path):
             return try keyPathType(root: rootName, path, expected: expected)
         }
@@ -1361,9 +1417,11 @@ final class TypeChecker {
             _ = try resolve([signature], &arguments, name: name)
             if throwing { try throwingSite(name) }
             return result
-        case .function, .unknown, .any:
+        case .function, .unknown:
             for index in arguments.indices { _ = try typeOf(&arguments[index].value, expecting: .unknown) }
             return .unknown
+        case .any:
+            throw TypeError("an Any can't be called: cast it first, as in (value as? (Int) -> Int)")
         default:
             throw TypeError("\(type) isn't a function")
         }
@@ -1549,7 +1607,8 @@ final class TypeChecker {
         switch type {
         case .list(let element): element
         case .output: .string
-        case .unknown, .any: .unknown
+        case TypeChecker.json: TypeChecker.json // An array's elements, or the value itself.
+        case .unknown: .unknown
         default: nil
         }
     }
@@ -1592,14 +1651,20 @@ final class TypeChecker {
     }
 
     private func memberType(of base: TypeAnnotation, _ name: String) throws -> TypeAnnotation {
+        lastMemberBase = base
+        if base == TypeChecker.json {
+            return TypeChecker.jsonAccessors[name] ?? .optional(TypeChecker.json)
+        }
         if name == "description" || name == "debugDescription" {
             if case .named(let structName) = base, let info = structInfo(named: structName),
                let property = info.property(name) { return property.type ?? .unknown }
             return .string
         }
         switch base {
-        case .unknown, .any, .record:
+        case .unknown, .record:
             return .unknown
+        case .any:
+            throw TypeError("an Any has no members: cast it first, as in (value as? T)?.\(name)")
         case .optional:
             throw TypeError("\(base) might be nil: unwrap it (if let, ??, ?. or !) before using .\(name)")
         case .named(let typeName):
@@ -1698,7 +1763,19 @@ final class TypeChecker {
             try expect(&index, .string, "an environment variable's name")
             return .optional(.string)
         }
-        let base = try typeOf(&baseExpr)
+        return try indexType(of: try typeOf(&baseExpr), &index)
+    }
+
+    /// Indexing a value of type `base` with `index`.
+    private func indexType(of base: TypeAnnotation, _ index: inout Expr) throws -> TypeAnnotation {
+        lastMemberBase = base
+        if base == TypeChecker.json {
+            let key = try typeOf(&index)
+            guard key == .string || key == .int || key == .unknown else {
+                throw TypeError("JSON is indexed by a String (a field) or an Int (an element), not \(key)")
+            }
+            return .optional(TypeChecker.json)
+        }
         switch base {
         case .list(let element):
             try expect(&index, .int, "a list's index")
@@ -1709,9 +1786,11 @@ final class TypeChecker {
         case .dictionary(let key, let value):
             try expect(&index, key, "the key")
             return .optional(value)
-        case .unknown, .any, .record:
+        case .unknown, .record:
             _ = try typeOf(&index)
             return .unknown
+        case .any:
+            throw TypeError("an Any can't be indexed: cast it first, as in (value as? [Any])")
         default:
             throw TypeError("\(base) can't be indexed")
         }
@@ -1878,6 +1957,7 @@ final class TypeChecker {
     /// a struct or enum by declaring it (an enum without associated values
     /// is Equatable and Hashable anyway, as in Swift).
     func conforms(_ type: TypeAnnotation, to proto: String) -> Bool {
+        if type == TypeChecker.json { return true }
         switch type {
         case .unknown, .parameter, .record: return true
         case .any, .function, .functionType, .void: return proto == "CustomStringConvertible"

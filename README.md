@@ -264,9 +264,9 @@ scripts/test.sh     # unit tests, plus pty-driven job-control, editor and backgr
   - [x] Function values, closures' results inferred, static overloads, Swift's rules for `throws`
   - [x] Protocols (`Equatable`, `Comparable`, …), key paths, generic builtins declared in a
     Swish prelude, typed pipelines with stages resolved from their input
-  - [ ] `Any` casts and `JSON`
-  - [ ] Swift packages as they are: typed from their symbol graphs, glue generated for what's used
-    ([design](docs/design/swift-interop.md))
+  - [x] `Any` casts (`as?`, `as!`, `is`), the `JSON` type, optional subscripts
+  - [ ] Swish types are Swift types: one type system read from Swift's symbol graphs, any package
+    usable as it is, generated Swift twins for Swish types ([design](docs/design/swift-interop.md))
 - [x] **Methods as stages**: after a `|`, a name is a method of what's piped in: the sequence's
   (`sorted`, `filter`, `map`, `prefix`, `reversed`, `count`, `select`, `get`, as in Swift, also
   `xs.sorted(by: \.size)`), then each item's (`points | describe`, `jobs | cancel`); stages

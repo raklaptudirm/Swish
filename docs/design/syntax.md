@@ -165,6 +165,22 @@ ls | sorted --by size              // a field's name is a key path, checked agai
 files.sorted(by: \.modified).map(\.name)
 ```
 
+### Any and JSON
+
+`Any` holds anything, and does nothing until it's cast, as in Swift:
+
+```swift
+let x: Any = 5
+(x as? Int ?? 0) + 1              // as? gives nil if it isn't one
+x is String                       // false
+let config = from("json", $(cat config.json).lines)
+config.server?.port?.int ?? 8080  // each field is a JSON?
+config["tags"]?[0]?.string
+```
+
+A pipeline can't be a `let`'s value, so parsed JSON kept in a variable comes
+from `from` called as a function, as above.
+
 ### Throwing
 
 Swift's rules: a function that can fail says `throws`, a call to it needs
