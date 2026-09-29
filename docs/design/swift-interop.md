@@ -123,7 +123,7 @@ scripts, reusing the twins.
    graph and generated glue, replacing the hand-written member tables.
    *Built so far:* `swish-bridge` (Sources/swish-bridge) reads the graph
    and writes Sources/SwishCore/Bridge/StandardLibrary.swift;
-   `scripts/generate-bridge.swish` reruns it. It bridges `String`,
+   `run bridge` reruns it. It bridges `String`,
    `Substring`, `Character`, `Int`, `Double`, `Bool`, `Array`,
    `ArraySlice`, `Set`, `Dictionary`, `Optional`, `Range` and
    `ClosedRange` (553 members). A member is bridged if every type in its

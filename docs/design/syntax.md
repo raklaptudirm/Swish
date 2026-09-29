@@ -275,6 +275,37 @@ let dir = $(mktemp -d).text
 defer { rm -rf $dir }
 ```
 
+### Tasks
+
+`run` is a task runner, like `just` or `make`, whose tasks are functions. It
+finds `Tasks.swish` in the working directory or a parent, runs its top
+level, then calls the named function with the rest of the line as its
+command line, as `main` gets a script's:
+
+```swift
+// Tasks.swish
+let root = $(dirname "\(#filePath)").text
+cd $root
+
+/// Builds the shell. With --release, optimized.
+func build(release: Bool = false) {
+    if release { try! swift build -c release } else { try! swift build }
+}
+
+/// Builds and tests.
+func test() {
+    build()
+    try! swift test
+}
+```
+
+`run` alone lists the tasks with the first sentence of each doc comment,
+`run build --help` shows one, and `run build --release` runs it. The file
+runs in a Swish of its own, so a task's `cd` or variables don't touch the
+shell you're in, and ^C and ^Z work on it as on any program. A task's
+arguments are its parameters; `args` is empty. Functions whose names start
+with `_` are helpers, not listed. From another shell: `swish -c 'run test'`.
+
 POSIX's `$1` and `$@` would collide with closures' `$0`, `$1`, so there
 aren't any.
 

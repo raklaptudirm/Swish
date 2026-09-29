@@ -1,0 +1,48 @@
+// Tasks for working on Swish: `run` lists them, `run test` runs one. Before
+// Swish is built, or from another shell: swift run swish -c 'run test'
+
+let root = $(dirname "\(#filePath)").text
+cd $root
+
+/// `swift test` for a package. With only the Command Line Tools installed,
+/// swift-testing isn't on the default search paths, so it's given them.
+func _swiftTest(_ package: String) throws {
+    let tools = "/Library/Developer/CommandLineTools"
+    if $(uname).text == "Darwin" && $(xcode-select -p).text == tools {
+        let frameworks = tools + "/Library/Developer/Frameworks"
+        let libraries = tools + "/Library/Developer/usr/lib"
+        try swift test --package-path $package -Xswiftc "-F\(frameworks)" -Xlinker "-F\(frameworks)" -Xlinker -rpath -Xlinker $frameworks -Xlinker -rpath -Xlinker $libraries
+    } else {
+        try swift test --package-path $package
+    }
+}
+
+/// Runs every test. Both packages' unit tests, then the shell built and
+/// driven through a real terminal by the expect scripts (on Linux, install
+/// expect first).
+func test() {
+    try! _swiftTest(".")
+    try! _swiftTest("Packages/SwishKit")
+    try! swift build
+    for script in ["job-control", "line-editor", "background-jobs"] {
+        try! expect "Tests/Interactive/\(script).exp"
+    }
+}
+
+/// Regenerates Sources/SwishCore/Bridge/StandardLibrary.swift from the
+/// standard library's symbol graph. Run it after changing swish-bridge or
+/// the Swift toolchain. The checked-in file is made on macOS; Linux's
+/// standard library has the same members.
+func bridge() {
+    let graphs = $(mktemp -d).text
+    defer { rm -rf $graphs }
+    let machine = $(uname -m).text
+    if $(uname).text == "Darwin" {
+        let sdk = $(xcrun --show-sdk-path).text
+        let extract = $(xcrun --find swift-symbolgraph-extract).text
+        try! $extract -module-name Swift -target "\(machine)-apple-macosx14.0" -sdk $sdk -output-dir $graphs
+    } else {
+        try! swift-symbolgraph-extract -module-name Swift -target "\(machine)-unknown-linux-gnu" -output-dir $graphs
+    }
+    try! swift run -c release swish-bridge "\(graphs)/Swift.symbols.json" Sources/SwishCore/Bridge/StandardLibrary.swift
+}

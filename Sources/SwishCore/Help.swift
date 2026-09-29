@@ -10,6 +10,8 @@ extension Shell {
         ("cd", "cd [<dir> | -]", "Changes the working directory: to <dir>, back to the previous one (-), or home."),
         ("exit", "exit [<status>]", "Leaves the shell, with <status> or the last command's."),
         ("pwd", "pwd", "Prints the working directory."),
+        ("run", "run [<task> [<argument>...]]",
+         "Runs a task: a function in the nearest Tasks.swish, here or in a parent directory, in a Swish of its own. Alone, lists the tasks."),
         ("which", "which <name>...", "Says what each name runs: a function, a shell builtin or a program."),
     ]
 

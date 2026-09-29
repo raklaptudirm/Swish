@@ -15,7 +15,7 @@ let package = Package(
     targets: [
         .executableTarget(name: "swish", dependencies: ["SwishCore"]),
         // Reads Swift's symbol graphs and writes the glue that bridges them
-        // (scripts/generate-bridge.swish); not part of the shell.
+        // (`run bridge`); not part of the shell.
         .executableTarget(name: "swish-bridge"),
         .target(
             name: "SwishCore",

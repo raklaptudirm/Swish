@@ -3,7 +3,7 @@ import SwishKit
 
 /// Swift's own types and members, as Swish sees them: read from the
 /// standard library's symbol graph by `swish-bridge`, which writes
-/// StandardLibrary.swift beside this file (see scripts/generate-bridge.swish
+/// StandardLibrary.swift beside this file (see `run bridge` in Tasks.swish
 /// and docs/design/swift-interop.md). Each member comes with its signature,
 /// for the checker, and its glue, which calls Swift.
 enum Bridge {

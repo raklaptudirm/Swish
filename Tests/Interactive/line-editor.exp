@@ -1,6 +1,6 @@
 # Drives swish through a real pty to check highlighting, completion,
 # multi-line input and history. Run from the repo root after `swift build`,
-# or via scripts/test.sh.
+# or via `run test`.
 set timeout 5
 log_user 0
 set failures 0

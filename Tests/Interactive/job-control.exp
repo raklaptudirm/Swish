@@ -1,5 +1,5 @@
 # Drives swish through a real pty to check job control and line editing.
-# Run from the repo root after `swift build`, or via scripts/test.sh.
+# Run from the repo root after `swift build`, or via `run test`.
 set timeout 5
 log_user 0
 # A scratch history file, so tests never touch the real history.

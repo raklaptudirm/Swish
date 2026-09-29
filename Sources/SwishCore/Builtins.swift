@@ -1,8 +1,34 @@
 import Foundation
 
 extension Shell {
-    /// `fg` and `bg` are only here to say what replaced them.
-    static let builtinNames: Set = ["cd", "pwd", "exit", "fg", "bg", "which"]
+    /// `fg` and `bg` are only here to say what replaced them. `run` becomes
+    /// a program, Swish itself, when its pipeline is made.
+    static let builtinNames: Set = ["cd", "pwd", "exit", "fg", "bg", "which", "run"]
+
+    /// The name of the file `run` finds its tasks in.
+    static let taskFileName = "Tasks.swish"
+
+    /// The Swish executable, which `run` starts for a task file.
+    nonisolated(unsafe) static var executablePath: String? = Bundle.main.executablePath
+
+    /// `run task args…` as the program that runs it: this Swish, told to run
+    /// `task` from the nearest Tasks.swish, here or in a parent directory.
+    /// Its own process, so a task's `cd` or variables don't touch the shell.
+    func taskCommand(_ arguments: [String], from start: String = FileManager.default.currentDirectoryPath) throws -> [String] {
+        var directory = URL(fileURLWithPath: start).standardizedFileURL
+        while true {
+            let file = directory.appendingPathComponent(Shell.taskFileName).path
+            if FileManager.default.fileExists(atPath: file) {
+                guard let swish = Shell.executablePath else { throw RuntimeError("run: can't find the Swish executable") }
+                return [swish, "--tasks", file] + arguments
+            }
+            let parent = directory.deletingLastPathComponent()
+            guard parent.path != directory.path else {
+                throw RuntimeError("run: no \(Shell.taskFileName) here or in a parent directory")
+            }
+            directory = parent
+        }
+    }
 
     /// Runs `argv` as a builtin, or returns nil if it isn't one.
     func runBuiltin(_ argv: [String]) -> Int32? {

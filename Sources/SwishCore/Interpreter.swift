@@ -1042,7 +1042,9 @@ extension Shell {
                     }
                     return text
                 }
-                stages.append(.external(argv, skipBuiltins: command.external, redirects: redirects, environment: environment))
+                // `run test`: the task file, in a Swish of its own.
+                let program = !command.external && name == "run" ? try taskCommand(Array(argv.dropFirst())) : argv
+                stages.append(.external(program, skipBuiltins: command.external || name == "run", redirects: redirects, environment: environment))
             }
         }
         return stages

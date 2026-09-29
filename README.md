@@ -217,11 +217,12 @@ swift build -c release
 ```sh
 swift build
 .build/debug/swish
-scripts/test.sh     # unit tests, plus pty-driven job-control, editor and background-job tests
-.build/debug/swish scripts/generate-bridge.swish   # regenerate the standard library bridge (after a toolchain update)
+swift run swish -c 'run test'     # unit tests, plus pty-driven job-control, editor and background-job tests
+swift run swish -c 'run bridge'   # regenerate the standard library bridge (after a toolchain update)
 ```
 
-`scripts/test.sh` works with just the Command Line Tools installed, where
+The tasks are functions in [`Tasks.swish`](Tasks.swish); inside Swish, `run` lists them and
+`run test` runs one. `run test` works with just the Command Line Tools installed, where
 `swift test` alone can't find the Testing framework. The terminal tests need
 `expect`, which macOS ships (on Linux, install it from your package manager).
 
@@ -233,7 +234,7 @@ scripts/test.sh     # unit tests, plus pty-driven job-control, editor and backgr
 | `Sources/swish` | The executable. |
 | `Tests/Interactive` | `expect` scripts that drive the shell through a real terminal. |
 | `Examples/Tools` | An example plugin, which the tests import. |
-| `Sources/swish-bridge` | Reads Swift's symbol graphs and generates the glue that bridges the standard library (`scripts/generate-bridge.swish`, a Swish script). |
+| `Sources/swish-bridge` | Reads Swift's symbol graphs and generates the glue that bridges the standard library (`run bridge`). |
 
 </details>
 

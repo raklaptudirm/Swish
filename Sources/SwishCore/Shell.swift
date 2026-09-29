@@ -114,6 +114,34 @@ public final class Shell {
     /// it's then called with them as its command line, so a script gets
     /// flags, `--help` and completion from `main`'s signature.
     public func runScript(at path: String, arguments: [String] = []) -> Int32 {
+        runFile(at: path, arguments: arguments) { _ in
+            guard let main = topLevelFunction("main") else { return }
+            // `main` stands for the script, so its help and errors use the script's name.
+            callAsCommand(main, named: (path as NSString).lastPathComponent, arguments)
+        }
+    }
+
+    /// Runs a task file for `run`: its top level first, with no `args`, then
+    /// the function named `task` with `arguments` as its command line. No
+    /// task (or `--help`) lists them.
+    public func runTasks(at path: String, task: String?, arguments: [String]) -> Int32 {
+        runFile(at: path, arguments: []) { program in
+            guard let task, task != "--help", task != "-h" else {
+                listTasks(program)
+                return
+            }
+            guard let function = topLevelFunction(task) else {
+                report("run: no task named '\(task)' in \(path); `run` lists them")
+                lastStatus = 127
+                return
+            }
+            callAsCommand(function, named: "run \(task)", arguments)
+        }
+    }
+
+    /// Reads, checks and runs a file's top level, then `finish`, unless a
+    /// `try!` stopped it. A top-level `defer` runs when it's all over.
+    private func runFile(at path: String, arguments: [String], then finish: (Program) -> Void) -> Int32 {
         guard let data = FileManager.default.contents(atPath: path) else {
             report("\(path): \(errorMessage(errno).lowercased())")
             return 127
@@ -138,9 +166,6 @@ public final class Shell {
         }
         // Checked whole too: a type error anywhere runs none of it.
         guard let program = typeCheck(program, file: path) else { return lastStatus }
-        var status: Int32 = 0
-        // A top-level `defer` runs when the script ends: after `main`, or
-        // when a `try!` stops it.
         var deferred: [Program] = []
         defer { runDeferred(deferred) }
         for statement in program.statements {
@@ -149,19 +174,28 @@ public final class Shell {
                 continue
             }
             runReportingErrors(Program(statements: [statement]))
-            status = lastStatus
-            if scriptStopped { return status }
+            if scriptStopped { return lastStatus }
         }
-        guard let main = scopes[1].bindings["main"], main.isFunction,
-              case .function(let set as OverloadSet) = main.value else { return status }
-        // `main` stands for the script, so its help and errors use the script's name.
-        let name = (path as NSString).lastPathComponent
-        let script = OverloadSet(name: name, candidates: set.candidates.map {
+        finish(program)
+        return lastStatus
+    }
+
+    /// A function the file declared at its top level.
+    private func topLevelFunction(_ name: String) -> OverloadSet? {
+        guard let binding = scopes[1].bindings[name], binding.isFunction,
+              case .function(let set as OverloadSet) = binding.value else { return nil }
+        return set
+    }
+
+    /// Calls a script's function with command-line `arguments`, under `name`
+    /// for its help and errors.
+    private func callAsCommand(_ set: OverloadSet, named name: String, _ arguments: [String]) {
+        let command = OverloadSet(name: name, candidates: set.candidates.map {
             Function(name: name, parameters: $0.parameters, returnType: $0.returnType, body: $0.body,
                      captured: $0.captured, documentation: $0.documentation)
         })
         do {
-            lastStatus = try callCommand(script, arguments.map(CommandArgument.text), display: true)
+            lastStatus = try callCommand(command, arguments.map(CommandArgument.text), display: true)
         } catch let fatal as FatalError {
             report("error: \(fatal.error)")
             lastStatus = fatal.error.status
@@ -174,7 +208,30 @@ public final class Shell {
             report("error: \(error)")
             lastStatus = 1
         }
-        return lastStatus
+    }
+
+    /// `run` alone: each task, with the first sentence of its doc comment.
+    private func listTasks(_ program: Program) {
+        let tasks: [(name: String, summary: String)] = program.statements.compactMap {
+            guard case .function(let decl) = $0, !decl.name.hasPrefix("_") else { return nil }
+            let summary = decl.documentation?.summary.replacingOccurrences(of: "\n", with: " ") ?? ""
+            let sentence = summary.range(of: ". ").map { String(summary[..<$0.lowerBound]) + "." } ?? summary
+            return (decl.name, sentence)
+        }
+        guard !tasks.isEmpty else {
+            writeAll(stdoutFD, "No tasks: a task is a function in the file.\n")
+            lastStatus = 0
+            return
+        }
+        let width = tasks.map(\.name.count).max()!
+        let styled = Style.enabled(for: stdoutFD)
+        var text = "Usage: run <task> [<argument>...]\n\nTasks:\n"
+        for task in tasks {
+            let name = task.name.padding(toLength: width, withPad: " ", startingAt: 0)
+            text += "  " + (styled ? name.styled(Style.bold) : name) + (task.summary.isEmpty ? "" : "  " + task.summary) + "\n"
+        }
+        writeAll(stdoutFD, text)
+        lastStatus = 0
     }
 
     /// Runs lines as they come, grouping those of an unfinished statement.
