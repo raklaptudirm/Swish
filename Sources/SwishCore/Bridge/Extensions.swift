@@ -1,0 +1,32 @@
+import Foundation
+import SwishKit
+
+/// Members Swish adds to Swift's types, as an `extension String` would:
+/// merged into the bridged types, so they're checked and called like
+/// Swift's own.
+extension Bridge {
+    nonisolated(unsafe) static let extensions: [String: [BridgedMember]] = [
+        "String": [styled],
+    ]
+
+    /// `"~/src".styled(.cyan, .bold)`: the text in colors or emphasis, as a
+    /// prompt wants; plain where color is off (NO_COLOR set, TERM=dumb, or
+    /// not writing to a terminal).
+    nonisolated(unsafe) private static let styled = BridgedMember(
+        kind: .method, name: "styled", isStatic: false,
+        parameters: [Parameter(label: nil, name: "styles", type: .named("TextStyle"), variadic: true)],
+        returns: .string, generics: [:], isThrowing: false, isRethrowing: false,
+        body: .native { shell, args in
+            guard case .string(let text)? = args["self"] else { return .nothing }
+            guard case .list(let styles)? = args["styles"], !styles.isEmpty, !text.isEmpty,
+                  Style.enabled(for: shell.stdoutFD) else {
+                return .string(text)
+            }
+            let codes = styles.compactMap { style -> String? in
+                guard case .enumValue(let value) = style else { return nil }
+                return Shell.textStyleCodes.first { $0.key == value.name }?.value
+            }
+            return .string("\u{1B}[\(codes.joined(separator: ";"))m" + text + Style.reset)
+        }
+    )
+}

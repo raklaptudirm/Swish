@@ -77,6 +77,7 @@ public final class Shell {
         }
         editor.highlight = { [unowned self] in highlightStyles($0) }
         editor.complete = { [unowned self] in completions(for: $0, cursor: $1) }
+        loadConfig()
         // Lines of a statement that isn't finished yet, like an open `if` block.
         var pending = ""
         while true {
@@ -141,7 +142,7 @@ public final class Shell {
 
     /// Reads, checks and runs a file's top level, then `finish`, unless a
     /// `try!` stopped it. A top-level `defer` runs when it's all over.
-    private func runFile(at path: String, arguments: [String], then finish: (Program) -> Void) -> Int32 {
+    func runFile(at path: String, arguments: [String], then finish: (Program) -> Void) -> Int32 {
         guard let data = FileManager.default.contents(atPath: path) else {
             report("\(path): \(errorMessage(errno).lowercased())")
             return 127
@@ -314,8 +315,9 @@ public final class Shell {
         } catch let fatal as FatalError {
             report("error: \(fatal.error)")
             lastStatus = fatal.error.status
-            // At the prompt, stopping would mean exiting your shell.
-            scriptStopped = !interactive
+            // At the prompt, stopping would mean exiting your shell; the
+            // config file stops, as a script does.
+            scriptStopped = !interactive || scriptPath != nil
         } catch let error as RuntimeError {
             report("error: \(error)")
             lastStatus = error.status
@@ -359,7 +361,18 @@ public final class Shell {
         interactive = true
     }
 
+    /// The prompt: what the config's `prompt` function gives, or the
+    /// default. One that fails is reported, and the default shown instead.
     private func prompt() -> String {
+        do {
+            if let custom = try customPrompt() { return custom }
+        } catch {
+            report("prompt: \(error)")
+        }
+        return defaultPrompt()
+    }
+
+    private func defaultPrompt() -> String {
         var directory = FileManager.default.currentDirectoryPath
         if let home = env("HOME"), directory == home || directory.hasPrefix(home + "/") {
             directory = "~" + directory.dropFirst(home.count)

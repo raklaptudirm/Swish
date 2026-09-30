@@ -6,6 +6,8 @@ log_user 0
 set failures 0
 set history [exec mktemp]
 set env(SWISH_HISTORY) $history
+# Not your own config: these expect the default prompt.
+set env(SWISH_CONFIG) ""
 # The end of a success prompt: directory, then a green arrow.
 set ok {\x1b\[0m \x1b\[32m}
 

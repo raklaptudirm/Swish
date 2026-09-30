@@ -1,0 +1,61 @@
+# Drives swish through a real pty to check the config file: found through
+# XDG_CONFIG_HOME, its functions defined at the prompt, and its `prompt`
+# function drawing the prompt. Run from the repo root after `swift build`,
+# or via `run test`.
+set timeout 5
+log_user 0
+set failures 0
+set env(SWISH_HISTORY) ""
+if {[info exists env(SWISH_CONFIG)]} { unset env(SWISH_CONFIG) }
+set config [exec mktemp -d]
+set env(XDG_CONFIG_HOME) $config
+file mkdir $config/swish
+set file [open $config/swish/config.swish w]
+puts $file {func prompt(status: Int) -> String {
+    "swish[\(status)]".styled(status == 0 ? .green : .red) + "> "
+}
+func greet() { echo "hello from config" }}
+close $file
+
+proc step {name pattern} {
+  expect {
+    -re $pattern { puts "ok   $name" }
+    timeout { puts "FAIL $name"; global failures; incr failures }
+  }
+}
+
+spawn .build/debug/swish
+step "the config's prompt draws the prompt, styled" {\x1b\[32mswish\[0\]\x1b\[0m> }
+send "greet\r"
+step "its functions are defined at the prompt" "hello from config"
+send "false\r"
+step "the prompt is told the last status" {\x1b\[31mswish\[1\]\x1b\[0m> }
+send "#filePath\r"
+step "the prompt isn't the config file" {"<prompt>"}
+send "func prompt() -> String \{ \"new> \" \}\r"
+step "a prompt declared at the prompt takes over" "new> "
+send "exit\r"
+expect eof
+
+# A config that fails: reported, and the shell starts with the default prompt.
+set file [open $config/swish/config.swish w]
+puts $file {let x: Int = "no"}
+close $file
+spawn .build/debug/swish
+step "a config's error is reported" {config.swish:1: error}
+step "and the default prompt shown" {\x1b\[0m \x1b\[32m}
+send "exit\r"
+expect eof
+
+# A prompt that fails is reported, and the default drawn instead.
+set file [open $config/swish/config.swish w]
+puts $file {func prompt() -> String { try! $(false).text }}
+close $file
+spawn .build/debug/swish
+step "a failing prompt is reported" {prompt: }
+step "and the default drawn" {\x1b\[0m \x1b\[32m}
+send "exit\r"
+expect eof
+
+file delete -force $config
+exit [expr {$failures > 0}]

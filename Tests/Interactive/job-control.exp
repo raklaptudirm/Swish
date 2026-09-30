@@ -4,6 +4,8 @@ set timeout 5
 log_user 0
 # A scratch history file, so tests never touch the real history.
 set env(SWISH_HISTORY) [exec mktemp]
+# Not your own config: these expect the default prompt.
+set env(SWISH_CONFIG) ""
 spawn .build/debug/swish
 # The end of a success prompt: directory, then a green arrow.
 set ok {\x1b\[0m \x1b\[32m}

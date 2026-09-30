@@ -167,6 +167,9 @@ scripts, reusing the twins.
      argument, made with `init(stringLiteral:)`. A `String` value doesn't
      convert: `FilePath(s)`. On a command line, a word is what a literal
      would be, so `show a/b.txt` works for `func show(_ path: FilePath)`.
+   - **Swish adds a few members of its own** to bridged types, as an
+     `extension` would, listed in Sources/SwishCore/Bridge/Extensions.swift
+     and checked and called like Swift's: `"text".styled(.red, .bold)`.
    - **A bridged sequence flows as its elements** in a pipeline, as a
      list does: `p.components | map(\.stem)`.
    Key paths (`\.count`) read the same bridged properties. Swift's members

@@ -73,11 +73,7 @@ final class History {
 
     static func defaultPath(environment: [String: String]) -> String? {
         if let path = environment["SWISH_HISTORY"] { return path.isEmpty ? nil : path }
-        // The spec says to ignore a relative XDG_STATE_HOME.
-        if let state = environment["XDG_STATE_HOME"], state.hasPrefix("/") {
-            return state + "/swish/history"
-        }
-        return environment["HOME"].map { $0 + "/.local/state/swish/history" }
+        return XDG.stateHome(environment).map { $0 + "/swish/history" }
     }
 
     /// Creates the file's directory, private to the user, as the spec asks.

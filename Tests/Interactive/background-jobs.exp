@@ -11,6 +11,8 @@ proc colored {pattern} {
   return [string map [list " " "$c $c"] $pattern]
 }
 set env(SWISH_HISTORY) [exec mktemp]
+# Not your own config: these expect the default prompt.
+set env(SWISH_CONFIG) ""
 # The end of a prompt: directory, then the arrow in any color.
 set prompt {\x1b\[0m \x1b\[3[12]m}
 

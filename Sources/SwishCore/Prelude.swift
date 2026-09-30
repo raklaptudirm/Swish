@@ -151,7 +151,7 @@ extension Shell {
     func installPrelude() {
         let program: Program
         do {
-            program = try Parser.parsePrelude(Shell.prelude, bound: ["FileType": .type, "JobState": .type, "FilePath": .type])
+            program = try Parser.parsePrelude(Shell.prelude, bound: ["FileType": .type, "JobState": .type, "TextStyle": .type, "FilePath": .type])
         } catch {
             preconditionFailure("the prelude doesn't parse: \(error)")
         }

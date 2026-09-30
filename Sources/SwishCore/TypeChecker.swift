@@ -1346,8 +1346,10 @@ final class TypeChecker {
             if case .literal(.nothing) = items[index] { continue }
             types[index] = try typeOf(&items[index])
         }
-        let known = commonType(types.compactMap { $0 })
+        // In order, each taking its type from those typed before it, so
+        // `[c ? K.a : .b, .b]` works.
         for index in items.indices where types[index] == nil {
+            let known = commonType(types.compactMap { $0 })
             types[index] = try typeOf(&items[index], expecting: known.map { .optional($0) } ?? nil)
         }
         return types.map { $0! }
@@ -1708,6 +1710,8 @@ final class TypeChecker {
     private static func hasNaturalType(_ expr: Expr) -> Bool {
         switch expr {
         case .closure, .caseLiteral, .list, .record, .tuple, .literal(.nothing), .keyPath: false
+        // `c ? .green : .red` takes its type from where it goes, as its branches do.
+        case .ifExpression(let node): branches(of: node).allSatisfy(hasNaturalType)
         default: true
         }
     }
@@ -2126,7 +2130,16 @@ final class TypeChecker {
     }
 
     private static func isContextual(_ expr: Expr) -> Bool {
-        if case .caseLiteral = expr { true } else { false }
+        switch expr {
+        case .caseLiteral: true
+        case .ifExpression(let node): branches(of: node).contains(where: isContextual)
+        default: false
+        }
+    }
+
+    /// An `if` expression's branches.
+    private static func branches(of node: IfStatement) -> [Expr] {
+        [node.then, node.otherwise].compactMap { $0.flatMap(IfStatement.branchExpression) }
     }
 
     private static func isIntegerLiteral(_ expr: Expr) -> Bool {

@@ -9,7 +9,9 @@ import SwishKit
 /// for the checker, and its glue, which calls Swift.
 enum Bridge {
     /// The bridged types, by the name Swish writes them with.
-    nonisolated(unsafe) static let types: [String: BridgedType] = Dictionary(uniqueKeysWithValues: (standardLibrary + system).map { ($0.name, $0) })
+    nonisolated(unsafe) static let types: [String: BridgedType] = Dictionary(uniqueKeysWithValues: (standardLibrary + system).map {
+        ($0.name, $0.adding(extensions[$0.name] ?? []))
+    })
 
     /// Whether a string literal can be one of the type: `FilePath`.
     static func isStringLiteral(_ typeName: String) -> Bool {
@@ -86,6 +88,12 @@ struct BridgedType {
     /// Its associated types: `Element` is `Character` for String.
     let associatedTypes: [String: TypeAnnotation]
     let members: [BridgedMember]
+
+    /// With Swish's own members after Swift's.
+    func adding(_ extra: [BridgedMember]) -> BridgedType {
+        BridgedType(name: name, genericParameters: genericParameters, conformances: conformances,
+                    associatedTypes: associatedTypes, members: members + extra)
+    }
 }
 
 struct BridgedMember {

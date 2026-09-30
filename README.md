@@ -211,6 +211,29 @@ swift build -c release
 .build/release/swish script.swish a b    # run a script, with arguments
 ```
 
+### Configuration
+
+The interactive shell runs `~/.config/swish/config.swish` as it starts: a Swish script whose
+functions and variables stay defined at the prompt. It's found as the XDG spec says, in
+`$XDG_CONFIG_HOME/swish` (default `~/.config/swish`), then each of `$XDG_CONFIG_DIRS` (default
+`/etc/xdg`); `$SWISH_CONFIG` names another file, or none when it's empty. A `prompt` function
+there draws the prompt, told how the last command exited if it asks:
+
+```swift
+// ~/.config/swish/config.swish
+func prompt(status: Int) -> String {
+    let mark = status == 0 ? "❯".styled(.green) : "[\(status)] ❯".styled(.red, .bold)
+    return (pwd().lastComponent?.string ?? "/").styled(.cyan) + " " + mark + " "
+}
+
+func gs() { git status --short }
+```
+
+`String.styled` colors text only where color belongs: not with `NO_COLOR` set, `TERM=dumb`, or output
+that isn't a terminal. A `prompt` that fails, or isn't `() -> String` or `(status: Int) -> String`,
+is reported, and the default prompt drawn instead. History lives in the XDG state directory,
+`$XDG_STATE_HOME/swish/history` (default `~/.local/state/swish/history`), or `$SWISH_HISTORY`.
+
 <details>
 <summary>Development builds and tests</summary>
 
@@ -292,6 +315,8 @@ The tasks are functions in [`Tasks.swish`](Tasks.swish); inside Swish, `run` lis
     and `ls`'s `path` and `target`
   - [ ] Durations
   - [ ] A lazy `ls`
+- [x] **Configuration**: an XDG `config.swish`, run at startup, whose `prompt` function draws the
+  prompt, with `String.styled` for color
 - [x] **Line editor**: persistent history (`$SWISH_HISTORY`, default `$XDG_STATE_HOME/swish/history`) with
   prefix search and `^R`, completion from signatures, highlighting from the parser,
   multi-line editing and wrapping
