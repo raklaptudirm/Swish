@@ -284,19 +284,28 @@ func main(_ name: String, loud: Bool = false) {
 
 A `#!` first line is skipped. `#filePath` is the running script's path
 (`"<prompt>"` at the prompt), so a script can find files beside it:
-`let here = $(dirname "\(#filePath)").text`.
+`let here = FilePath(#filePath).removingLastComponent()`. `readLine()`
+reads a line of standard input, as in Swift.
 
 `defer { … }` runs its block when the enclosing block, function or script
 ends, however it ends: normally, by `return`, `break` or a thrown error.
 Several run last-first. A script's top-level `defer`s run when the script
-ends, after `main` and after a `try!` stops it. Nothing leaves a `defer`:
-it can't `return`, `break` or `continue`, and whatever throws in it must
-be handled there.
+ends, after `main` and after a `try!` stops it, and when ^C, `kill` or a
+hangup stops it: the script stops at its next statement, runs its
+`defer`s, then ends by the signal, as it would have without them. That's
+what other shells' `trap … EXIT` is for. Nothing leaves a `defer`: it
+can't `return`, `break` or `continue`, and whatever throws in it must be
+handled there.
 
 ```swift
 let dir = $(mktemp -d).text
 defer { rm -rf $dir }
 ```
+
+`source file.swish a b` runs a file in this shell, so what it declares
+stays declared, with `args` its arguments while it runs. At the prompt,
+what it declares is there for later entries; a script is checked before
+it runs, so its own later lines can't use what a `source` declares.
 
 ### Tasks
 

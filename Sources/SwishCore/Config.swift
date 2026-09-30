@@ -20,11 +20,7 @@ extension Shell {
     /// the shell starts anyway.
     func loadConfig() {
         guard let path = Shell.configPath(environment: ProcessInfo.processInfo.environment) else { return }
-        _ = runFile(at: path, arguments: []) { _ in }
-        // Back to the prompt's: `#filePath` and relative imports.
-        scriptPath = nil
-        scriptDirectory = nil
-        scriptStopped = false
+        _ = sourceFile(path, arguments: [])
         lastStatus = 0
     }
 

@@ -1,0 +1,38 @@
+# A script stopped by ^C, kill or hangup runs its `defer`s, then ends by
+# the signal. Run from the repo root after `swift build`, or via `run test`.
+set timeout 10
+log_user 0
+set failures 0
+set env(SWISH_HISTORY) ""
+set env(SWISH_CONFIG) ""
+set script [exec mktemp]
+set file [open $script w]
+puts $file {defer { echo "cleaned up" }
+echo started
+while true {}}
+close $file
+
+proc step {name pattern} {
+  expect {
+    -re $pattern { puts "ok   $name" }
+    timeout { puts "FAIL $name"; global failures; incr failures }
+  }
+}
+
+foreach signal {INT TERM HUP} {
+  spawn .build/debug/swish $script
+  expect "started"
+  exec kill -$signal [exp_pid]
+  step "SIG$signal runs the script's defer" "cleaned up"
+  expect eof
+  # Killed by the signal itself, as it would have been without the defer.
+  set result [wait]
+  if {[lindex $result 4] eq "CHILDKILLED" && [lindex $result 5] eq "SIG$signal"} {
+    puts "ok   and it ends by SIG$signal"
+  } else {
+    puts "FAIL it ended with $result"; incr failures
+  }
+}
+
+file delete $script
+exit [expr {$failures > 0}]

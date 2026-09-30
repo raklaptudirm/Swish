@@ -36,7 +36,10 @@ struct FatalError: Error {
 }
 
 /// ^C while the shell itself was running code.
-struct Interrupted: Error {}
+/// ^C, or in a script SIGTERM or SIGHUP: stops what's running.
+struct Interrupted: Error {
+    var signal: Int32 = SIGINT
+}
 
 /// Non-local exits, thrown up to the loop or call that handles them. The
 /// parser guarantees each one has a handler.
@@ -497,7 +500,7 @@ extension Shell {
     }
 
     func checkInterrupt() throws {
-        if takeInterrupt() { throw Interrupted() }
+        if let signal = takeInterruptSignal() { throw Interrupted(signal: signal) }
     }
 
     // MARK: Expressions

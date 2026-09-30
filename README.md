@@ -192,7 +192,14 @@ env.PAGER = "less"                // or for the session
 make e>o | tee build.log          // errors along with output
 ls **/*.swift                     // globs, including **
 foreign ls -la                    // the program, not the builtin `ls`
+source ~/lib.swish                // run a file in this shell
+umask 077; ulimit -n 4096         // builtins that change the shell
+exec zsh                          // another program in the shell's place
 ```
+
+Other shells' builtins that Swish does another way (`alias`, `export`, `wait`, `read`, `trap`,
+`set -e`, …) say what to use instead, rather than running the `/usr/bin` stubs that can't
+change the shell.
 
 Interactively there's syntax highlighting, completion of commands, paths and
 function flags, history with prefix and `^R` search, and multi-line editing.

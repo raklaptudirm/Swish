@@ -66,7 +66,7 @@ extension Shell {
     /// (`filter`), or all of them (`sorted`).
     func builtinBodies() -> [String: (body: FunctionBody, input: Parameter?)] {
         var bodies: [String: (body: FunctionBody, input: Parameter?)] = [:]
-        for function in [ls(), pwd(), ps(), from(), to(), table(), list(), members(), help(), with()] {
+        for function in [ls(), pwd(), history(), readLine(), ps(), from(), to(), table(), list(), members(), help(), with()] {
             bodies[function.name!] = (function.body, nil)
         }
         for method in [sorted(), filter(), map(), prefix(), reversed(), count(), uniqued(), select(), get()] {
@@ -184,6 +184,31 @@ extension Shell {
         builtin("pwd", "The working directory.", [], .native { _, _ in
             pathValue(FileManager.default.currentDirectoryPath)
         })
+    }
+
+    private func history() -> Function {
+        builtin("history", "What you've entered at the prompt, oldest first.", [], .native { shell, _ in
+            .list(shell.historyEntries.map(Value.string))
+        })
+    }
+
+    private func readLine() -> Function {
+        builtin(
+            "readLine", "A line of standard input, or nil at its end.",
+            [option("strippingNewline", .bool, default: .bool(true))],
+            .native { _, args in
+                // A byte at a time, so nothing past the line is taken from
+                // programs that read the rest.
+                var bytes: [UInt8] = []
+                while let byte = readByte(STDIN_FILENO) {
+                    bytes.append(byte)
+                    if byte == UInt8(ascii: "\n") { break }
+                }
+                guard !bytes.isEmpty else { return .nothing }
+                if args["strippingNewline"] != .bool(false), bytes.last == UInt8(ascii: "\n") { bytes.removeLast() }
+                return .string(String(decoding: bytes, as: UTF8.self))
+            }
+        )
     }
 
     private func ps() -> Function {

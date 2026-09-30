@@ -28,11 +28,12 @@ struct WaitStatus {
 /// is; the readers call through a function, so the load isn't hoisted.
 nonisolated(unsafe) private var interrupted: sig_atomic_t = 0
 
-/// Makes SIGINT set a flag instead of being ignored, so ^C can stop code
-/// running in the shell itself, like a `while true {}` loop.
-func catchInterrupts() {
+/// Makes SIGINT (or the signals given) set a flag instead of ending the
+/// shell, so ^C can stop code running in the shell itself, like a
+/// `while true {}` loop, and a script can run its `defer`s first.
+func catchInterrupts(_ signals: [Int32] = [SIGINT]) {
     var action = sigaction()
-    let handler: @convention(c) (Int32) -> Void = { _ in interrupted = 1 }
+    let handler: @convention(c) (Int32) -> Void = { signal in interrupted = signal }
     #if canImport(Darwin)
     action.__sigaction_u.__sa_handler = handler
     #elseif canImport(Glibc)
@@ -42,14 +43,20 @@ func catchInterrupts() {
     #endif
     action.sa_flags = SA_RESTART
     sigemptyset(&action.sa_mask)
-    sigaction(SIGINT, &action, nil)
+    for signal in signals { sigaction(signal, &action, nil) }
 }
 
-/// Whether SIGINT arrived since the last call, clearing the flag.
+/// Whether a caught signal arrived since the last call, clearing the flag.
 @inline(never)
 func takeInterrupt() -> Bool {
+    takeInterruptSignal() != nil
+}
+
+/// The caught signal that arrived since the last call, if any, clearing it.
+@inline(never)
+func takeInterruptSignal() -> Int32? {
     defer { interrupted = 0 }
-    return interrupted != 0
+    return interrupted != 0 ? Int32(interrupted) : nil
 }
 
 // MARK: Spawning

@@ -38,6 +38,8 @@ public final class Shell {
     var warnedAboutJobs = false
     /// A `try!` failed in a script, which stops it.
     var scriptStopped = false
+    /// The signal that stopped the script, which it then ends by.
+    var endingSignal: Int32?
     /// The running script's directory, which relative `import` paths start
     /// from; nil at the prompt, where they start from the working directory.
     var scriptDirectory: String?
@@ -55,6 +57,12 @@ public final class Shell {
     var lastSignalStatus: Int32?
 
     private let editor = LineEditor()
+
+    /// What's been entered at the prompt: this shell's history, or the
+    /// history file's outside the interactive shell.
+    var historyEntries: [String] {
+        interactive ? editor.history.entries : History(path: History.defaultPath).entries
+    }
 
     public init() {
         // The shell writes into pipes itself now; a reader exiting early
@@ -115,18 +123,31 @@ public final class Shell {
     /// it's then called with them as its command line, so a script gets
     /// flags, `--help` and completion from `main`'s signature.
     public func runScript(at path: String, arguments: [String] = []) -> Int32 {
-        runFile(at: path, arguments: arguments) { _ in
+        // ^C, kill and hangup stop the script at the next statement, so its
+        // defers run; then it ends by the signal (see `endBySignal`).
+        catchInterrupts([SIGINT, SIGTERM, SIGHUP])
+        return runFile(at: path, arguments: arguments) { _ in
             guard let main = topLevelFunction("main") else { return }
             // `main` stands for the script, so its help and errors use the script's name.
             callAsCommand(main, named: (path as NSString).lastPathComponent, arguments)
         }
     }
 
+    /// After a script stopped by a signal has run its defers: ends the
+    /// process by that signal, as the script would have without them, so
+    /// whatever started it sees how it ended.
+    public func endBySignal() {
+        guard let ending = endingSignal else { return }
+        signal(ending, SIG_DFL)
+        kill(getpid(), ending)
+    }
+
     /// Runs a task file for `run`: its top level first, with no `args`, then
     /// the function named `task` with `arguments` as its command line. No
     /// task (or `--help`) lists them.
     public func runTasks(at path: String, task: String?, arguments: [String]) -> Int32 {
-        runFile(at: path, arguments: []) { program in
+        catchInterrupts([SIGINT, SIGTERM, SIGHUP])
+        return runFile(at: path, arguments: []) { program in
             guard let task, task != "--help", task != "-h" else {
                 listTasks(program)
                 return
@@ -203,6 +224,9 @@ public final class Shell {
         })
         do {
             lastStatus = try callCommand(command, arguments.map(CommandArgument.text), display: true)
+        } catch let interrupt as Interrupted {
+            lastStatus = 128 + interrupt.signal
+            endingSignal = interrupt.signal
         } catch let fatal as FatalError {
             report("error: \(fatal.error)")
             lastStatus = fatal.error.status
@@ -302,12 +326,20 @@ public final class Shell {
     /// A runtime error abandons the rest of the input, unlike a failing
     /// command, which only sets the status.
     private func runReportingErrors(_ program: Program) {
-        _ = takeInterrupt() // Drop a stale ^C from while the prompt was up.
+        // Drop a stale ^C from while the prompt was up; a script's stops it.
+        if interactive && scriptPath == nil { _ = takeInterrupt() }
         do {
             lastStatus = try run(program)
-        } catch is Interrupted {
-            writeAll(STDERR_FILENO, "\n")
-            lastStatus = 128 + SIGINT
+        } catch let interrupt as Interrupted {
+            if interactive && scriptPath == nil {
+                writeAll(STDERR_FILENO, "\n")
+                lastStatus = 128 + SIGINT
+            } else {
+                // A script stops, running its defers, then ends by the signal.
+                lastStatus = 128 + interrupt.signal
+                scriptStopped = true
+                endingSignal = interrupt.signal
+            }
         } catch is JobSuspended {
             lastStatus = 128 + SIGTSTP // Already announced; the job is in `jobs`.
         } catch is AlreadyReported {

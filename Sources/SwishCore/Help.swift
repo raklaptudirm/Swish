@@ -8,9 +8,14 @@ extension Shell {
     /// itself: their usage and what they do.
     static let shellBuiltins: [(name: String, usage: String, summary: String)] = [
         ("cd", "cd [<dir> | -]", "Changes the working directory: to <dir>, back to the previous one (-), or home."),
+        ("exec", "exec <program> [<argument>...]", "Runs a program in the shell's place."),
         ("exit", "exit [<status>]", "Leaves the shell, with <status> or the last command's."),
         ("run", "run [<task> [<argument>...]]",
          "Runs a task: a function in the nearest Tasks.swish, here or in a parent directory, in a Swish of its own. Alone, lists the tasks."),
+        ("source", "source <file> [<argument>...]", "Runs a Swish file in this shell, so what it declares stays declared."),
+        ("ulimit", "ulimit [-a] [-S|-H] [-c|-d|-f|-n|-s|-t|-u|-v] [<limit>|unlimited]",
+         "Shows or sets a resource limit for the shell and what it runs: file size (-f) unless another is named."),
+        ("umask", "umask [<mask>]", "Shows or sets, in octal, the permissions new files are made without."),
         ("which", "which <name>...", "Says what each name runs: a function, a shell builtin or a program."),
     ]
 

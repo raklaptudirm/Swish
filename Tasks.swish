@@ -12,7 +12,7 @@ func test() {
     try! _swiftTest(".")
     try! _swiftTest("Packages/SwishKit")
     try! swift build
-    for script in ["job-control", "line-editor", "background-jobs", "config"] {
+    for script in ["job-control", "line-editor", "background-jobs", "config", "signals"] {
         try! expect "Tests/Interactive/\(script).exp"
     }
 }

@@ -122,7 +122,7 @@ extension Shell {
                     described[name] = summary.map { String($0.prefix { $0 != "\n" }) } ?? "function"
                 }
             }
-            for name in Shell.builtinNames { described[name] = "shell builtin" }
+            for name in Shell.workingBuiltins { described[name] = "shell builtin" }
             for (name, set) in sequenceMethods {
                 described[name] = set.candidates.first?.documentation.map { String($0.summary.prefix { $0 != "\n" }) } ?? "sequence method"
             }
