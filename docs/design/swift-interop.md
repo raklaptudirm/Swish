@@ -153,6 +153,22 @@ scripts, reusing the twins.
      `keys` and `values` are still arrays rather than Swift's views.
      `OrderedDictionary`, from swift-collections, is next, for when order
      matters.
+   - **Other modules' types are held boxed,** by their full name:
+     swift-system's `FilePath`, `FilePath.Component` and
+     `FilePath.ComponentView` (61 members, in
+     Sources/SwishCore/Bridge/SystemPackage.swift). It's swift-system's
+     until the standard library's
+     ([SE-0529](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0529-filepath-in-stdlib.md))
+     ships, when swift-system's becomes a typealias for it and keeps these
+     members as extensions. `FilePath.Root` is left out, since SE-0529
+     calls it `Anchor`.
+   - **A string literal is whatever `ExpressibleByStringLiteral` type is
+     wanted,** as in Swift: `let p: FilePath = "/tmp"`, or a `FilePath`
+     argument, made with `init(stringLiteral:)`. A `String` value doesn't
+     convert: `FilePath(s)`. On a command line, a word is what a literal
+     would be, so `show a/b.txt` works for `func show(_ path: FilePath)`.
+   - **A bridged sequence flows as its elements** in a pipeline, as a
+     list does: `p.components | map(\.stem)`.
    Key paths (`\.count`) read the same bridged properties. Swift's members
    come before the prelude's; the prelude's shell additions
    (`sorted(by: \.size)`, `prefix` with a default, `select`, `get`,

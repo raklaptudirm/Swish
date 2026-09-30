@@ -2,13 +2,26 @@ import Foundation
 import SwishKit
 
 /// Swift's own types and members, as Swish sees them: read from the
-/// standard library's symbol graph by `swish-bridge`, which writes
-/// StandardLibrary.swift beside this file (see `run bridge` in Tasks.swish
+/// standard library's symbol graph (and swift-system's, for FilePath) by
+/// `swish-bridge`, which writes StandardLibrary.swift and SystemPackage.swift
+/// beside this file (see `run bridge` in Tasks.swish
 /// and docs/design/swift-interop.md). Each member comes with its signature,
 /// for the checker, and its glue, which calls Swift.
 enum Bridge {
     /// The bridged types, by the name Swish writes them with.
-    nonisolated(unsafe) static let types: [String: BridgedType] = Dictionary(uniqueKeysWithValues: standardLibrary.map { ($0.name, $0) })
+    nonisolated(unsafe) static let types: [String: BridgedType] = Dictionary(uniqueKeysWithValues: (standardLibrary + system).map { ($0.name, $0) })
+
+    /// Whether a string literal can be one of the type: `FilePath`.
+    static func isStringLiteral(_ typeName: String) -> Bool {
+        types[typeName]?.conformances["ExpressibleByStringLiteral"] != nil
+    }
+
+    /// The type's `init(stringLiteral:)`, and its label, if it's bridged.
+    static func literalInitializer(_ typeName: String) -> (Int, String?)? {
+        types[typeName]?.members.firstIndex {
+            $0.kind == .initializer && $0.parameters.count == 1 && $0.parameters[0].label == "stringLiteral"
+        }.map { ($0, "stringLiteral") }
+    }
 }
 
 /// A bridged type's name as a value, as in `String(sub)` or `Int.max`.
@@ -205,7 +218,10 @@ extension Shell {
             if let value = next as? Value { return value }
             // A Substring's Characters.
             if let character = next as? Character { return SwiftValue.make(character, as: "Character") }
-            return SwiftValue.make(next, as: String(describing: type(of: next)))
+            // By the name Swish writes it with: FilePath.Component, not Component.
+            let name = String(reflecting: type(of: next))
+            let module = name.prefix { $0 != "." }
+            return SwiftValue.make(next, as: module == "Swift" || module == "SystemPackage" ? String(name.dropFirst(module.count + 1)) : name)
         }
     }
 }

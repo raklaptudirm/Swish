@@ -19,9 +19,9 @@ final class ValueStream {
         ValueStream { nil }
     }
 
-    /// A list flows as its elements, as does a generic Swift sequence
-    /// (a Set, a range of Ints); nothing as no items, anything else as a
-    /// single item.
+    /// A list flows as its elements, as does a Swift sequence (a Set, a
+    /// range of Ints, a FilePath's components); nothing as no items,
+    /// anything else as a single item.
     static func elements(of value: Value) -> ValueStream {
         let items: AnyIterator<Value>
         switch value {
@@ -29,7 +29,9 @@ final class ValueStream {
             return .empty
         case .list, .output:
             items = Shell.items(of: value)!
-        case .object(let box as SwiftValue) where Bridge.types[box.typeName]?.genericParameters.isEmpty == false:
+        case .object(let box as SwiftValue) where Bridge.types[box.typeName].map({
+            !$0.genericParameters.isEmpty || $0.conformances["Sequence"] != nil
+        }) == true:
             items = Shell.items(of: value) ?? AnyIterator([value].makeIterator())
         default:
             items = AnyIterator([value].makeIterator())

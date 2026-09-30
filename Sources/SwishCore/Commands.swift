@@ -300,6 +300,11 @@ extension Shell {
     }
 
     func converted(_ text: String, to type: TypeAnnotation, for what: String, of function: String) throws -> Value {
+        // `show a/b.txt` for a FilePath: a word is what a literal would be.
+        if case .named(let name) = type, enumType(named: name) == nil, Bridge.isStringLiteral(name),
+           let (index, label) = Bridge.literalInitializer(name) {
+            return try runBridged(name, index, receiver: nil, [Argument(label: label, value: .literal(.string(text)))])
+        }
         let value: Value? = switch type {
         case .any, .unknown, .parameter, .string: .string(text)
         // `sorted --by size`: a field's name is its key path.
@@ -461,6 +466,9 @@ extension Shell {
         case .literal(.string(let text)): "\"\(text)\""
         case .literal(.nothing): "nil"
         case .literal(let value): value.description
+        // A literal made into its type: `"/tmp"` for a FilePath.
+        case .bridged(_, _, nil, let arguments) where arguments.count == 1:
+            if case .literal(.string(let text)) = arguments[0].value { "\"\(text)\"" } else { "computed" }
         default: "computed"
         }
     }

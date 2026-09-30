@@ -1,7 +1,7 @@
 // Tasks for working on Swish: `run` lists them, `run test` runs one. Before
 // Swish is built, or from another shell: swift run swish -c 'run test'
 
-let root = $(dirname "\(#filePath)").text
+let root = FilePath(#filePath).removingLastComponent()
 cd $root
 
 /// `swift test` for a package. With only the Command Line Tools installed,
@@ -29,20 +29,32 @@ func test() {
     }
 }
 
-/// Regenerates Sources/SwishCore/Bridge/StandardLibrary.swift from the
-/// standard library's symbol graph. Run it after changing swish-bridge or
-/// the Swift toolchain. The checked-in file is made on macOS; Linux's
-/// standard library has the same members.
-func bridge() {
-    let graphs = $(mktemp -d).text
-    defer { rm -rf $graphs }
+/// Writes a module's symbol graph into `graphs`. SystemPackage is found
+/// among what `swift build` built, with the C module it imports.
+func _graph(_ module: String, into graphs: String) throws {
     let machine = $(uname -m).text
+    let built = $(swift build --show-bin-path).text
+    let csystem = ".build/checkouts/swift-system/Sources/CSystem/include"
     if $(uname).text == "Darwin" {
         let sdk = $(xcrun --show-sdk-path).text
         let extract = $(xcrun --find swift-symbolgraph-extract).text
-        try! $extract -module-name Swift -target "\(machine)-apple-macosx14.0" -sdk $sdk -output-dir $graphs
+        try $extract -module-name $module -target "\(machine)-apple-macosx14.0" -sdk $sdk -I $built -I "\(built)/Modules" -I $csystem -output-dir $graphs
     } else {
-        try! swift-symbolgraph-extract -module-name Swift -target "\(machine)-unknown-linux-gnu" -output-dir $graphs
+        try swift-symbolgraph-extract -module-name $module -target "\(machine)-unknown-linux-gnu" -I $built -I "\(built)/Modules" -I $csystem -output-dir $graphs
     }
+}
+
+/// Regenerates the bridges in Sources/SwishCore/Bridge: StandardLibrary.swift
+/// from the standard library's symbol graph, and SystemPackage.swift from
+/// swift-system's, for FilePath. Run it after changing swish-bridge, the
+/// Swift toolchain or swift-system. The checked-in files are made on macOS;
+/// Linux's modules have the same members.
+func bridge() {
+    let graphs = $(mktemp -d).text
+    defer { rm -rf $graphs }
+    try! swift build
+    try! _graph("Swift", into: graphs)
+    try! _graph("SystemPackage", into: graphs)
     try! swift run -c release swish-bridge "\(graphs)/Swift.symbols.json" Sources/SwishCore/Bridge/StandardLibrary.swift
+    try! swift run -c release swish-bridge "\(graphs)/SystemPackage.symbols.json" Sources/SwishCore/Bridge/SystemPackage.swift
 }

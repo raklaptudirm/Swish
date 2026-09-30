@@ -2,9 +2,10 @@
 // its types' members to Swish: each member's signature, for the checker,
 // and glue that converts Swish values, calls Swift and converts back.
 //
-//   swish-bridge <Swift.symbols.json> <output.swift>
+//   swish-bridge <Module.symbols.json> <output.swift>
 //
-// `run bridge` (Tasks.swish) runs it on the standard library. A member is
+// `run bridge` (Tasks.swish) runs it on the standard library and on
+// swift-system (for FilePath). A member is
 // bridged only if every type in its signature is one Swish can pass or hold
 // (see `supported`); the rest are left out, and counted on stderr.
 import Foundation
@@ -42,7 +43,12 @@ struct Relationship: Decodable {
     let kind: String; let source: String; let target: String; let targetFallback: String?
     let swiftConstraints: [Constraint]?
 }
-struct Graph: Decodable { let symbols: [Symbol]; let relationships: [Relationship] }
+struct Graph: Decodable {
+    struct Module: Decodable { let name: String }
+    let module: Module
+    let symbols: [Symbol]
+    let relationships: [Relationship]
+}
 
 // MARK: Swift types
 
@@ -93,6 +99,11 @@ struct Reader {
 
     mutating func identifier() -> String? {
         pos = skipSpacesCopy()
+        // `extension`: a keyword used as a name.
+        if peek() == "`", let close = chars[(pos + 1)...].firstIndex(of: "`"), close > pos + 1 {
+            defer { pos = close + 1 }
+            return String(chars[(pos + 1)..<close])
+        }
         var end = pos
         while end < chars.count, chars[end].isLetter || chars[end].isNumber || chars[end] == "_" { end += 1 }
         guard end > pos, !chars[pos].isNumber else { return nil }
@@ -362,7 +373,7 @@ func parseDeclaration(_ text: String) throws -> Declaration {
 // MARK: Bridging
 
 /// Swish's own values, and how Swift's are held in them.
-nonisolated(unsafe) let leaves: [String: (annotation: String, from: (String) -> String, to: (String) -> String)] = [
+nonisolated(unsafe) var leaves: [String: (annotation: String, from: (String) -> String, to: (String) -> String)] = [
     "Int": (".int", { "try Int(swishValue: \($0))" }, { "\($0).swishValue" }),
     "Double": (".double", { "try Double(swishValue: \($0))" }, { "\($0).swishValue" }),
     "Bool": (".bool", { "try Bool(swishValue: \($0))" }, { "\($0).swishValue" }),
@@ -376,7 +387,8 @@ nonisolated(unsafe) let leaves: [String: (annotation: String, from: (String) -> 
 let boxes: Set = ["Set", "ArraySlice", "Range", "ClosedRange"]
 
 /// The protocols a type conforms to, as far as the checker needs to know.
-let knownProtocols: Set = ["Equatable", "Hashable", "Comparable", "CustomStringConvertible", "Encodable", "Sequence"]
+let knownProtocols: Set = ["Equatable", "Hashable", "Comparable", "CustomStringConvertible", "Encodable", "Sequence",
+                           "ExpressibleByStringLiteral"]
 /// What Swish's values (the stand-in for every generic parameter) can be.
 let valueProtocols: Set = ["Equatable", "Hashable", "Comparable"]
 /// Constraints every Swish value meets, so they say nothing.
@@ -447,6 +459,8 @@ func resolve(_ type: SType, _ context: Context) -> SType? {
         if case .named(let parameter, []) = base, let element = context.sequences[parameter] {
             return name == "Element" ? resolve(element, context) : nil
         }
+        // `FilePath.Component`: a nested type that's bridged too.
+        if case .named(let outer, []) = base, types["\(outer).\(name)"] != nil { return .named("\(outer).\(name)", []) }
         guard let resolvedBase = resolve(base, context) else { return nil }
         // `Self.Element`: a generic parameter (on Array) or an associated type.
         if resolvedBase == selfType(owner) {
@@ -630,6 +644,11 @@ func literalDefault(_ text: String) -> String? {
     return nil
 }
 
+/// A member's name as Swift code writes it: a keyword in backticks.
+func swiftName(_ name: String) -> String {
+    ["extension", "default", "func", "import", "in", "is", "as", "operator"].contains(name) ? "`\(name)`" : name
+}
+
 func quoted(_ text: String) -> String {
     "\"" + text.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
 }
@@ -638,21 +657,37 @@ func quoted(_ text: String) -> String {
 
 let arguments = CommandLine.arguments
 guard arguments.count == 3 else {
-    FileHandle.standardError.write(Data("usage: swish-bridge <Swift.symbols.json> <output.swift>\n".utf8))
+    FileHandle.standardError.write(Data("usage: swish-bridge <Module.symbols.json> <output.swift>\n".utf8))
     exit(2)
 }
 let graph = try JSONDecoder().decode(Graph.self, from: Data(contentsOf: URL(fileURLWithPath: arguments[1])))
 
-/// The types bridged, with their generic parameters.
-let bridgedTypeNames: [(String, [String])] = [
-    ("String", []), ("Substring", []), ("Character", []), ("Int", []), ("Double", []), ("Bool", []),
-    ("Array", ["Element"]), ("ArraySlice", ["Element"]), ("Set", ["Element"]), ("Dictionary", ["Key", "Value"]),
-    ("Optional", ["Wrapped"]), ("Range", ["Bound"]), ("ClosedRange", ["Bound"]),
+/// What's bridged from each module: its types, with their generic
+/// parameters, and the name of the list the output declares.
+let modules: [String: (list: String, types: [(String, [String])])] = [
+    "Swift": ("standardLibrary", [
+        ("String", []), ("Substring", []), ("Character", []), ("Int", []), ("Double", []), ("Bool", []),
+        ("Array", ["Element"]), ("ArraySlice", ["Element"]), ("Set", ["Element"]), ("Dictionary", ["Key", "Value"]),
+        ("Optional", ["Wrapped"]), ("Range", ["Bound"]), ("ClosedRange", ["Bound"]),
+    ]),
+    // FilePath.Root is left out: the standard library's FilePath (SE-0529)
+    // calls it Anchor.
+    "SystemPackage": ("system", [("FilePath", []), ("FilePath.Component", []), ("FilePath.ComponentView", [])]),
 ]
+guard let module = modules[graph.module.name] else {
+    FileHandle.standardError.write(Data("swish-bridge: nothing to bridge from \(graph.module.name)\n".utf8))
+    exit(2)
+}
+let bridgedTypeNames = module.types
+// Types of other modules than Swift's are held as they are, boxed.
+if graph.module.name != "Swift" {
+    for (name, _) in bridgedTypeNames {
+        leaves[name] = (".named(\(quoted(name)))", { "try SwiftValue.unbox(\(name).self, \($0))" }, { "SwiftValue.make(\($0), as: \(quoted(name)))" })
+    }
+}
 /// Members Swish has its own way: the textual form of the types it
-/// formats, and a dictionary's keys and values, which are arrays in its
-/// order, since Swish's dictionaries keep one (Swift's views would be in
-/// no order at all).
+/// formats, and a dictionary's keys and values, which are arrays rather
+/// than Swift's views.
 let swishOwn: [String: Set<String>] = [
     "Array": ["description", "debugDescription"],
     "Optional": ["description", "debugDescription"],
@@ -675,7 +710,8 @@ func strideFix(_ constraint: Constraint) -> Bool {
 nonisolated(unsafe) var types: [String: BridgedType] = [:]
 for (name, parameters) in bridgedTypeNames {
     var type = BridgedType(name: name, parameters: parameters)
-    for symbol in graph.symbols where symbol.pathComponents.count == 2 && symbol.pathComponents[0] == name
+    let path = name.split(separator: ".").map(String.init)
+    for symbol in graph.symbols where symbol.pathComponents.dropLast() == path[...]
         && symbol.kind.identifier == "swift.typealias" {
         let text = (symbol.declarationFragments ?? []).map(\.spelling).joined()
         guard let equals = text.range(of: "=") else { continue }
@@ -686,7 +722,7 @@ for (name, parameters) in bridgedTypeNames {
 }
 for (name, _) in bridgedTypeNames {
     var type = types[name]!
-    let id = typeIDs[[name]]
+    let id = typeIDs[name.split(separator: ".").map(String.init)]
     for relationship in graph.relationships where relationship.kind == "conformsTo" && relationship.source == id {
         var proto = relationship.targetFallback.map { String($0.split(separator: ".").last!) }
             ?? symbolsByID[relationship.target]?.pathComponents.last ?? ""
@@ -866,8 +902,8 @@ func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Const
     let target: String
     switch declaration.kind {
     case .initializer: target = "\(swiftType)(\(arguments))"
-    case .method: target = (declaration.isStatic ? swiftType : "receiver") + ".\(declaration.name)(\(arguments))"
-    case .property: target = (declaration.isStatic ? swiftType : "receiver") + ".\(declaration.name)"
+    case .method: target = (declaration.isStatic ? swiftType : "receiver") + ".\(swiftName(declaration.name))(\(arguments))"
+    case .property: target = (declaration.isStatic ? swiftType : "receiver") + ".\(swiftName(declaration.name))"
     }
     let tryPrefix = declaration.throwing || declaration.rethrowing ? "try " : ""
     var body = ""
@@ -896,13 +932,13 @@ func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Const
 }
 
 var output = """
-// Generated by swish-bridge from the Swift standard library's symbol graph.
+// Generated by swish-bridge from the \(graph.module.name) module's symbol graph.
 // Don't edit: `run bridge` remakes it.
 import Foundation
 import SwishKit
-
+\(graph.module.name == "Swift" ? "" : "import \(graph.module.name)\n")
 extension Bridge {
-    nonisolated(unsafe) static let standardLibrary: [BridgedType] = [
+    nonisolated(unsafe) static let \(module.list): [BridgedType] = [
 
 """
 var skipped: [String: Int] = [:]
@@ -915,9 +951,8 @@ for (name, _) in bridgedTypeNames {
     let kinds = ["swift.method", "swift.property", "swift.init", "swift.type.method", "swift.type.property"]
     // Its own members, then, for a range, those of the collection protocols
     // it conforms to when Bound is Int, which the graph doesn't list.
-    var candidates = graph.symbols.filter {
-        $0.pathComponents.count == 2 && $0.pathComponents[0] == name
-    }.map { ($0, [Constraint]()) }
+    let path = name.split(separator: ".").map(String.init)
+    var candidates = graph.symbols.filter { $0.pathComponents.dropLast() == path[...] }.map { ($0, [Constraint]()) }
     if name == "Range" || name == "ClosedRange" {
         let conditions = [Constraint(kind: "conformance", lhs: "Bound", rhs: "Strideable"),
                           Constraint(kind: "conformance", lhs: "Bound.Stride", rhs: "SignedInteger")]

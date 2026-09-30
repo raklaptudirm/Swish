@@ -95,3 +95,28 @@ private func typeError(_ source: String) -> String? {
     #expect(try output(#"[[1, 2], [3]] | map(\.count); ["ab"] | map(\.isEmpty); [1, 2].last"#) == "2\n1\nfalse\n2\n")
     #expect(try output("[[1, 2], [3]].flatMap { $0 }; [1, 2].elementsEqual([1, 2])") == "[1, 2, 3]\ntrue\n")
 }
+
+@Test func filePathsAreSwiftSystems() throws {
+    let p = #"let p: FilePath = "/usr/local/bin/swish.tar.gz"; "#
+    // A string literal is a FilePath where one is wanted; its members are swift-system's.
+    #expect(try output(p + "p.lastComponent!; p.extension; p.stem; p.removingLastComponent(); p.appending(\"x\"); p.isAbsolute")
+        == #""swish.tar.gz""# + "\n" + #""gz""# + "\n" + #""swish.tar""# + "\n" + #""/usr/local/bin""# + "\n"
+        + #""/usr/local/bin/swish.tar.gz/x""# + "\ntrue\n")
+    // Nested types by their full name, and a path's components as a sequence.
+    #expect(try output(#"let c: FilePath.Component = "a.b"; c.extension; c.stem"#) == "\"b\"\n\"a\"\n")
+    #expect(try output(p + "p.components.count; p.components | map { $0.stem }; for c in p.components { echo $c }")
+        == "4\nusr\nlocal\nbin\nswish.tar\nusr\nlocal\nbin\nswish.tar.gz\n")
+    // In text, a path is its description.
+    #expect(try output(p + #"echo $p; "\(p.lastComponent!)""#) == "/usr/local/bin/swish.tar.gz\n\"swish.tar.gz\"\n")
+    #expect(try output(p + #"p == FilePath("/usr/local/bin/swish.tar.gz"); p.starts(with: "/usr")"#) == "true\ntrue\n")
+    // Only a literal converts, as in Swift; a String's doesn't have a path's members.
+    #expect(typeError(#"let s = "a"; let q: FilePath = s"#) == "the value must be FilePath, not String")
+    #expect(typeError(#""a.txt".extension"#) == "String has no member 'extension'")
+
+    // A FilePath parameter takes a word on the command line, and --help
+    // shows a literal default as it's written.
+    let shell = Shell()
+    _ = try output(#"func show(_ path: FilePath, to other: FilePath = "/tmp") { echo "\(path.lastComponent!) \(other)" }"#, in: shell)
+    #expect(try output("show a/b.txt; show a/b.txt --to /x", in: shell) == "b.txt /tmp\nb.txt /x\n")
+    #expect(try output("show --help", in: shell).contains(#"(default: "/tmp")"#))
+}

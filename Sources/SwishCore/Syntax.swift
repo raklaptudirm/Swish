@@ -1884,9 +1884,15 @@ struct Parser {
             if elements.count == 1 && elements[0].label == nil { return elements[0].type }
             return .tuple(elements)
         }
-        guard let name = identifier() else { throw expected("a type") }
+        guard var name = identifier() else { throw expected("a type") }
         mark(.type, from: pos, to: pos + name.count)
         pos += name.count
+        // A nested bridged type: `FilePath.Component`.
+        while peek() == ".", let inner = identifier(at: pos + 1), Bridge.types["\(name).\(inner)"] != nil {
+            mark(.type, from: pos + 1, to: pos + 1 + inner.count)
+            pos += 1 + inner.count
+            name += "." + inner
+        }
         if typeParameters.contains(where: { $0.contains(name) }) { return .parameter(name) }
         if name == "KeyPath" && consume("<") {
             let root = try parseType()
@@ -2755,6 +2761,14 @@ struct Parser {
             name.append(c)
         }
         return name
+    }
+
+    /// The identifier starting at `index`, without moving.
+    private func identifier(at index: Int) -> String? {
+        guard index < chars.count, Parser.isIdentifierStart(chars[index]) else { return nil }
+        var end = index + 1
+        while end < chars.count, Parser.isIdentifierPart(chars[end]) { end += 1 }
+        return String(chars[index..<end])
     }
 
     private func kind(of name: String) -> NameKind? {

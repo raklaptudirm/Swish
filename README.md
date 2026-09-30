@@ -272,7 +272,8 @@ The tasks are functions in [`Tasks.swish`](Tasks.swish); inside Swish, `run` lis
   - [ ] Swish types are Swift types: one type system read from Swift's symbol graphs, any package
     usable as it is, generated Swift twins for Swish types ([design](docs/design/swift-interop.md));
     so far the standard library's non-mutating members on `String`, `Int`, `Double`, `Bool`,
-    `Array`, `Set`, `Dictionary`, `Optional` and ranges, with `1...5` a real `ClosedRange<Int>`
+    `Array`, `Set`, `Dictionary`, `Optional` and ranges, with `1...5` a real `ClosedRange<Int>`,
+    and swift-system's `FilePath`
 - [x] **Methods as stages**: after a `|`, a name is a method of what's piped in: the sequence's
   (`sorted`, `filter`, `map`, `prefix`, `reversed`, `count`, `select`, `get`, as in Swift, also
   `xs.sorted(by: \.size)`), then each item's (`points | describe`, `jobs | cancel`); stages
@@ -287,7 +288,8 @@ The tasks are functions in [`Tasks.swish`](Tasks.swish); inside Swish, `run` lis
   objects shown through their fields
   - [x] Live objects for bridged Swift values
   - [ ] Errors as values you can inspect after the fact
-  - [ ] Paths and durations
+  - [x] Paths: swift-system's `FilePath`, the standard library's once SE-0529 ships
+  - [ ] Durations
   - [ ] A lazy `ls`
 - [x] **Line editor**: persistent history (`$SWISH_HISTORY`, default `$XDG_STATE_HOME/swish/history`) with
   prefix search and `^R`, completion from signatures, highlighting from the parser,

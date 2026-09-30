@@ -11,6 +11,9 @@ let package = Package(
         // A separate package so the host links SwishKit as a dylib (products of
         // the same package would be linked statically into the executable).
         .package(path: "Packages/SwishKit"),
+        // FilePath, until the standard library's (SE-0529) ships; swift-system's
+        // then becomes a typealias for it, keeping the members added here.
+        .package(url: "https://github.com/apple/swift-system.git", from: "1.4.0"),
     ],
     targets: [
         .executableTarget(name: "swish", dependencies: ["SwishCore"]),
@@ -19,7 +22,10 @@ let package = Package(
         .executableTarget(name: "swish-bridge"),
         .target(
             name: "SwishCore",
-            dependencies: [.product(name: "SwishKit", package: "SwishKit")]
+            dependencies: [
+                .product(name: "SwishKit", package: "SwishKit"),
+                .product(name: "SystemPackage", package: "swift-system"),
+            ]
         ),
         .testTarget(name: "SwishCoreTests", dependencies: ["SwishCore"]),
     ]
