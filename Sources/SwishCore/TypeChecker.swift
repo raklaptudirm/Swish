@@ -704,14 +704,23 @@ final class TypeChecker {
             try checkHandled("'try \(pipeline.source)'")
         }
         var flowing: TypeAnnotation?
+        // `"a b" | split(…)`: a value that isn't a sequence is the first
+        // stage's receiver itself.
+        var single: TypeAnnotation?
         if pipeline.input != nil {
             // Stages type what flows, so an empty `[]` needs no type.
-            flowing = streamElement(try typeOf(&pipeline.input!, expecting: .unknown))
+            let type = try typeOf(&pipeline.input!, expecting: .unknown)
+            flowing = streamElement(type)
+            if flowing == type && type != .unknown && type != .any { single = type }
         }
         for index in pipeline.commands.indices {
             var command = pipeline.commands[index]
             try checkCommandText(&command)
-            flowing = try checkStage(&command, input: flowing)
+            if index == 0, let single, let result = try checkBridgedStage(command.words.first.flatMap { _ in TypeChecker.literalName(command) } ?? "", &command, element: single, receiver: .value) {
+                flowing = result
+            } else {
+                flowing = try checkStage(&command, input: flowing)
+            }
             pipeline.commands[index] = command
         }
     }
@@ -755,15 +764,40 @@ final class TypeChecker {
         }
         let element = input ?? .unknown
         let known = input != nil && element != .unknown && element != .any
+        // A stage is a method call: of the items collected, then of each
+        // item, then a function, then a program (see foundations.md).
         if input != nil, let methods = shell.sequenceMethods[name] {
-            command.resolution = .sequenceMethod
-            return try checkSequenceStage(name, methods, &command, element: element)
+            // The prelude's additions, and its streaming versions of Swift's
+            // methods; where none fits, Swift's own.
+            let attempt = command
+            do {
+                command.resolution = .sequenceMethod
+                return try checkSequenceStage(name, methods, &command, element: element)
+            } catch let error as TypeError {
+                // Swift's, or else the prelude's error, the one meant first.
+                command = attempt
+                do {
+                    guard let result = try checkBridgedStage(name, &command, element: element, receiver: .collected) else { throw error }
+                    return result
+                } catch let swiftError as TypeError {
+                    command = attempt
+                    throw TypeChecker.preferred(prelude: error, swift: swiftError)
+                }
+            }
+        }
+        if input != nil, let result = try checkBridgedStage(name, &command, element: element, receiver: .collected) {
+            return result
         }
         if input != nil, let result = try checkItemMethodStage(name, &command, element: element) {
             command.resolution = .itemMethod
             return result
         }
-        if known { command.resolution = .other }
+        if known, let result = try checkBridgedStage(name, &command, element: element, receiver: .each) {
+            return result
+        }
+        // Decided here, even when the items' type isn't known: the
+        // interpreter doesn't guess.
+        if input != nil { command.resolution = .other }
         // A sequence method with nothing piped in, and no function or
         // program by that name, has nothing to work on.
         if input == nil, shell.sequenceMethods[name] != nil, lookup(name) == nil, shell.findExecutable(name) == nil {
@@ -773,8 +807,57 @@ final class TypeChecker {
             let runtime = shell.commandFunctions(named: name)
             return try checkFunctionStage(name, overloads, runtime, &command, piped: input != nil)
         }
+        // Only a program is left, and a program only takes words.
+        if command.call != nil || command.words.contains(where: { if case .closure = $0 { true } else { false } }) {
+            let what = input.map { " of \(TypeAnnotation.list($0))" } ?? ""
+            throw TypeError("\(name) isn't a method\(what) or a function, and a program can't take a closure or (…)")
+        }
         try checkClosures(&command, expecting: [:])
         return .string
+    }
+
+    /// When neither the prelude's method nor Swift's fits: the prelude's
+    /// error, unless its overloads didn't even line up with the arguments
+    /// (one was missing), when Swift's is the one that applies.
+    private static func preferred(prelude: TypeError, swift: TypeError?) -> TypeError {
+        guard let swift, prelude.message.contains("missing") else { return prelude }
+        return swift
+    }
+
+    /// `xs | max`, `xs | joined(separator: ",")`, or `names | uppercased`:
+    /// a Swift member of the items collected (as an Array), or of each item.
+    /// Nil when the type has no member by that name.
+    private func checkBridgedStage(
+        _ name: String, _ command: inout CommandNode, element: TypeAnnotation, receiver: StageReceiver
+    ) throws -> TypeAnnotation? {
+        guard !command.external, let (bridgedType, bindings) = bridged(receiver == .collected ? .list(element) : element),
+              let runtime = shell.bridgedStage(bridgedType.name, name, receiver: receiver, bindings: bindings) else { return nil }
+        let signatures = Bridge.stageMembers(bridgedType.name, name).enumerated().map { position, entry in
+            Signature(name: name, parameters: [Bridge.receiverParameter(receiver, element: element)] + entry.member.parameters,
+                      returns: entry.member.returns, isThrowing: entry.member.isThrowing,
+                      isRethrowing: entry.member.isRethrowing, index: position, generics: entry.member.generics)
+        }
+        command.resolution = .bridged(type: bridgedType.name, receiver: receiver, bindings: bindings)
+        let result: TypeAnnotation
+        if var call = command.call {
+            let visible = signatures.map { signature -> Signature in
+                var signature = signature
+                signature.parameters.removeFirst()
+                return signature
+            }
+            guard let chosen = try resolve(visible, &call, name: name, bindings: bindings) else {
+                command.call = call
+                return .unknown
+            }
+            command.call = call
+            if signatures.count > 1 { command.overload = chosen.index }
+            if chosen.isThrowing { try throwingSite("'\(name)'") }
+            result = chosen.returns
+        } else {
+            result = try checkCommandLine(name, runtime, signatures, &command, bindings: bindings, excludingInput: true)
+        }
+        // Collected, a list comes out as its items; each item's result flows on as it is.
+        return receiver == .each ? result : streamElement(result)
     }
 
     /// The command's name, when it's written out rather than built at run time.
@@ -1571,8 +1654,12 @@ final class TypeChecker {
                 bridgedError = error
             }
         }
-        if let sequenceResult = try sequenceMethodType(name, on: base, &callee, &arguments) {
-            return sequenceResult
+        do {
+            if let sequenceResult = try sequenceMethodType(name, on: base, &callee, &arguments) {
+                return sequenceResult
+            }
+        } catch let error as TypeError {
+            throw TypeChecker.preferred(prelude: error, swift: bridgedError)
         }
         if let bridgedError { throw bridgedError }
         let member = try memberType(of: base, name)
@@ -1814,6 +1901,8 @@ final class TypeChecker {
         case .double: ("Double", [:])
         case .bool: ("Bool", [:])
         case .list(let element): ("Array", ["Element": element])
+        // A command's output has its lines' members: `$(ls).sorted()`.
+        case .output: ("Array", ["Element": .string])
         case .optional(let wrapped): ("Optional", ["Wrapped": wrapped])
         case .dictionary(let key, let value): ("Dictionary", ["Key": key, "Value": value])
         case .named(let name): (name, [:])

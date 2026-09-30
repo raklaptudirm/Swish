@@ -381,8 +381,23 @@ enum StageResolution: Equatable, Sendable {
     case sequenceMethod
     /// A method of each item: `points | describe`.
     case itemMethod
+    /// A Swift member of a bridged type, called on `receiver`. `bindings`:
+    /// what its generic parameters are here, so a word on the command line
+    /// converts to them (`xs | contains 2`, 2 an Int).
+    case bridged(type: String, receiver: StageReceiver, bindings: [String: TypeAnnotation])
     /// Neither: a function or a program, looked up as for the first command.
     case other
+}
+
+/// What a Swift member as a stage is called on.
+enum StageReceiver: Equatable, Sendable {
+    /// The items collected, as an Array: `xs | max`.
+    case collected
+    /// Each item, its results flowing on: `names | uppercased`.
+    case each
+    /// The one value a pipeline starts from, when it isn't a sequence:
+    /// `"a b" | split(separator: " ")`. A list it gives flows as its items.
+    case value
 }
 
 struct EnvironmentAssignment: Equatable, Sendable {

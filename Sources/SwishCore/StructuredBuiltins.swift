@@ -69,7 +69,7 @@ extension Shell {
         for function in [ls(), pwd(), history(), readLine(), ps(), from(), to(), table(), list(), members(), help(), with()] {
             bodies[function.name!] = (function.body, nil)
         }
-        for method in [sorted(), filter(), map(), prefix(), reversed(), count(), uniqued(), select(), get()] {
+        for method in [sorted(), filter(), map(), compactMap(), prefix(), reversed(), count(), uniqued(), select(), get()] {
             let input = method.parameters.first(where: \.isInput)!
             // Each item is an Element; all of them, a list of Elements.
             let type: TypeAnnotation = input.type.isList ? .list(.parameter("Element")) : .parameter("Element")
@@ -249,7 +249,23 @@ extension Shell {
 
     private func map() -> Function {
         builtin(
-            "map", "Each item transformed by the closure; nil results are dropped.",
+            "map", "Each item transformed by the closure, nil results included.",
+            [input("items", .list(.any)), positional("transform", .function)],
+            docs: ["transform": "a closure like { $0.name }"],
+            // A stream, so a nil result is an item too; lazily, so
+            // `yes | map { … } | prefix 3` ends.
+            .stream { shell, upstream, args in
+                ValueStream {
+                    guard let item = try upstream.next() else { return nil }
+                    return try shell.call(args["transform"]!, with: [item])
+                }
+            }
+        )
+    }
+
+    private func compactMap() -> Function {
+        builtin(
+            "compactMap", "Each item transformed by the closure, nil results dropped.",
             [input("item", .any), positional("transform", .function)],
             docs: ["transform": "a closure like { $0.name }"],
             .native { shell, args in
@@ -289,37 +305,16 @@ extension Shell {
     private func sorted() -> Function {
         builtin(
             "sorted", "The items in order.",
-            [input("items", .list(.any)), option("by", .any, default: .nothing), option("reverse", .bool, default: .bool(false))],
+            [input("items", .list(.any)), option("by", .any)],
             .native { shell, args in
-                guard case .list(let items) = args["items"] else { return .list([]) }
-                var ordered: [Value]
-                // The prelude's overloads name `by` for what it is: a key path
-                // (`key`) or a comparison (`areInIncreasingOrder`).
-                let by = args["key"] ?? args["areInIncreasingOrder"] ?? args["by"]
-                switch by {
-                case .function(let keyPath as KeyPathValue)?:
-                    // By a field: ties keep their input order.
-                    let keyed = try items.enumerated().map { (key: try keyPath.read(from: $1, in: shell), index: $0, item: $1) }
-                    ordered = keyed.sorted { a, b in
-                        let order = a.key.order(comparedTo: b.key)
-                        return order != .orderedSame ? order == .orderedAscending : a.index < b.index
-                    }.map(\.item)
-                case .function?:
-                    ordered = try items.sorted { a, b in
-                        let verdict = try shell.call(by!, with: [a, b])
-                        guard case .bool(let before) = verdict else {
-                            throw RuntimeError("sorted: the closure must return a Bool, not \(verdict.typeName)")
-                        }
-                        return before
-                    }
-                default:
-                    ordered = items.enumerated().sorted { a, b in
-                        let order = a.element.order(comparedTo: b.element)
-                        return order != .orderedSame ? order == .orderedAscending : a.offset < b.offset
-                    }.map(\.element)
-                }
-                if args["reverse"] == .bool(true) { ordered.reverse() }
-                return .list(ordered)
+                guard case .list(let items) = args["items"],
+                      case .function(let keyPath as KeyPathValue)? = args["key"] ?? args["by"] else { return .list([]) }
+                // By a field: ties keep their input order.
+                let keyed = try items.enumerated().map { (key: try keyPath.read(from: $1, in: shell), index: $0, item: $1) }
+                return .list(keyed.sorted { a, b in
+                    let order = a.key.order(comparedTo: b.key)
+                    return order != .orderedSame ? order == .orderedAscending : a.index < b.index
+                }.map(\.item))
             }
         )
     }

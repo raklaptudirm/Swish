@@ -20,7 +20,8 @@ final class OverloadSet: Callable, @unchecked Sendable {
 extension Function {
     /// Like a Swift declaration: `greet(_ name: String, times: Int) -> String`.
     var signature: String {
-        let parameters = parameters.map { p in
+        // A Swift member's receiver, as a stage's input, isn't written.
+        let parameters = parameters.filter { !($0.isInput && $0.name == "self") }.map { p in
             let names = p.label == p.name ? p.name : "\(p.label ?? "_") \(p.name)"
             return "\(p.isInput ? "@input " : "")\(names): \(p.type)\(p.variadic ? "..." : "")"
         }

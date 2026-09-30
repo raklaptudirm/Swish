@@ -119,20 +119,26 @@ the tools: a bare `ls` or `ps` gives records, so
 After a `|`, a stage's name can be a method of what's piped in, with the
 input as `self`: `x | name args` is `x.name(args)`. Lookup goes:
 
-1. **The sequence's methods.** A stream, list, or an Output's lines has
-   Swift's sequence methods: `sorted`, `filter`, `map`, `prefix`,
-   `reversed` and `count`, plus `select` and `get` for records. They're
-   also called as methods on values: `xs.sorted(by: \.size)`,
-   `xs.filter { $0 > 1 }.map { $0 * 2 }`. `prefix` and `filter` stream,
-   so `yes | prefix 3` ends.
-2. **Each item's methods,** when a struct in scope declares one by that
-   name (or it's a job's, like `cancel`): `points | describe` calls
-   `describe()` on each point, and what it returns flows on. A mutating
-   method can't be piped, since a piped value isn't a variable.
+1. **The items' methods, collected.** A stream, list, or an Output's
+   lines has an Array's members, Swift's own: `xs | max`,
+   `| contains 2`, `| joined(separator: ",")`, `| first(where: …)`,
+   `| sorted`. The shell's streaming versions come first where they
+   exist: `filter`, `map`, `compactMap` and `prefix` stream, so
+   `yes | prefix 3` ends; `select`, `get`, `uniqued` and `sorted(by:
+   \.size)` are its additions. `map` and `sorted` are Swift's: `map`
+   keeps nils, and there's no `--reverse`, `| reversed` instead. A single
+   value that isn't a sequence is the receiver itself:
+   `"a b" | split(separator: " ")`.
+2. **Each item's methods:** a struct's (`points | describe`), a job's
+   (`jobs | cancel`), or a Swift type's (`names | uppercased`). What each
+   returns flows on. A mutating method can't be piped, since a piped
+   value isn't a variable.
 3. **Functions, then programs,** as for the first command. `foreign sort`
    still reaches `/usr/bin/sort`.
-4. **Items' methods found only at run time,** like a plugin object's: if
-   nothing else has the name, each item is asked for it.
+
+The checker decides which, from what flows in; the interpreter does what
+it recorded, and never guesses. Items of a type the checker can't see
+(`Any`) have no methods as stages.
 
 Methods come before functions so a `func sorted` can't silently change
 `ls | sorted`. Without a `|` there's nothing for a method to work on, so

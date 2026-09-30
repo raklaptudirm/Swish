@@ -16,7 +16,7 @@ private let data = #"let xs = [(n: 2, s: "b"), (n: 1, s: "a"), (n: 3, s: "c")]; 
 @Test func sequenceMethodsAsStages() throws {
     // Command syntax, call syntax and trailing closures, all after a `|`.
     #expect(try output(data + "xs | sorted --by n | get s") == "a\nb\nc\n")
-    #expect(try output(data + #"xs | sorted(by: \.n, reverse: true) | prefix(2) | get s"#) == "c\nb\n")
+    #expect(try output(data + #"xs | sorted(by: \.n) | reversed | prefix(2) | get s"#) == "c\nb\n")
     #expect(try output(data + "xs | sorted { $0.n > $1.n } | get n") == "3\n2\n1\n")
     #expect(try output("[1, 2, 3, 4] | filter { $0 % 2 == 0 } | map { $0 * 10 }") == "20\n40\n")
     #expect(try output("[1, 2, 3] | count; [1, 2, 3] | count { $0 > 1 }; [1, 2] | reversed") == "3\n2\n2\n1\n")
@@ -49,4 +49,49 @@ private let data = #"let xs = [(n: 2, s: "b"), (n: 1, s: "a"), (n: 3, s: "c")]; 
     // Without a `|`, a method has nothing to work on.
     #expect(status("sorted") == 2)
     #expect(status("ls | surely-nothing") == 127)
+}
+
+/// The syntax or type error that stops `source` before it runs, or nil.
+private func checkError(_ source: String) -> String? {
+    let shell = Shell()
+    guard let program = try? Parser.parse(source, bound: shell.globalNames()) else { return "syntax error" }
+    do {
+        _ = try TypeChecker(shell: shell).check(program)
+        return nil
+    } catch {
+        return error.message
+    }
+}
+
+@Test func swiftMembersAsStages() throws {
+    // A member of the items collected, as an Array, in either syntax.
+    #expect(try output(#"[3, 1, 2] | max; [3, 1, 2] | min(); [1, 2] | contains(2); [1, 2, 3] | reduce(0) { $0 + $1 }"#)
+        == "3\n1\ntrue\n6\n")
+    #expect(try output(#"["a", "b"] | joined(separator: "-"); ["a", "b"] | joined --separator +; [4, 5] | first"#) == "a-b\na+b\n4\n")
+    // A word converts to the Element it's compared with.
+    #expect(try output(#"[1, 2] | contains 2; ["a"] | contains a"#) == "true\ntrue\n")
+    // A list it gives flows as its items.
+    #expect(try output("[1, 2, 3] | dropFirst | count") == "2\n")
+    // A member of each item, when the collected items have none by that name.
+    #expect(try output(#"["abc", "de"] | uppercased; ["abc"] | hasPrefix("a")"#) == "ABC\nDE\ntrue\n")
+    // A single value that isn't a sequence is the receiver itself.
+    #expect(try output(#""a b c" | split(separator: " ") | count; "abc" | count; let p: FilePath = "/a/b.txt"; p | lastComponent"#)
+        == "3\n3\nb.txt\n")
+    // A command's output has its lines' members.
+    #expect(try output(#"$(printf "b\na").sorted()"#) == #"["a", "b"]"# + "\n")
+    // Nothing by that name, and a program can't take a closure.
+    #expect(checkError("[1, 2] | nosuch(1)") == "nosuch isn't a method of [Int] or a function, and a program can't take a closure or (…)")
+}
+
+@Test func mapAndSortedAreSwifts() throws {
+    // map keeps nils, as Swift's does; compactMap drops them.
+    #expect(try output("[1, 2, 3] | map { $0 > 1 ? $0 : nil } | count; [1, 2, 3] | compactMap { $0 > 1 ? $0 : nil } | count") == "3\n2\n")
+    // Still a stream, so it stops reading once what's after it has enough.
+    #expect(try output(#"yes | map { $0 + "!" } | prefix 2"#) == "y!\ny!\n")
+    // sorted() and sorted(by:) are Swift's; sorting by a key path is the shell's addition.
+    #expect(try output("[3, 1, 2] | sorted; [3, 1, 2] | sorted { $0 > $1 }; [3, 1, 2] | sorted | reversed")
+        == "1\n2\n3\n3\n2\n1\n3\n2\n1\n")
+    #expect(try output(#"[(n: 2), (n: 1)] | sorted --by n | get n"#) == "1\n2\n")
+    #expect(checkError("[(n: 1)] | sorted") == "sorted needs Element to be Comparable, and (n: Int) isn't")
+    #expect(checkError("ls | sorted --reverse") != nil)
 }

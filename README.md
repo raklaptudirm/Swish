@@ -9,7 +9,7 @@ right from the prompt.
 let n = 3
 if n > 2 { echo "big \(n)" }
 
-ls | filter { $0.size > 1.kb } | sorted --by size -r | prefix 3
+ls | filter { $0.size > 1.kb } | sorted --by size | reversed | prefix 3
 ```
 
 ```
@@ -306,10 +306,11 @@ The tasks are functions in [`Tasks.swish`](Tasks.swish); inside Swish, `run` lis
     so far the standard library's members, mutating ones too, on `String`, `Int`, `Double`, `Bool`,
     `Array`, `Set`, `Dictionary`, `Optional` and ranges, with `1...5` a real `ClosedRange<Int>`,
     and swift-system's `FilePath`
-- [x] **Methods as stages**: after a `|`, a name is a method of what's piped in: the sequence's
-  (`sorted`, `filter`, `map`, `prefix`, `reversed`, `count`, `select`, `get`, as in Swift, also
-  `xs.sorted(by: \.size)`), then each item's (`points | describe`, `jobs | cancel`); stages
-  written as calls, `ls | sorted(by: \.size)`; trailing closures for labeled parameters
+- [x] **Methods as stages**: after a `|`, a name is a method of what's piped in: the items
+  collected (Swift's, `xs | max`, `| joined(separator: ",")`, and the shell's streaming `filter`,
+  `map`, `compactMap`, `prefix`, plus `select`, `get`, `sorted(by: \.size)`), then each item's
+  (`names | uppercased`, `points | describe`, `jobs | cancel`); stages written as calls; the checker
+  decides, never the interpreter ([design](docs/design/foundations.md))
 - [x] **Structs**: typed records with the memberwise init or custom `init`s, computed
   properties, methods and `mutating`; assignment into values (`p.x = 1`, `xs[0] += 5`)
 - [x] **Callables**: command lines derived from signatures, `@input` streaming, `@flag`,

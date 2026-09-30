@@ -228,19 +228,6 @@ extension Shell {
         return .list(results)
     }
 
-    /// Whether items could have a method called `name`, known before they
-    /// arrive: a struct in scope declares it, or a job has it. A stage by
-    /// that name is then its items' method, ahead of functions and programs
-    /// (`jobs | cancel`, not /usr/bin/cancel).
-    func itemsMayHaveMethod(_ name: String) -> Bool {
-        if Job.methodNames.contains(name) { return true }
-        return scopes.contains { scope in
-            scope.bindings.values.contains { binding in
-                if case .object(let type as StructType) = binding.value { type.methods[name] != nil } else { false }
-            }
-        }
-    }
-
     /// `[p1, p2] | describe`: the method called on each item, with the
     /// stage's arguments; what it returns flows on.
     func methodStream(_ name: String, _ args: [CommandArgument], upstream: ValueStream) -> ValueStream {

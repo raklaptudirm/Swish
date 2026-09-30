@@ -140,9 +140,8 @@ func ps() -> [ProcessEntry]
 extension Sequence {
     func filter(_ isIncluded: (Element) throws -> Bool) rethrows -> [Element]
     func map<T>(_ transform: (Element) throws -> T) rethrows -> [T]
-    func sorted() -> [Element] where Element: Comparable
-    func sorted<V: Comparable>(by key: KeyPath<Element, V>, reverse: Bool = false) -> [Element]
-    func sorted(by areInIncreasingOrder: (Element, Element) throws -> Bool) rethrows -> [Element]
+    func compactMap<T>(_ transform: (Element) throws -> T?) rethrows -> [T]
+    func sorted<V: Comparable>(by key: KeyPath<Element, V>) -> [Element]
     func prefix(_ maxLength: Int = 1) -> [Element]
     func reversed() -> [Element]
     func count(where predicate: ((Element) throws -> Bool)? = nil) rethrows -> Int

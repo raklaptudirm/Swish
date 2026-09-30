@@ -1,6 +1,6 @@
 # One foundation for everything callable
 
-Status: **planned**. It follows on from [swift-interop.md](swift-interop.md),
+Status: **in progress**: step 1 is done. It follows on from [swift-interop.md](swift-interop.md),
 whose step 2 ("Swish's own types in SwishKit") it takes all the way.
 
 Swish grew several ways for a name to be callable, each with its own lookup,
@@ -124,6 +124,10 @@ they change the shell is what they do, not how they're found.
 
 1. **Pipes resolve to members**, by the rule above, in the checker, with
    the interpreter's fallback removed. `map` and `sorted` become Swift's.
+   *Done.* The prelude's `filter`, `map`, `compactMap` and `prefix` still
+   come first, since they stream and an Array's members need all their
+   input; where theirs doesn't fit, Swift's is tried, and the error shown
+   is the prelude's unless its overloads didn't line up at all.
 2. **Flags convert by protocol**, with optional, list and Bool fixes.
 3. **`help` from the registry**, with `help Type`, and internals hidden.
 4. **The standard library module.** The generator learns free functions,

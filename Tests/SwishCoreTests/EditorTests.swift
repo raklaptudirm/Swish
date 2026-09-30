@@ -116,7 +116,7 @@ private func completion(_ text: String, in shell: Shell = Shell()) -> (start: In
     shell.execute(#"func f(@flag("n") times: Int = 1, color: Bool = true) {}"#)
     #expect(completion("f --", in: shell).replacements == ["--color", "--help", "--no-color", "--times"])
     #expect(completion("f -", in: shell).replacements.contains("-n"))
-    #expect(completion("ls | sorted --r").replacements == ["--reverse"])
+    #expect(completion("ls | sorted --b").replacements == ["--by"])
 }
 
 @Test func completesVariables() {

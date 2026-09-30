@@ -376,7 +376,7 @@ private func fixture() throws -> String {
 @Test func sortingAndSlicing() throws {
     let data = #"let xs = [(n: 3, s: "c"), (n: 1, s: "a"), (n: 2, s: "b")];"#
     #expect(try output(data + "xs | sorted --by n | get s") == "a\nb\nc\n")
-    #expect(try output(data + "xs | sorted -rb s | prefix 2 | get n") == "3\n2\n")
+    #expect(try output(data + "xs | sorted -b s | reversed | prefix 2 | get n") == "3\n2\n")
     #expect(try output(data + "xs | reversed | get n; xs | count") == "2\n1\n3\n3\n")
     #expect(status(data + "xs | sorted") == 2) // tuples aren't Comparable: sort them by a field
     #expect(try output("printf 'b\\n10\\n9\\na\\n' | sorted; printf '10\\n9\\n9\\n10\\n' | uniqued") == "10\n9\na\nb\n10\n9\n")

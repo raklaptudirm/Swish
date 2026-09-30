@@ -117,19 +117,18 @@ extension Shell {
         /// - Parameter isIncluded: a closure like { $0.size > 1.mb }
         func filter(_ isIncluded: (Element) throws -> Bool) rethrows -> [Element]
 
-        /// Each item transformed; nil results are dropped.
+        /// Each item transformed, nil results included, as Swift's map.
         /// - Parameter transform: a closure like { $0.name }, or a key path like \.name
         func map<T>(_ transform: (Element) throws -> T) rethrows -> [T]
 
-        /// The items in order.
-        func sorted(@flag("r") reverse: Bool = false) -> [Element] where Element: Comparable
+        /// Each item transformed, nil results dropped.
+        /// - Parameter transform: a closure like { $0.name }, or a key path like \.name
+        func compactMap<T>(_ transform: (Element) throws -> T?) rethrows -> [T]
 
-        /// The items in order of a field.
+        /// The items in order of a field; Swift's sorted() and sorted(by:)
+        /// sort by the items themselves or a closure.
         /// - Parameter by: the field, as in --by size or by: \.size
-        func sorted<V: Comparable>(@flag("b") by key: KeyPath<Element, V>, @flag("r") reverse: Bool = false) -> [Element]
-
-        /// The items in the order a closure says: whether $0 comes before $1.
-        func sorted(by areInIncreasingOrder: (Element, Element) throws -> Bool, @flag("r") reverse: Bool = false) rethrows -> [Element]
+        func sorted<V: Comparable>(@flag("b") by key: KeyPath<Element, V>) -> [Element]
 
         /// The first items; stops reading after them.
         func prefix(_ maxLength: Int = 1) -> [Element]

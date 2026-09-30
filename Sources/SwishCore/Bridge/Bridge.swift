@@ -26,6 +26,67 @@ enum Bridge {
     }
 }
 
+extension Bridge {
+    /// A bridged type's members that can be a pipeline stage: those named
+    /// `name` that read their receiver without changing it.
+    static func stageMembers(_ typeName: String, _ name: String) -> [(index: Int, member: BridgedMember)] {
+        (types[typeName]?.members ?? []).enumerated().filter { _, member in
+            member.name == name && !member.isStatic && !member.isMutating && (member.kind == .method || member.kind == .property)
+        }.map { (index: $0.offset, member: $0.element) }
+    }
+
+    /// A parameter's type as a word on the command line converts to it: a
+    /// generic parameter as what it's bound to (Element as Int).
+    static func wordType(_ type: TypeAnnotation, _ bindings: [String: TypeAnnotation]) -> TypeAnnotation {
+        switch type {
+        case .parameter(let name): bindings[name].flatMap { $0 == .unknown || $0 == .any ? nil : $0 } ?? type
+        case .optional(let wrapped): .optional(wordType(wrapped, bindings))
+        case .list(let element): .list(wordType(element, bindings))
+        default: type
+        }
+    }
+
+    /// The receiver of a member as a stage's input: the items collected
+    /// (for `.value`, the one item), or each one.
+    static func receiverParameter(_ receiver: StageReceiver, element: TypeAnnotation = .any) -> Parameter {
+        var parameter = Parameter(label: nil, name: "self", type: receiver == .each ? element : .list(element))
+        parameter.isInput = true
+        return parameter
+    }
+}
+
+extension Shell {
+    /// `xs | max` or `names | uppercased`: a bridged type's members named
+    /// `name`, as functions whose input is the receiver, so a stage runs
+    /// them as it runs any function.
+    func bridgedStage(
+        _ typeName: String, _ name: String, receiver: StageReceiver, bindings: [String: TypeAnnotation] = [:]
+    ) -> OverloadSet? {
+        let members = Bridge.stageMembers(typeName, name)
+        guard !members.isEmpty else { return nil }
+        return OverloadSet(name: name, candidates: members.map { _, member in
+            let parameters = member.parameters.map { parameter -> Parameter in
+                var parameter = parameter
+                parameter.type = Bridge.wordType(parameter.type, bindings)
+                return parameter
+            }
+            var body = member.body
+            if receiver == .value, case .native(let call) = body {
+                // Collected like a sequence's items, so what it gives flows
+                // as items too; but it's the one value that's the receiver.
+                body = .native { shell, args in
+                    var args = args
+                    if case .list(let items)? = args["self"] { args["self"] = items.first ?? .nothing }
+                    return try call(shell, args)
+                }
+            }
+            return Function(name: name, parameters: [Bridge.receiverParameter(receiver)] + parameters,
+                            returnType: nil, body: body, isThrowing: member.isThrowing,
+                            isRethrowing: member.isRethrowing, generics: member.generics)
+        })
+    }
+}
+
 /// A bridged type's name as a value, as in `String(sub)` or `Int.max`.
 final class BridgedTypeName: SwishObject, @unchecked Sendable {
     let name: String

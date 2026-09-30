@@ -1065,17 +1065,16 @@ extension Shell {
             // What the checker found, from the input's type, decides; without
             // that, the interpreter looks.
             let resolution = command.resolution
-            if !command.external, piped, resolution == nil || resolution == .sequenceMethod,
-               let methods = sequenceMethods[name] {
+            if !command.external, piped, case .bridged(let type, let receiver, let bindings)? = resolution,
+               let members = bridgedStage(type, name, receiver: receiver, bindings: bindings) {
+                // `xs | max`: a Swift member, as the checker found it.
+                stages.append(.function(narrowed(members, command.overload), rest, redirects: redirects, environment: environment))
+            } else if !command.external, piped, resolution == .sequenceMethod, let methods = sequenceMethods[name] {
                 stages.append(.function(narrowed(methods, command.overload), rest, redirects: redirects, environment: environment))
-            } else if !command.external, piped, resolution == .itemMethod || resolution == nil && itemsMayHaveMethod(name) {
+            } else if !command.external, piped, resolution == .itemMethod {
                 stages.append(.method(name, rest, redirects: redirects, environment: environment))
             } else if !command.external, let functions = commandFunctions(named: name) {
                 stages.append(.function(narrowed(functions, command.overload), rest, redirects: redirects, environment: environment))
-            } else if !command.external, piped, resolution == nil, !Shell.builtinNames.contains(name), findExecutable(name) == nil {
-                // Nothing else by that name: perhaps the items have it, like
-                // a job's `cancel`. Only known once they arrive.
-                stages.append(.method(name, rest, redirects: redirects, environment: environment))
             } else if !command.external, !piped, sequenceMethods[name] != nil, findExecutable(name) == nil {
                 throw RuntimeError("\(name) is a method of sequences: pipe something into it, as in `ls | \(name)`, or call it on a list, as in `xs.\(name)(…)`")
             } else {
