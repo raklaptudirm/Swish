@@ -17,8 +17,8 @@ extension Shell {
         let owner: String
         let created: Date
         let accessed: Date
-        let path: String
-        let target: String?
+        let path: FilePath
+        let target: FilePath?
     }
 
     /// A process `ps` lists.
@@ -70,7 +70,10 @@ extension Shell {
     /// Lists directory contents.
     /// - Parameter paths: files or directories to list (default: the current directory)
     /// - Parameter all: include hidden files
-    func ls(_ paths: String..., @flag("a") all: Bool = false) -> [FileEntry]
+    func ls(_ paths: FilePath..., @flag("a") all: Bool = false) -> [FileEntry]
+
+    /// The working directory.
+    func pwd() -> FilePath
 
     /// Lists running processes. Memory and CPU time are only known for your own processes.
     func ps() -> [ProcessEntry]
@@ -148,7 +151,7 @@ extension Shell {
     func installPrelude() {
         let program: Program
         do {
-            program = try Parser.parsePrelude(Shell.prelude, bound: ["FileType": .type, "JobState": .type])
+            program = try Parser.parsePrelude(Shell.prelude, bound: ["FileType": .type, "JobState": .type, "FilePath": .type])
         } catch {
             preconditionFailure("the prelude doesn't parse: \(error)")
         }

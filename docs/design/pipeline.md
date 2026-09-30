@@ -21,7 +21,7 @@ enum Value {
     case object(any SwishObject) // a live value with its own members: a Job, and later
                                  // bridged Swift objects (milestone 8)
     case function(any Callable)
-    // Planned: path and duration.
+    // A path is a bridged FilePath, held in .object; planned: duration.
 }
 ```
 
@@ -104,6 +104,9 @@ pipeline turns values into text, and only if nothing else consumed them.
   (table for lists of similar records, key/value list for a single record).
   `ls` records carry every field (permissions, owner, dates, path, …) but
   show `name`, `type`, `size` and `modified`; `ls | table` shows them all.
+  Their `path` and `target` are `FilePath`s, as is what `pwd()` gives: shown
+  unquoted, in their own color, so a path doesn't look like a String, and
+  written to JSON as strings.
 - Explicit formatters (`table`, `list`, `to text`, `to json`) override the
   view. They return lines of text, so their output can go on to external
   programs.

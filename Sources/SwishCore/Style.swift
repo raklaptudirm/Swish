@@ -25,6 +25,7 @@ enum Style: String {
     static let constant = Style.brightMagenta // numbers, true, nil
     static let type = Style.brightYellow
     static let variable = Style.cyan
+    static let path = Style.green // a FilePath, unquoted, unlike a String
     static let flag = Style.blue
     static let comment = Style.dim
     static let label = Style.bold // table headers, record keys, help sections

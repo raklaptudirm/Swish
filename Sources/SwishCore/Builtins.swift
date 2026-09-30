@@ -3,7 +3,7 @@ import Foundation
 extension Shell {
     /// `fg` and `bg` are only here to say what replaced them. `run` becomes
     /// a program, Swish itself, when its pipeline is made.
-    static let builtinNames: Set = ["cd", "pwd", "exit", "fg", "bg", "which", "run"]
+    static let builtinNames: Set = ["cd", "exit", "fg", "bg", "which", "run"]
 
     /// The name of the file `run` finds its tasks in.
     static let taskFileName = "Tasks.swish"
@@ -35,7 +35,6 @@ extension Shell {
         let args = Array(argv.dropFirst())
         switch argv[0] {
         case "cd": return cd(args)
-        case "pwd": return pwd(args)
         case "exit": return exitShell(args)
         case "fg":
             report("fg isn't Swish: `await` brings back the most recent job, `await jobs[n]` another")
@@ -78,11 +77,6 @@ extension Shell {
         }
         setenv("OLDPWD", previous, 1)
         setenv("PWD", FileManager.default.currentDirectoryPath, 1)
-        return 0
-    }
-
-    private func pwd(_ args: [String]) -> Int32 {
-        writeAll(stdoutFD, FileManager.default.currentDirectoryPath + "\n")
         return 0
     }
 

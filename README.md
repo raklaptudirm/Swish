@@ -288,7 +288,8 @@ The tasks are functions in [`Tasks.swish`](Tasks.swish); inside Swish, `run` lis
   objects shown through their fields
   - [x] Live objects for bridged Swift values
   - [ ] Errors as values you can inspect after the fact
-  - [x] Paths: swift-system's `FilePath`, the standard library's once SE-0529 ships
+  - [x] Paths: swift-system's `FilePath` (the standard library's once SE-0529 ships), from `pwd`
+    and `ls`'s `path` and `target`
   - [ ] Durations
   - [ ] A lazy `ls`
 - [x] **Line editor**: persistent history (`$SWISH_HISTORY`, default `$XDG_STATE_HOME/swish/history`) with

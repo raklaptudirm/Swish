@@ -1,5 +1,6 @@
 import Foundation
 import SwishKit
+import SystemPackage
 
 /// Builtins written in Swift. They're ordinary functions to the rest of
 /// the shell: the same flags, help, overloads and streaming as Swish ones.
@@ -64,7 +65,7 @@ extension Shell {
     /// (`filter`), or all of them (`sorted`).
     func builtinBodies() -> [String: (body: FunctionBody, input: Parameter?)] {
         var bodies: [String: (body: FunctionBody, input: Parameter?)] = [:]
-        for function in [ls(), ps(), from(), to(), table(), list(), members(), help(), with()] {
+        for function in [ls(), pwd(), ps(), from(), to(), table(), list(), members(), help(), with()] {
             bodies[function.name!] = (function.body, nil)
         }
         for method in [sorted(), filter(), map(), prefix(), reversed(), count(), uniqued(), select(), get()] {
@@ -102,7 +103,7 @@ extension Shell {
         builtin(
             "ls", "Lists directory contents as records.",
             [
-                positional("paths", .string, variadic: true),
+                positional("paths", .named("FilePath"), variadic: true),
                 option("all", .bool, default: .bool(false), short: "a"),
             ],
             .native { shell, args in
@@ -145,8 +146,6 @@ extension Shell {
         var owner: String
         var created: Date
         var accessed: Date
-        var path: String
-        var target: String?
     }
 
     private func fileEntry(named name: String, at path: String) -> Value? {
@@ -162,15 +161,21 @@ extension Shell {
         let entry = FileEntry(
             name: name, type: type, size: FileSize(bytes: status.size),
             modified: status.modified, permissions: letter + status.permissions, owner: userName(status.owner),
-            created: status.created ?? status.modified, accessed: status.accessed,
-            path: path,
-            target: status.isSymlink ? try? FileManager.default.destinationOfSymbolicLink(atPath: path) : nil
+            created: status.created ?? status.modified, accessed: status.accessed
         )
         guard case .record(var record) = try? ValueEncoder().encode(entry) else { return nil }
         record["type"] = .enumValue(EnumValue(type: Shell.fileType, name: type))
+        record["path"] = pathValue(path)
         // A nil target is still a field, as the struct declares it.
-        if record["target"] == nil { record["target"] = .nothing }
+        let target = status.isSymlink ? try? FileManager.default.destinationOfSymbolicLink(atPath: path) : nil
+        record["target"] = target.map(pathValue) ?? .nothing
         return .record(record)
+    }
+
+    private func pwd() -> Function {
+        builtin("pwd", "The working directory.", [], .native { _, _ in
+            pathValue(FileManager.default.currentDirectoryPath)
+        })
     }
 
     private func ps() -> Function {
@@ -539,4 +544,9 @@ extension SwishKit.Value {
         @unknown default: 9
         }
     }
+}
+
+/// A path as Swish holds it: a FilePath.
+func pathValue(_ path: String) -> Value {
+    SwiftValue.make(FilePath(path), as: "FilePath")
 }

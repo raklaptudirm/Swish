@@ -1,5 +1,6 @@
 import Foundation
 import SwishKit
+import SystemPackage
 
 /// Shows a value as `debugDescription` spells it, but for a person: in the
 /// highlighter's colors, and, when it won't fit on one line, broken over
@@ -47,6 +48,8 @@ struct PrettyPrinter {
             node(for: value)
         case .object(let job as Job):
             .segments(job.segments)
+        case .object(let box as SwiftValue) where box.value is FilePath || box.value is FilePath.Component:
+            .segments([(box.description, Style.path)])
         case .object(let type as EnumType):
             .segments([("enum", Style.keyword), (" ", nil), (type.name, Style.type)])
         case .object(let object):

@@ -100,8 +100,7 @@ private func typeError(_ source: String) -> String? {
     let p = #"let p: FilePath = "/usr/local/bin/swish.tar.gz"; "#
     // A string literal is a FilePath where one is wanted; its members are swift-system's.
     #expect(try output(p + "p.lastComponent!; p.extension; p.stem; p.removingLastComponent(); p.appending(\"x\"); p.isAbsolute")
-        == #""swish.tar.gz""# + "\n" + #""gz""# + "\n" + #""swish.tar""# + "\n" + #""/usr/local/bin""# + "\n"
-        + #""/usr/local/bin/swish.tar.gz/x""# + "\ntrue\n")
+        == "swish.tar.gz\n" + #""gz""# + "\n" + #""swish.tar""# + "\n/usr/local/bin\n/usr/local/bin/swish.tar.gz/x\ntrue\n")
     // Nested types by their full name, and a path's components as a sequence.
     #expect(try output(#"let c: FilePath.Component = "a.b"; c.extension; c.stem"#) == "\"b\"\n\"a\"\n")
     #expect(try output(p + "p.components.count; p.components | map { $0.stem }; for c in p.components { echo $c }")
@@ -112,6 +111,13 @@ private func typeError(_ source: String) -> String? {
     // Only a literal converts, as in Swift; a String's doesn't have a path's members.
     #expect(typeError(#"let s = "a"; let q: FilePath = s"#) == "the value must be FilePath, not String")
     #expect(typeError(#""a.txt".extension"#) == "String has no member 'extension'")
+
+    // Shown unquoted, unlike a String; in JSON, a string.
+    #expect(try output(p + #"[p]; [p] | to json"#) == "[/usr/local/bin/swish.tar.gz]\n\"/usr/local/bin/swish.tar.gz\"\n")
+
+    // pwd and ls give paths.
+    #expect(try output("pwd().isAbsolute; ls().first!.path.isAbsolute") == "true\nfalse\n")
+    #expect(try output("let d = pwd().removingLastComponent(); ls(d).first!.path.starts(with: d); ls(\"/\").count > 0") == "true\ntrue\n")
 
     // A FilePath parameter takes a word on the command line, and --help
     // shows a literal default as it's written.
