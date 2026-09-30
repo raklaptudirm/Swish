@@ -15,7 +15,7 @@ extension Bridge {
     nonisolated(unsafe) private static let styled = BridgedMember(
         kind: .method, name: "styled", isStatic: false,
         parameters: [Parameter(label: nil, name: "styles", type: .named("TextStyle"), variadic: true)],
-        returns: .string, generics: [:], isThrowing: false, isRethrowing: false,
+        returns: .string, generics: [:], isThrowing: false, isRethrowing: false, isMutating: false, discardableResult: false,
         body: .native { shell, args in
             guard case .string(let text)? = args["self"] else { return .nothing }
             guard case .list(let styles)? = args["styles"], !styles.isEmpty, !text.isEmpty,

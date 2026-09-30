@@ -50,7 +50,13 @@ extension Shell {
             if value == .nothing && typeName != "Optional" { return .nothing }
             bindings["self"] = value
         }
-        return try invoke(function, with: bindings)
+        guard member.isMutating, let receiver else { return try invoke(function, with: bindings) }
+        // `xs.append(1)`: Swift changes a copy, which goes back into `xs`.
+        guard case .list(let parts) = try invoke(function, with: bindings), parts.count == 2 else {
+            throw RuntimeError("\(typeName).\(member.name) gave back no receiver")
+        }
+        try mutate(receiver, by: member.name) { _ in parts[1] }
+        return parts[0]
     }
 }
 
@@ -97,7 +103,8 @@ struct BridgedType {
 }
 
 struct BridgedMember {
-    enum Kind { case method, property, initializer }
+    /// A setter is a property's other half, for `p.extension = "md"`.
+    enum Kind { case method, property, initializer, setter }
 
     let kind: Kind
     let name: String
@@ -107,6 +114,12 @@ struct BridgedMember {
     let generics: [String: [String]]
     let isThrowing: Bool
     let isRethrowing: Bool
+    /// Changes its receiver, like `append`. Its glue gives the result and
+    /// the changed receiver, which the shell puts back.
+    let isMutating: Bool
+    /// `@discardableResult`, like `removeLast()`: a statement that's just
+    /// the call doesn't show what it gives.
+    let discardableResult: Bool
     /// Converts the arguments (and `self`), calls Swift, and converts back.
     let body: FunctionBody
 }

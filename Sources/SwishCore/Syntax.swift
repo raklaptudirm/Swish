@@ -38,6 +38,10 @@ enum Statement: Equatable, Sendable {
     /// Carries on into the next case of a switch.
     case fallthroughStatement
     case returnStatement(Expr?)
+    /// `guard let x = y else { return }`: unless the condition holds, runs
+    /// the `else`, which must leave the block; what it binds stays bound
+    /// for the rest of the block.
+    case guardStatement(IfStatement.Condition, otherwise: Program)
     case breakStatement
     case continueStatement
     case chain(Chain)
@@ -590,9 +594,9 @@ struct Parser {
         "let", "var", "if", "else", "true", "false", "nil",
         "for", "in", "while", "func", "return", "break", "continue", "try", "do", "catch",
         "async", "await", "enum", "switch", "case", "default", "fallthrough", "import", "struct", "throws",
-        "as", "is", "defer",
+        "as", "is", "defer", "guard",
     ]
-    private static let statementKeywords: Set = ["let", "var", "func", "return", "break", "continue", "do", "catch", "enum", "fallthrough", "import", "struct", "defer"]
+    private static let statementKeywords: Set = ["let", "var", "func", "return", "break", "continue", "do", "catch", "enum", "fallthrough", "import", "struct", "defer", "guard"]
     private static let precedence: [[BinaryOperator]] = [
         [.or],
         [.and],
@@ -643,6 +647,8 @@ struct Parser {
     /// Inside an `if`/`while` condition, `{` after a command starts the body
     /// rather than a closure argument.
     private var conditionDepth = 0
+    /// In a guard's condition, where a command ends at `else`.
+    private var guardCondition = false
     /// Inside the operand of `try`, `try?` or `try!`, where `$(…)` throws
     /// when its command fails. Closures and function bodies start afresh:
     /// they decide for themselves whether to throw, as in Swift.
@@ -743,6 +749,8 @@ struct Parser {
             return try parseDeclaration()
         case "func":
             return .function(try parseFunction())
+        case "guard":
+            return try parseGuard()
         case "return":
             guard functionDepth > 0 else { throw SyntaxError("'return' outside a function") }
             keyword("return")
@@ -1451,6 +1459,45 @@ struct Parser {
     private mutating func parseIf() throws(SyntaxError) -> IfStatement {
         keyword("if")
         skipSpaces()
+        let (condition, bound) = try parseIfCondition()
+        skipSpaces()
+        let then = try parseBlock(declaring: bound)
+
+        let afterBlock = (pos, spans.count)
+        skipSpaces(newlines: true)
+        guard identifier() == "else" else {
+            rewind(to: afterBlock)
+            return IfStatement(condition: condition, then: then)
+        }
+        keyword("else")
+        skipSpaces()
+        if identifier() == "if" {
+            let elseIf = Statement.chain(Chain(first: .ifStatement(try parseIf())))
+            return IfStatement(condition: condition, then: then, otherwise: Program(statements: [elseIf]))
+        }
+        return IfStatement(condition: condition, then: then, otherwise: try parseBlock())
+    }
+
+    /// `guard condition else { … }`, whose bindings last to the block's end.
+    private mutating func parseGuard() throws(SyntaxError) -> Statement {
+        keyword("guard")
+        skipSpaces()
+        guardCondition = true
+        let parsed = Result { () throws(SyntaxError) in try parseIfCondition() }
+        guardCondition = false
+        let (condition, bound) = try parsed.get()
+        skipSpaces()
+        guard identifier() == "else" else { throw expected("'else' after guard's condition") }
+        keyword("else")
+        skipSpaces()
+        let otherwise = try parseBlock()
+        for (name, kind) in bound { scopes[scopes.count - 1][name] = kind }
+        return .guardStatement(condition, otherwise: otherwise)
+    }
+
+    /// An `if` or `guard` condition: a Bool (or command), `let x = y`, or
+    /// `case pattern = y`; with the names it binds.
+    private mutating func parseIfCondition() throws(SyntaxError) -> (IfStatement.Condition, [String: NameKind]) {
         let condition: IfStatement.Condition
         var bound: [String: NameKind] = [:]
         if identifier() == "case" {
@@ -1479,22 +1526,7 @@ struct Parser {
         } else {
             condition = .chain(try parseCondition())
         }
-        skipSpaces()
-        let then = try parseBlock(declaring: bound)
-
-        let afterBlock = (pos, spans.count)
-        skipSpaces(newlines: true)
-        guard identifier() == "else" else {
-            rewind(to: afterBlock)
-            return IfStatement(condition: condition, then: then)
-        }
-        keyword("else")
-        skipSpaces()
-        if identifier() == "if" {
-            let elseIf = Statement.chain(Chain(first: .ifStatement(try parseIf())))
-            return IfStatement(condition: condition, then: then, otherwise: Program(statements: [elseIf]))
-        }
-        return IfStatement(condition: condition, then: then, otherwise: try parseBlock())
+        return (condition, bound)
     }
 
     private mutating func parseCondition() throws(SyntaxError) -> Chain {
@@ -1535,11 +1567,14 @@ struct Parser {
         guard peek() == "{" else { throw expected("'{'") }
         pos += 1
         let savedCondition = conditionDepth
+        let savedGuard = guardCondition
         conditionDepth = 0
+        guardCondition = false
         scopes.append(names)
         defer {
             scopes.removeLast()
             conditionDepth = savedCondition
+            guardCondition = savedGuard
         }
         let body = try parseProgram(until: "}")
         pos += 1 // parseProgram only returns at the closing brace.
@@ -2187,6 +2222,8 @@ struct Parser {
         case "|", ";", "\n", ")", "}": true
         case "&": peek(1) == "&"
         case "{": peek(1) != "}" && conditionDepth > 0
+        // `guard test -d x else { … }`: `else` isn't the command's.
+        case "e": guardCondition && identifier() == "else" && (pos == 0 || isWordBoundary(chars[pos - 1]))
         default: false
         }
     }

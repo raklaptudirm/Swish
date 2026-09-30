@@ -227,17 +227,22 @@ extension Shell {
     /// The branch of an `if` its condition picks, with what the condition
     /// binds; nil for no `else`.
     private func chooseBranch(_ node: IfStatement) throws -> (Program?, [String: Binding]) {
-        switch node.condition {
+        if let bindings = try holds(node.condition) { return (node.then, bindings) }
+        return (node.otherwise, [:])
+    }
+
+    /// What an `if` or `guard` condition binds when it holds; nil when it doesn't.
+    private func holds(_ condition: IfStatement.Condition) throws -> [String: Binding]? {
+        switch condition {
         case .pattern(let pattern, let expr):
             var bindings: [String: Binding] = [:]
-            if try match(pattern, try evaluate(expr), into: &bindings) { return (node.then, bindings) }
+            return try match(pattern, try evaluate(expr), into: &bindings) ? bindings : nil
         case .chain(let chain):
-            if try run(chain, context: .condition) == 0 { return (node.then, [:]) }
+            return try run(chain, context: .condition) == 0 ? [:] : nil
         case .binding(let name, let mutable, let expr):
             let value = try evaluate(expr)
-            if value != .nothing { return (node.then, [name: Binding(value: value, mutable: mutable)]) }
+            return value != .nothing ? [name: Binding(value: value, mutable: mutable)] : nil
         }
-        return (node.otherwise, [:])
     }
 
     /// Declares a block's functions and types before it runs, so they can
@@ -353,6 +358,15 @@ extension Shell {
             return 0
         case .fallthroughStatement:
             throw ControlFlow.fallthroughCase
+        case .guardStatement(let condition, let otherwise):
+            if let bindings = try holds(condition) {
+                for (name, binding) in bindings { scopes[scopes.count - 1].bindings[name] = binding }
+                return 0
+            }
+            _ = try runBlock(otherwise)
+            // The checker sees to it that the else leaves; `exit` might not
+            // (with jobs left, it only warns).
+            throw RuntimeError("guard's else carried on")
         case .returnStatement(let expr):
             // A `.case` returned from a function declared to return an enum.
             throw ControlFlow.returned(try expr.map { try evaluate($0, expecting: returnTypes.last ?? nil) } ?? .nothing)
@@ -395,7 +409,11 @@ extension Shell {
             // `await build`: the job wrote to the terminal; its Output has
             // nothing more to show.
             let awaitedToTerminal = expr.isAwait && value.isEmptyOutput
-            if context == .statement && !isBoolLiteral && !awaitedToTerminal {
+            // `xs.removeLast()` alone: Swift's @discardableResult.
+            let discarded = if case .bridged(let type, let member, _, _) = expr {
+                Bridge.types[type]?.members[member].discardableResult == true
+            } else { false }
+            if context == .statement && !isBoolLiteral && !awaitedToTerminal && !discarded {
                 display(value)
             }
             if case .bool(let truth) = value { return truth ? 0 : 1 }

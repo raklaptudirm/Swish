@@ -162,6 +162,11 @@ let size = big ? 10 : 1             // `?` with spaces around it, as in Swift
 let kind = if n < 0 { "negative" } else if n == 0 { "zero" } else { "positive" }
 ```
 
+`guard` is Swift's too: its `else` must leave with `return`, `break`,
+`continue` or `exit`, and what `guard let` or `guard case` binds stays
+bound after it. Its condition can be a command: `guard test -d $dir else
+{ exit 1 }`.
+
 `if` is an expression wherever a value goes, as in Swift: each branch one
 expression, and an `else`. A function or closure whose body is just such
 an `if` returns it. Functions, structs and enums can be used before their

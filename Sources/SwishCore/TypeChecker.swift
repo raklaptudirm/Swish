@@ -219,6 +219,16 @@ final class TypeChecker {
             scopes[scopes.count - 1][name] = .module
             afterImport = true
             statement = .importPlugin(name: name, path: path)
+        case .guardStatement(let condition, var otherwise):
+            var node = IfStatement(condition: condition, then: Program(statements: []))
+            let bound = try checkCondition(&node)
+            try checkBlock(&otherwise, newScope: true)
+            guard definitelyLeaves(otherwise, orExits: true) else {
+                throw TypeError("guard's else must not carry on: end it with return, break, continue or exit")
+            }
+            // What the condition binds is bound for the rest of the block.
+            for (name, symbol) in bound { scopes[scopes.count - 1][name] = symbol }
+            statement = .guardStatement(node.condition, otherwise: otherwise)
         case .returnStatement(var value):
             guard let context = returns.last else { return }
             if value != nil {
@@ -335,7 +345,7 @@ final class TypeChecker {
             } else if type == .unknown {
                 bound[name] = .variable(.unknown, mutable: mutable)
             } else {
-                throw TypeError("'if let' unwraps an optional, but this is \(type)")
+                throw TypeError("'let' in a condition unwraps an optional, but this is \(type)")
             }
             node.condition = .binding(name: name, mutable: mutable, value: value)
         case .pattern(var pattern, var value):
@@ -482,24 +492,37 @@ final class TypeChecker {
     /// Whether running `program` always ends in a `return`: as simple as
     /// Swift's own check, from the last statement.
     private func definitelyReturns(_ program: Program) -> Bool {
+        definitelyLeaves(program, orExits: false)
+    }
+
+    /// Whether running `program` always leaves it: by `return`, or, with
+    /// `orExits` (for a guard's `else`), by `break`, `continue` or `exit`.
+    private func definitelyLeaves(_ program: Program, orExits: Bool) -> Bool {
         // Declarations after the last statement run nothing, as in Swift.
         guard let last = program.statements.last(where: {
             if case .function = $0 { return false }
             return !$0.declaresType
         }) else { return false }
+        let leaves = { (program: Program) in self.definitelyLeaves(program, orExits: orExits) }
         switch last {
         case .returnStatement:
             return true
+        case .breakStatement, .continueStatement:
+            return orExits
         case .doCatch(let body, _, let handler):
-            return definitelyReturns(body) && handler.map(definitelyReturns) ?? true
+            return leaves(body) && handler.map(leaves) ?? true
         case .chain(let chain) where chain.links.isEmpty:
             switch chain.first {
             case .ifStatement(let node):
                 guard let otherwise = node.otherwise else { return false }
-                return definitelyReturns(node.then) && definitelyReturns(otherwise)
+                return leaves(node.then) && leaves(otherwise)
             case .switchStatement(let node):
                 // A switch always matches (or fails), so every case returning is enough.
-                return !node.cases.isEmpty && node.cases.allSatisfy { definitelyReturns($0.body) }
+                return !node.cases.isEmpty && node.cases.allSatisfy { leaves($0.body) }
+            case .pipeline(let pipeline) where orExits:
+                // `exit 1` ends the shell.
+                guard pipeline.commands.count == 1, case .text(let parts)? = pipeline.commands[0].words.first else { return false }
+                return parts == [.literal("exit")]
             default:
                 return false
             }
@@ -629,6 +652,13 @@ final class TypeChecker {
                     type = element
                 } else if type == .unknown || type == .record || type == .any {
                     type = .unknown
+                } else if let (bridgedType, bindings) = bridged(type),
+                          bridgedType.members.contains(where: { $0.kind == .property && !$0.isStatic && $0.name == name }) {
+                    // `p.extension = "md"`: a Swift property with a setter.
+                    guard let setter = bridgedType.members.first(where: { $0.kind == .setter && $0.name == name }) else {
+                        throw TypeError("cannot assign to '\(name)': it's a get-only property of \(type)")
+                    }
+                    type = substitute(setter.parameters[0].type, bindings)
                 } else {
                     throw TypeError("cannot assign to '\(name)' of \(type)")
                 }
@@ -1663,6 +1693,9 @@ final class TypeChecker {
             switch (natural, wanted) {
             case (.unknown?, _): uncertain = true
             case (_, .any), (_, .unknown), (_, .function), (_, .record): cost += 3
+            // A generic sequence is less specific than a concrete type, as
+            // Swift ranks them: `merging([:])` takes the dictionary one.
+            case (_, .someSequence): cost += 1
             case (let type?, let wanted) where type != wanted: cost += 1
             default: break
             }
@@ -1856,6 +1889,11 @@ final class TypeChecker {
             throw TypeError("\(candidates[0].name): which overload isn't clear until the arguments' types are known")
         }
         if chosen.isThrowing { try throwingSite("'\(name)'") }
+        if bridgedType.members[chosen.index].isMutating {
+            // `xs.append(1)` changes xs, which must be a `var`.
+            guard let receiver else { throw TypeError("\(typeName).\(name) is mutating: call it on a variable") }
+            try checkMutable(receiver, method: name)
+        }
         return (chosen.returns, .bridged(type: typeName, member: chosen.index, receiver: receiver, arguments: arguments))
     }
 

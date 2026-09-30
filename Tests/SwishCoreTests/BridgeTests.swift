@@ -126,3 +126,28 @@ private func typeError(_ source: String) -> String? {
     #expect(try output("show a/b.txt; show a/b.txt --to /x", in: shell) == "b.txt /tmp\nb.txt /x\n")
     #expect(try output("show --help", in: shell).contains(#"(default: "/tmp")"#))
 }
+
+@Test func mutatingMembersChangeTheirVariable() throws {
+    #expect(try output("var xs = [3, 1]; xs.append(2); xs.append(contentsOf: [5]); xs.insert(0, at: 0); xs.sort(); xs")
+        == "[0, 1, 2, 3, 5]\n")
+    #expect(try output("var xs = [3, 1, 2]; xs.removeAll { $0 > 2 }; let last = xs.removeLast(); xs; last") == "[1]\n2\n")
+    #expect(try output(#"var d = ["a": 1]; d.updateValue(2, forKey: "b"); d.removeValue(forKey: "a"); d"#) == #"["b": 2]"# + "\n")
+    // A concrete overload wins over a generic sequence one, as in Swift.
+    #expect(try output(#"var d = ["a": 1]; d.merge(["b": 2]) { a, b in b }; d"#) == #"["a": 1, "b": 2]"# + "\n")
+    #expect(try output(#"var s = Set([1]); s.insert(2); s.remove(1); var t = "ab"; t.append("c"); s; t"#) == "Set([2])\n\"abc\"\n")
+    // Through a struct's field or a list's element, back into the variable.
+    #expect(try output("struct S { var xs: [Int] }; var s = S(xs: []); s.xs.append(4); var m = [[1], [2]]; m[0].append(9); s; m")
+        == "S(xs: [4])\n[[1, 9], [2]]\n")
+    // @discardableResult ones don't show what they give as a statement.
+    #expect(try output("var xs = [1, 2, 3]; xs.removeLast(); xs.popLast()") == "2\n")
+    // Only on a var, as in Swift.
+    #expect(typeError("let xs = [1]; xs.append(2)") == "cannot use mutating method 'append' on 'xs': it's a 'let' constant")
+    #expect(typeError("[1].append(2)") == "cannot use mutating method 'append' on a value that isn't in a variable")
+}
+
+@Test func settablePropertiesCanBeAssigned() throws {
+    #expect(try output(#"var p: FilePath = "/a/b.txt"; p.extension = "md"; p; p.extension = nil; p"#) == "/a/b.md\n/a/b\n")
+    #expect(try output(#"struct W { var path: FilePath }; var w = W(path: "/x/y.c"); w.path.extension = "h"; w.path"#) == "/x/y.h\n")
+    #expect(typeError(#"var p: FilePath = "/a"; p.isAbsolute = false"#) == "cannot assign to 'isAbsolute': it's a get-only property of FilePath")
+    #expect(typeError(#"let p: FilePath = "/a"; p.extension = "md""#) == "cannot assign to 'p': it's a 'let' constant")
+}

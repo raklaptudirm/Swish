@@ -294,7 +294,7 @@ The tasks are functions in [`Tasks.swish`](Tasks.swish); inside Swish, `run` lis
   - [x] `Any` casts (`as?`, `as!`, `is`), the `JSON` type, optional subscripts
   - [ ] Swish types are Swift types: one type system read from Swift's symbol graphs, any package
     usable as it is, generated Swift twins for Swish types ([design](docs/design/swift-interop.md));
-    so far the standard library's non-mutating members on `String`, `Int`, `Double`, `Bool`,
+    so far the standard library's members, mutating ones too, on `String`, `Int`, `Double`, `Bool`,
     `Array`, `Set`, `Dictionary`, `Optional` and ranges, with `1...5` a real `ClosedRange<Int>`,
     and swift-system's `FilePath`
 - [x] **Methods as stages**: after a `|`, a name is a method of what's piped in: the sequence's

@@ -14,7 +14,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "c", type: .named("Character"))],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = String(try bridgeCharacter(args["c"]!))
@@ -22,10 +23,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "write", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "other", type: .string)],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: String = try String(swishValue: args["self"]!)
+                receiver.write(try String(swishValue: args["other"]!))
+                return .list([.nothing, receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
                     kind: .property, name: "hashValue", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -37,7 +52,8 @@ extension Bridge {
                     kind: .method, name: "dropLast", isStatic: false,
                     parameters: [Parameter(label: nil, name: "k", type: .int)],
                     returns: .named("Substring"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -49,7 +65,8 @@ extension Bridge {
                     kind: .method, name: "suffix", isStatic: false,
                     parameters: [Parameter(label: nil, name: "maxLength", type: .int)],
                     returns: .named("Substring"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -61,7 +78,8 @@ extension Bridge {
                     kind: .method, name: "map", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.named("Character")], .parameter("T"), throws: true))],
                     returns: .list(.parameter("T")), generics: ["T": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -73,7 +91,8 @@ extension Bridge {
                     kind: .method, name: "dropFirst", isStatic: false,
                     parameters: [Parameter(label: nil, name: "k", type: .int, defaultValue: .literal(.int(1)))],
                     returns: .named("Substring"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -85,7 +104,8 @@ extension Bridge {
                     kind: .method, name: "drop", isStatic: false,
                     parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.named("Character")], .bool, throws: true))],
                     returns: .named("Substring"), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -97,7 +117,8 @@ extension Bridge {
                     kind: .method, name: "prefix", isStatic: false,
                     parameters: [Parameter(label: nil, name: "maxLength", type: .int)],
                     returns: .named("Substring"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -109,7 +130,8 @@ extension Bridge {
                     kind: .method, name: "prefix", isStatic: false,
                     parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.named("Character")], .bool, throws: true))],
                     returns: .named("Substring"), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -121,7 +143,8 @@ extension Bridge {
                     kind: .method, name: "split", isStatic: false,
                     parameters: [Parameter(label: "maxSplits", name: "maxSplits", type: .int, externalDefault: "Int.max"), Parameter(label: "omittingEmptySubsequences", name: "omittingEmptySubsequences", type: .bool, defaultValue: .literal(.bool(true))), Parameter(label: "whereSeparator", name: "isSeparator", type: .functionType([.named("Character")], .bool, throws: true))],
                     returns: .list(.named("Substring")), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -133,7 +156,8 @@ extension Bridge {
                     kind: .method, name: "split", isStatic: false,
                     parameters: [Parameter(label: "separator", name: "separator", type: .named("Character")), Parameter(label: "maxSplits", name: "maxSplits", type: .int, externalDefault: "Int.max"), Parameter(label: "omittingEmptySubsequences", name: "omittingEmptySubsequences", type: .bool, defaultValue: .literal(.bool(true)))],
                     returns: .list(.named("Substring")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -145,7 +169,8 @@ extension Bridge {
                     kind: .property, name: "last", isStatic: false,
                     parameters: [],
                     returns: .optional(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -157,7 +182,8 @@ extension Bridge {
                     kind: .method, name: "last", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.named("Character")], .bool, throws: true))],
                     returns: .optional(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -169,7 +195,8 @@ extension Bridge {
                     kind: .method, name: "shuffled", isStatic: false,
                     parameters: [],
                     returns: .list(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -181,7 +208,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "repeating", name: "repeatedValue", type: .named("Character")), Parameter(label: "count", name: "count", type: .int)],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = String(repeating: try bridgeCharacter(args["repeatedValue"]!), count: try Int(swishValue: args["count"]!))
@@ -192,7 +220,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "elements", type: .someSequence(.named("Character")))],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = String(try bridgeSequence(args["elements"]!).map { try bridgeCharacter($0) })
@@ -200,10 +229,128 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "append", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "newElement", type: .named("Character"))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: String = try String(swishValue: args["self"]!)
+                receiver.append(try bridgeCharacter(args["newElement"]!))
+                return .list([.nothing, receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "append", isStatic: false,
+                    parameters: [Parameter(label: "contentsOf", name: "newElements", type: .someSequence(.named("Character")))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: String = try String(swishValue: args["self"]!)
+                receiver.append(contentsOf: try bridgeSequence(args["newElements"]!).map { try bridgeCharacter($0) })
+                return .list([.nothing, receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeFirst", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "k", type: .int)],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: String = try String(swishValue: args["self"]!)
+                receiver.removeFirst(try Int(swishValue: args["k"]!))
+                return .list([.nothing, receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeFirst", isStatic: false,
+                    parameters: [],
+                    returns: .named("Character"), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: true,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: String = try String(swishValue: args["self"]!)
+                let result = receiver.removeFirst()
+                return .list([SwiftValue.make(result, as: "Character"), receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeAll", isStatic: false,
+                    parameters: [Parameter(label: "keepingCapacity", name: "keepCapacity", type: .bool, defaultValue: .literal(.bool(false)))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: String = try String(swishValue: args["self"]!)
+                receiver.removeAll(keepingCapacity: try Bool(swishValue: args["keepCapacity"]!))
+                return .list([.nothing, receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "reserveCapacity", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "n", type: .int)],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: String = try String(swishValue: args["self"]!)
+                receiver.reserveCapacity(try Int(swishValue: args["n"]!))
+                return .list([.nothing, receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "popLast", isStatic: false,
+                    parameters: [],
+                    returns: .optional(.named("Character")), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: String = try String(swishValue: args["self"]!)
+                let result = receiver.popLast()
+                return .list([(result.map { SwiftValue.make($0, as: "Character") } ?? .nothing), receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeLast", isStatic: false,
+                    parameters: [],
+                    returns: .named("Character"), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: true,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: String = try String(swishValue: args["self"]!)
+                let result = receiver.removeLast()
+                return .list([SwiftValue.make(result, as: "Character"), receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeLast", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "k", type: .int)],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: String = try String(swishValue: args["self"]!)
+                receiver.removeLast(try Int(swishValue: args["k"]!))
+                return .list([.nothing, receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "filter", isStatic: false,
                     parameters: [Parameter(label: nil, name: "isIncluded", type: .functionType([.named("Character")], .bool, throws: true))],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -212,10 +359,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "removeAll", isStatic: false,
+                    parameters: [Parameter(label: "where", name: "shouldBeRemoved", type: .functionType([.named("Character")], .bool, throws: true))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: true, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: String = try String(swishValue: args["self"]!)
+                try receiver.removeAll(where: { (a0: Character) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["shouldBeRemoved"]!)([SwiftValue.make(a0, as: "Character")])) })
+                return .list([.nothing, receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "forEach", isStatic: false,
                     parameters: [Parameter(label: nil, name: "body", type: .functionType([.named("Character")], .void, throws: true))],
                     returns: .void, generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -227,7 +388,8 @@ extension Bridge {
                     kind: .method, name: "first", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.named("Character")], .bool, throws: true))],
                     returns: .optional(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -239,7 +401,8 @@ extension Bridge {
                     kind: .method, name: "min", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.named("Character"), .named("Character")], .bool, throws: true))],
                     returns: .optional(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -251,7 +414,8 @@ extension Bridge {
                     kind: .method, name: "max", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.named("Character"), .named("Character")], .bool, throws: true))],
                     returns: .optional(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -263,7 +427,8 @@ extension Bridge {
                     kind: .method, name: "min", isStatic: false,
                     parameters: [],
                     returns: .optional(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -275,7 +440,8 @@ extension Bridge {
                     kind: .method, name: "max", isStatic: false,
                     parameters: [],
                     returns: .optional(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -287,7 +453,8 @@ extension Bridge {
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.parameter("PossiblePrefix.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.named("Character"), .parameter("PossiblePrefix.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["PossiblePrefix.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -299,7 +466,8 @@ extension Bridge {
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.named("Character")))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -311,7 +479,8 @@ extension Bridge {
                     kind: .method, name: "elementsEqual", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("OtherSequence.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.named("Character"), .parameter("OtherSequence.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["OtherSequence.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -323,7 +492,8 @@ extension Bridge {
                     kind: .method, name: "elementsEqual", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.named("Character")))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -335,7 +505,8 @@ extension Bridge {
                     kind: .method, name: "lexicographicallyPrecedes", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.named("Character"))), Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.named("Character"), .named("Character")], .bool, throws: true))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -347,7 +518,8 @@ extension Bridge {
                     kind: .method, name: "lexicographicallyPrecedes", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.named("Character")))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -359,7 +531,8 @@ extension Bridge {
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.named("Character")], .bool, throws: true))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -371,7 +544,8 @@ extension Bridge {
                     kind: .method, name: "allSatisfy", isStatic: false,
                     parameters: [Parameter(label: nil, name: "predicate", type: .functionType([.named("Character")], .bool, throws: true))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -383,7 +557,8 @@ extension Bridge {
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: nil, name: "element", type: .named("Character"))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -395,7 +570,8 @@ extension Bridge {
                     kind: .method, name: "count", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.named("Character")], .bool, throws: true))],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -407,7 +583,8 @@ extension Bridge {
                     kind: .method, name: "reduce", isStatic: false,
                     parameters: [Parameter(label: nil, name: "initialResult", type: .parameter("Result")), Parameter(label: nil, name: "nextPartialResult", type: .functionType([.parameter("Result"), .named("Character")], .parameter("Result"), throws: true))],
                     returns: .parameter("Result"), generics: ["Result": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -419,7 +596,8 @@ extension Bridge {
                     kind: .method, name: "flatMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.named("Character")], .someSequence(.parameter("SegmentOfResult.Element")), throws: true))],
                     returns: .list(.parameter("SegmentOfResult.Element")), generics: ["SegmentOfResult.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -431,7 +609,8 @@ extension Bridge {
                     kind: .method, name: "compactMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.named("Character")], .optional(.parameter("ElementOfResult")), throws: true))],
                     returns: .list(.parameter("ElementOfResult")), generics: ["ElementOfResult": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -443,7 +622,8 @@ extension Bridge {
                     kind: .method, name: "sorted", isStatic: false,
                     parameters: [],
                     returns: .list(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -455,7 +635,8 @@ extension Bridge {
                     kind: .method, name: "sorted", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.named("Character"), .named("Character")], .bool, throws: true))],
                     returns: .list(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -467,7 +648,8 @@ extension Bridge {
                     kind: .method, name: "randomElement", isStatic: false,
                     parameters: [],
                     returns: .optional(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -479,7 +661,8 @@ extension Bridge {
                     kind: .property, name: "first", isStatic: false,
                     parameters: [],
                     returns: .optional(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -491,7 +674,8 @@ extension Bridge {
                     kind: .property, name: "underestimatedCount", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -503,7 +687,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = String()
@@ -514,7 +699,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "stringLiteral", name: "value", type: .string)],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = String(stringLiteral: try String(swishValue: args["value"]!))
@@ -525,7 +711,8 @@ extension Bridge {
                     kind: .property, name: "debugDescription", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -537,7 +724,8 @@ extension Bridge {
                     kind: .method, name: "lowercased", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -549,7 +737,8 @@ extension Bridge {
                     kind: .method, name: "uppercased", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -561,7 +750,8 @@ extension Bridge {
                     kind: .property, name: "description", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -573,7 +763,8 @@ extension Bridge {
                     kind: .property, name: "count", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -585,7 +776,8 @@ extension Bridge {
                     kind: .property, name: "isContiguousUTF8", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -594,10 +786,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "makeContiguousUTF8", isStatic: false,
+                    parameters: [],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: String = try String(swishValue: args["self"]!)
+                receiver.makeContiguousUTF8()
+                return .list([.nothing, receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "repeating", name: "repeatedValue", type: .string), Parameter(label: "count", name: "count", type: .int)],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = String(repeating: try String(swishValue: args["repeatedValue"]!), count: try Int(swishValue: args["count"]!))
@@ -608,7 +814,8 @@ extension Bridge {
                     kind: .property, name: "isEmpty", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -620,7 +827,8 @@ extension Bridge {
                     kind: .method, name: "hasPrefix", isStatic: false,
                     parameters: [Parameter(label: nil, name: "prefix", type: .string)],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -632,7 +840,8 @@ extension Bridge {
                     kind: .method, name: "hasSuffix", isStatic: false,
                     parameters: [Parameter(label: nil, name: "suffix", type: .string)],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -641,10 +850,50 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "append", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "other", type: .string)],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: String = try String(swishValue: args["self"]!)
+                receiver.append(try String(swishValue: args["other"]!))
+                return .list([.nothing, receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "append", isStatic: false,
+                    parameters: [Parameter(label: "contentsOf", name: "newElements", type: .string)],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: String = try String(swishValue: args["self"]!)
+                receiver.append(contentsOf: try String(swishValue: args["newElements"]!))
+                return .list([.nothing, receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "append", isStatic: false,
+                    parameters: [Parameter(label: "contentsOf", name: "newElements", type: .named("Substring"))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: String = try String(swishValue: args["self"]!)
+                receiver.append(contentsOf: try SwiftValue.unbox(Substring.self, args["newElements"]!))
+                return .list([.nothing, receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "max", isStatic: false,
                     parameters: [Parameter(label: nil, name: "x", type: .parameter("T")), Parameter(label: nil, name: "y", type: .parameter("T"))],
                     returns: .parameter("T"), generics: ["T": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -656,7 +905,8 @@ extension Bridge {
                     kind: .method, name: "min", isStatic: false,
                     parameters: [Parameter(label: nil, name: "x", type: .parameter("T")), Parameter(label: nil, name: "y", type: .parameter("T"))],
                     returns: .parameter("T"), generics: ["T": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
@@ -668,7 +918,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "substring", type: .named("Substring"))],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = String(try SwiftValue.unbox(Substring.self, args["substring"]!))
@@ -679,7 +930,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "describing", name: "instance", type: .parameter("Subject"))],
                     returns: .string, generics: ["Subject": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = String(describing: args["instance"]!)
@@ -690,7 +942,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "reflecting", name: "subject", type: .parameter("Subject"))],
                     returns: .string, generics: ["Subject": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = String(reflecting: args["subject"]!)
@@ -708,7 +961,8 @@ extension Bridge {
                     kind: .property, name: "isContiguousUTF8", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -717,10 +971,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "makeContiguousUTF8", isStatic: false,
+                    parameters: [],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
+                receiver.makeContiguousUTF8()
+                return .list([.nothing, SwiftValue.make(receiver, as: "Substring")])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "dropLast", isStatic: false,
                     parameters: [Parameter(label: nil, name: "k", type: .int)],
                     returns: .named("Substring"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -732,7 +1000,8 @@ extension Bridge {
                     kind: .method, name: "suffix", isStatic: false,
                     parameters: [Parameter(label: nil, name: "maxLength", type: .int)],
                     returns: .named("Substring"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -744,7 +1013,8 @@ extension Bridge {
                     kind: .method, name: "map", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.named("Character")], .parameter("T"), throws: true))],
                     returns: .list(.parameter("T")), generics: ["T": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -756,7 +1026,8 @@ extension Bridge {
                     kind: .method, name: "dropFirst", isStatic: false,
                     parameters: [Parameter(label: nil, name: "k", type: .int, defaultValue: .literal(.int(1)))],
                     returns: .named("Substring"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -768,7 +1039,8 @@ extension Bridge {
                     kind: .method, name: "drop", isStatic: false,
                     parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.named("Character")], .bool, throws: true))],
                     returns: .named("Substring"), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -780,7 +1052,8 @@ extension Bridge {
                     kind: .method, name: "prefix", isStatic: false,
                     parameters: [Parameter(label: nil, name: "maxLength", type: .int)],
                     returns: .named("Substring"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -792,7 +1065,8 @@ extension Bridge {
                     kind: .method, name: "prefix", isStatic: false,
                     parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.named("Character")], .bool, throws: true))],
                     returns: .named("Substring"), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -804,7 +1078,8 @@ extension Bridge {
                     kind: .method, name: "split", isStatic: false,
                     parameters: [Parameter(label: "maxSplits", name: "maxSplits", type: .int, externalDefault: "Int.max"), Parameter(label: "omittingEmptySubsequences", name: "omittingEmptySubsequences", type: .bool, defaultValue: .literal(.bool(true))), Parameter(label: "whereSeparator", name: "isSeparator", type: .functionType([.named("Character")], .bool, throws: true))],
                     returns: .list(.named("Substring")), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -816,7 +1091,8 @@ extension Bridge {
                     kind: .method, name: "split", isStatic: false,
                     parameters: [Parameter(label: "separator", name: "separator", type: .named("Character")), Parameter(label: "maxSplits", name: "maxSplits", type: .int, externalDefault: "Int.max"), Parameter(label: "omittingEmptySubsequences", name: "omittingEmptySubsequences", type: .bool, defaultValue: .literal(.bool(true)))],
                     returns: .list(.named("Substring")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -828,7 +1104,8 @@ extension Bridge {
                     kind: .property, name: "last", isStatic: false,
                     parameters: [],
                     returns: .optional(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -840,7 +1117,8 @@ extension Bridge {
                     kind: .method, name: "last", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.named("Character")], .bool, throws: true))],
                     returns: .optional(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -852,7 +1130,8 @@ extension Bridge {
                     kind: .method, name: "shuffled", isStatic: false,
                     parameters: [],
                     returns: .list(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -864,7 +1143,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "repeating", name: "repeatedValue", type: .named("Character")), Parameter(label: "count", name: "count", type: .int)],
                     returns: .named("Substring"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Substring(repeating: try bridgeCharacter(args["repeatedValue"]!), count: try Int(swishValue: args["count"]!))
@@ -875,7 +1155,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "elements", type: .someSequence(.named("Character")))],
                     returns: .named("Substring"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Substring(try bridgeSequence(args["elements"]!).map { try bridgeCharacter($0) })
@@ -883,10 +1164,141 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "append", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "newElement", type: .named("Character"))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
+                receiver.append(try bridgeCharacter(args["newElement"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "Substring")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "append", isStatic: false,
+                    parameters: [Parameter(label: "contentsOf", name: "newElements", type: .someSequence(.named("Character")))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
+                receiver.append(contentsOf: try bridgeSequence(args["newElements"]!).map { try bridgeCharacter($0) })
+                return .list([.nothing, SwiftValue.make(receiver, as: "Substring")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeFirst", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "k", type: .int)],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
+                receiver.removeFirst(try Int(swishValue: args["k"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "Substring")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeFirst", isStatic: false,
+                    parameters: [],
+                    returns: .named("Character"), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: true,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
+                let result = receiver.removeFirst()
+                return .list([SwiftValue.make(result, as: "Character"), SwiftValue.make(receiver, as: "Substring")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeAll", isStatic: false,
+                    parameters: [Parameter(label: "keepingCapacity", name: "keepCapacity", type: .bool, defaultValue: .literal(.bool(false)))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
+                receiver.removeAll(keepingCapacity: try Bool(swishValue: args["keepCapacity"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "Substring")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "reserveCapacity", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "n", type: .int)],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
+                receiver.reserveCapacity(try Int(swishValue: args["n"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "Substring")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "popLast", isStatic: false,
+                    parameters: [],
+                    returns: .optional(.named("Character")), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
+                let result = receiver.popLast()
+                return .list([(result.map { SwiftValue.make($0, as: "Character") } ?? .nothing), SwiftValue.make(receiver, as: "Substring")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeLast", isStatic: false,
+                    parameters: [],
+                    returns: .named("Character"), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: true,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
+                let result = receiver.removeLast()
+                return .list([SwiftValue.make(result, as: "Character"), SwiftValue.make(receiver, as: "Substring")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeLast", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "k", type: .int)],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
+                receiver.removeLast(try Int(swishValue: args["k"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "Substring")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeAll", isStatic: false,
+                    parameters: [Parameter(label: "where", name: "shouldBeRemoved", type: .functionType([.named("Character")], .bool, throws: true))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: true, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
+                try receiver.removeAll(where: { (a0: Character) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["shouldBeRemoved"]!)([SwiftValue.make(a0, as: "Character")])) })
+                return .list([.nothing, SwiftValue.make(receiver, as: "Substring")])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "forEach", isStatic: false,
                     parameters: [Parameter(label: nil, name: "body", type: .functionType([.named("Character")], .void, throws: true))],
                     returns: .void, generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -898,7 +1310,8 @@ extension Bridge {
                     kind: .method, name: "first", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.named("Character")], .bool, throws: true))],
                     returns: .optional(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -910,7 +1323,8 @@ extension Bridge {
                     kind: .method, name: "min", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.named("Character"), .named("Character")], .bool, throws: true))],
                     returns: .optional(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -922,7 +1336,8 @@ extension Bridge {
                     kind: .method, name: "max", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.named("Character"), .named("Character")], .bool, throws: true))],
                     returns: .optional(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -934,7 +1349,8 @@ extension Bridge {
                     kind: .method, name: "min", isStatic: false,
                     parameters: [],
                     returns: .optional(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -946,7 +1362,8 @@ extension Bridge {
                     kind: .method, name: "max", isStatic: false,
                     parameters: [],
                     returns: .optional(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -958,7 +1375,8 @@ extension Bridge {
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.parameter("PossiblePrefix.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.named("Character"), .parameter("PossiblePrefix.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["PossiblePrefix.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -970,7 +1388,8 @@ extension Bridge {
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.named("Character")))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -982,7 +1401,8 @@ extension Bridge {
                     kind: .method, name: "elementsEqual", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("OtherSequence.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.named("Character"), .parameter("OtherSequence.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["OtherSequence.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -994,7 +1414,8 @@ extension Bridge {
                     kind: .method, name: "elementsEqual", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.named("Character")))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1006,7 +1427,8 @@ extension Bridge {
                     kind: .method, name: "lexicographicallyPrecedes", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.named("Character"))), Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.named("Character"), .named("Character")], .bool, throws: true))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1018,7 +1440,8 @@ extension Bridge {
                     kind: .method, name: "lexicographicallyPrecedes", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.named("Character")))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1030,7 +1453,8 @@ extension Bridge {
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.named("Character")], .bool, throws: true))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1042,7 +1466,8 @@ extension Bridge {
                     kind: .method, name: "allSatisfy", isStatic: false,
                     parameters: [Parameter(label: nil, name: "predicate", type: .functionType([.named("Character")], .bool, throws: true))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1054,7 +1479,8 @@ extension Bridge {
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: nil, name: "element", type: .named("Character"))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1066,7 +1492,8 @@ extension Bridge {
                     kind: .method, name: "count", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.named("Character")], .bool, throws: true))],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1078,7 +1505,8 @@ extension Bridge {
                     kind: .method, name: "reduce", isStatic: false,
                     parameters: [Parameter(label: nil, name: "initialResult", type: .parameter("Result")), Parameter(label: nil, name: "nextPartialResult", type: .functionType([.parameter("Result"), .named("Character")], .parameter("Result"), throws: true))],
                     returns: .parameter("Result"), generics: ["Result": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1090,7 +1518,8 @@ extension Bridge {
                     kind: .method, name: "flatMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.named("Character")], .someSequence(.parameter("SegmentOfResult.Element")), throws: true))],
                     returns: .list(.parameter("SegmentOfResult.Element")), generics: ["SegmentOfResult.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1102,7 +1531,8 @@ extension Bridge {
                     kind: .method, name: "compactMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.named("Character")], .optional(.parameter("ElementOfResult")), throws: true))],
                     returns: .list(.parameter("ElementOfResult")), generics: ["ElementOfResult": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1114,7 +1544,8 @@ extension Bridge {
                     kind: .method, name: "sorted", isStatic: false,
                     parameters: [],
                     returns: .list(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1126,7 +1557,8 @@ extension Bridge {
                     kind: .method, name: "sorted", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.named("Character"), .named("Character")], .bool, throws: true))],
                     returns: .list(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1138,7 +1570,8 @@ extension Bridge {
                     kind: .method, name: "randomElement", isStatic: false,
                     parameters: [],
                     returns: .optional(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1150,7 +1583,8 @@ extension Bridge {
                     kind: .property, name: "isEmpty", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1162,7 +1596,8 @@ extension Bridge {
                     kind: .property, name: "first", isStatic: false,
                     parameters: [],
                     returns: .optional(.named("Character")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1174,7 +1609,8 @@ extension Bridge {
                     kind: .property, name: "underestimatedCount", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1186,7 +1622,8 @@ extension Bridge {
                     kind: .property, name: "count", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1198,7 +1635,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [],
                     returns: .named("Substring"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Substring()
@@ -1209,7 +1647,8 @@ extension Bridge {
                     kind: .property, name: "base", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1221,7 +1660,8 @@ extension Bridge {
                     kind: .property, name: "hashValue", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1233,7 +1673,8 @@ extension Bridge {
                     kind: .property, name: "description", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1245,7 +1686,8 @@ extension Bridge {
                     kind: .property, name: "debugDescription", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1257,7 +1699,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "content", type: .string)],
                     returns: .named("Substring"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Substring(try String(swishValue: args["content"]!))
@@ -1268,7 +1711,8 @@ extension Bridge {
                     kind: .method, name: "lowercased", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1280,7 +1724,8 @@ extension Bridge {
                     kind: .method, name: "uppercased", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1292,7 +1737,8 @@ extension Bridge {
                     kind: .method, name: "filter", isStatic: false,
                     parameters: [Parameter(label: nil, name: "isIncluded", type: .functionType([.named("Character")], .bool, throws: true))],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
@@ -1301,10 +1747,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "write", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "other", type: .string)],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
+                receiver.write(try String(swishValue: args["other"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "Substring")])
+                    }
+                ),
+                BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "unicodeScalarLiteral", name: "value", type: .string)],
                     returns: .named("Substring"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Substring(unicodeScalarLiteral: try String(swishValue: args["value"]!))
@@ -1315,7 +1775,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "extendedGraphemeClusterLiteral", name: "value", type: .string)],
                     returns: .named("Substring"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Substring(extendedGraphemeClusterLiteral: try String(swishValue: args["value"]!))
@@ -1326,7 +1787,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "stringLiteral", name: "value", type: .string)],
                     returns: .named("Substring"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Substring(stringLiteral: try String(swishValue: args["value"]!))
@@ -1344,7 +1806,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "extendedGraphemeClusterLiteral", name: "value", type: .named("Character"))],
                     returns: .named("Character"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Character(extendedGraphemeClusterLiteral: try bridgeCharacter(args["value"]!))
@@ -1355,7 +1818,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "s", type: .string)],
                     returns: .named("Character"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Character(try String(swishValue: args["s"]!))
@@ -1366,7 +1830,8 @@ extension Bridge {
                     kind: .property, name: "description", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Character = try bridgeCharacter(args["self"]!)
@@ -1378,7 +1843,8 @@ extension Bridge {
                     kind: .property, name: "debugDescription", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Character = try bridgeCharacter(args["self"]!)
@@ -1390,7 +1856,8 @@ extension Bridge {
                     kind: .property, name: "hashValue", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Character = try bridgeCharacter(args["self"]!)
@@ -1402,7 +1869,8 @@ extension Bridge {
                     kind: .property, name: "isASCII", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Character = try bridgeCharacter(args["self"]!)
@@ -1414,7 +1882,8 @@ extension Bridge {
                     kind: .property, name: "isWhitespace", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Character = try bridgeCharacter(args["self"]!)
@@ -1426,7 +1895,8 @@ extension Bridge {
                     kind: .property, name: "isNewline", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Character = try bridgeCharacter(args["self"]!)
@@ -1438,7 +1908,8 @@ extension Bridge {
                     kind: .property, name: "isNumber", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Character = try bridgeCharacter(args["self"]!)
@@ -1450,7 +1921,8 @@ extension Bridge {
                     kind: .property, name: "isWholeNumber", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Character = try bridgeCharacter(args["self"]!)
@@ -1462,7 +1934,8 @@ extension Bridge {
                     kind: .property, name: "wholeNumberValue", isStatic: false,
                     parameters: [],
                     returns: .optional(.int), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Character = try bridgeCharacter(args["self"]!)
@@ -1474,7 +1947,8 @@ extension Bridge {
                     kind: .property, name: "isHexDigit", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Character = try bridgeCharacter(args["self"]!)
@@ -1486,7 +1960,8 @@ extension Bridge {
                     kind: .property, name: "hexDigitValue", isStatic: false,
                     parameters: [],
                     returns: .optional(.int), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Character = try bridgeCharacter(args["self"]!)
@@ -1498,7 +1973,8 @@ extension Bridge {
                     kind: .property, name: "isLetter", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Character = try bridgeCharacter(args["self"]!)
@@ -1510,7 +1986,8 @@ extension Bridge {
                     kind: .method, name: "uppercased", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Character = try bridgeCharacter(args["self"]!)
@@ -1522,7 +1999,8 @@ extension Bridge {
                     kind: .method, name: "lowercased", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Character = try bridgeCharacter(args["self"]!)
@@ -1534,7 +2012,8 @@ extension Bridge {
                     kind: .property, name: "isUppercase", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Character = try bridgeCharacter(args["self"]!)
@@ -1546,7 +2025,8 @@ extension Bridge {
                     kind: .property, name: "isLowercase", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Character = try bridgeCharacter(args["self"]!)
@@ -1558,7 +2038,8 @@ extension Bridge {
                     kind: .property, name: "isCased", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Character = try bridgeCharacter(args["self"]!)
@@ -1570,7 +2051,8 @@ extension Bridge {
                     kind: .property, name: "isSymbol", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Character = try bridgeCharacter(args["self"]!)
@@ -1582,7 +2064,8 @@ extension Bridge {
                     kind: .property, name: "isMathSymbol", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Character = try bridgeCharacter(args["self"]!)
@@ -1594,7 +2077,8 @@ extension Bridge {
                     kind: .property, name: "isCurrencySymbol", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Character = try bridgeCharacter(args["self"]!)
@@ -1606,7 +2090,8 @@ extension Bridge {
                     kind: .property, name: "isPunctuation", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Character = try bridgeCharacter(args["self"]!)
@@ -1622,10 +2107,24 @@ extension Bridge {
             associatedTypes: ["IntegerLiteralType": .int, "SIMDMaskScalar": .int, "Stride": .int],
             members: [
                 BridgedMember(
+                    kind: .method, name: "negate", isStatic: false,
+                    parameters: [],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Int = try Int(swishValue: args["self"]!)
+                receiver.negate()
+                return .list([.nothing, receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Int()
@@ -1636,7 +2135,8 @@ extension Bridge {
                     kind: .method, name: "quotientAndRemainder", isStatic: false,
                     parameters: [Parameter(label: "dividingBy", name: "rhs", type: .int)],
                     returns: .tuple([.init(label: "quotient", type: .int), .init(label: "remainder", type: .int)]), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Int = try Int(swishValue: args["self"]!)
@@ -1648,7 +2148,8 @@ extension Bridge {
                     kind: .property, name: "description", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Int = try Int(swishValue: args["self"]!)
@@ -1660,7 +2161,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "description", type: .string)],
                     returns: .optional(.int), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Int(try String(swishValue: args["description"]!))
@@ -1671,7 +2173,8 @@ extension Bridge {
                     kind: .property, name: "zero", isStatic: true,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Int.zero
@@ -1682,7 +2185,8 @@ extension Bridge {
                     kind: .property, name: "bitWidth", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Int = try Int(swishValue: args["self"]!)
@@ -1694,7 +2198,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "littleEndian", name: "value", type: .int)],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Int(littleEndian: try Int(swishValue: args["value"]!))
@@ -1705,7 +2210,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "bigEndian", name: "value", type: .int)],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Int(bigEndian: try Int(swishValue: args["value"]!))
@@ -1716,7 +2222,8 @@ extension Bridge {
                     kind: .property, name: "littleEndian", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Int = try Int(swishValue: args["self"]!)
@@ -1728,7 +2235,8 @@ extension Bridge {
                     kind: .property, name: "bigEndian", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Int = try Int(swishValue: args["self"]!)
@@ -1740,7 +2248,8 @@ extension Bridge {
                     kind: .method, name: "random", isStatic: true,
                     parameters: [Parameter(label: "in", name: "range", type: .generic("Range", [.int]))],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Int.random(in: try bridgeRange(args["range"]!) { try Int(swishValue: $0) })
@@ -1751,7 +2260,8 @@ extension Bridge {
                     kind: .method, name: "random", isStatic: true,
                     parameters: [Parameter(label: "in", name: "range", type: .generic("ClosedRange", [.int]))],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Int.random(in: try bridgeClosedRange(args["range"]!) { try Int(swishValue: $0) })
@@ -1762,7 +2272,8 @@ extension Bridge {
                     kind: .property, name: "isSigned", isStatic: true,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Int.isSigned
@@ -1773,7 +2284,8 @@ extension Bridge {
                     kind: .property, name: "max", isStatic: true,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Int.max
@@ -1784,7 +2296,8 @@ extension Bridge {
                     kind: .property, name: "min", isStatic: true,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Int.min
@@ -1795,7 +2308,8 @@ extension Bridge {
                     kind: .method, name: "isMultiple", isStatic: false,
                     parameters: [Parameter(label: "of", name: "other", type: .int)],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Int = try Int(swishValue: args["self"]!)
@@ -1807,7 +2321,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "source", type: .double)],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Int(try Double(swishValue: args["source"]!))
@@ -1818,7 +2333,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "exactly", name: "source", type: .double)],
                     returns: .optional(.int), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Int(exactly: try Double(swishValue: args["source"]!))
@@ -1829,7 +2345,8 @@ extension Bridge {
                     kind: .method, name: "addingReportingOverflow", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .int)],
                     returns: .tuple([.init(label: "partialValue", type: .int), .init(label: "overflow", type: .bool)]), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Int = try Int(swishValue: args["self"]!)
@@ -1841,7 +2358,8 @@ extension Bridge {
                     kind: .method, name: "subtractingReportingOverflow", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .int)],
                     returns: .tuple([.init(label: "partialValue", type: .int), .init(label: "overflow", type: .bool)]), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Int = try Int(swishValue: args["self"]!)
@@ -1853,7 +2371,8 @@ extension Bridge {
                     kind: .method, name: "multipliedReportingOverflow", isStatic: false,
                     parameters: [Parameter(label: "by", name: "other", type: .int)],
                     returns: .tuple([.init(label: "partialValue", type: .int), .init(label: "overflow", type: .bool)]), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Int = try Int(swishValue: args["self"]!)
@@ -1865,7 +2384,8 @@ extension Bridge {
                     kind: .method, name: "dividedReportingOverflow", isStatic: false,
                     parameters: [Parameter(label: "by", name: "other", type: .int)],
                     returns: .tuple([.init(label: "partialValue", type: .int), .init(label: "overflow", type: .bool)]), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Int = try Int(swishValue: args["self"]!)
@@ -1877,7 +2397,8 @@ extension Bridge {
                     kind: .method, name: "remainderReportingOverflow", isStatic: false,
                     parameters: [Parameter(label: "dividingBy", name: "other", type: .int)],
                     returns: .tuple([.init(label: "partialValue", type: .int), .init(label: "overflow", type: .bool)]), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Int = try Int(swishValue: args["self"]!)
@@ -1889,7 +2410,8 @@ extension Bridge {
                     kind: .property, name: "bitWidth", isStatic: true,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Int.bitWidth
@@ -1900,7 +2422,8 @@ extension Bridge {
                     kind: .property, name: "leadingZeroBitCount", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Int = try Int(swishValue: args["self"]!)
@@ -1912,7 +2435,8 @@ extension Bridge {
                     kind: .property, name: "trailingZeroBitCount", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Int = try Int(swishValue: args["self"]!)
@@ -1924,7 +2448,8 @@ extension Bridge {
                     kind: .property, name: "nonzeroBitCount", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Int = try Int(swishValue: args["self"]!)
@@ -1936,7 +2461,8 @@ extension Bridge {
                     kind: .property, name: "byteSwapped", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Int = try Int(swishValue: args["self"]!)
@@ -1948,7 +2474,8 @@ extension Bridge {
                     kind: .method, name: "signum", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Int = try Int(swishValue: args["self"]!)
@@ -1960,7 +2487,8 @@ extension Bridge {
                     kind: .property, name: "hashValue", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Int = try Int(swishValue: args["self"]!)
@@ -1972,7 +2500,8 @@ extension Bridge {
                     kind: .method, name: "distance", isStatic: false,
                     parameters: [Parameter(label: "to", name: "other", type: .int)],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Int = try Int(swishValue: args["self"]!)
@@ -1984,7 +2513,8 @@ extension Bridge {
                     kind: .method, name: "advanced", isStatic: false,
                     parameters: [Parameter(label: "by", name: "n", type: .int)],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Int = try Int(swishValue: args["self"]!)
@@ -2003,7 +2533,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "text", type: .named("Substring"))],
                     returns: .optional(.double), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double(try SwiftValue.unbox(Substring.self, args["text"]!))
@@ -2014,7 +2545,8 @@ extension Bridge {
                     kind: .property, name: "ulpOfOne", isStatic: true,
                     parameters: [],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double.ulpOfOne
@@ -2025,7 +2557,8 @@ extension Bridge {
                     kind: .method, name: "rounded", isStatic: false,
                     parameters: [],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2034,10 +2567,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "round", isStatic: false,
+                    parameters: [],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Double = try Double(swishValue: args["self"]!)
+                receiver.round()
+                return .list([.nothing, receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
                     kind: .property, name: "nextDown", isStatic: false,
                     parameters: [],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2049,7 +2596,8 @@ extension Bridge {
                     kind: .method, name: "truncatingRemainder", isStatic: false,
                     parameters: [Parameter(label: "dividingBy", name: "other", type: .double)],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2061,7 +2609,8 @@ extension Bridge {
                     kind: .method, name: "remainder", isStatic: false,
                     parameters: [Parameter(label: "dividingBy", name: "other", type: .double)],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2073,7 +2622,8 @@ extension Bridge {
                     kind: .method, name: "squareRoot", isStatic: false,
                     parameters: [],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2085,7 +2635,8 @@ extension Bridge {
                     kind: .method, name: "addingProduct", isStatic: false,
                     parameters: [Parameter(label: nil, name: "lhs", type: .double), Parameter(label: nil, name: "rhs", type: .double)],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2097,7 +2648,8 @@ extension Bridge {
                     kind: .method, name: "minimum", isStatic: true,
                     parameters: [Parameter(label: nil, name: "x", type: .double), Parameter(label: nil, name: "y", type: .double)],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double.minimum(try Double(swishValue: args["x"]!), try Double(swishValue: args["y"]!))
@@ -2108,7 +2660,8 @@ extension Bridge {
                     kind: .method, name: "maximum", isStatic: true,
                     parameters: [Parameter(label: nil, name: "x", type: .double), Parameter(label: nil, name: "y", type: .double)],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double.maximum(try Double(swishValue: args["x"]!), try Double(swishValue: args["y"]!))
@@ -2119,7 +2672,8 @@ extension Bridge {
                     kind: .method, name: "minimumMagnitude", isStatic: true,
                     parameters: [Parameter(label: nil, name: "x", type: .double), Parameter(label: nil, name: "y", type: .double)],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double.minimumMagnitude(try Double(swishValue: args["x"]!), try Double(swishValue: args["y"]!))
@@ -2130,7 +2684,8 @@ extension Bridge {
                     kind: .method, name: "maximumMagnitude", isStatic: true,
                     parameters: [Parameter(label: nil, name: "x", type: .double), Parameter(label: nil, name: "y", type: .double)],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double.maximumMagnitude(try Double(swishValue: args["x"]!), try Double(swishValue: args["y"]!))
@@ -2141,7 +2696,8 @@ extension Bridge {
                     kind: .property, name: "radix", isStatic: true,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double.radix
@@ -2152,7 +2708,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "signOf", name: "signOf", type: .double), Parameter(label: "magnitudeOf", name: "magnitudeOf", type: .double)],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double(signOf: try Double(swishValue: args["signOf"]!), magnitudeOf: try Double(swishValue: args["magnitudeOf"]!))
@@ -2163,7 +2720,8 @@ extension Bridge {
                     kind: .method, name: "isTotallyOrdered", isStatic: false,
                     parameters: [Parameter(label: "belowOrEqualTo", name: "other", type: .double)],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2175,7 +2733,8 @@ extension Bridge {
                     kind: .property, name: "zero", isStatic: true,
                     parameters: [],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double.zero
@@ -2183,10 +2742,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "negate", isStatic: false,
+                    parameters: [],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Double = try Double(swishValue: args["self"]!)
+                receiver.negate()
+                return .list([.nothing, receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double()
@@ -2197,7 +2770,8 @@ extension Bridge {
                     kind: .property, name: "description", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2209,7 +2783,8 @@ extension Bridge {
                     kind: .property, name: "debugDescription", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2221,7 +2796,8 @@ extension Bridge {
                     kind: .property, name: "exponentBitCount", isStatic: true,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double.exponentBitCount
@@ -2232,7 +2808,8 @@ extension Bridge {
                     kind: .property, name: "significandBitCount", isStatic: true,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double.significandBitCount
@@ -2243,7 +2820,8 @@ extension Bridge {
                     kind: .property, name: "isCanonical", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2255,7 +2833,8 @@ extension Bridge {
                     kind: .property, name: "infinity", isStatic: true,
                     parameters: [],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double.infinity
@@ -2266,7 +2845,8 @@ extension Bridge {
                     kind: .property, name: "nan", isStatic: true,
                     parameters: [],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double.nan
@@ -2277,7 +2857,8 @@ extension Bridge {
                     kind: .property, name: "signalingNaN", isStatic: true,
                     parameters: [],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double.signalingNaN
@@ -2288,7 +2869,8 @@ extension Bridge {
                     kind: .property, name: "greatestFiniteMagnitude", isStatic: true,
                     parameters: [],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double.greatestFiniteMagnitude
@@ -2299,7 +2881,8 @@ extension Bridge {
                     kind: .property, name: "pi", isStatic: true,
                     parameters: [],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double.pi
@@ -2310,7 +2893,8 @@ extension Bridge {
                     kind: .property, name: "ulp", isStatic: false,
                     parameters: [],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2322,7 +2906,8 @@ extension Bridge {
                     kind: .property, name: "leastNormalMagnitude", isStatic: true,
                     parameters: [],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double.leastNormalMagnitude
@@ -2333,7 +2918,8 @@ extension Bridge {
                     kind: .property, name: "leastNonzeroMagnitude", isStatic: true,
                     parameters: [],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double.leastNonzeroMagnitude
@@ -2344,7 +2930,8 @@ extension Bridge {
                     kind: .property, name: "exponent", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2356,7 +2943,8 @@ extension Bridge {
                     kind: .property, name: "significand", isStatic: false,
                     parameters: [],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2368,7 +2956,8 @@ extension Bridge {
                     kind: .property, name: "nextUp", isStatic: false,
                     parameters: [],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2377,10 +2966,63 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "formRemainder", isStatic: false,
+                    parameters: [Parameter(label: "dividingBy", name: "other", type: .double)],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Double = try Double(swishValue: args["self"]!)
+                receiver.formRemainder(dividingBy: try Double(swishValue: args["other"]!))
+                return .list([.nothing, receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "formTruncatingRemainder", isStatic: false,
+                    parameters: [Parameter(label: "dividingBy", name: "other", type: .double)],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Double = try Double(swishValue: args["self"]!)
+                receiver.formTruncatingRemainder(dividingBy: try Double(swishValue: args["other"]!))
+                return .list([.nothing, receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "formSquareRoot", isStatic: false,
+                    parameters: [],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Double = try Double(swishValue: args["self"]!)
+                receiver.formSquareRoot()
+                return .list([.nothing, receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "addProduct", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "lhs", type: .double), Parameter(label: nil, name: "rhs", type: .double)],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Double = try Double(swishValue: args["self"]!)
+                receiver.addProduct(try Double(swishValue: args["lhs"]!), try Double(swishValue: args["rhs"]!))
+                return .list([.nothing, receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "isEqual", isStatic: false,
                     parameters: [Parameter(label: "to", name: "other", type: .double)],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2392,7 +3034,8 @@ extension Bridge {
                     kind: .method, name: "isLess", isStatic: false,
                     parameters: [Parameter(label: "than", name: "other", type: .double)],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2404,7 +3047,8 @@ extension Bridge {
                     kind: .method, name: "isLessThanOrEqualTo", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .double)],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2416,7 +3060,8 @@ extension Bridge {
                     kind: .property, name: "isNormal", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2428,7 +3073,8 @@ extension Bridge {
                     kind: .property, name: "isFinite", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2440,7 +3086,8 @@ extension Bridge {
                     kind: .property, name: "isZero", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2452,7 +3099,8 @@ extension Bridge {
                     kind: .property, name: "isSubnormal", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2464,7 +3112,8 @@ extension Bridge {
                     kind: .property, name: "isInfinite", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2476,7 +3125,8 @@ extension Bridge {
                     kind: .property, name: "isNaN", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2488,7 +3138,8 @@ extension Bridge {
                     kind: .property, name: "isSignalingNaN", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2500,7 +3151,8 @@ extension Bridge {
                     kind: .property, name: "binade", isStatic: false,
                     parameters: [],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2512,7 +3164,8 @@ extension Bridge {
                     kind: .property, name: "significandWidth", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2524,7 +3177,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "floatLiteral", name: "value", type: .double)],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double(floatLiteral: try Double(swishValue: args["value"]!))
@@ -2535,7 +3189,8 @@ extension Bridge {
                     kind: .property, name: "hashValue", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2547,7 +3202,8 @@ extension Bridge {
                     kind: .property, name: "magnitude", isStatic: false,
                     parameters: [],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2559,7 +3215,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "v", type: .int)],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double(try Int(swishValue: args["v"]!))
@@ -2570,7 +3227,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "other", type: .double)],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double(try Double(swishValue: args["other"]!))
@@ -2581,7 +3239,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "exactly", name: "other", type: .double)],
                     returns: .optional(.double), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Double(exactly: try Double(swishValue: args["other"]!))
@@ -2592,7 +3251,8 @@ extension Bridge {
                     kind: .method, name: "distance", isStatic: false,
                     parameters: [Parameter(label: "to", name: "other", type: .double)],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2604,7 +3264,8 @@ extension Bridge {
                     kind: .method, name: "advanced", isStatic: false,
                     parameters: [Parameter(label: "by", name: "amount", type: .double)],
                     returns: .double, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Double = try Double(swishValue: args["self"]!)
@@ -2623,7 +3284,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Bool()
@@ -2634,7 +3296,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "value", type: .bool)],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Bool(try Bool(swishValue: args["value"]!))
@@ -2645,7 +3308,8 @@ extension Bridge {
                     kind: .method, name: "random", isStatic: true,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Bool.random()
@@ -2656,7 +3320,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "booleanLiteral", name: "value", type: .bool)],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Bool(booleanLiteral: try Bool(swishValue: args["value"]!))
@@ -2667,7 +3332,8 @@ extension Bridge {
                     kind: .property, name: "description", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Bool = try Bool(swishValue: args["self"]!)
@@ -2679,7 +3345,8 @@ extension Bridge {
                     kind: .property, name: "hashValue", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Bool = try Bool(swishValue: args["self"]!)
@@ -2691,11 +3358,25 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "description", type: .string)],
                     returns: .optional(.bool), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Bool(try String(swishValue: args["description"]!))
                 return (result.map { $0.swishValue } ?? .nothing)
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "toggle", isStatic: false,
+                    parameters: [],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Bool = try Bool(swishValue: args["self"]!)
+                receiver.toggle()
+                return .list([.nothing, receiver.swishValue])
                     }
                 ),
             ]
@@ -2709,7 +3390,8 @@ extension Bridge {
                     kind: .method, name: "filter", isStatic: false,
                     parameters: [Parameter(label: nil, name: "isIncluded", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .list(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2721,7 +3403,8 @@ extension Bridge {
                     kind: .method, name: "dropLast", isStatic: false,
                     parameters: [Parameter(label: nil, name: "k", type: .int)],
                     returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2733,7 +3416,8 @@ extension Bridge {
                     kind: .method, name: "suffix", isStatic: false,
                     parameters: [Parameter(label: nil, name: "maxLength", type: .int)],
                     returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2745,7 +3429,8 @@ extension Bridge {
                     kind: .method, name: "map", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.parameter("Element")], .parameter("T"), throws: true))],
                     returns: .list(.parameter("T")), generics: ["Element": [], "T": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2757,7 +3442,8 @@ extension Bridge {
                     kind: .method, name: "dropFirst", isStatic: false,
                     parameters: [Parameter(label: nil, name: "k", type: .int, defaultValue: .literal(.int(1)))],
                     returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2769,7 +3455,8 @@ extension Bridge {
                     kind: .method, name: "drop", isStatic: false,
                     parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2781,7 +3468,8 @@ extension Bridge {
                     kind: .method, name: "prefix", isStatic: false,
                     parameters: [Parameter(label: nil, name: "maxLength", type: .int)],
                     returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2793,7 +3481,8 @@ extension Bridge {
                     kind: .method, name: "prefix", isStatic: false,
                     parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2805,7 +3494,8 @@ extension Bridge {
                     kind: .method, name: "prefix", isStatic: false,
                     parameters: [Parameter(label: "upTo", name: "end", type: .int)],
                     returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2817,7 +3507,8 @@ extension Bridge {
                     kind: .method, name: "suffix", isStatic: false,
                     parameters: [Parameter(label: "from", name: "start", type: .int)],
                     returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2829,7 +3520,8 @@ extension Bridge {
                     kind: .method, name: "prefix", isStatic: false,
                     parameters: [Parameter(label: "through", name: "position", type: .int)],
                     returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2841,7 +3533,8 @@ extension Bridge {
                     kind: .method, name: "split", isStatic: false,
                     parameters: [Parameter(label: "maxSplits", name: "maxSplits", type: .int, externalDefault: "Int.max"), Parameter(label: "omittingEmptySubsequences", name: "omittingEmptySubsequences", type: .bool, defaultValue: .literal(.bool(true))), Parameter(label: "whereSeparator", name: "isSeparator", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .list(.generic("ArraySlice", [.parameter("Element")])), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2853,7 +3546,8 @@ extension Bridge {
                     kind: .property, name: "last", isStatic: false,
                     parameters: [],
                     returns: .optional(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2865,7 +3559,8 @@ extension Bridge {
                     kind: .method, name: "firstIndex", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .optional(.int), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2877,7 +3572,8 @@ extension Bridge {
                     kind: .method, name: "last", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .optional(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2889,7 +3585,8 @@ extension Bridge {
                     kind: .method, name: "lastIndex", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .optional(.int), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2898,10 +3595,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "partition", isStatic: false,
+                    parameters: [Parameter(label: "by", name: "belongsInSecondPartition", type: .functionType([.parameter("Element")], .bool, throws: true))],
+                    returns: .int, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: true, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value] = try bridgeList(args["self"]!)
+                let result = try receiver.partition(by: { (a0: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["belongsInSecondPartition"]!)([a0])) })
+                return .list([result.swishValue, .list(receiver)])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "shuffled", isStatic: false,
                     parameters: [],
                     returns: .list(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2910,10 +3621,37 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "shuffle", isStatic: false,
+                    parameters: [],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value] = try bridgeList(args["self"]!)
+                receiver.shuffle()
+                return .list([.nothing, .list(receiver)])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "swapAt", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "i", type: .int), Parameter(label: nil, name: "j", type: .int)],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value] = try bridgeList(args["self"]!)
+                receiver.swapAt(try Int(swishValue: args["i"]!), try Int(swishValue: args["j"]!))
+                return .list([.nothing, .list(receiver)])
+                    }
+                ),
+                BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "repeating", name: "repeatedValue", type: .parameter("Element")), Parameter(label: "count", name: "count", type: .int)],
                     returns: .list(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = [Value](repeating: args["repeatedValue"]!, count: try Int(swishValue: args["count"]!))
@@ -2924,7 +3662,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "elements", type: .someSequence(.parameter("Element")))],
                     returns: .list(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = [Value](try bridgeSequence(args["elements"]!))
@@ -2932,10 +3671,193 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "append", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "newElement", type: .parameter("Element"))],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value] = try bridgeList(args["self"]!)
+                receiver.append(args["newElement"]!)
+                return .list([.nothing, .list(receiver)])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "append", isStatic: false,
+                    parameters: [Parameter(label: "contentsOf", name: "newElements", type: .someSequence(.parameter("Element")))],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value] = try bridgeList(args["self"]!)
+                receiver.append(contentsOf: try bridgeSequence(args["newElements"]!))
+                return .list([.nothing, .list(receiver)])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "insert", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "newElement", type: .parameter("Element")), Parameter(label: "at", name: "i", type: .int)],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value] = try bridgeList(args["self"]!)
+                receiver.insert(args["newElement"]!, at: try Int(swishValue: args["i"]!))
+                return .list([.nothing, .list(receiver)])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "remove", isStatic: false,
+                    parameters: [Parameter(label: "at", name: "position", type: .int)],
+                    returns: .parameter("Element"), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: true,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value] = try bridgeList(args["self"]!)
+                let result = receiver.remove(at: try Int(swishValue: args["position"]!))
+                return .list([result, .list(receiver)])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeSubrange", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "bounds", type: .generic("Range", [.int]))],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value] = try bridgeList(args["self"]!)
+                receiver.removeSubrange(try bridgeRange(args["bounds"]!) { try Int(swishValue: $0) })
+                return .list([.nothing, .list(receiver)])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeFirst", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "k", type: .int)],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value] = try bridgeList(args["self"]!)
+                receiver.removeFirst(try Int(swishValue: args["k"]!))
+                return .list([.nothing, .list(receiver)])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeFirst", isStatic: false,
+                    parameters: [],
+                    returns: .parameter("Element"), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: true,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value] = try bridgeList(args["self"]!)
+                let result = receiver.removeFirst()
+                return .list([result, .list(receiver)])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeAll", isStatic: false,
+                    parameters: [Parameter(label: "keepingCapacity", name: "keepCapacity", type: .bool, defaultValue: .literal(.bool(false)))],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value] = try bridgeList(args["self"]!)
+                receiver.removeAll(keepingCapacity: try Bool(swishValue: args["keepCapacity"]!))
+                return .list([.nothing, .list(receiver)])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "reserveCapacity", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "n", type: .int)],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value] = try bridgeList(args["self"]!)
+                receiver.reserveCapacity(try Int(swishValue: args["n"]!))
+                return .list([.nothing, .list(receiver)])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "popLast", isStatic: false,
+                    parameters: [],
+                    returns: .optional(.parameter("Element")), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value] = try bridgeList(args["self"]!)
+                let result = receiver.popLast()
+                return .list([(result.map { $0 } ?? .nothing), .list(receiver)])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeLast", isStatic: false,
+                    parameters: [],
+                    returns: .parameter("Element"), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: true,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value] = try bridgeList(args["self"]!)
+                let result = receiver.removeLast()
+                return .list([result, .list(receiver)])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeLast", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "k", type: .int)],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value] = try bridgeList(args["self"]!)
+                receiver.removeLast(try Int(swishValue: args["k"]!))
+                return .list([.nothing, .list(receiver)])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeAll", isStatic: false,
+                    parameters: [Parameter(label: "where", name: "shouldBeRemoved", type: .functionType([.parameter("Element")], .bool, throws: true))],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: true, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value] = try bridgeList(args["self"]!)
+                try receiver.removeAll(where: { (a0: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["shouldBeRemoved"]!)([a0])) })
+                return .list([.nothing, .list(receiver)])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "reverse", isStatic: false,
+                    parameters: [],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value] = try bridgeList(args["self"]!)
+                receiver.reverse()
+                return .list([.nothing, .list(receiver)])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "forEach", isStatic: false,
                     parameters: [Parameter(label: nil, name: "body", type: .functionType([.parameter("Element")], .void, throws: true))],
                     returns: .void, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2947,7 +3869,8 @@ extension Bridge {
                     kind: .method, name: "first", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .optional(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2959,7 +3882,8 @@ extension Bridge {
                     kind: .method, name: "min", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.parameter("Element"), .parameter("Element")], .bool, throws: true))],
                     returns: .optional(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2971,7 +3895,8 @@ extension Bridge {
                     kind: .method, name: "max", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.parameter("Element"), .parameter("Element")], .bool, throws: true))],
                     returns: .optional(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2983,7 +3908,8 @@ extension Bridge {
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.parameter("PossiblePrefix.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.parameter("Element"), .parameter("PossiblePrefix.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["Element": [], "PossiblePrefix.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -2995,7 +3921,8 @@ extension Bridge {
                     kind: .method, name: "elementsEqual", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("OtherSequence.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.parameter("Element"), .parameter("OtherSequence.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["Element": [], "OtherSequence.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3007,7 +3934,8 @@ extension Bridge {
                     kind: .method, name: "lexicographicallyPrecedes", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("Element"))), Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.parameter("Element"), .parameter("Element")], .bool, throws: true))],
                     returns: .bool, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3019,7 +3947,8 @@ extension Bridge {
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .bool, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3031,7 +3960,8 @@ extension Bridge {
                     kind: .method, name: "allSatisfy", isStatic: false,
                     parameters: [Parameter(label: nil, name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .bool, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3043,7 +3973,8 @@ extension Bridge {
                     kind: .method, name: "count", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3055,7 +3986,8 @@ extension Bridge {
                     kind: .method, name: "reduce", isStatic: false,
                     parameters: [Parameter(label: nil, name: "initialResult", type: .parameter("Result")), Parameter(label: nil, name: "nextPartialResult", type: .functionType([.parameter("Result"), .parameter("Element")], .parameter("Result"), throws: true))],
                     returns: .parameter("Result"), generics: ["Element": [], "Result": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3067,7 +3999,8 @@ extension Bridge {
                     kind: .method, name: "flatMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.parameter("Element")], .someSequence(.parameter("SegmentOfResult.Element")), throws: true))],
                     returns: .list(.parameter("SegmentOfResult.Element")), generics: ["Element": [], "SegmentOfResult.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3079,7 +4012,8 @@ extension Bridge {
                     kind: .method, name: "compactMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.parameter("Element")], .optional(.parameter("ElementOfResult")), throws: true))],
                     returns: .list(.parameter("ElementOfResult")), generics: ["Element": [], "ElementOfResult": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3091,7 +4025,8 @@ extension Bridge {
                     kind: .method, name: "sorted", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.parameter("Element"), .parameter("Element")], .bool, throws: true))],
                     returns: .list(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3100,10 +4035,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "sort", isStatic: false,
+                    parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.parameter("Element"), .parameter("Element")], .bool, throws: true))],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: true, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value] = try bridgeList(args["self"]!)
+                try receiver.sort(by: { (a0: Value, a1: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0, a1])) })
+                return .list([.nothing, .list(receiver)])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "randomElement", isStatic: false,
                     parameters: [],
                     returns: .optional(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3115,7 +4064,8 @@ extension Bridge {
                     kind: .property, name: "isEmpty", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3127,7 +4077,8 @@ extension Bridge {
                     kind: .property, name: "first", isStatic: false,
                     parameters: [],
                     returns: .optional(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3139,7 +4090,8 @@ extension Bridge {
                     kind: .property, name: "underestimatedCount", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3151,7 +4103,8 @@ extension Bridge {
                     kind: .method, name: "min", isStatic: false,
                     parameters: [],
                     returns: .optional(.parameter("Element")), generics: ["Element": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3163,7 +4116,8 @@ extension Bridge {
                     kind: .method, name: "max", isStatic: false,
                     parameters: [],
                     returns: .optional(.parameter("Element")), generics: ["Element": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3175,7 +4129,8 @@ extension Bridge {
                     kind: .method, name: "lexicographicallyPrecedes", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("Element")))],
                     returns: .bool, generics: ["Element": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3187,7 +4142,8 @@ extension Bridge {
                     kind: .method, name: "sorted", isStatic: false,
                     parameters: [],
                     returns: .list(.parameter("Element")), generics: ["Element": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3196,10 +4152,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "sort", isStatic: false,
+                    parameters: [],
+                    returns: .void, generics: ["Element": ["Comparable"]],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value] = try bridgeList(args["self"]!)
+                receiver.sort()
+                return .list([.nothing, .list(receiver)])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "split", isStatic: false,
                     parameters: [Parameter(label: "separator", name: "separator", type: .parameter("Element")), Parameter(label: "maxSplits", name: "maxSplits", type: .int, externalDefault: "Int.max"), Parameter(label: "omittingEmptySubsequences", name: "omittingEmptySubsequences", type: .bool, defaultValue: .literal(.bool(true)))],
                     returns: .list(.generic("ArraySlice", [.parameter("Element")])), generics: ["Element": ["Equatable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3211,7 +4181,8 @@ extension Bridge {
                     kind: .method, name: "firstIndex", isStatic: false,
                     parameters: [Parameter(label: "of", name: "element", type: .parameter("Element"))],
                     returns: .optional(.int), generics: ["Element": ["Equatable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3223,7 +4194,8 @@ extension Bridge {
                     kind: .method, name: "lastIndex", isStatic: false,
                     parameters: [Parameter(label: "of", name: "element", type: .parameter("Element"))],
                     returns: .optional(.int), generics: ["Element": ["Equatable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3235,7 +4207,8 @@ extension Bridge {
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.parameter("Element")))],
                     returns: .bool, generics: ["Element": ["Equatable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3247,7 +4220,8 @@ extension Bridge {
                     kind: .method, name: "elementsEqual", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("Element")))],
                     returns: .bool, generics: ["Element": ["Equatable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3259,7 +4233,8 @@ extension Bridge {
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: nil, name: "element", type: .parameter("Element"))],
                     returns: .bool, generics: ["Element": ["Equatable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3271,7 +4246,8 @@ extension Bridge {
                     kind: .method, name: "joined", isStatic: false,
                     parameters: [Parameter(label: "separator", name: "separator", type: .string, defaultValue: .literal(.string("")))],
                     returns: .string, generics: ["Element": ["=String"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [String] = try bridgeList(args["self"]!).map { try String(swishValue: $0) }
@@ -3283,7 +4259,8 @@ extension Bridge {
                     kind: .property, name: "capacity", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3295,7 +4272,8 @@ extension Bridge {
                     kind: .property, name: "startIndex", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3307,7 +4285,8 @@ extension Bridge {
                     kind: .property, name: "endIndex", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3319,7 +4298,8 @@ extension Bridge {
                     kind: .method, name: "index", isStatic: false,
                     parameters: [Parameter(label: "after", name: "i", type: .int)],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3331,7 +4311,8 @@ extension Bridge {
                     kind: .method, name: "index", isStatic: false,
                     parameters: [Parameter(label: "before", name: "i", type: .int)],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3343,7 +4324,8 @@ extension Bridge {
                     kind: .method, name: "index", isStatic: false,
                     parameters: [Parameter(label: nil, name: "i", type: .int), Parameter(label: "offsetBy", name: "distance", type: .int)],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3355,7 +4337,8 @@ extension Bridge {
                     kind: .method, name: "index", isStatic: false,
                     parameters: [Parameter(label: nil, name: "i", type: .int), Parameter(label: "offsetBy", name: "distance", type: .int), Parameter(label: "limitedBy", name: "limit", type: .int)],
                     returns: .optional(.int), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3367,7 +4350,8 @@ extension Bridge {
                     kind: .method, name: "distance", isStatic: false,
                     parameters: [Parameter(label: "from", name: "start", type: .int), Parameter(label: "to", name: "end", type: .int)],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3379,7 +4363,8 @@ extension Bridge {
                     kind: .property, name: "count", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3391,7 +4376,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [],
                     returns: .list(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = [Value]()
@@ -3402,7 +4388,8 @@ extension Bridge {
                     kind: .property, name: "hashValue", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
@@ -3421,7 +4408,8 @@ extension Bridge {
                     kind: .method, name: "filter", isStatic: false,
                     parameters: [Parameter(label: nil, name: "isIncluded", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .list(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3433,7 +4421,8 @@ extension Bridge {
                     kind: .method, name: "dropLast", isStatic: false,
                     parameters: [Parameter(label: nil, name: "k", type: .int)],
                     returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3445,7 +4434,8 @@ extension Bridge {
                     kind: .method, name: "suffix", isStatic: false,
                     parameters: [Parameter(label: nil, name: "maxLength", type: .int)],
                     returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3457,7 +4447,8 @@ extension Bridge {
                     kind: .method, name: "map", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.parameter("Element")], .parameter("T"), throws: true))],
                     returns: .list(.parameter("T")), generics: ["Element": [], "T": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3469,7 +4460,8 @@ extension Bridge {
                     kind: .method, name: "dropFirst", isStatic: false,
                     parameters: [Parameter(label: nil, name: "k", type: .int, defaultValue: .literal(.int(1)))],
                     returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3481,7 +4473,8 @@ extension Bridge {
                     kind: .method, name: "drop", isStatic: false,
                     parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3493,7 +4486,8 @@ extension Bridge {
                     kind: .method, name: "prefix", isStatic: false,
                     parameters: [Parameter(label: nil, name: "maxLength", type: .int)],
                     returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3505,7 +4499,8 @@ extension Bridge {
                     kind: .method, name: "prefix", isStatic: false,
                     parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3517,7 +4512,8 @@ extension Bridge {
                     kind: .method, name: "prefix", isStatic: false,
                     parameters: [Parameter(label: "upTo", name: "end", type: .int)],
                     returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3529,7 +4525,8 @@ extension Bridge {
                     kind: .method, name: "suffix", isStatic: false,
                     parameters: [Parameter(label: "from", name: "start", type: .int)],
                     returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3541,7 +4538,8 @@ extension Bridge {
                     kind: .method, name: "prefix", isStatic: false,
                     parameters: [Parameter(label: "through", name: "position", type: .int)],
                     returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3553,7 +4551,8 @@ extension Bridge {
                     kind: .method, name: "split", isStatic: false,
                     parameters: [Parameter(label: "maxSplits", name: "maxSplits", type: .int, externalDefault: "Int.max"), Parameter(label: "omittingEmptySubsequences", name: "omittingEmptySubsequences", type: .bool, defaultValue: .literal(.bool(true))), Parameter(label: "whereSeparator", name: "isSeparator", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .list(.generic("ArraySlice", [.parameter("Element")])), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3565,7 +4564,8 @@ extension Bridge {
                     kind: .property, name: "last", isStatic: false,
                     parameters: [],
                     returns: .optional(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3577,7 +4577,8 @@ extension Bridge {
                     kind: .method, name: "firstIndex", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .optional(.int), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3589,7 +4590,8 @@ extension Bridge {
                     kind: .method, name: "last", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .optional(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3601,7 +4603,8 @@ extension Bridge {
                     kind: .method, name: "lastIndex", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .optional(.int), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3610,10 +4613,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "partition", isStatic: false,
+                    parameters: [Parameter(label: "by", name: "belongsInSecondPartition", type: .functionType([.parameter("Element")], .bool, throws: true))],
+                    returns: .int, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: true, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                let result = try receiver.partition(by: { (a0: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["belongsInSecondPartition"]!)([a0])) })
+                return .list([result.swishValue, SwiftValue.make(receiver, as: "ArraySlice")])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "shuffled", isStatic: false,
                     parameters: [],
                     returns: .list(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3622,10 +4639,37 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "shuffle", isStatic: false,
+                    parameters: [],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                receiver.shuffle()
+                return .list([.nothing, SwiftValue.make(receiver, as: "ArraySlice")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "swapAt", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "i", type: .int), Parameter(label: nil, name: "j", type: .int)],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                receiver.swapAt(try Int(swishValue: args["i"]!), try Int(swishValue: args["j"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "ArraySlice")])
+                    }
+                ),
+                BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "repeating", name: "repeatedValue", type: .parameter("Element")), Parameter(label: "count", name: "count", type: .int)],
                     returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = ArraySlice<Value>(repeating: args["repeatedValue"]!, count: try Int(swishValue: args["count"]!))
@@ -3636,7 +4680,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "elements", type: .someSequence(.parameter("Element")))],
                     returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = ArraySlice<Value>(try bridgeSequence(args["elements"]!))
@@ -3644,10 +4689,193 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "append", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "newElement", type: .parameter("Element"))],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                receiver.append(args["newElement"]!)
+                return .list([.nothing, SwiftValue.make(receiver, as: "ArraySlice")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "append", isStatic: false,
+                    parameters: [Parameter(label: "contentsOf", name: "newElements", type: .someSequence(.parameter("Element")))],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                receiver.append(contentsOf: try bridgeSequence(args["newElements"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "ArraySlice")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "insert", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "newElement", type: .parameter("Element")), Parameter(label: "at", name: "i", type: .int)],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                receiver.insert(args["newElement"]!, at: try Int(swishValue: args["i"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "ArraySlice")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "remove", isStatic: false,
+                    parameters: [Parameter(label: "at", name: "position", type: .int)],
+                    returns: .parameter("Element"), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: true,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                let result = receiver.remove(at: try Int(swishValue: args["position"]!))
+                return .list([result, SwiftValue.make(receiver, as: "ArraySlice")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeSubrange", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "bounds", type: .generic("Range", [.int]))],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                receiver.removeSubrange(try bridgeRange(args["bounds"]!) { try Int(swishValue: $0) })
+                return .list([.nothing, SwiftValue.make(receiver, as: "ArraySlice")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeFirst", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "k", type: .int)],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                receiver.removeFirst(try Int(swishValue: args["k"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "ArraySlice")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeFirst", isStatic: false,
+                    parameters: [],
+                    returns: .parameter("Element"), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: true,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                let result = receiver.removeFirst()
+                return .list([result, SwiftValue.make(receiver, as: "ArraySlice")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeAll", isStatic: false,
+                    parameters: [Parameter(label: "keepingCapacity", name: "keepCapacity", type: .bool, defaultValue: .literal(.bool(false)))],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                receiver.removeAll(keepingCapacity: try Bool(swishValue: args["keepCapacity"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "ArraySlice")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "reserveCapacity", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "n", type: .int)],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                receiver.reserveCapacity(try Int(swishValue: args["n"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "ArraySlice")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "popLast", isStatic: false,
+                    parameters: [],
+                    returns: .optional(.parameter("Element")), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                let result = receiver.popLast()
+                return .list([(result.map { $0 } ?? .nothing), SwiftValue.make(receiver, as: "ArraySlice")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeLast", isStatic: false,
+                    parameters: [],
+                    returns: .parameter("Element"), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: true,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                let result = receiver.removeLast()
+                return .list([result, SwiftValue.make(receiver, as: "ArraySlice")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeLast", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "k", type: .int)],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                receiver.removeLast(try Int(swishValue: args["k"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "ArraySlice")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeAll", isStatic: false,
+                    parameters: [Parameter(label: "where", name: "shouldBeRemoved", type: .functionType([.parameter("Element")], .bool, throws: true))],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: true, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                try receiver.removeAll(where: { (a0: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["shouldBeRemoved"]!)([a0])) })
+                return .list([.nothing, SwiftValue.make(receiver, as: "ArraySlice")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "reverse", isStatic: false,
+                    parameters: [],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                receiver.reverse()
+                return .list([.nothing, SwiftValue.make(receiver, as: "ArraySlice")])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "forEach", isStatic: false,
                     parameters: [Parameter(label: nil, name: "body", type: .functionType([.parameter("Element")], .void, throws: true))],
                     returns: .void, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3659,7 +4887,8 @@ extension Bridge {
                     kind: .method, name: "first", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .optional(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3671,7 +4900,8 @@ extension Bridge {
                     kind: .method, name: "min", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.parameter("Element"), .parameter("Element")], .bool, throws: true))],
                     returns: .optional(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3683,7 +4913,8 @@ extension Bridge {
                     kind: .method, name: "max", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.parameter("Element"), .parameter("Element")], .bool, throws: true))],
                     returns: .optional(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3695,7 +4926,8 @@ extension Bridge {
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.parameter("PossiblePrefix.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.parameter("Element"), .parameter("PossiblePrefix.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["Element": [], "PossiblePrefix.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3707,7 +4939,8 @@ extension Bridge {
                     kind: .method, name: "elementsEqual", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("OtherSequence.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.parameter("Element"), .parameter("OtherSequence.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["Element": [], "OtherSequence.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3719,7 +4952,8 @@ extension Bridge {
                     kind: .method, name: "lexicographicallyPrecedes", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("Element"))), Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.parameter("Element"), .parameter("Element")], .bool, throws: true))],
                     returns: .bool, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3731,7 +4965,8 @@ extension Bridge {
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .bool, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3743,7 +4978,8 @@ extension Bridge {
                     kind: .method, name: "allSatisfy", isStatic: false,
                     parameters: [Parameter(label: nil, name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .bool, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3755,7 +4991,8 @@ extension Bridge {
                     kind: .method, name: "count", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3767,7 +5004,8 @@ extension Bridge {
                     kind: .method, name: "reduce", isStatic: false,
                     parameters: [Parameter(label: nil, name: "initialResult", type: .parameter("Result")), Parameter(label: nil, name: "nextPartialResult", type: .functionType([.parameter("Result"), .parameter("Element")], .parameter("Result"), throws: true))],
                     returns: .parameter("Result"), generics: ["Element": [], "Result": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3779,7 +5017,8 @@ extension Bridge {
                     kind: .method, name: "flatMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.parameter("Element")], .someSequence(.parameter("SegmentOfResult.Element")), throws: true))],
                     returns: .list(.parameter("SegmentOfResult.Element")), generics: ["Element": [], "SegmentOfResult.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3791,7 +5030,8 @@ extension Bridge {
                     kind: .method, name: "compactMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.parameter("Element")], .optional(.parameter("ElementOfResult")), throws: true))],
                     returns: .list(.parameter("ElementOfResult")), generics: ["Element": [], "ElementOfResult": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3803,7 +5043,8 @@ extension Bridge {
                     kind: .method, name: "sorted", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.parameter("Element"), .parameter("Element")], .bool, throws: true))],
                     returns: .list(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3812,10 +5053,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "sort", isStatic: false,
+                    parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.parameter("Element"), .parameter("Element")], .bool, throws: true))],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: true, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                try receiver.sort(by: { (a0: Value, a1: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0, a1])) })
+                return .list([.nothing, SwiftValue.make(receiver, as: "ArraySlice")])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "randomElement", isStatic: false,
                     parameters: [],
                     returns: .optional(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3827,7 +5082,8 @@ extension Bridge {
                     kind: .property, name: "isEmpty", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3839,7 +5095,8 @@ extension Bridge {
                     kind: .property, name: "first", isStatic: false,
                     parameters: [],
                     returns: .optional(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3851,7 +5108,8 @@ extension Bridge {
                     kind: .property, name: "underestimatedCount", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3863,7 +5121,8 @@ extension Bridge {
                     kind: .method, name: "min", isStatic: false,
                     parameters: [],
                     returns: .optional(.parameter("Element")), generics: ["Element": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3875,7 +5134,8 @@ extension Bridge {
                     kind: .method, name: "max", isStatic: false,
                     parameters: [],
                     returns: .optional(.parameter("Element")), generics: ["Element": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3887,7 +5147,8 @@ extension Bridge {
                     kind: .method, name: "lexicographicallyPrecedes", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("Element")))],
                     returns: .bool, generics: ["Element": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3899,7 +5160,8 @@ extension Bridge {
                     kind: .method, name: "sorted", isStatic: false,
                     parameters: [],
                     returns: .list(.parameter("Element")), generics: ["Element": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3908,10 +5170,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "sort", isStatic: false,
+                    parameters: [],
+                    returns: .void, generics: ["Element": ["Comparable"]],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                receiver.sort()
+                return .list([.nothing, SwiftValue.make(receiver, as: "ArraySlice")])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "split", isStatic: false,
                     parameters: [Parameter(label: "separator", name: "separator", type: .parameter("Element")), Parameter(label: "maxSplits", name: "maxSplits", type: .int, externalDefault: "Int.max"), Parameter(label: "omittingEmptySubsequences", name: "omittingEmptySubsequences", type: .bool, defaultValue: .literal(.bool(true)))],
                     returns: .list(.generic("ArraySlice", [.parameter("Element")])), generics: ["Element": ["Equatable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3923,7 +5199,8 @@ extension Bridge {
                     kind: .method, name: "firstIndex", isStatic: false,
                     parameters: [Parameter(label: "of", name: "element", type: .parameter("Element"))],
                     returns: .optional(.int), generics: ["Element": ["Equatable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3935,7 +5212,8 @@ extension Bridge {
                     kind: .method, name: "lastIndex", isStatic: false,
                     parameters: [Parameter(label: "of", name: "element", type: .parameter("Element"))],
                     returns: .optional(.int), generics: ["Element": ["Equatable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3947,7 +5225,8 @@ extension Bridge {
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.parameter("Element")))],
                     returns: .bool, generics: ["Element": ["Equatable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3959,7 +5238,8 @@ extension Bridge {
                     kind: .method, name: "elementsEqual", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("Element")))],
                     returns: .bool, generics: ["Element": ["Equatable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3971,7 +5251,8 @@ extension Bridge {
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: nil, name: "element", type: .parameter("Element"))],
                     returns: .bool, generics: ["Element": ["Equatable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -3983,7 +5264,8 @@ extension Bridge {
                     kind: .method, name: "joined", isStatic: false,
                     parameters: [Parameter(label: "separator", name: "separator", type: .string, defaultValue: .literal(.string("")))],
                     returns: .string, generics: ["Element": ["=String"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<String> = ArraySlice<String>(try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!).map { try String(swishValue: $0) })
@@ -3995,7 +5277,8 @@ extension Bridge {
                     kind: .property, name: "capacity", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -4007,7 +5290,8 @@ extension Bridge {
                     kind: .property, name: "startIndex", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -4019,7 +5303,8 @@ extension Bridge {
                     kind: .property, name: "endIndex", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -4031,7 +5316,8 @@ extension Bridge {
                     kind: .method, name: "index", isStatic: false,
                     parameters: [Parameter(label: "after", name: "i", type: .int)],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -4043,7 +5329,8 @@ extension Bridge {
                     kind: .method, name: "index", isStatic: false,
                     parameters: [Parameter(label: "before", name: "i", type: .int)],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -4055,7 +5342,8 @@ extension Bridge {
                     kind: .method, name: "index", isStatic: false,
                     parameters: [Parameter(label: nil, name: "i", type: .int), Parameter(label: "offsetBy", name: "distance", type: .int)],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -4067,7 +5355,8 @@ extension Bridge {
                     kind: .method, name: "index", isStatic: false,
                     parameters: [Parameter(label: nil, name: "i", type: .int), Parameter(label: "offsetBy", name: "distance", type: .int), Parameter(label: "limitedBy", name: "limit", type: .int)],
                     returns: .optional(.int), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -4079,7 +5368,8 @@ extension Bridge {
                     kind: .method, name: "distance", isStatic: false,
                     parameters: [Parameter(label: "from", name: "start", type: .int), Parameter(label: "to", name: "end", type: .int)],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -4091,7 +5381,8 @@ extension Bridge {
                     kind: .property, name: "count", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -4103,7 +5394,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [],
                     returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = ArraySlice<Value>()
@@ -4114,7 +5406,8 @@ extension Bridge {
                     kind: .property, name: "description", isStatic: false,
                     parameters: [],
                     returns: .string, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -4126,7 +5419,8 @@ extension Bridge {
                     kind: .property, name: "debugDescription", isStatic: false,
                     parameters: [],
                     returns: .string, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -4138,7 +5432,8 @@ extension Bridge {
                     kind: .property, name: "hashValue", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
@@ -4157,7 +5452,8 @@ extension Bridge {
                     kind: .method, name: "map", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.parameter("Element")], .parameter("T"), throws: true))],
                     returns: .list(.parameter("T")), generics: ["Element": [], "T": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4169,7 +5465,8 @@ extension Bridge {
                     kind: .method, name: "shuffled", isStatic: false,
                     parameters: [],
                     returns: .list(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4181,7 +5478,8 @@ extension Bridge {
                     kind: .method, name: "forEach", isStatic: false,
                     parameters: [Parameter(label: nil, name: "body", type: .functionType([.parameter("Element")], .void, throws: true))],
                     returns: .void, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4193,7 +5491,8 @@ extension Bridge {
                     kind: .method, name: "first", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .optional(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4205,7 +5504,8 @@ extension Bridge {
                     kind: .method, name: "min", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.parameter("Element"), .parameter("Element")], .bool, throws: true))],
                     returns: .optional(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4217,7 +5517,8 @@ extension Bridge {
                     kind: .method, name: "max", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.parameter("Element"), .parameter("Element")], .bool, throws: true))],
                     returns: .optional(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4229,7 +5530,8 @@ extension Bridge {
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.parameter("PossiblePrefix.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.parameter("Element"), .parameter("PossiblePrefix.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["Element": [], "PossiblePrefix.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4241,7 +5543,8 @@ extension Bridge {
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.parameter("Element")))],
                     returns: .bool, generics: ["Element": ["Equatable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4253,7 +5556,8 @@ extension Bridge {
                     kind: .method, name: "elementsEqual", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("OtherSequence.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.parameter("Element"), .parameter("OtherSequence.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["Element": [], "OtherSequence.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4265,7 +5569,8 @@ extension Bridge {
                     kind: .method, name: "elementsEqual", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("Element")))],
                     returns: .bool, generics: ["Element": ["Equatable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4277,7 +5582,8 @@ extension Bridge {
                     kind: .method, name: "lexicographicallyPrecedes", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("Element"))), Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.parameter("Element"), .parameter("Element")], .bool, throws: true))],
                     returns: .bool, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4289,7 +5595,8 @@ extension Bridge {
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .bool, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4301,7 +5608,8 @@ extension Bridge {
                     kind: .method, name: "allSatisfy", isStatic: false,
                     parameters: [Parameter(label: nil, name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .bool, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4313,7 +5621,8 @@ extension Bridge {
                     kind: .method, name: "count", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4325,7 +5634,8 @@ extension Bridge {
                     kind: .method, name: "reduce", isStatic: false,
                     parameters: [Parameter(label: nil, name: "initialResult", type: .parameter("Result")), Parameter(label: nil, name: "nextPartialResult", type: .functionType([.parameter("Result"), .parameter("Element")], .parameter("Result"), throws: true))],
                     returns: .parameter("Result"), generics: ["Element": [], "Result": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4337,7 +5647,8 @@ extension Bridge {
                     kind: .method, name: "reversed", isStatic: false,
                     parameters: [],
                     returns: .list(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4349,7 +5660,8 @@ extension Bridge {
                     kind: .method, name: "flatMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.parameter("Element")], .someSequence(.parameter("SegmentOfResult.Element")), throws: true))],
                     returns: .list(.parameter("SegmentOfResult.Element")), generics: ["Element": [], "SegmentOfResult.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4361,7 +5673,8 @@ extension Bridge {
                     kind: .method, name: "compactMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.parameter("Element")], .optional(.parameter("ElementOfResult")), throws: true))],
                     returns: .list(.parameter("ElementOfResult")), generics: ["Element": [], "ElementOfResult": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4373,7 +5686,8 @@ extension Bridge {
                     kind: .method, name: "sorted", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.parameter("Element"), .parameter("Element")], .bool, throws: true))],
                     returns: .list(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4385,7 +5699,8 @@ extension Bridge {
                     kind: .method, name: "randomElement", isStatic: false,
                     parameters: [],
                     returns: .optional(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4397,7 +5712,8 @@ extension Bridge {
                     kind: .property, name: "first", isStatic: false,
                     parameters: [],
                     returns: .optional(.parameter("Element")), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4409,7 +5725,8 @@ extension Bridge {
                     kind: .property, name: "underestimatedCount", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4421,7 +5738,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "sequence", type: .someSequence(.parameter("Element")))],
                     returns: .generic("Set", [.parameter("Element")]), generics: ["Element": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Set<Value>(try bridgeSequence(args["sequence"]!))
@@ -4429,10 +5747,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "subtract", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "other", type: .generic("Set", [.parameter("Element")]))],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
+                receiver.subtract(try SwiftValue.unbox(Set<Value>.self, args["other"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "Set")])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "min", isStatic: false,
                     parameters: [],
                     returns: .optional(.parameter("Element")), generics: ["Element": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4444,7 +5776,8 @@ extension Bridge {
                     kind: .method, name: "max", isStatic: false,
                     parameters: [],
                     returns: .optional(.parameter("Element")), generics: ["Element": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4456,7 +5789,8 @@ extension Bridge {
                     kind: .method, name: "lexicographicallyPrecedes", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("Element")))],
                     returns: .bool, generics: ["Element": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4468,7 +5802,8 @@ extension Bridge {
                     kind: .method, name: "sorted", isStatic: false,
                     parameters: [],
                     returns: .list(.parameter("Element")), generics: ["Element": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4480,7 +5815,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "minimumCapacity", name: "minimumCapacity", type: .int)],
                     returns: .generic("Set", [.parameter("Element")]), generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Set<Value>(minimumCapacity: try Int(swishValue: args["minimumCapacity"]!))
@@ -4491,7 +5827,8 @@ extension Bridge {
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: nil, name: "member", type: .parameter("Element"))],
                     returns: .bool, generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4503,7 +5840,8 @@ extension Bridge {
                     kind: .method, name: "filter", isStatic: false,
                     parameters: [Parameter(label: nil, name: "isIncluded", type: .functionType([.parameter("Element")], .bool, throws: true))],
                     returns: .generic("Set", [.parameter("Element")]), generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4515,7 +5853,8 @@ extension Bridge {
                     kind: .property, name: "count", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4527,7 +5866,8 @@ extension Bridge {
                     kind: .property, name: "isEmpty", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4539,7 +5879,8 @@ extension Bridge {
                     kind: .property, name: "hashValue", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4548,10 +5889,76 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "insert", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "newMember", type: .parameter("Element"))],
+                    returns: .tuple([.init(label: "inserted", type: .bool), .init(label: "memberAfterInsert", type: .parameter("Element"))]), generics: ["Element": ["Hashable"]],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: true,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
+                let result = receiver.insert(args["newMember"]!)
+                return .list([bridgeTuple(result) { t in [("inserted", t.0.swishValue), ("memberAfterInsert", t.1)] }, SwiftValue.make(receiver, as: "Set")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "update", isStatic: false,
+                    parameters: [Parameter(label: "with", name: "newMember", type: .parameter("Element"))],
+                    returns: .optional(.parameter("Element")), generics: ["Element": ["Hashable"]],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: true,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
+                let result = receiver.update(with: args["newMember"]!)
+                return .list([(result.map { $0 } ?? .nothing), SwiftValue.make(receiver, as: "Set")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "remove", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "member", type: .parameter("Element"))],
+                    returns: .optional(.parameter("Element")), generics: ["Element": ["Hashable"]],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: true,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
+                let result = receiver.remove(args["member"]!)
+                return .list([(result.map { $0 } ?? .nothing), SwiftValue.make(receiver, as: "Set")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeAll", isStatic: false,
+                    parameters: [Parameter(label: "keepingCapacity", name: "keepCapacity", type: .bool, defaultValue: .literal(.bool(false)))],
+                    returns: .void, generics: ["Element": ["Hashable"]],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
+                receiver.removeAll(keepingCapacity: try Bool(swishValue: args["keepCapacity"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "Set")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeFirst", isStatic: false,
+                    parameters: [],
+                    returns: .parameter("Element"), generics: ["Element": ["Hashable"]],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: true,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
+                let result = receiver.removeFirst()
+                return .list([result, SwiftValue.make(receiver, as: "Set")])
+                    }
+                ),
+                BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [],
                     returns: .generic("Set", [.parameter("Element")]), generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Set<Value>()
@@ -4562,7 +5969,8 @@ extension Bridge {
                     kind: .method, name: "isSubset", isStatic: false,
                     parameters: [Parameter(label: "of", name: "possibleSuperset", type: .someSequence(.parameter("Element")))],
                     returns: .bool, generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4574,7 +5982,8 @@ extension Bridge {
                     kind: .method, name: "isStrictSubset", isStatic: false,
                     parameters: [Parameter(label: "of", name: "possibleStrictSuperset", type: .someSequence(.parameter("Element")))],
                     returns: .bool, generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4586,7 +5995,8 @@ extension Bridge {
                     kind: .method, name: "isSuperset", isStatic: false,
                     parameters: [Parameter(label: "of", name: "possibleSubset", type: .someSequence(.parameter("Element")))],
                     returns: .bool, generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4598,7 +6008,8 @@ extension Bridge {
                     kind: .method, name: "isStrictSuperset", isStatic: false,
                     parameters: [Parameter(label: "of", name: "possibleStrictSubset", type: .someSequence(.parameter("Element")))],
                     returns: .bool, generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4610,7 +6021,8 @@ extension Bridge {
                     kind: .method, name: "isDisjoint", isStatic: false,
                     parameters: [Parameter(label: "with", name: "other", type: .someSequence(.parameter("Element")))],
                     returns: .bool, generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4622,7 +6034,8 @@ extension Bridge {
                     kind: .method, name: "union", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("Element")))],
                     returns: .generic("Set", [.parameter("Element")]), generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4631,10 +6044,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "formUnion", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("Element")))],
+                    returns: .void, generics: ["Element": ["Hashable"]],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
+                receiver.formUnion(try bridgeSequence(args["other"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "Set")])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "subtracting", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("Element")))],
                     returns: .generic("Set", [.parameter("Element")]), generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4643,10 +6070,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "subtract", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("Element")))],
+                    returns: .void, generics: ["Element": ["Hashable"]],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
+                receiver.subtract(try bridgeSequence(args["other"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "Set")])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "intersection", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("Element")))],
                     returns: .generic("Set", [.parameter("Element")]), generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4655,10 +6096,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "formIntersection", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("Element")))],
+                    returns: .void, generics: ["Element": ["Hashable"]],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
+                receiver.formIntersection(try bridgeSequence(args["other"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "Set")])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "symmetricDifference", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("Element")))],
                     returns: .generic("Set", [.parameter("Element")]), generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4667,10 +6122,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "formSymmetricDifference", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("Element")))],
+                    returns: .void, generics: ["Element": ["Hashable"]],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
+                receiver.formSymmetricDifference(try bridgeSequence(args["other"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "Set")])
+                    }
+                ),
+                BridgedMember(
                     kind: .property, name: "description", isStatic: false,
                     parameters: [],
                     returns: .string, generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4682,7 +6151,8 @@ extension Bridge {
                     kind: .property, name: "debugDescription", isStatic: false,
                     parameters: [],
                     returns: .string, generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4694,7 +6164,8 @@ extension Bridge {
                     kind: .method, name: "isSubset", isStatic: false,
                     parameters: [Parameter(label: "of", name: "other", type: .generic("Set", [.parameter("Element")]))],
                     returns: .bool, generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4706,7 +6177,8 @@ extension Bridge {
                     kind: .method, name: "isSuperset", isStatic: false,
                     parameters: [Parameter(label: "of", name: "other", type: .generic("Set", [.parameter("Element")]))],
                     returns: .bool, generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4718,7 +6190,8 @@ extension Bridge {
                     kind: .method, name: "isDisjoint", isStatic: false,
                     parameters: [Parameter(label: "with", name: "other", type: .generic("Set", [.parameter("Element")]))],
                     returns: .bool, generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4730,7 +6203,8 @@ extension Bridge {
                     kind: .method, name: "subtracting", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .generic("Set", [.parameter("Element")]))],
                     returns: .generic("Set", [.parameter("Element")]), generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4742,7 +6216,8 @@ extension Bridge {
                     kind: .method, name: "isStrictSuperset", isStatic: false,
                     parameters: [Parameter(label: "of", name: "other", type: .generic("Set", [.parameter("Element")]))],
                     returns: .bool, generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4754,7 +6229,8 @@ extension Bridge {
                     kind: .method, name: "isStrictSubset", isStatic: false,
                     parameters: [Parameter(label: "of", name: "other", type: .generic("Set", [.parameter("Element")]))],
                     returns: .bool, generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4766,7 +6242,8 @@ extension Bridge {
                     kind: .method, name: "intersection", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .generic("Set", [.parameter("Element")]))],
                     returns: .generic("Set", [.parameter("Element")]), generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
@@ -4775,15 +6252,55 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "formSymmetricDifference", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "other", type: .generic("Set", [.parameter("Element")]))],
+                    returns: .void, generics: ["Element": ["Hashable"]],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
+                receiver.formSymmetricDifference(try SwiftValue.unbox(Set<Value>.self, args["other"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "Set")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "popFirst", isStatic: false,
+                    parameters: [],
+                    returns: .optional(.parameter("Element")), generics: ["Element": ["Hashable"]],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
+                let result = receiver.popFirst()
+                return .list([(result.map { $0 } ?? .nothing), SwiftValue.make(receiver, as: "Set")])
+                    }
+                ),
+                BridgedMember(
                     kind: .property, name: "capacity", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Element": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
                 let result = receiver.capacity
                 return result.swishValue
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "reserveCapacity", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "minimumCapacity", type: .int)],
+                    returns: .void, generics: ["Element": ["Hashable"]],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
+                receiver.reserveCapacity(try Int(swishValue: args["minimumCapacity"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "Set")])
                     }
                 ),
             ]
@@ -4797,7 +6314,8 @@ extension Bridge {
                     kind: .method, name: "map", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])], .parameter("T"), throws: true))],
                     returns: .list(.parameter("T")), generics: ["Key": [], "T": [], "Value": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -4809,7 +6327,8 @@ extension Bridge {
                     kind: .method, name: "shuffled", isStatic: false,
                     parameters: [],
                     returns: .list(.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])), generics: ["Key": [], "Value": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -4821,7 +6340,8 @@ extension Bridge {
                     kind: .method, name: "forEach", isStatic: false,
                     parameters: [Parameter(label: nil, name: "body", type: .functionType([.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])], .void, throws: true))],
                     returns: .void, generics: ["Key": [], "Value": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -4833,7 +6353,8 @@ extension Bridge {
                     kind: .method, name: "first", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])], .bool, throws: true))],
                     returns: .optional(.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])), generics: ["Key": [], "Value": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -4845,7 +6366,8 @@ extension Bridge {
                     kind: .method, name: "min", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))]), .tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])], .bool, throws: true))],
                     returns: .optional(.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])), generics: ["Key": [], "Value": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -4857,7 +6379,8 @@ extension Bridge {
                     kind: .method, name: "max", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))]), .tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])], .bool, throws: true))],
                     returns: .optional(.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])), generics: ["Key": [], "Value": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -4869,7 +6392,8 @@ extension Bridge {
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.parameter("PossiblePrefix.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))]), .parameter("PossiblePrefix.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["Key": [], "PossiblePrefix.Element": [], "Value": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -4881,7 +6405,8 @@ extension Bridge {
                     kind: .method, name: "elementsEqual", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("OtherSequence.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))]), .parameter("OtherSequence.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["Key": [], "OtherSequence.Element": [], "Value": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -4893,7 +6418,8 @@ extension Bridge {
                     kind: .method, name: "lexicographicallyPrecedes", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))]))), Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))]), .tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])], .bool, throws: true))],
                     returns: .bool, generics: ["Key": [], "Value": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -4905,7 +6431,8 @@ extension Bridge {
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])], .bool, throws: true))],
                     returns: .bool, generics: ["Key": [], "Value": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -4917,7 +6444,8 @@ extension Bridge {
                     kind: .method, name: "allSatisfy", isStatic: false,
                     parameters: [Parameter(label: nil, name: "predicate", type: .functionType([.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])], .bool, throws: true))],
                     returns: .bool, generics: ["Key": [], "Value": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -4929,7 +6457,8 @@ extension Bridge {
                     kind: .method, name: "count", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])], .bool, throws: true))],
                     returns: .int, generics: ["Key": [], "Value": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -4941,7 +6470,8 @@ extension Bridge {
                     kind: .method, name: "reduce", isStatic: false,
                     parameters: [Parameter(label: nil, name: "initialResult", type: .parameter("Result")), Parameter(label: nil, name: "nextPartialResult", type: .functionType([.parameter("Result"), .tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])], .parameter("Result"), throws: true))],
                     returns: .parameter("Result"), generics: ["Key": [], "Result": [], "Value": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -4953,7 +6483,8 @@ extension Bridge {
                     kind: .method, name: "reversed", isStatic: false,
                     parameters: [],
                     returns: .list(.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])), generics: ["Key": [], "Value": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -4965,7 +6496,8 @@ extension Bridge {
                     kind: .method, name: "flatMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])], .someSequence(.parameter("SegmentOfResult.Element")), throws: true))],
                     returns: .list(.parameter("SegmentOfResult.Element")), generics: ["Key": [], "SegmentOfResult.Element": [], "Value": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -4977,7 +6509,8 @@ extension Bridge {
                     kind: .method, name: "compactMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])], .optional(.parameter("ElementOfResult")), throws: true))],
                     returns: .list(.parameter("ElementOfResult")), generics: ["ElementOfResult": [], "Key": [], "Value": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -4989,7 +6522,8 @@ extension Bridge {
                     kind: .method, name: "sorted", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))]), .tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])], .bool, throws: true))],
                     returns: .list(.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])), generics: ["Key": [], "Value": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -5001,7 +6535,8 @@ extension Bridge {
                     kind: .method, name: "randomElement", isStatic: false,
                     parameters: [],
                     returns: .optional(.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])), generics: ["Key": [], "Value": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -5013,7 +6548,8 @@ extension Bridge {
                     kind: .property, name: "first", isStatic: false,
                     parameters: [],
                     returns: .optional(.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])), generics: ["Key": [], "Value": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -5025,7 +6561,8 @@ extension Bridge {
                     kind: .property, name: "underestimatedCount", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Key": [], "Value": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -5037,7 +6574,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [],
                     returns: .dictionary(.parameter("Key"), .parameter("Value")), generics: ["Key": ["Hashable"], "Value": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = [Value: Value]()
@@ -5048,7 +6586,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "minimumCapacity", name: "minimumCapacity", type: .int)],
                     returns: .dictionary(.parameter("Key"), .parameter("Value")), generics: ["Key": ["Hashable"], "Value": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = [Value: Value](minimumCapacity: try Int(swishValue: args["minimumCapacity"]!))
@@ -5059,7 +6598,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "uniqueKeysWithValues", name: "keysAndValues", type: .someSequence(.tuple([.init(label: nil, type: .parameter("Key")), .init(label: nil, type: .parameter("Value"))])))],
                     returns: .dictionary(.parameter("Key"), .parameter("Value")), generics: ["Key": ["Hashable"], "Value": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = [Value: Value](uniqueKeysWithValues: try bridgeSequence(args["keysAndValues"]!).map { try bridgeTuple($0, [nil, nil]) { t in (t[0], t[1]) } })
@@ -5070,7 +6610,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "keysAndValues", type: .someSequence(.tuple([.init(label: nil, type: .parameter("Key")), .init(label: nil, type: .parameter("Value"))]))), Parameter(label: "uniquingKeysWith", name: "combine", type: .functionType([.parameter("Value"), .parameter("Value")], .parameter("Value"), throws: true))],
                     returns: .dictionary(.parameter("Key"), .parameter("Value")), generics: ["Key": ["Hashable"], "Value": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = try [Value: Value](try bridgeSequence(args["keysAndValues"]!).map { try bridgeTuple($0, [nil, nil]) { t in (t[0], t[1]) } }, uniquingKeysWith: { (a0: Value, a1: Value) throws -> Value in try bridgeClosure(shell, args["combine"]!)([a0, a1]) })
@@ -5081,7 +6622,8 @@ extension Bridge {
                     kind: .method, name: "filter", isStatic: false,
                     parameters: [Parameter(label: nil, name: "isIncluded", type: .functionType([.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])], .bool, throws: true))],
                     returns: .dictionary(.parameter("Key"), .parameter("Value")), generics: ["Key": ["Hashable"], "Value": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -5093,7 +6635,8 @@ extension Bridge {
                     kind: .property, name: "count", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Key": ["Hashable"], "Value": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -5105,7 +6648,8 @@ extension Bridge {
                     kind: .property, name: "isEmpty", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: ["Key": ["Hashable"], "Value": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -5117,7 +6661,8 @@ extension Bridge {
                     kind: .method, name: "mapValues", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.parameter("Value")], .parameter("T"), throws: true))],
                     returns: .dictionary(.parameter("Key"), .parameter("T")), generics: ["Key": ["Hashable"], "T": [], "Value": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -5129,7 +6674,8 @@ extension Bridge {
                     kind: .method, name: "compactMapValues", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.parameter("Value")], .optional(.parameter("T")), throws: true))],
                     returns: .dictionary(.parameter("Key"), .parameter("T")), generics: ["Key": ["Hashable"], "T": [], "Value": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -5138,10 +6684,50 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "updateValue", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "value", type: .parameter("Value")), Parameter(label: "forKey", name: "key", type: .parameter("Key"))],
+                    returns: .optional(.parameter("Value")), generics: ["Key": ["Hashable"], "Value": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: true,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
+                let result = receiver.updateValue(args["value"]!, forKey: args["key"]!)
+                return .list([(result.map { $0 } ?? .nothing), bridgeDictionary(receiver)])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "merge", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "other", type: .someSequence(.tuple([.init(label: nil, type: .parameter("Key")), .init(label: nil, type: .parameter("Value"))]))), Parameter(label: "uniquingKeysWith", name: "combine", type: .functionType([.parameter("Value"), .parameter("Value")], .parameter("Value"), throws: true))],
+                    returns: .void, generics: ["Key": ["Hashable"], "Value": []],
+                    isThrowing: false, isRethrowing: true, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
+                try receiver.merge(try bridgeSequence(args["other"]!).map { try bridgeTuple($0, [nil, nil]) { t in (t[0], t[1]) } }, uniquingKeysWith: { (a0: Value, a1: Value) throws -> Value in try bridgeClosure(shell, args["combine"]!)([a0, a1]) })
+                return .list([.nothing, bridgeDictionary(receiver)])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "merge", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "other", type: .dictionary(.parameter("Key"), .parameter("Value"))), Parameter(label: "uniquingKeysWith", name: "combine", type: .functionType([.parameter("Value"), .parameter("Value")], .parameter("Value"), throws: true))],
+                    returns: .void, generics: ["Key": ["Hashable"], "Value": []],
+                    isThrowing: false, isRethrowing: true, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
+                try receiver.merge(try bridgeDictionary(args["other"]!), uniquingKeysWith: { (a0: Value, a1: Value) throws -> Value in try bridgeClosure(shell, args["combine"]!)([a0, a1]) })
+                return .list([.nothing, bridgeDictionary(receiver)])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "merging", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.tuple([.init(label: nil, type: .parameter("Key")), .init(label: nil, type: .parameter("Value"))]))), Parameter(label: "uniquingKeysWith", name: "combine", type: .functionType([.parameter("Value"), .parameter("Value")], .parameter("Value"), throws: true))],
                     returns: .dictionary(.parameter("Key"), .parameter("Value")), generics: ["Key": ["Hashable"], "Value": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -5153,7 +6739,8 @@ extension Bridge {
                     kind: .method, name: "merging", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .dictionary(.parameter("Key"), .parameter("Value"))), Parameter(label: "uniquingKeysWith", name: "combine", type: .functionType([.parameter("Value"), .parameter("Value")], .parameter("Value"), throws: true))],
                     returns: .dictionary(.parameter("Key"), .parameter("Value")), generics: ["Key": ["Hashable"], "Value": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -5162,10 +6749,37 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "removeValue", isStatic: false,
+                    parameters: [Parameter(label: "forKey", name: "key", type: .parameter("Key"))],
+                    returns: .optional(.parameter("Value")), generics: ["Key": ["Hashable"], "Value": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: true,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
+                let result = receiver.removeValue(forKey: args["key"]!)
+                return .list([(result.map { $0 } ?? .nothing), bridgeDictionary(receiver)])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeAll", isStatic: false,
+                    parameters: [Parameter(label: "keepingCapacity", name: "keepCapacity", type: .bool, defaultValue: .literal(.bool(false)))],
+                    returns: .void, generics: ["Key": ["Hashable"], "Value": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
+                receiver.removeAll(keepingCapacity: try Bool(swishValue: args["keepCapacity"]!))
+                return .list([.nothing, bridgeDictionary(receiver)])
+                    }
+                ),
+                BridgedMember(
                     kind: .property, name: "hashValue", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Key": ["Hashable"], "Value": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
@@ -5174,15 +6788,42 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "popFirst", isStatic: false,
+                    parameters: [],
+                    returns: .optional(.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])), generics: ["Key": ["Hashable"], "Value": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
+                let result = receiver.popFirst()
+                return .list([(result.map { bridgeTuple($0) { t in [("key", t.0), ("value", t.1)] } } ?? .nothing), bridgeDictionary(receiver)])
+                    }
+                ),
+                BridgedMember(
                     kind: .property, name: "capacity", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Key": ["Hashable"], "Value": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = receiver.capacity
                 return result.swishValue
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "reserveCapacity", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "minimumCapacity", type: .int)],
+                    returns: .void, generics: ["Key": ["Hashable"], "Value": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
+                receiver.reserveCapacity(try Int(swishValue: args["minimumCapacity"]!))
+                return .list([.nothing, bridgeDictionary(receiver)])
                     }
                 ),
             ]
@@ -5196,7 +6837,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "nilLiteral", name: "nilLiteral", type: .void)],
                     returns: .optional(.parameter("Wrapped")), generics: ["Wrapped": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Value?(nilLiteral: try bridgeTuple(args["nilLiteral"]!, []) { t in () })
@@ -5207,7 +6849,8 @@ extension Bridge {
                     kind: .method, name: "map", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.parameter("Wrapped")], .parameter("U"), throws: true))],
                     returns: .optional(.parameter("U")), generics: ["U": [], "Wrapped": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Value? = (args["self"]! == .nothing ? nil : args["self"]!)
@@ -5219,7 +6862,8 @@ extension Bridge {
                     kind: .method, name: "flatMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.parameter("Wrapped")], .optional(.parameter("U")), throws: true))],
                     returns: .optional(.parameter("U")), generics: ["U": [], "Wrapped": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Value? = (args["self"]! == .nothing ? nil : args["self"]!)
@@ -5231,7 +6875,8 @@ extension Bridge {
                     kind: .property, name: "unsafelyUnwrapped", isStatic: false,
                     parameters: [],
                     returns: .parameter("Wrapped"), generics: ["Wrapped": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Value? = (args["self"]! == .nothing ? nil : args["self"]!)
@@ -5240,10 +6885,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "take", isStatic: false,
+                    parameters: [],
+                    returns: .optional(.parameter("Wrapped")), generics: ["Wrapped": []],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Value? = (args["self"]! == .nothing ? nil : args["self"]!)
+                let result = receiver.take()
+                return .list([(result.map { $0 } ?? .nothing), (receiver.map { $0 } ?? .nothing)])
+                    }
+                ),
+                BridgedMember(
                     kind: .property, name: "hashValue", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Wrapped": ["Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Value? = (args["self"]! == .nothing ? nil : args["self"]!)
@@ -5262,7 +6921,8 @@ extension Bridge {
                     kind: .property, name: "lowerBound", isStatic: false,
                     parameters: [],
                     returns: .parameter("Bound"), generics: ["Bound": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Value> = try SwiftValue.unbox(Range<Value>.self, args["self"]!)
@@ -5274,7 +6934,8 @@ extension Bridge {
                     kind: .property, name: "upperBound", isStatic: false,
                     parameters: [],
                     returns: .parameter("Bound"), generics: ["Bound": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Value> = try SwiftValue.unbox(Range<Value>.self, args["self"]!)
@@ -5286,7 +6947,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "uncheckedBounds", name: "bounds", type: .tuple([.init(label: "lower", type: .parameter("Bound")), .init(label: "upper", type: .parameter("Bound"))]))],
                     returns: .generic("Range", [.parameter("Bound")]), generics: ["Bound": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Range<Value>(uncheckedBounds: try bridgeTuple(args["bounds"]!, ["lower", "upper"]) { t in (lower: t[0], upper: t[1]) })
@@ -5297,7 +6959,8 @@ extension Bridge {
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: nil, name: "element", type: .parameter("Bound"))],
                     returns: .bool, generics: ["Bound": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Value> = try SwiftValue.unbox(Range<Value>.self, args["self"]!)
@@ -5309,7 +6972,8 @@ extension Bridge {
                     kind: .property, name: "isEmpty", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: ["Bound": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Value> = try SwiftValue.unbox(Range<Value>.self, args["self"]!)
@@ -5321,7 +6985,8 @@ extension Bridge {
                     kind: .property, name: "startIndex", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5333,7 +6998,8 @@ extension Bridge {
                     kind: .property, name: "endIndex", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5345,7 +7011,8 @@ extension Bridge {
                     kind: .method, name: "index", isStatic: false,
                     parameters: [Parameter(label: "after", name: "i", type: .int)],
                     returns: .int, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5357,7 +7024,8 @@ extension Bridge {
                     kind: .method, name: "index", isStatic: false,
                     parameters: [Parameter(label: "before", name: "i", type: .int)],
                     returns: .int, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5369,7 +7037,8 @@ extension Bridge {
                     kind: .method, name: "index", isStatic: false,
                     parameters: [Parameter(label: nil, name: "i", type: .int), Parameter(label: "offsetBy", name: "n", type: .int)],
                     returns: .int, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5381,7 +7050,8 @@ extension Bridge {
                     kind: .method, name: "distance", isStatic: false,
                     parameters: [Parameter(label: "from", name: "start", type: .int), Parameter(label: "to", name: "end", type: .int)],
                     returns: .int, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5393,7 +7063,8 @@ extension Bridge {
                     kind: .property, name: "indices", isStatic: false,
                     parameters: [],
                     returns: .generic("Range", [.int]), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5405,7 +7076,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "other", type: .generic("ClosedRange", [.int]))],
                     returns: .generic("Range", [.int]), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = Range<Int>(try bridgeClosedRange(args["other"]!) { try Int(swishValue: $0) })
@@ -5416,7 +7088,8 @@ extension Bridge {
                     kind: .method, name: "clamped", isStatic: false,
                     parameters: [Parameter(label: "to", name: "limits", type: .generic("Range", [.parameter("Bound")]))],
                     returns: .generic("Range", [.parameter("Bound")]), generics: ["Bound": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Value> = try SwiftValue.unbox(Range<Value>.self, args["self"]!)
@@ -5428,7 +7101,8 @@ extension Bridge {
                     kind: .property, name: "description", isStatic: false,
                     parameters: [],
                     returns: .string, generics: ["Bound": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Value> = try SwiftValue.unbox(Range<Value>.self, args["self"]!)
@@ -5440,7 +7114,8 @@ extension Bridge {
                     kind: .property, name: "debugDescription", isStatic: false,
                     parameters: [],
                     returns: .string, generics: ["Bound": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Value> = try SwiftValue.unbox(Range<Value>.self, args["self"]!)
@@ -5452,7 +7127,8 @@ extension Bridge {
                     kind: .property, name: "hashValue", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Bound": ["Comparable", "Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Value> = try SwiftValue.unbox(Range<Value>.self, args["self"]!)
@@ -5464,7 +7140,8 @@ extension Bridge {
                     kind: .method, name: "overlaps", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .generic("Range", [.parameter("Bound")]))],
                     returns: .bool, generics: ["Bound": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Value> = try SwiftValue.unbox(Range<Value>.self, args["self"]!)
@@ -5476,7 +7153,8 @@ extension Bridge {
                     kind: .method, name: "overlaps", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .generic("ClosedRange", [.parameter("Bound")]))],
                     returns: .bool, generics: ["Bound": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Value> = try SwiftValue.unbox(Range<Value>.self, args["self"]!)
@@ -5488,7 +7166,8 @@ extension Bridge {
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .generic("Range", [.parameter("Bound")]))],
                     returns: .bool, generics: ["Bound": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Value> = try SwiftValue.unbox(Range<Value>.self, args["self"]!)
@@ -5500,7 +7179,8 @@ extension Bridge {
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .generic("ClosedRange", [.parameter("Bound")]))],
                     returns: .bool, generics: ["Bound": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Value> = try SwiftValue.unbox(Range<Value>.self, args["self"]!)
@@ -5512,7 +7192,8 @@ extension Bridge {
                     kind: .method, name: "index", isStatic: false,
                     parameters: [Parameter(label: nil, name: "i", type: .int), Parameter(label: "offsetBy", name: "distance", type: .int), Parameter(label: "limitedBy", name: "limit", type: .int)],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5524,7 +7205,8 @@ extension Bridge {
                     kind: .method, name: "dropLast", isStatic: false,
                     parameters: [Parameter(label: nil, name: "k", type: .int)],
                     returns: .generic("Range", [.int]), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5536,7 +7218,8 @@ extension Bridge {
                     kind: .method, name: "suffix", isStatic: false,
                     parameters: [Parameter(label: nil, name: "maxLength", type: .int)],
                     returns: .generic("Range", [.int]), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5548,7 +7231,8 @@ extension Bridge {
                     kind: .property, name: "count", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5560,7 +7244,8 @@ extension Bridge {
                     kind: .method, name: "randomElement", isStatic: false,
                     parameters: [],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5572,7 +7257,8 @@ extension Bridge {
                     kind: .property, name: "first", isStatic: false,
                     parameters: [],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5584,7 +7270,8 @@ extension Bridge {
                     kind: .property, name: "underestimatedCount", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5596,7 +7283,8 @@ extension Bridge {
                     kind: .method, name: "map", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.int], .parameter("T"), throws: true))],
                     returns: .list(.parameter("T")), generics: ["Bound": ["=Int"], "T": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5608,7 +7296,8 @@ extension Bridge {
                     kind: .method, name: "dropFirst", isStatic: false,
                     parameters: [Parameter(label: nil, name: "k", type: .int, defaultValue: .literal(.int(1)))],
                     returns: .generic("Range", [.int]), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5620,7 +7309,8 @@ extension Bridge {
                     kind: .method, name: "drop", isStatic: false,
                     parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.int], .bool, throws: true))],
                     returns: .generic("Range", [.int]), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5632,7 +7322,8 @@ extension Bridge {
                     kind: .method, name: "prefix", isStatic: false,
                     parameters: [Parameter(label: nil, name: "maxLength", type: .int)],
                     returns: .generic("Range", [.int]), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5644,7 +7335,8 @@ extension Bridge {
                     kind: .method, name: "prefix", isStatic: false,
                     parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.int], .bool, throws: true))],
                     returns: .generic("Range", [.int]), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5656,7 +7348,8 @@ extension Bridge {
                     kind: .method, name: "prefix", isStatic: false,
                     parameters: [Parameter(label: "upTo", name: "end", type: .int)],
                     returns: .generic("Range", [.int]), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5668,7 +7361,8 @@ extension Bridge {
                     kind: .method, name: "suffix", isStatic: false,
                     parameters: [Parameter(label: "from", name: "start", type: .int)],
                     returns: .generic("Range", [.int]), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5680,7 +7374,8 @@ extension Bridge {
                     kind: .method, name: "prefix", isStatic: false,
                     parameters: [Parameter(label: "through", name: "position", type: .int)],
                     returns: .generic("Range", [.int]), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5692,7 +7387,8 @@ extension Bridge {
                     kind: .method, name: "split", isStatic: false,
                     parameters: [Parameter(label: "maxSplits", name: "maxSplits", type: .int, externalDefault: "Int.max"), Parameter(label: "omittingEmptySubsequences", name: "omittingEmptySubsequences", type: .bool, defaultValue: .literal(.bool(true))), Parameter(label: "whereSeparator", name: "isSeparator", type: .functionType([.int], .bool, throws: true))],
                     returns: .list(.generic("Range", [.int])), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5704,7 +7400,8 @@ extension Bridge {
                     kind: .method, name: "split", isStatic: false,
                     parameters: [Parameter(label: "separator", name: "separator", type: .int), Parameter(label: "maxSplits", name: "maxSplits", type: .int, externalDefault: "Int.max"), Parameter(label: "omittingEmptySubsequences", name: "omittingEmptySubsequences", type: .bool, defaultValue: .literal(.bool(true)))],
                     returns: .list(.generic("Range", [.int])), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5716,7 +7413,8 @@ extension Bridge {
                     kind: .property, name: "last", isStatic: false,
                     parameters: [],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5728,7 +7426,8 @@ extension Bridge {
                     kind: .method, name: "firstIndex", isStatic: false,
                     parameters: [Parameter(label: "of", name: "element", type: .int)],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5740,7 +7439,8 @@ extension Bridge {
                     kind: .method, name: "firstIndex", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.int], .bool, throws: true))],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5752,7 +7452,8 @@ extension Bridge {
                     kind: .method, name: "last", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.int], .bool, throws: true))],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5764,7 +7465,8 @@ extension Bridge {
                     kind: .method, name: "lastIndex", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.int], .bool, throws: true))],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5776,7 +7478,8 @@ extension Bridge {
                     kind: .method, name: "lastIndex", isStatic: false,
                     parameters: [Parameter(label: "of", name: "element", type: .int)],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5788,7 +7491,8 @@ extension Bridge {
                     kind: .method, name: "shuffled", isStatic: false,
                     parameters: [],
                     returns: .list(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5800,7 +7504,8 @@ extension Bridge {
                     kind: .method, name: "filter", isStatic: false,
                     parameters: [Parameter(label: nil, name: "isIncluded", type: .functionType([.int], .bool, throws: true))],
                     returns: .list(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5812,7 +7517,8 @@ extension Bridge {
                     kind: .method, name: "forEach", isStatic: false,
                     parameters: [Parameter(label: nil, name: "body", type: .functionType([.int], .void, throws: true))],
                     returns: .void, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5824,7 +7530,8 @@ extension Bridge {
                     kind: .method, name: "first", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.int], .bool, throws: true))],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5836,7 +7543,8 @@ extension Bridge {
                     kind: .method, name: "min", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.int, .int], .bool, throws: true))],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5848,7 +7556,8 @@ extension Bridge {
                     kind: .method, name: "max", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.int, .int], .bool, throws: true))],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5860,7 +7569,8 @@ extension Bridge {
                     kind: .method, name: "min", isStatic: false,
                     parameters: [],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5872,7 +7582,8 @@ extension Bridge {
                     kind: .method, name: "max", isStatic: false,
                     parameters: [],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5884,7 +7595,8 @@ extension Bridge {
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.parameter("PossiblePrefix.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.int, .parameter("PossiblePrefix.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["Bound": ["=Int"], "PossiblePrefix.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5896,7 +7608,8 @@ extension Bridge {
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.int))],
                     returns: .bool, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5908,7 +7621,8 @@ extension Bridge {
                     kind: .method, name: "elementsEqual", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("OtherSequence.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.int, .parameter("OtherSequence.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["Bound": ["=Int"], "OtherSequence.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5920,7 +7634,8 @@ extension Bridge {
                     kind: .method, name: "elementsEqual", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.int))],
                     returns: .bool, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5932,7 +7647,8 @@ extension Bridge {
                     kind: .method, name: "lexicographicallyPrecedes", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.int)), Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.int, .int], .bool, throws: true))],
                     returns: .bool, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5944,7 +7660,8 @@ extension Bridge {
                     kind: .method, name: "lexicographicallyPrecedes", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.int))],
                     returns: .bool, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5956,7 +7673,8 @@ extension Bridge {
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.int], .bool, throws: true))],
                     returns: .bool, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5968,7 +7686,8 @@ extension Bridge {
                     kind: .method, name: "allSatisfy", isStatic: false,
                     parameters: [Parameter(label: nil, name: "predicate", type: .functionType([.int], .bool, throws: true))],
                     returns: .bool, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5980,7 +7699,8 @@ extension Bridge {
                     kind: .method, name: "count", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.int], .bool, throws: true))],
                     returns: .int, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -5992,7 +7712,8 @@ extension Bridge {
                     kind: .method, name: "reduce", isStatic: false,
                     parameters: [Parameter(label: nil, name: "initialResult", type: .parameter("Result")), Parameter(label: nil, name: "nextPartialResult", type: .functionType([.parameter("Result"), .int], .parameter("Result"), throws: true))],
                     returns: .parameter("Result"), generics: ["Bound": ["=Int"], "Result": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6004,7 +7725,8 @@ extension Bridge {
                     kind: .method, name: "reversed", isStatic: false,
                     parameters: [],
                     returns: .list(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6016,7 +7738,8 @@ extension Bridge {
                     kind: .method, name: "flatMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.int], .someSequence(.parameter("SegmentOfResult.Element")), throws: true))],
                     returns: .list(.parameter("SegmentOfResult.Element")), generics: ["Bound": ["=Int"], "SegmentOfResult.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6028,7 +7751,8 @@ extension Bridge {
                     kind: .method, name: "compactMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.int], .optional(.parameter("ElementOfResult")), throws: true))],
                     returns: .list(.parameter("ElementOfResult")), generics: ["Bound": ["=Int"], "ElementOfResult": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6040,7 +7764,8 @@ extension Bridge {
                     kind: .method, name: "sorted", isStatic: false,
                     parameters: [],
                     returns: .list(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6052,7 +7777,8 @@ extension Bridge {
                     kind: .method, name: "sorted", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.int, .int], .bool, throws: true))],
                     returns: .list(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6071,7 +7797,8 @@ extension Bridge {
                     kind: .property, name: "lowerBound", isStatic: false,
                     parameters: [],
                     returns: .parameter("Bound"), generics: ["Bound": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Value> = try SwiftValue.unbox(ClosedRange<Value>.self, args["self"]!)
@@ -6083,7 +7810,8 @@ extension Bridge {
                     kind: .property, name: "upperBound", isStatic: false,
                     parameters: [],
                     returns: .parameter("Bound"), generics: ["Bound": []],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Value> = try SwiftValue.unbox(ClosedRange<Value>.self, args["self"]!)
@@ -6095,7 +7823,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "uncheckedBounds", name: "bounds", type: .tuple([.init(label: "lower", type: .parameter("Bound")), .init(label: "upper", type: .parameter("Bound"))]))],
                     returns: .generic("ClosedRange", [.parameter("Bound")]), generics: ["Bound": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = ClosedRange<Value>(uncheckedBounds: try bridgeTuple(args["bounds"]!, ["lower", "upper"]) { t in (lower: t[0], upper: t[1]) })
@@ -6106,7 +7835,8 @@ extension Bridge {
                     kind: .property, name: "isEmpty", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: ["Bound": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Value> = try SwiftValue.unbox(ClosedRange<Value>.self, args["self"]!)
@@ -6118,7 +7848,8 @@ extension Bridge {
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: nil, name: "element", type: .parameter("Bound"))],
                     returns: .bool, generics: ["Bound": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Value> = try SwiftValue.unbox(ClosedRange<Value>.self, args["self"]!)
@@ -6130,7 +7861,8 @@ extension Bridge {
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .generic("Range", [.int]))],
                     returns: .bool, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6142,7 +7874,8 @@ extension Bridge {
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .generic("ClosedRange", [.parameter("Bound")]))],
                     returns: .bool, generics: ["Bound": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Value> = try SwiftValue.unbox(ClosedRange<Value>.self, args["self"]!)
@@ -6154,7 +7887,8 @@ extension Bridge {
                     kind: .property, name: "hashValue", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Bound": ["Comparable", "Hashable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Value> = try SwiftValue.unbox(ClosedRange<Value>.self, args["self"]!)
@@ -6166,7 +7900,8 @@ extension Bridge {
                     kind: .property, name: "description", isStatic: false,
                     parameters: [],
                     returns: .string, generics: ["Bound": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Value> = try SwiftValue.unbox(ClosedRange<Value>.self, args["self"]!)
@@ -6178,7 +7913,8 @@ extension Bridge {
                     kind: .property, name: "debugDescription", isStatic: false,
                     parameters: [],
                     returns: .string, generics: ["Bound": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Value> = try SwiftValue.unbox(ClosedRange<Value>.self, args["self"]!)
@@ -6190,7 +7926,8 @@ extension Bridge {
                     kind: .method, name: "clamped", isStatic: false,
                     parameters: [Parameter(label: "to", name: "limits", type: .generic("ClosedRange", [.parameter("Bound")]))],
                     returns: .generic("ClosedRange", [.parameter("Bound")]), generics: ["Bound": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Value> = try SwiftValue.unbox(ClosedRange<Value>.self, args["self"]!)
@@ -6202,7 +7939,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "other", type: .generic("Range", [.int]))],
                     returns: .generic("ClosedRange", [.int]), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = ClosedRange<Int>(try bridgeRange(args["other"]!) { try Int(swishValue: $0) })
@@ -6213,7 +7951,8 @@ extension Bridge {
                     kind: .method, name: "overlaps", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .generic("ClosedRange", [.parameter("Bound")]))],
                     returns: .bool, generics: ["Bound": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Value> = try SwiftValue.unbox(ClosedRange<Value>.self, args["self"]!)
@@ -6225,7 +7964,8 @@ extension Bridge {
                     kind: .method, name: "overlaps", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .generic("Range", [.parameter("Bound")]))],
                     returns: .bool, generics: ["Bound": ["Comparable"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Value> = try SwiftValue.unbox(ClosedRange<Value>.self, args["self"]!)
@@ -6237,7 +7977,8 @@ extension Bridge {
                     kind: .property, name: "count", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6249,7 +7990,8 @@ extension Bridge {
                     kind: .method, name: "randomElement", isStatic: false,
                     parameters: [],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6261,7 +8003,8 @@ extension Bridge {
                     kind: .property, name: "first", isStatic: false,
                     parameters: [],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6273,7 +8016,8 @@ extension Bridge {
                     kind: .property, name: "underestimatedCount", isStatic: false,
                     parameters: [],
                     returns: .int, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6285,7 +8029,8 @@ extension Bridge {
                     kind: .method, name: "map", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.int], .parameter("T"), throws: true))],
                     returns: .list(.parameter("T")), generics: ["Bound": ["=Int"], "T": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6297,7 +8042,8 @@ extension Bridge {
                     kind: .property, name: "last", isStatic: false,
                     parameters: [],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6309,7 +8055,8 @@ extension Bridge {
                     kind: .method, name: "last", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.int], .bool, throws: true))],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6321,7 +8068,8 @@ extension Bridge {
                     kind: .method, name: "shuffled", isStatic: false,
                     parameters: [],
                     returns: .list(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6333,7 +8081,8 @@ extension Bridge {
                     kind: .method, name: "filter", isStatic: false,
                     parameters: [Parameter(label: nil, name: "isIncluded", type: .functionType([.int], .bool, throws: true))],
                     returns: .list(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6345,7 +8094,8 @@ extension Bridge {
                     kind: .method, name: "forEach", isStatic: false,
                     parameters: [Parameter(label: nil, name: "body", type: .functionType([.int], .void, throws: true))],
                     returns: .void, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6357,7 +8107,8 @@ extension Bridge {
                     kind: .method, name: "first", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.int], .bool, throws: true))],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6369,7 +8120,8 @@ extension Bridge {
                     kind: .method, name: "split", isStatic: false,
                     parameters: [Parameter(label: "separator", name: "separator", type: .int), Parameter(label: "maxSplits", name: "maxSplits", type: .int, externalDefault: "Int.max"), Parameter(label: "omittingEmptySubsequences", name: "omittingEmptySubsequences", type: .bool, defaultValue: .literal(.bool(true)))],
                     returns: .list(.generic("ArraySlice", [.int])), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6381,7 +8133,8 @@ extension Bridge {
                     kind: .method, name: "split", isStatic: false,
                     parameters: [Parameter(label: "maxSplits", name: "maxSplits", type: .int, externalDefault: "Int.max"), Parameter(label: "omittingEmptySubsequences", name: "omittingEmptySubsequences", type: .bool, defaultValue: .literal(.bool(true))), Parameter(label: "whereSeparator", name: "isSeparator", type: .functionType([.int], .bool, throws: true))],
                     returns: .list(.generic("ArraySlice", [.int])), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6393,7 +8146,8 @@ extension Bridge {
                     kind: .method, name: "suffix", isStatic: false,
                     parameters: [Parameter(label: nil, name: "maxLength", type: .int)],
                     returns: .list(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6405,7 +8159,8 @@ extension Bridge {
                     kind: .method, name: "dropLast", isStatic: false,
                     parameters: [Parameter(label: nil, name: "k", type: .int, defaultValue: .literal(.int(1)))],
                     returns: .list(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6417,7 +8172,8 @@ extension Bridge {
                     kind: .method, name: "prefix", isStatic: false,
                     parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.int], .bool, throws: true))],
                     returns: .list(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6429,7 +8185,8 @@ extension Bridge {
                     kind: .method, name: "min", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.int, .int], .bool, throws: true))],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6441,7 +8198,8 @@ extension Bridge {
                     kind: .method, name: "max", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.int, .int], .bool, throws: true))],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6453,7 +8211,8 @@ extension Bridge {
                     kind: .method, name: "min", isStatic: false,
                     parameters: [],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6465,7 +8224,8 @@ extension Bridge {
                     kind: .method, name: "max", isStatic: false,
                     parameters: [],
                     returns: .optional(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6477,7 +8237,8 @@ extension Bridge {
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.parameter("PossiblePrefix.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.int, .parameter("PossiblePrefix.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["Bound": ["=Int"], "PossiblePrefix.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6489,7 +8250,8 @@ extension Bridge {
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.int))],
                     returns: .bool, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6501,7 +8263,8 @@ extension Bridge {
                     kind: .method, name: "elementsEqual", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("OtherSequence.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.int, .parameter("OtherSequence.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["Bound": ["=Int"], "OtherSequence.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6513,7 +8276,8 @@ extension Bridge {
                     kind: .method, name: "elementsEqual", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.int))],
                     returns: .bool, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6525,7 +8289,8 @@ extension Bridge {
                     kind: .method, name: "lexicographicallyPrecedes", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.int)), Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.int, .int], .bool, throws: true))],
                     returns: .bool, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6537,7 +8302,8 @@ extension Bridge {
                     kind: .method, name: "lexicographicallyPrecedes", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.int))],
                     returns: .bool, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6549,7 +8315,8 @@ extension Bridge {
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.int], .bool, throws: true))],
                     returns: .bool, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6561,7 +8328,8 @@ extension Bridge {
                     kind: .method, name: "allSatisfy", isStatic: false,
                     parameters: [Parameter(label: nil, name: "predicate", type: .functionType([.int], .bool, throws: true))],
                     returns: .bool, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6573,7 +8341,8 @@ extension Bridge {
                     kind: .method, name: "count", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.int], .bool, throws: true))],
                     returns: .int, generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6585,7 +8354,8 @@ extension Bridge {
                     kind: .method, name: "reduce", isStatic: false,
                     parameters: [Parameter(label: nil, name: "initialResult", type: .parameter("Result")), Parameter(label: nil, name: "nextPartialResult", type: .functionType([.parameter("Result"), .int], .parameter("Result"), throws: true))],
                     returns: .parameter("Result"), generics: ["Bound": ["=Int"], "Result": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6597,7 +8367,8 @@ extension Bridge {
                     kind: .method, name: "reversed", isStatic: false,
                     parameters: [],
                     returns: .list(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6609,7 +8380,8 @@ extension Bridge {
                     kind: .method, name: "flatMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.int], .someSequence(.parameter("SegmentOfResult.Element")), throws: true))],
                     returns: .list(.parameter("SegmentOfResult.Element")), generics: ["Bound": ["=Int"], "SegmentOfResult.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6621,7 +8393,8 @@ extension Bridge {
                     kind: .method, name: "compactMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.int], .optional(.parameter("ElementOfResult")), throws: true))],
                     returns: .list(.parameter("ElementOfResult")), generics: ["Bound": ["=Int"], "ElementOfResult": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6633,7 +8406,8 @@ extension Bridge {
                     kind: .method, name: "sorted", isStatic: false,
                     parameters: [],
                     returns: .list(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
@@ -6645,7 +8419,8 @@ extension Bridge {
                     kind: .method, name: "sorted", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.int, .int], .bool, throws: true))],
                     returns: .list(.int), generics: ["Bound": ["=Int"]],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }

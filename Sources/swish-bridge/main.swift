@@ -783,7 +783,7 @@ func sequenceParameter(_ type: SType, _ sequences: Set<String>) -> String? {
 func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Constraint] = []) throws -> (key: String, code: String) {
     let text = (symbol.declarationFragments ?? []).map(\.spelling).joined()
     let declaration = try parseDeclaration(text)
-    if declaration.isMutating { throw Unsupported(reason: "mutating") }
+    if declaration.isMutating && declaration.isStatic { throw Unsupported(reason: "mutating") }
     var owner = original
     let constraints = conditions + (symbol.swiftExtension?.constraints ?? []) + (symbol.swiftGenerics?.constraints ?? [])
         + declaration.constraints
@@ -908,26 +908,55 @@ func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Const
     let tryPrefix = declaration.throwing || declaration.rethrowing ? "try " : ""
     var body = ""
     if !declaration.isStatic && declaration.kind != .initializer {
-        body += "let receiver: \(swiftType) = \(fromSwish("args[\"self\"]!", receiverType))\n                "
+        let binding = declaration.isMutating ? "var" : "let"
+        body += "\(binding) receiver: \(swiftType) = \(fromSwish("args[\"self\"]!", receiverType))\n                "
     }
-    if case .tuple(let elements) = returns, elements.isEmpty {
+    let isVoid = if case .tuple(let elements) = returns, elements.isEmpty { true } else { false }
+    if declaration.isMutating {
+        // The result, and the receiver as the call left it, for the shell to
+        // put back where it came from (see `Shell.runBridged`).
+        body += isVoid ? "\(tryPrefix)\(target)\n                " : "let result = \(tryPrefix)\(target)\n                "
+        body += "return .list([\(isVoid ? ".nothing" : toSwish("result", returns)), \(toSwish("receiver", receiverType))])"
+    } else if isVoid {
         body += "\(tryPrefix)\(target)\n                return .nothing"
     } else {
         body += "let result = \(tryPrefix)\(target)\n                return \(toSwish("result", returns))"
     }
     let kind = declaration.kind == .initializer ? ".initializer" : declaration.kind == .property ? ".property" : ".method"
+    // `var extension: String? { get set }`: a setter too, which changes a
+    // copy of the receiver and gives it back, as a mutating method does.
+    var setter = ""
+    if declaration.kind == .property, !declaration.isStatic, text.contains("set }") {
+        setter = """
+
+                BridgedMember(
+                    kind: .setter, name: \(quoted(declaration.name)), isStatic: false,
+                    parameters: [Parameter(label: nil, name: "newValue", type: \(annotation(returns)))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: \(swiftType) = \(fromSwish("args[\"self\"]!", receiverType))
+                        receiver.\(swiftName(declaration.name)) = \(fromSwish("args[\"newValue\"]!", returns))
+                        return .list([.nothing, \(toSwish("receiver", receiverType))])
+                    }
+                ),
+"""
+    }
     let genericsCode = generics.isEmpty ? "[:]" : "[" + generics.sorted { $0.key < $1.key }.map { "\(quoted($0.key)): [\($0.value.map(quoted).joined(separator: ", "))]" }.joined(separator: ", ") + "]"
     return (key, """
                 BridgedMember(
                     kind: \(kind), name: \(quoted(declaration.name)), isStatic: \(declaration.isStatic),
                     parameters: [\(parameterCode.joined(separator: ", "))],
                     returns: \(annotation(returns)), generics: \(genericsCode),
-                    isThrowing: \(declaration.throwing), isRethrowing: \(declaration.rethrowing),
+                    isThrowing: \(declaration.throwing), isRethrowing: \(declaration.rethrowing), isMutating: \(declaration.isMutating),
+                    discardableResult: \(text.contains("@discardableResult")),
                     body: .native { shell, args in
                         _ = shell
                         \(body)
                     }
-                ),
+                ),\(setter)
 """)
 }
 

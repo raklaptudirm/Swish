@@ -90,3 +90,32 @@ private func checkError(_ source: String) -> String? {
     #expect(checkError("let z = if true { 1 }") == "syntax error: an if expression needs an else")
     #expect(checkError("let z = if true { ls } else { 2 }") == "syntax error: each branch of an if expression must be one expression")
 }
+
+@Test func guardStatements() throws {
+    #expect(try output("""
+    func tilde(_ path: String, _ home: String?) -> String {
+        guard let home = home else { return path }
+        guard path.hasPrefix(home) else { return path }
+        return "~" + String(path.dropFirst(home.count))
+    }
+    tilde("/u/me/src", "/u/me"); tilde("/u/me/src", nil); tilde("/opt", "/u/me")
+    enum R { case ok(Int), failed }
+    func doubled(_ r: R) -> Int {
+        guard case .ok(let n) = r else { return -1 }
+        return n * 2
+    }
+    doubled(.ok(21)); doubled(.failed)
+    for x in [1, 2, 3, 4] {
+        guard x % 2 == 0 else { continue }
+        echo $x
+    }
+    guard test -d / else { exit 1 }
+    let maybe: Int? = 5
+    guard let m = maybe else { exit 1 }
+    m + 1
+    """) == "\"~/src\"\n\"/u/me/src\"\n\"/opt\"\n42\n-1\n2\n4\n6\n")
+    // The else must leave; what it binds must be an optional.
+    #expect(checkError("guard true else { echo no }") == "error: guard's else must not carry on: end it with return, break, continue or exit")
+    #expect(checkError("guard let q = 5 else { exit 1 }") == "error: 'let' in a condition unwraps an optional, but this is Int")
+    #expect(checkError("guard true { exit 1 }") == "syntax error: expected 'else' after guard's condition, found '{'")
+}

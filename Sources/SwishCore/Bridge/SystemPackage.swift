@@ -15,7 +15,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [],
                     returns: .named("FilePath"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = FilePath()
@@ -26,7 +27,8 @@ extension Bridge {
                     kind: .property, name: "length", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
@@ -38,7 +40,8 @@ extension Bridge {
                     kind: .property, name: "components", isStatic: false,
                     parameters: [],
                     returns: .named("FilePath.ComponentView"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
@@ -47,10 +50,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .setter, name: "components", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "newValue", type: .named("FilePath.ComponentView"))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
+                        receiver.components = try SwiftValue.unbox(FilePath.ComponentView.self, args["newValue"]!)
+                        return .list([.nothing, SwiftValue.make(receiver, as: "FilePath")])
+                    }
+                ),
+                BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "stringLiteral", name: "stringLiteral", type: .string)],
                     returns: .named("FilePath"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = FilePath(stringLiteral: try String(swishValue: args["stringLiteral"]!))
@@ -61,7 +78,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "string", type: .string)],
                     returns: .named("FilePath"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = FilePath(try String(swishValue: args["string"]!))
@@ -72,7 +90,8 @@ extension Bridge {
                     kind: .property, name: "description", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
@@ -84,7 +103,8 @@ extension Bridge {
                     kind: .property, name: "debugDescription", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
@@ -96,7 +116,8 @@ extension Bridge {
                     kind: .property, name: "string", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
@@ -108,7 +129,8 @@ extension Bridge {
                     kind: .property, name: "isAbsolute", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
@@ -120,7 +142,8 @@ extension Bridge {
                     kind: .property, name: "isRelative", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
@@ -132,7 +155,8 @@ extension Bridge {
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "other", type: .named("FilePath"))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
@@ -144,7 +168,8 @@ extension Bridge {
                     kind: .method, name: "ends", isStatic: false,
                     parameters: [Parameter(label: "with", name: "other", type: .named("FilePath"))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
@@ -156,7 +181,8 @@ extension Bridge {
                     kind: .property, name: "isEmpty", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
@@ -168,7 +194,8 @@ extension Bridge {
                     kind: .method, name: "removingRoot", isStatic: false,
                     parameters: [],
                     returns: .named("FilePath"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
@@ -180,7 +207,8 @@ extension Bridge {
                     kind: .property, name: "lastComponent", isStatic: false,
                     parameters: [],
                     returns: .optional(.named("FilePath.Component")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
@@ -192,7 +220,8 @@ extension Bridge {
                     kind: .method, name: "removingLastComponent", isStatic: false,
                     parameters: [],
                     returns: .named("FilePath"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
@@ -201,10 +230,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "removeLastComponent", isStatic: false,
+                    parameters: [],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: true,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
+                let result = receiver.removeLastComponent()
+                return .list([result.swishValue, SwiftValue.make(receiver, as: "FilePath")])
+                    }
+                ),
+                BridgedMember(
                     kind: .property, name: "extension", isStatic: false,
                     parameters: [],
                     returns: .optional(.string), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
@@ -213,10 +256,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .setter, name: "extension", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "newValue", type: .optional(.string))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
+                        receiver.`extension` = (args["newValue"]! == .nothing ? nil : try String(swishValue: args["newValue"]!))
+                        return .list([.nothing, SwiftValue.make(receiver, as: "FilePath")])
+                    }
+                ),
+                BridgedMember(
                     kind: .property, name: "stem", isStatic: false,
                     parameters: [],
                     returns: .optional(.string), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
@@ -228,7 +285,8 @@ extension Bridge {
                     kind: .property, name: "isLexicallyNormal", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
@@ -237,10 +295,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "lexicallyNormalize", isStatic: false,
+                    parameters: [],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
+                receiver.lexicallyNormalize()
+                return .list([.nothing, SwiftValue.make(receiver, as: "FilePath")])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "lexicallyNormalized", isStatic: false,
                     parameters: [],
                     returns: .named("FilePath"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
@@ -252,7 +324,8 @@ extension Bridge {
                     kind: .method, name: "lexicallyResolving", isStatic: false,
                     parameters: [Parameter(label: nil, name: "subpath", type: .named("FilePath"))],
                     returns: .optional(.named("FilePath")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
@@ -261,10 +334,50 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "removePrefix", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "prefix", type: .named("FilePath"))],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
+                let result = receiver.removePrefix(try SwiftValue.unbox(FilePath.self, args["prefix"]!))
+                return .list([result.swishValue, SwiftValue.make(receiver, as: "FilePath")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "append", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "component", type: .named("FilePath.Component"))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
+                receiver.append(try SwiftValue.unbox(FilePath.Component.self, args["component"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "FilePath")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "append", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "other", type: .string)],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
+                receiver.append(try String(swishValue: args["other"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "FilePath")])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "appending", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .named("FilePath.Component"))],
                     returns: .named("FilePath"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
@@ -276,7 +389,8 @@ extension Bridge {
                     kind: .method, name: "appending", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .string)],
                     returns: .named("FilePath"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
@@ -285,15 +399,55 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "push", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "other", type: .named("FilePath"))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
+                receiver.push(try SwiftValue.unbox(FilePath.self, args["other"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "FilePath")])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "pushing", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .named("FilePath"))],
                     returns: .named("FilePath"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
                 let result = receiver.pushing(try SwiftValue.unbox(FilePath.self, args["other"]!))
                 return SwiftValue.make(result, as: "FilePath")
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeAll", isStatic: false,
+                    parameters: [Parameter(label: "keepingCapacity", name: "keepingCapacity", type: .bool, defaultValue: .literal(.bool(false)))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
+                receiver.removeAll(keepingCapacity: try Bool(swishValue: args["keepingCapacity"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "FilePath")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "reserveCapacity", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "minimumCapacity", type: .int)],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath = try SwiftValue.unbox(FilePath.self, args["self"]!)
+                receiver.reserveCapacity(try Int(swishValue: args["minimumCapacity"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "FilePath")])
                     }
                 ),
             ]
@@ -307,7 +461,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "stringLiteral", name: "stringLiteral", type: .string)],
                     returns: .named("FilePath.Component"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = FilePath.Component(stringLiteral: try String(swishValue: args["stringLiteral"]!))
@@ -318,7 +473,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "string", type: .string)],
                     returns: .optional(.named("FilePath.Component")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = FilePath.Component(try String(swishValue: args["string"]!))
@@ -329,7 +485,8 @@ extension Bridge {
                     kind: .property, name: "description", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.Component = try SwiftValue.unbox(FilePath.Component.self, args["self"]!)
@@ -341,7 +498,8 @@ extension Bridge {
                     kind: .property, name: "debugDescription", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.Component = try SwiftValue.unbox(FilePath.Component.self, args["self"]!)
@@ -353,7 +511,8 @@ extension Bridge {
                     kind: .property, name: "string", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.Component = try SwiftValue.unbox(FilePath.Component.self, args["self"]!)
@@ -365,7 +524,8 @@ extension Bridge {
                     kind: .property, name: "extension", isStatic: false,
                     parameters: [],
                     returns: .optional(.string), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.Component = try SwiftValue.unbox(FilePath.Component.self, args["self"]!)
@@ -377,7 +537,8 @@ extension Bridge {
                     kind: .property, name: "stem", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.Component = try SwiftValue.unbox(FilePath.Component.self, args["self"]!)
@@ -396,7 +557,8 @@ extension Bridge {
                     kind: .method, name: "map", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.named("FilePath.Component")], .parameter("T"), throws: true))],
                     returns: .list(.parameter("T")), generics: ["T": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -408,7 +570,8 @@ extension Bridge {
                     kind: .property, name: "last", isStatic: false,
                     parameters: [],
                     returns: .optional(.named("FilePath.Component")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -420,7 +583,8 @@ extension Bridge {
                     kind: .method, name: "last", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.named("FilePath.Component")], .bool, throws: true))],
                     returns: .optional(.named("FilePath.Component")), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -432,7 +596,8 @@ extension Bridge {
                     kind: .method, name: "shuffled", isStatic: false,
                     parameters: [],
                     returns: .list(.named("FilePath.Component")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -444,7 +609,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "repeating", name: "repeatedValue", type: .named("FilePath.Component")), Parameter(label: "count", name: "count", type: .int)],
                     returns: .named("FilePath.ComponentView"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = FilePath.ComponentView(repeating: try SwiftValue.unbox(FilePath.Component.self, args["repeatedValue"]!), count: try Int(swishValue: args["count"]!))
@@ -455,7 +621,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "elements", type: .someSequence(.named("FilePath.Component")))],
                     returns: .named("FilePath.ComponentView"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = FilePath.ComponentView(try bridgeSequence(args["elements"]!).map { try SwiftValue.unbox(FilePath.Component.self, $0) })
@@ -463,10 +630,128 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "append", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "newElement", type: .named("FilePath.Component"))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
+                receiver.append(try SwiftValue.unbox(FilePath.Component.self, args["newElement"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "FilePath.ComponentView")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "append", isStatic: false,
+                    parameters: [Parameter(label: "contentsOf", name: "newElements", type: .someSequence(.named("FilePath.Component")))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
+                receiver.append(contentsOf: try bridgeSequence(args["newElements"]!).map { try SwiftValue.unbox(FilePath.Component.self, $0) })
+                return .list([.nothing, SwiftValue.make(receiver, as: "FilePath.ComponentView")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeFirst", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "k", type: .int)],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
+                receiver.removeFirst(try Int(swishValue: args["k"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "FilePath.ComponentView")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeFirst", isStatic: false,
+                    parameters: [],
+                    returns: .named("FilePath.Component"), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: true,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
+                let result = receiver.removeFirst()
+                return .list([SwiftValue.make(result, as: "FilePath.Component"), SwiftValue.make(receiver, as: "FilePath.ComponentView")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeAll", isStatic: false,
+                    parameters: [Parameter(label: "keepingCapacity", name: "keepCapacity", type: .bool, defaultValue: .literal(.bool(false)))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
+                receiver.removeAll(keepingCapacity: try Bool(swishValue: args["keepCapacity"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "FilePath.ComponentView")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "reserveCapacity", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "n", type: .int)],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
+                receiver.reserveCapacity(try Int(swishValue: args["n"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "FilePath.ComponentView")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "popLast", isStatic: false,
+                    parameters: [],
+                    returns: .optional(.named("FilePath.Component")), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
+                let result = receiver.popLast()
+                return .list([(result.map { SwiftValue.make($0, as: "FilePath.Component") } ?? .nothing), SwiftValue.make(receiver, as: "FilePath.ComponentView")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeLast", isStatic: false,
+                    parameters: [],
+                    returns: .named("FilePath.Component"), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: true,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
+                let result = receiver.removeLast()
+                return .list([SwiftValue.make(result, as: "FilePath.Component"), SwiftValue.make(receiver, as: "FilePath.ComponentView")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "removeLast", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "k", type: .int)],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
+                receiver.removeLast(try Int(swishValue: args["k"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "FilePath.ComponentView")])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "filter", isStatic: false,
                     parameters: [Parameter(label: nil, name: "isIncluded", type: .functionType([.named("FilePath.Component")], .bool, throws: true))],
                     returns: .named("FilePath.ComponentView"), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -475,10 +760,24 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "removeAll", isStatic: false,
+                    parameters: [Parameter(label: "where", name: "shouldBeRemoved", type: .functionType([.named("FilePath.Component")], .bool, throws: true))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: true, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
+                try receiver.removeAll(where: { (a0: FilePath.Component) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["shouldBeRemoved"]!)([SwiftValue.make(a0, as: "FilePath.Component")])) })
+                return .list([.nothing, SwiftValue.make(receiver, as: "FilePath.ComponentView")])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "forEach", isStatic: false,
                     parameters: [Parameter(label: nil, name: "body", type: .functionType([.named("FilePath.Component")], .void, throws: true))],
                     returns: .void, generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -490,7 +789,8 @@ extension Bridge {
                     kind: .method, name: "first", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.named("FilePath.Component")], .bool, throws: true))],
                     returns: .optional(.named("FilePath.Component")), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -502,7 +802,8 @@ extension Bridge {
                     kind: .method, name: "min", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.named("FilePath.Component"), .named("FilePath.Component")], .bool, throws: true))],
                     returns: .optional(.named("FilePath.Component")), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -514,7 +815,8 @@ extension Bridge {
                     kind: .method, name: "max", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.named("FilePath.Component"), .named("FilePath.Component")], .bool, throws: true))],
                     returns: .optional(.named("FilePath.Component")), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -526,7 +828,8 @@ extension Bridge {
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.parameter("PossiblePrefix.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.named("FilePath.Component"), .parameter("PossiblePrefix.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["PossiblePrefix.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -538,7 +841,8 @@ extension Bridge {
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.named("FilePath.Component")))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -550,7 +854,8 @@ extension Bridge {
                     kind: .method, name: "elementsEqual", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("OtherSequence.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.named("FilePath.Component"), .parameter("OtherSequence.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["OtherSequence.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -562,7 +867,8 @@ extension Bridge {
                     kind: .method, name: "elementsEqual", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.named("FilePath.Component")))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -574,7 +880,8 @@ extension Bridge {
                     kind: .method, name: "lexicographicallyPrecedes", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.named("FilePath.Component"))), Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.named("FilePath.Component"), .named("FilePath.Component")], .bool, throws: true))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -586,7 +893,8 @@ extension Bridge {
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.named("FilePath.Component")], .bool, throws: true))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -598,7 +906,8 @@ extension Bridge {
                     kind: .method, name: "allSatisfy", isStatic: false,
                     parameters: [Parameter(label: nil, name: "predicate", type: .functionType([.named("FilePath.Component")], .bool, throws: true))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -610,7 +919,8 @@ extension Bridge {
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: nil, name: "element", type: .named("FilePath.Component"))],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -622,7 +932,8 @@ extension Bridge {
                     kind: .method, name: "reduce", isStatic: false,
                     parameters: [Parameter(label: nil, name: "initialResult", type: .parameter("Result")), Parameter(label: nil, name: "nextPartialResult", type: .functionType([.parameter("Result"), .named("FilePath.Component")], .parameter("Result"), throws: true))],
                     returns: .parameter("Result"), generics: ["Result": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -634,7 +945,8 @@ extension Bridge {
                     kind: .method, name: "flatMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.named("FilePath.Component")], .someSequence(.parameter("SegmentOfResult.Element")), throws: true))],
                     returns: .list(.parameter("SegmentOfResult.Element")), generics: ["SegmentOfResult.Element": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -646,7 +958,8 @@ extension Bridge {
                     kind: .method, name: "compactMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.named("FilePath.Component")], .optional(.parameter("ElementOfResult")), throws: true))],
                     returns: .list(.parameter("ElementOfResult")), generics: ["ElementOfResult": []],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -658,7 +971,8 @@ extension Bridge {
                     kind: .method, name: "sorted", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.named("FilePath.Component"), .named("FilePath.Component")], .bool, throws: true))],
                     returns: .list(.named("FilePath.Component")), generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -667,10 +981,37 @@ extension Bridge {
                     }
                 ),
                 BridgedMember(
+                    kind: .method, name: "trimPrefix", isStatic: false,
+                    parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.named("FilePath.Component")], .bool, throws: true))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: true, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
+                try receiver.trimPrefix(while: { (a0: FilePath.Component) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([SwiftValue.make(a0, as: "FilePath.Component")])) })
+                return .list([.nothing, SwiftValue.make(receiver, as: "FilePath.ComponentView")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "trimPrefix", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "prefix", type: .someSequence(.named("FilePath.Component")))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false,
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
+                receiver.trimPrefix(try bridgeSequence(args["prefix"]!).map { try SwiftValue.unbox(FilePath.Component.self, $0) })
+                return .list([.nothing, SwiftValue.make(receiver, as: "FilePath.ComponentView")])
+                    }
+                ),
+                BridgedMember(
                     kind: .method, name: "count", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.named("FilePath.Component")], .bool, throws: true))],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: true,
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -682,7 +1023,8 @@ extension Bridge {
                     kind: .method, name: "randomElement", isStatic: false,
                     parameters: [],
                     returns: .optional(.named("FilePath.Component")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -694,7 +1036,8 @@ extension Bridge {
                     kind: .property, name: "isEmpty", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -706,7 +1049,8 @@ extension Bridge {
                     kind: .property, name: "first", isStatic: false,
                     parameters: [],
                     returns: .optional(.named("FilePath.Component")), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -718,7 +1062,8 @@ extension Bridge {
                     kind: .property, name: "underestimatedCount", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -730,7 +1075,8 @@ extension Bridge {
                     kind: .property, name: "count", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
@@ -742,7 +1088,8 @@ extension Bridge {
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [],
                     returns: .named("FilePath.ComponentView"), generics: [:],
-                    isThrowing: false, isRethrowing: false,
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
                         let result = FilePath.ComponentView()

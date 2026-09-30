@@ -126,7 +126,7 @@ scripts, reusing the twins.
    `run bridge` reruns it. It bridges `String`,
    `Substring`, `Character`, `Int`, `Double`, `Bool`, `Array`,
    `ArraySlice`, `Set`, `Dictionary`, `Optional`, `Range` and
-   `ClosedRange` (553 members). A member is bridged if every type in its
+   `ClosedRange` (647 members). A member is bridged if every type in its
    signature is one of those, a generic parameter, a tuple or a closure of
    them, and its constraints are ones Swish can check:
    - **Generic code is compiled once**, with Swish's values standing in
@@ -155,7 +155,7 @@ scripts, reusing the twins.
      matters.
    - **Other modules' types are held boxed,** by their full name:
      swift-system's `FilePath`, `FilePath.Component` and
-     `FilePath.ComponentView` (61 members, in
+     `FilePath.ComponentView` (81 members, in
      Sources/SwishCore/Bridge/SystemPackage.swift). It's swift-system's
      until the standard library's
      ([SE-0529](https://github.com/swiftlang/swift-evolution/blob/main/proposals/0529-filepath-in-stdlib.md))
@@ -172,10 +172,18 @@ scripts, reusing the twins.
      and checked and called like Swift's: `"text".styled(.red, .bold)`.
    - **A bridged sequence flows as its elements** in a pipeline, as a
      list does: `p.components | map(\.stem)`.
+   - **Mutating members change their variable,** as struct methods do:
+     the glue calls Swift on a `var` copy and gives back the result and
+     the changed receiver, which the shell puts back where it came from
+     (`xs.append(1)`, `s.xs.append(1)`, `m[0].append(1)`). So a receiver
+     must be a `var`, or part of one. A settable property gets a setter
+     the same way: `p.extension = "md"`. `@discardableResult` members
+     (`removeLast()`) don't show what they give when a statement is just
+     the call.
    Key paths (`\.count`) read the same bridged properties. Swift's members
    come before the prelude's; the prelude's shell additions
    (`sorted(by: \.size)`, `prefix` with a default, `select`, `get`,
-   `uniqued`) remain. Left for the next slices: mutating methods,
+   `uniqued`) remain. Left for the next slices: `inout` parameters,
    operators (`reduce(0, +)`), `Slice` and the other lazy and view types
    (`enumerated()`, `lazy`, a Set's `dropFirst`), indices, Foundation.
 2. **Swish's own types in SwishKit**, read the same way; the prelude

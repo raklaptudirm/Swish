@@ -211,6 +211,16 @@ extension Shell {
         return result
     }
 
+    /// Puts what a mutating method made of `receiver` back where it came
+    /// from: a variable, or a part of one.
+    func mutate(_ receiver: Expr, by method: String, _ change: (Value) throws -> Value) throws {
+        guard let (root, path) = lvalue(receiver) else {
+            throw RuntimeError("cannot use mutating method '\(method)' on a value that isn't in a variable")
+        }
+        try checkAssignable(root, what: "use mutating method '\(method)' on")
+        try update(root, path) { current, _ in try change(current) }
+    }
+
     /// `p`, `p.a`, `xs[0].b`: somewhere a value can be put back.
     private func lvalue(_ expr: Expr) -> (String, [Assignment.Step])? {
         switch expr {
@@ -310,6 +320,18 @@ extension Shell {
             }
             record[name] = try updated(record[name] ?? .nothing, rest, type: nil, change)
             return .record(record)
+        case (.member(let name), .object(let box as SwiftValue)):
+            // A Swift property with a setter: get it, change it, set it on a copy.
+            guard let setter = Bridge.types[box.typeName]?.members.first(where: { $0.kind == .setter && $0.name == name }),
+                  let current = try bridgedProperty(name, of: base) else {
+                throw RuntimeError("cannot assign to '\(name)' of \(base.typeName)")
+            }
+            let value = try updated(current, rest, type: setter.parameters[0].type, change)
+            let function = Function(name: name, parameters: setter.parameters, returnType: nil, body: setter.body)
+            guard case .list(let parts) = try invoke(function, with: ["self": base, "newValue": value]), parts.count == 2 else {
+                throw RuntimeError("\(box.typeName).\(name) gave back no receiver")
+            }
+            return parts[1]
         case (.member(let name), _):
             throw RuntimeError("cannot assign to '\(name)' of \(base.typeName)")
         case (.index, _):
