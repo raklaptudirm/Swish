@@ -12,18 +12,21 @@ echo started
 while true {}}
 close $file
 
-proc step {name pattern} {
-  expect {
-    -re $pattern { puts "ok   $name" }
-    timeout { puts "FAIL $name"; global failures; incr failures }
-  }
-}
-
 foreach signal {INT TERM HUP} {
   spawn .build/debug/swish $script
   expect "started"
-  exec kill -$signal [exp_pid]
-  step "SIG$signal runs the script's defer" "cleaned up"
+  set pid [exp_pid]
+  exec kill -$signal $pid
+  expect {
+    "cleaned up" { puts "ok   SIG$signal runs the script's defer" }
+    timeout {
+      # Its state, if it's still there, then gone, so a failure never hangs.
+      if {[catch {exec ps -o stat=,sigcatch= -p $pid} state]} { set state "exited" }
+      puts "FAIL SIG$signal runs the script's defer ($state)"
+      incr failures
+      catch {exec kill -9 $pid}
+    }
+  }
   expect eof
   # Killed by the signal itself, as it would have been without the defer.
   set result [wait]
