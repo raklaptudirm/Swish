@@ -64,7 +64,8 @@ final class Job: SwishObject, @unchecked Sendable {
 
     var typeName: String { "Job" }
 
-    var memberNames: [String] { ["id", "command", "state", "pids", "output", "resume", "cancel"] }
+    static let memberNames = ["id", "command", "state", "pids", "output", "resume", "cancel"]
+    var memberNames: [String] { Job.memberNames }
 
     func member(_ name: String) -> Value? {
         switch name {

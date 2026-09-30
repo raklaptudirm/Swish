@@ -15,7 +15,7 @@ extension Shell {
             let range = span.range.clamped(to: 0..<characters.count)
             let style: String? = switch span.kind {
             case .keyword, .punctuation: Style.keyword.escape
-            case .command: commandStyle(String(characters[range]))
+            case .command: commandStyle(String(characters[range]), piped: Shell.isPiped(characters, before: range.lowerBound))
             case .flag: Style.flag.escape
             case .string: Style.string.escape
             case .number, .constant: Style.constant.escape
@@ -28,7 +28,14 @@ extension Shell {
         return styles
     }
 
-    private func commandStyle(_ word: String) -> String? {
+    /// Whether the command starting at `index` comes after a `|`.
+    private static func isPiped(_ characters: [Character], before index: Int) -> Bool {
+        var before = index - 1
+        while before >= 0, characters[before].isWhitespace { before -= 1 }
+        return before >= 0 && characters[before] == "|" && (before == 0 || characters[before - 1] != "|")
+    }
+
+    private func commandStyle(_ word: String, piped: Bool) -> String? {
         let external = word.hasPrefix("^")
         let name = external ? String(word.dropFirst()) : word
         // Names built at run time can't be checked while typing.
@@ -36,6 +43,10 @@ extension Shell {
         let known: Bool
         if !external && (commandFunctions(named: name) != nil || sequenceMethods[name] != nil
                          || Shell.builtinNames.contains(name)) {
+            known = true
+        } else if !external && piped && isMemberName(name) {
+            // After a `|`, a method of what's piped in: which type's isn't
+            // known while typing, so any type's will do.
             known = true
         } else if name.contains("/") {
             let path = name.hasPrefix("~") ? (env("HOME") ?? "") + name.dropFirst() : name

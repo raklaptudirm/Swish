@@ -55,7 +55,25 @@ extension Bridge {
     }
 }
 
+extension Bridge {
+    /// Every bridged member's name that can be a stage, for highlighting.
+    nonisolated(unsafe) static let stageNames: Set<String> = Set(types.values.flatMap { type in
+        type.members.filter { !$0.isStatic && !$0.isMutating && ($0.kind == .method || $0.kind == .property) }.map(\.name)
+    })
+}
+
 extension Shell {
+    /// Whether some type has a member called `name` that a stage could
+    /// call: a Swift type's, a struct's in scope, or a job's.
+    func isMemberName(_ name: String) -> Bool {
+        if Bridge.stageNames.contains(name) || Job.memberNames.contains(name) { return true }
+        return scopes.contains { scope in
+            scope.bindings.values.contains { binding in
+                if case .object(let type as StructType) = binding.value { type.methods[name] != nil } else { false }
+            }
+        }
+    }
+
     /// `xs | max` or `names | uppercased`: a bridged type's members named
     /// `name`, as functions whose input is the receiver, so a stage runs
     /// them as it runs any function.

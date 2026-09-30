@@ -169,6 +169,17 @@ private func completion(_ text: String, in shell: Shell = Shell()) -> (start: In
     #expect(styles[4] == "\u{1B}[31m")
 }
 
+@Test func methodsAfterAPipeAreGreen() {
+    // A member of some type is a stage after `|`, but not a command on its own.
+    let shell = Shell()
+    let line = "[1, 2] | contains 2; contains 2; [1] | nosuchmemberzz"
+    let styles = shell.highlightStyles(line)
+    let at = { (word: String, from: Int) in styles[line.range(of: word, range: line.index(line.startIndex, offsetBy: from)..<line.endIndex)!.lowerBound.utf16Offset(in: line)] }
+    #expect(at("contains", 0) == "\u{1B}[32m")
+    #expect(at("contains", 20) == "\u{1B}[31m")
+    #expect(at("nosuchmemberzz", 0) == "\u{1B}[31m")
+}
+
 @Test func redirectOperatorsHighlight() {
     let source = "sort < in e>o > out o+e>> log"
     let chars = Array(source)
