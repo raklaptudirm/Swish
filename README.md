@@ -278,6 +278,8 @@ The tasks are functions in [`Tasks.swish`](Tasks.swish); inside Swish, `run` lis
   comments, the environment, command output, scripts, redirects, background jobs
 - [Plugins](docs/design/plugins.md): exporting from Swift, and how `import`
   builds, loads and registers a package
+- [One foundation](docs/design/foundations.md): every function, method and type as a Swift
+  declaration read from a symbol graph, so pipes, flags and `help` treat them all alike (planned)
 
 ## Roadmap
 
