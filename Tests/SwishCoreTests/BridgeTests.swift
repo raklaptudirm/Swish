@@ -75,10 +75,15 @@ private func typeError(_ source: String) -> String? {
 
 @Test func dictionariesAndOptionalsHaveSwiftsMembers() throws {
     let d = #"let d = ["b": 2, "a": 1]; "#
-    // Results keep the dictionary's order; keys and values are arrays in it.
-    #expect(try output(d + "d.filter { $0.value > 1 }; d.mapValues { $0 * 10 }; d.map { $0.key }; d.keys; d.values")
-        == #"["b": 2]"# + "\n" + #"["b": 20, "a": 10]"# + "\n" + #"["b", "a"]"# + "\n" + #"["b", "a"]"# + "\n[2, 1]\n")
-    #expect(try output(d + "d.count; d.isEmpty; d.sorted { $0.key < $1.key }.map { $0.value }; d.first?.key") == "2\nfalse\n[1, 2]\n\"b\"\n")
+    // Swift's own Dictionary: shown sorted by key, iterated in Swift's order.
+    #expect(try output(d + "d; d.filter { $0.value > 1 }; d.mapValues { $0 * 10 }")
+        == #"["a": 1, "b": 2]"# + "\n" + #"["b": 2]"# + "\n" + #"["a": 10, "b": 20]"# + "\n")
+    #expect(try output(d + "d.map { $0.key }.sorted(); d.keys.sorted(); d.values.sorted()")
+        == #"["a", "b"]"# + "\n" + #"["a", "b"]"# + "\n[1, 2]\n")
+    #expect(try output(d + "d.count; d.isEmpty; d.sorted { $0.key < $1.key }.map { $0.value }; d.first!.key == d.keys.first!")
+        == "2\nfalse\n[1, 2]\ntrue\n")
+    // Keys of other types sort by value too, and JSON's objects by key.
+    #expect(try output(#"[10: "x", 2: "y"]; ["b": 1, "a": 2] | to json"#) == #"[2: "y", 10: "x"]"# + "\n{\n  \"a\": 2,\n  \"b\": 1\n}\n")
     #expect(try output(#"Dictionary(uniqueKeysWithValues: [("x", 1), ("y", 2)])"#) == #"["x": 1, "y": 2]"# + "\n")
     #expect(try output("let o: Int? = 4; o.map { $0 + 1 }; let n: Int? = nil; n.map { $0 + 1 } ?? 0") == "5\n0\n")
     #expect(typeError("let n: Int? = nil; n.count") == "Int? might be nil: unwrap it (if let, ??, ?. or !) before using .count")

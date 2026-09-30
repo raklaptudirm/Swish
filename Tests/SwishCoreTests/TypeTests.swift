@@ -58,7 +58,7 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
 @Test func tuplesAndDictionaries() throws {
     #expect(try output(#"let t = (name: "x", 2); t.name; t.1; t"#) == "\"x\"\n2\n(name: \"x\", 2)\n")
     #expect(try output(#"[(n: 5, s: "a"), (n: 1, s: "b")] | sorted --by n | get s"#) == "b\na\n")
-    #expect(try output(#"var d = ["a": 1]; d["b"] = 2; d["a"]; d["a"]! + 1; d.keys"#) == "1\n2\n[\"a\", \"b\"]\n")
+    #expect(try output(#"var d = ["a": 1]; d["b"] = 2; d["a"]; d["a"]! + 1; d.keys.sorted()"#) == "1\n2\n[\"a\", \"b\"]\n")
     #expect(typeError(#"let t = (name: "x", 2); t.nope"#) == "(name: String, Int) has no element 'nope'")
 }
 

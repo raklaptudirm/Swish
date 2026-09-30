@@ -101,29 +101,15 @@ func bridgeList(_ value: Value) throws -> [Value] {
     }
 }
 
-/// A dictionary as Swift's.
+/// A dictionary as Swift's, which is what it holds.
 func bridgeDictionary(_ value: Value) throws -> [Value: Value] {
     guard case .dictionary(let dictionary) = value else { throw SwishError("expected a dictionary, not \(value.typeName)") }
-    var result: [Value: Value] = [:]
-    for (key, value) in dictionary { result[key] = value }
-    return result
+    return dictionary.dictionary
 }
 
-/// A dictionary's (key, value) pairs, in its order.
-func bridgeDictionaryPairs(_ value: Value) throws -> [(key: Value, value: Value)] {
-    guard case .dictionary(let dictionary) = value else { throw SwishError("expected a dictionary, not \(value.typeName)") }
-    return dictionary.map { (key: $0.key, value: $0.value) }
-}
-
-/// Swift's dictionary as Swish's, which keeps an order: the receiver's, as
-/// far as it goes, then the other keys in order.
-func bridgeDictionary(_ dictionary: [Value: Value], order receiver: Value?) -> Value {
-    var ordered = ValueDictionary()
-    if case .dictionary(let original)? = receiver {
-        for key in original.keys { if let value = dictionary[key] { ordered[key] = value } }
-    }
-    for key in dictionary.keys.sorted() where ordered[key] == nil { ordered[key] = dictionary[key] }
-    return .dictionary(ordered)
+/// Swift's dictionary as Swish's.
+func bridgeDictionary(_ dictionary: [Value: Value]) -> Value {
+    .dictionary(ValueDictionary(dictionary))
 }
 
 /// A tuple's elements, by label or position, made into a Swift tuple.

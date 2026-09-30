@@ -35,7 +35,7 @@ struct PrettyPrinter {
             .group(open: [("[", nil)], items: items.map { ([], node(for: $0)) }, close: "]")
         case .record(let record): node(for: record)
         case .dictionary(let dictionary):
-            dictionary.count == 0 ? .segments([("[:]", nil)]) : .group(open: [("[", nil)], items: dictionary.map { key, value in
+            dictionary.count == 0 ? .segments([("[:]", nil)]) : .group(open: [("[", nil)], items: dictionary.sortedForDisplay.map { key, value in
                 ([keySegment(key), (": ", nil)], node(for: value))
             }, close: "]")
         case .output(let output):

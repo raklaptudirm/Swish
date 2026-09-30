@@ -14,7 +14,7 @@ public enum Value: Sendable {
     /// Named fields in order, like a row of a table: a struct's value (with
     /// its type's name), or a tuple (without).
     case record(Record)
-    /// `["a": 1]`: keys to values, kept in the order they were added.
+    /// `["a": 1]`: keys to values, as Swift's Dictionary, unordered.
     case dictionary(ValueDictionary)
     /// A size in bytes, shown as `1.2 MB`.
     case filesize(Int64)
@@ -178,49 +178,74 @@ extension Record: CustomStringConvertible, CustomDebugStringConvertible {
     }
 }
 
-/// A dictionary's entries, in the order their keys were first added.
+/// Swift's `[Value: Value]`: iterating it goes in Swift's order, which is
+/// no particular one and changes from run to run. Shown, it's sorted by key
+/// (`sortedForDisplay`), so what's printed is the same every time.
 public struct ValueDictionary: Sendable, Hashable, Sequence, CustomStringConvertible, CustomDebugStringConvertible {
-    public private(set) var keys: [Value] = []
-    private var storage: [Value: Value] = [:]
+    public var dictionary: [Value: Value]
 
-    public init() {}
+    public init() { dictionary = [:] }
 
+    public init(_ dictionary: [Value: Value]) { self.dictionary = dictionary }
+
+    /// Later entries replace earlier ones with the same key.
     public init(_ entries: [(Value, Value)]) {
-        for (key, value) in entries { self[key] = value }
+        dictionary = Dictionary(entries, uniquingKeysWith: { $1 })
     }
 
     public subscript(key: Value) -> Value? {
-        get { storage[key] }
-        set {
-            if let newValue {
-                if storage.updateValue(newValue, forKey: key) == nil { keys.append(key) }
-            } else if storage.removeValue(forKey: key) != nil {
-                keys.removeAll { $0 == key }
-            }
-        }
+        get { dictionary[key] }
+        set { dictionary[key] = newValue }
     }
 
-    public var count: Int { keys.count }
-    public var values: [Value] { keys.map { storage[$0]! } }
+    public var count: Int { dictionary.count }
+    public var keys: [Value] { Array(dictionary.keys) }
+    public var values: [Value] { Array(dictionary.values) }
 
     public func makeIterator() -> some IteratorProtocol<(key: Value, value: Value)> {
-        keys.lazy.map { (key: $0, value: storage[$0]!) }.makeIterator()
+        dictionary.makeIterator()
     }
 
-    public static func == (lhs: ValueDictionary, rhs: ValueDictionary) -> Bool {
-        lhs.storage == rhs.storage
-    }
-
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(storage)
+    /// The entries sorted by key: numbers by value, strings as Swift sorts
+    /// them, an enum's cases in declared order, and anything else by how
+    /// it's written.
+    public var sortedForDisplay: [(key: Value, value: Value)] {
+        dictionary.sorted { Value.displaysBefore($0.key, $1.key) }
     }
 
     public var debugDescription: String {
         guard count > 0 else { return "[:]" }
-        return "[" + map { "\($0.key.debugDescription): \($0.value.debugDescription)" }.joined(separator: ", ") + "]"
+        return "[" + sortedForDisplay.map { "\($0.key.debugDescription): \($0.value.debugDescription)" }.joined(separator: ", ") + "]"
     }
 
     public var description: String { debugDescription }
+}
+
+extension Value {
+    /// The order a dictionary's keys are shown in: only for showing, so it
+    /// needn't mean anything beyond being the same every time.
+    static func displaysBefore(_ a: Value, _ b: Value) -> Bool {
+        switch (a, b) {
+        case (.int(let x), .int(let y)): return x < y
+        case (.int, .double), (.double, .int), (.double, .double), (.filesize, .filesize):
+            return a.displayNumber! < b.displayNumber!
+        case (.string(let x), .string(let y)): return x < y
+        case (.bool(let x), .bool(let y)): return !x && y
+        case (.date(let x), .date(let y)): return x < y
+        case (.enumValue(let x), .enumValue(let y)) where x.type === y.type && x.index != y.index: return x.index < y.index
+        default:
+            return a.debugDescription < b.debugDescription
+        }
+    }
+
+    private var displayNumber: Double? {
+        switch self {
+        case .int(let n): Double(n)
+        case .double(let d): d
+        case .filesize(let bytes): Double(bytes)
+        default: nil
+        }
+    }
 }
 
 /// Encodes as a `.filesize` value through `ValueEncoder`, and as a plain

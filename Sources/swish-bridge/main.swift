@@ -25,7 +25,7 @@ struct Constraint: Decodable { var kind: String; var lhs: String; var rhs: Strin
 struct Symbol: Decodable {
     struct Kind: Decodable { let identifier: String }
     struct Identifier: Decodable { let precise: String }
-    struct Extension: Decodable { let constraints: [Constraint]?; let typeKind: String? }
+    struct Extension: Decodable { let constraints: [Constraint]? }
     struct Generics: Decodable { let constraints: [Constraint]? }
     struct Doc: Decodable { struct Line: Decodable { let text: String }; let lines: [Line] }
     let kind: Kind
@@ -608,8 +608,8 @@ func toSwish(_ swift: String, _ type: SType) -> String {
     case .optional(let wrapped): return "(\(swift).map { \(toSwish("$0", wrapped)) } ?? .nothing)"
     case .dictionary(let key, let value):
         // In the receiver's order, as far as it goes.
-        guard isLeaf(key) || isLeaf(value) else { return "bridgeDictionary(\(swift), order: args[\"self\"])" }
-        return "bridgeDictionary(Dictionary(uniqueKeysWithValues: \(swift).map { (\(toSwish("$0.key", key)), \(toSwish("$0.value", value))) }), order: args[\"self\"])"
+        guard isLeaf(key) || isLeaf(value) else { return "bridgeDictionary(\(swift))" }
+        return "bridgeDictionary(Dictionary(uniqueKeysWithValues: \(swift).map { (\(toSwish("$0.key", key)), \(toSwish("$0.value", value))) }))"
     case .tuple(let elements):
         if elements.isEmpty { return ".nothing" }
         let parts = elements.enumerated().map { index, element in
@@ -862,18 +862,7 @@ func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Const
         return (parameter.label.map { "\($0): " } ?? "") + expr
     }.joined(separator: ", ")
     let receiverType = selfType(owner)
-    var swiftType = spelling(receiverType)
-    var receiverCode = fromSwish("args[\"self\"]!", receiverType)
-    // A dictionary's sequence members (`first`, `map`, `reduce`) run on its
-    // (key, value) pairs in Swish's order; Swift's would be in none.
-    if owner.name == "Dictionary", symbol.swiftExtension?.typeKind == "swift.protocol",
-       !declaration.isStatic, declaration.kind != .initializer {
-        guard case .dictionary(let key, let value) = receiverType, !isLeaf(key), !isLeaf(value) else {
-            throw Unsupported(reason: "dictionary sequence member with fixed types")
-        }
-        swiftType = "[(key: Value, value: Value)]"
-        receiverCode = "try bridgeDictionaryPairs(args[\"self\"]!)"
-    }
+    let swiftType = spelling(receiverType)
     let target: String
     switch declaration.kind {
     case .initializer: target = "\(swiftType)(\(arguments))"
@@ -883,7 +872,7 @@ func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Const
     let tryPrefix = declaration.throwing || declaration.rethrowing ? "try " : ""
     var body = ""
     if !declaration.isStatic && declaration.kind != .initializer {
-        body += "let receiver: \(swiftType) = \(receiverCode)\n                "
+        body += "let receiver: \(swiftType) = \(fromSwish("args[\"self\"]!", receiverType))\n                "
     }
     if case .tuple(let elements) = returns, elements.isEmpty {
         body += "\(tryPrefix)\(target)\n                return .nothing"

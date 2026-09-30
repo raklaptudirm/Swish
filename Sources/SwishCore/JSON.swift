@@ -46,7 +46,7 @@ enum JSON {
             return "{\n" + fields.joined(separator: ",\n") + "\n\(indent)}"
         case .dictionary(let dictionary):
             guard dictionary.count > 0 else { return "{}" }
-            let fields = try dictionary.map { key, value in
+            let fields = try dictionary.sortedForDisplay.map { key, value in
                 guard case .string(let name) = key else {
                     throw RuntimeError("to json: an object's keys are Strings, not \(key.typeName)")
                 }

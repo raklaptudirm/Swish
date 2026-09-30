@@ -56,7 +56,7 @@ config.server?.port?.int ?? 8080
 | Void | `()` or `Void` | What a function with no `->` returns, as in Swift. |
 | Optional | `T?` | `nil`, `if let`, `??`, `?.` optional chaining (new). |
 | Array | `[T]` | |
-| Dictionary | `[K: V]` | New, with `K: Hashable`. `["a": 1]` is `[String: Int]`; a mixed literal needs a type, as in Swift. |
+| Dictionary | `[K: V]` | New, with `K: Hashable`. `["a": 1]` is `[String: Int]`; a mixed literal needs a type, as in Swift. Swift's, so unordered; shown sorted by key. |
 | Tuple | `(name: String, size: FileSize)`, `(Int, Int)` | New. Labeled tuples are the anonymous records: they show as table rows, work with `select`, and encode as JSON objects. |
 | Function | `(Int, String) -> Bool`, `() throws -> T` | New as a written type; closures infer theirs from context. |
 | Key path | `KeyPath<Root, Value>`, written `\.size` | New. |

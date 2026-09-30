@@ -4800,7 +4800,7 @@ extension Bridge {
                     isThrowing: false, isRethrowing: true,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: [(key: Value, value: Value)] = try bridgeDictionaryPairs(args["self"]!)
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = try receiver.map({ (a0: (key: Value, value: Value)) throws -> Value in try bridgeClosure(shell, args["transform"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }]) })
                 return .list(result)
                     }
@@ -4812,7 +4812,7 @@ extension Bridge {
                     isThrowing: false, isRethrowing: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: [(key: Value, value: Value)] = try bridgeDictionaryPairs(args["self"]!)
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = receiver.shuffled()
                 return .list(result.map { bridgeTuple($0) { t in [("key", t.0), ("value", t.1)] } })
                     }
@@ -4824,7 +4824,7 @@ extension Bridge {
                     isThrowing: false, isRethrowing: true,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: [(key: Value, value: Value)] = try bridgeDictionaryPairs(args["self"]!)
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 try receiver.forEach({ (a0: (key: Value, value: Value)) throws -> Void in _ = try bridgeClosure(shell, args["body"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }]) })
                 return .nothing
                     }
@@ -4836,7 +4836,7 @@ extension Bridge {
                     isThrowing: false, isRethrowing: true,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: [(key: Value, value: Value)] = try bridgeDictionaryPairs(args["self"]!)
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = try receiver.first(where: { (a0: (key: Value, value: Value)) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }])) })
                 return (result.map { bridgeTuple($0) { t in [("key", t.0), ("value", t.1)] } } ?? .nothing)
                     }
@@ -4848,7 +4848,7 @@ extension Bridge {
                     isThrowing: false, isRethrowing: true,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: [(key: Value, value: Value)] = try bridgeDictionaryPairs(args["self"]!)
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = try receiver.min(by: { (a0: (key: Value, value: Value), a1: (key: Value, value: Value)) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }, bridgeTuple(a1) { t in [("key", t.0), ("value", t.1)] }])) })
                 return (result.map { bridgeTuple($0) { t in [("key", t.0), ("value", t.1)] } } ?? .nothing)
                     }
@@ -4860,7 +4860,7 @@ extension Bridge {
                     isThrowing: false, isRethrowing: true,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: [(key: Value, value: Value)] = try bridgeDictionaryPairs(args["self"]!)
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = try receiver.max(by: { (a0: (key: Value, value: Value), a1: (key: Value, value: Value)) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }, bridgeTuple(a1) { t in [("key", t.0), ("value", t.1)] }])) })
                 return (result.map { bridgeTuple($0) { t in [("key", t.0), ("value", t.1)] } } ?? .nothing)
                     }
@@ -4872,7 +4872,7 @@ extension Bridge {
                     isThrowing: false, isRethrowing: true,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: [(key: Value, value: Value)] = try bridgeDictionaryPairs(args["self"]!)
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = try receiver.starts(with: try bridgeSequence(args["possiblePrefix"]!), by: { (a0: (key: Value, value: Value), a1: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areEquivalent"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }, a1])) })
                 return result.swishValue
                     }
@@ -4884,7 +4884,7 @@ extension Bridge {
                     isThrowing: false, isRethrowing: true,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: [(key: Value, value: Value)] = try bridgeDictionaryPairs(args["self"]!)
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = try receiver.elementsEqual(try bridgeSequence(args["other"]!), by: { (a0: (key: Value, value: Value), a1: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areEquivalent"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }, a1])) })
                 return result.swishValue
                     }
@@ -4896,7 +4896,7 @@ extension Bridge {
                     isThrowing: false, isRethrowing: true,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: [(key: Value, value: Value)] = try bridgeDictionaryPairs(args["self"]!)
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = try receiver.lexicographicallyPrecedes(try bridgeSequence(args["other"]!).map { try bridgeTuple($0, ["key", "value"]) { t in (key: t[0], value: t[1]) } }, by: { (a0: (key: Value, value: Value), a1: (key: Value, value: Value)) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }, bridgeTuple(a1) { t in [("key", t.0), ("value", t.1)] }])) })
                 return result.swishValue
                     }
@@ -4908,7 +4908,7 @@ extension Bridge {
                     isThrowing: false, isRethrowing: true,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: [(key: Value, value: Value)] = try bridgeDictionaryPairs(args["self"]!)
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = try receiver.contains(where: { (a0: (key: Value, value: Value)) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }])) })
                 return result.swishValue
                     }
@@ -4920,7 +4920,7 @@ extension Bridge {
                     isThrowing: false, isRethrowing: true,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: [(key: Value, value: Value)] = try bridgeDictionaryPairs(args["self"]!)
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = try receiver.allSatisfy({ (a0: (key: Value, value: Value)) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }])) })
                 return result.swishValue
                     }
@@ -4932,7 +4932,7 @@ extension Bridge {
                     isThrowing: false, isRethrowing: true,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: [(key: Value, value: Value)] = try bridgeDictionaryPairs(args["self"]!)
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = try receiver.count(where: { (a0: (key: Value, value: Value)) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }])) })
                 return result.swishValue
                     }
@@ -4944,7 +4944,7 @@ extension Bridge {
                     isThrowing: false, isRethrowing: true,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: [(key: Value, value: Value)] = try bridgeDictionaryPairs(args["self"]!)
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = try receiver.reduce(args["initialResult"]!, { (a0: Value, a1: (key: Value, value: Value)) throws -> Value in try bridgeClosure(shell, args["nextPartialResult"]!)([a0, bridgeTuple(a1) { t in [("key", t.0), ("value", t.1)] }]) })
                 return result
                     }
@@ -4956,7 +4956,7 @@ extension Bridge {
                     isThrowing: false, isRethrowing: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: [(key: Value, value: Value)] = try bridgeDictionaryPairs(args["self"]!)
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = receiver.reversed()
                 return .list(result.map { bridgeTuple($0) { t in [("key", t.0), ("value", t.1)] } })
                     }
@@ -4968,7 +4968,7 @@ extension Bridge {
                     isThrowing: false, isRethrowing: true,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: [(key: Value, value: Value)] = try bridgeDictionaryPairs(args["self"]!)
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = try receiver.flatMap({ (a0: (key: Value, value: Value)) throws -> [Value] in try bridgeSequence(try bridgeClosure(shell, args["transform"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }])) })
                 return .list(result)
                     }
@@ -4980,7 +4980,7 @@ extension Bridge {
                     isThrowing: false, isRethrowing: true,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: [(key: Value, value: Value)] = try bridgeDictionaryPairs(args["self"]!)
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = try receiver.compactMap({ (a0: (key: Value, value: Value)) throws -> Value? in (try bridgeClosure(shell, args["transform"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }]) == .nothing ? nil : try bridgeClosure(shell, args["transform"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }])) })
                 return .list(result)
                     }
@@ -4992,7 +4992,7 @@ extension Bridge {
                     isThrowing: false, isRethrowing: true,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: [(key: Value, value: Value)] = try bridgeDictionaryPairs(args["self"]!)
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = try receiver.sorted(by: { (a0: (key: Value, value: Value), a1: (key: Value, value: Value)) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }, bridgeTuple(a1) { t in [("key", t.0), ("value", t.1)] }])) })
                 return .list(result.map { bridgeTuple($0) { t in [("key", t.0), ("value", t.1)] } })
                     }
@@ -5004,7 +5004,7 @@ extension Bridge {
                     isThrowing: false, isRethrowing: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: [(key: Value, value: Value)] = try bridgeDictionaryPairs(args["self"]!)
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = receiver.randomElement()
                 return (result.map { bridgeTuple($0) { t in [("key", t.0), ("value", t.1)] } } ?? .nothing)
                     }
@@ -5016,7 +5016,7 @@ extension Bridge {
                     isThrowing: false, isRethrowing: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: [(key: Value, value: Value)] = try bridgeDictionaryPairs(args["self"]!)
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = receiver.first
                 return (result.map { bridgeTuple($0) { t in [("key", t.0), ("value", t.1)] } } ?? .nothing)
                     }
@@ -5028,7 +5028,7 @@ extension Bridge {
                     isThrowing: false, isRethrowing: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: [(key: Value, value: Value)] = try bridgeDictionaryPairs(args["self"]!)
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = receiver.underestimatedCount
                 return result.swishValue
                     }
@@ -5041,7 +5041,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let result = [Value: Value]()
-                return bridgeDictionary(result, order: args["self"])
+                return bridgeDictionary(result)
                     }
                 ),
                 BridgedMember(
@@ -5052,7 +5052,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let result = [Value: Value](minimumCapacity: try Int(swishValue: args["minimumCapacity"]!))
-                return bridgeDictionary(result, order: args["self"])
+                return bridgeDictionary(result)
                     }
                 ),
                 BridgedMember(
@@ -5063,7 +5063,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let result = [Value: Value](uniqueKeysWithValues: try bridgeSequence(args["keysAndValues"]!).map { try bridgeTuple($0, [nil, nil]) { t in (t[0], t[1]) } })
-                return bridgeDictionary(result, order: args["self"])
+                return bridgeDictionary(result)
                     }
                 ),
                 BridgedMember(
@@ -5074,7 +5074,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let result = try [Value: Value](try bridgeSequence(args["keysAndValues"]!).map { try bridgeTuple($0, [nil, nil]) { t in (t[0], t[1]) } }, uniquingKeysWith: { (a0: Value, a1: Value) throws -> Value in try bridgeClosure(shell, args["combine"]!)([a0, a1]) })
-                return bridgeDictionary(result, order: args["self"])
+                return bridgeDictionary(result)
                     }
                 ),
                 BridgedMember(
@@ -5086,7 +5086,7 @@ extension Bridge {
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = try receiver.filter({ (a0: (key: Value, value: Value)) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isIncluded"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }])) })
-                return bridgeDictionary(result, order: args["self"])
+                return bridgeDictionary(result)
                     }
                 ),
                 BridgedMember(
@@ -5122,7 +5122,7 @@ extension Bridge {
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = try receiver.mapValues({ (a0: Value) throws -> Value in try bridgeClosure(shell, args["transform"]!)([a0]) })
-                return bridgeDictionary(result, order: args["self"])
+                return bridgeDictionary(result)
                     }
                 ),
                 BridgedMember(
@@ -5134,7 +5134,7 @@ extension Bridge {
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = try receiver.compactMapValues({ (a0: Value) throws -> Value? in (try bridgeClosure(shell, args["transform"]!)([a0]) == .nothing ? nil : try bridgeClosure(shell, args["transform"]!)([a0])) })
-                return bridgeDictionary(result, order: args["self"])
+                return bridgeDictionary(result)
                     }
                 ),
                 BridgedMember(
@@ -5146,7 +5146,7 @@ extension Bridge {
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = try receiver.merging(try bridgeSequence(args["other"]!).map { try bridgeTuple($0, [nil, nil]) { t in (t[0], t[1]) } }, uniquingKeysWith: { (a0: Value, a1: Value) throws -> Value in try bridgeClosure(shell, args["combine"]!)([a0, a1]) })
-                return bridgeDictionary(result, order: args["self"])
+                return bridgeDictionary(result)
                     }
                 ),
                 BridgedMember(
@@ -5158,7 +5158,7 @@ extension Bridge {
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 let result = try receiver.merging(try bridgeDictionary(args["other"]!), uniquingKeysWith: { (a0: Value, a1: Value) throws -> Value in try bridgeClosure(shell, args["combine"]!)([a0, a1]) })
-                return bridgeDictionary(result, order: args["self"])
+                return bridgeDictionary(result)
                     }
                 ),
                 BridgedMember(

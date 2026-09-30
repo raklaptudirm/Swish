@@ -146,10 +146,13 @@ scripts, reusing the twins.
    - **Values keep Swish's form where it has one:** arrays, dictionaries,
      optionals and tuples convert at the call; `Set`, `ArraySlice` and
      ranges are held boxed, as the Swift values.
-   - **Swish's dictionaries keep their order,** so what a Swift method
-     gives back (`filter`, `mapValues`, `merging`) keeps the receiver's
-     order, and `keys` and `values` stay Swish's: arrays in that order,
-     not Swift's unordered views.
+   - **Dictionaries are Swift's,** unordered: iterating one (`for`, `map`,
+     `first`) goes in Swift's order, which changes from run to run. Only
+     showing one sorts it, by key: at the prompt, in a string, piped to a
+     program or written by `to json`, so output is the same every run.
+     `keys` and `values` are still arrays rather than Swift's views.
+     `OrderedDictionary`, from swift-collections, is next, for when order
+     matters.
    Key paths (`\.count`) read the same bridged properties. Swift's members
    come before the prelude's; the prelude's shell additions
    (`sorted(by: \.size)`, `prefix` with a default, `select`, `get`,
