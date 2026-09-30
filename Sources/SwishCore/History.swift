@@ -13,10 +13,11 @@ final class History {
         self.path = path
         self.limit = limit
         guard let path, let data = FileManager.default.contents(atPath: path) else { return }
-        entries = String(decoding: data, as: UTF8.self)
-            .split(separator: "\n", omittingEmptySubsequences: true)
-            .map { History.decode(String($0)) }
-        if entries.count > limit {
+        entries = History.lines(of: [UInt8](data))
+        // Trimmed back to the limit only once it's well past it: at the
+        // limit, every session adds a little, and rewriting the whole file
+        // each start would make a full history slow to start with.
+        if entries.count > limit + limit / 10 {
             entries.removeFirst(entries.count - limit)
             rewrite()
         }
@@ -46,23 +47,55 @@ final class History {
     }
 
     static func encode(_ entry: String) -> String {
-        entry.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\n", with: "\\n")
+        guard entry.utf8.contains(where: { $0 == UInt8(ascii: "\\") || $0 == UInt8(ascii: "\n") }) else { return entry }
+        return entry.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\n", with: "\\n")
+    }
+
+    /// The file's entries. It's read as bytes on every start, since that's
+    /// many times faster than as Characters; most lines have no escapes,
+    /// so they're taken as they are.
+    static func lines(of bytes: [UInt8]) -> [String] {
+        var entries: [String] = []
+        var start = 0
+        var escaped = false
+        for index in bytes.indices {
+            switch bytes[index] {
+            case UInt8(ascii: "\\"):
+                escaped = true
+            case UInt8(ascii: "\n"):
+                if index > start {
+                    let line = bytes[start..<index]
+                    entries.append(escaped ? decode(line) : String(decoding: line, as: UTF8.self))
+                }
+                start = index + 1
+                escaped = false
+            default:
+                break
+            }
+        }
+        if start < bytes.count { entries.append(decode(bytes[start...])) }
+        return entries
     }
 
     static func decode(_ line: String) -> String {
-        var result = ""
+        decode([UInt8](line.utf8)[...])
+    }
+
+    static func decode(_ line: ArraySlice<UInt8>) -> String {
+        var result: [UInt8] = []
+        result.reserveCapacity(line.count)
         var escaped = false
-        for c in line {
+        for byte in line {
             if escaped {
-                result.append(c == "n" ? "\n" : c)
+                result.append(byte == UInt8(ascii: "n") ? UInt8(ascii: "\n") : byte)
                 escaped = false
-            } else if c == "\\" {
+            } else if byte == UInt8(ascii: "\\") {
                 escaped = true
             } else {
-                result.append(c)
+                result.append(byte)
             }
         }
-        return result
+        return String(decoding: result, as: UTF8.self)
     }
 
     /// The default file: `$SWISH_HISTORY` (empty for none), or `swish/history`

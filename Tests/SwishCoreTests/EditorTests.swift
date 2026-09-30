@@ -22,6 +22,26 @@ import Testing
     #expect(History(path: path).entries == ["if x {\n}"]) // trimmed on disk too
 }
 
+@Test func historyReadsItsFileAsBytes() {
+    // Escaped lines decode; others, and a last line without a newline, are
+    // taken as they are, multi-byte characters included.
+    let file = "echo héllo\nif x {\\n}\n\nlast \\\\ one"
+    #expect(History.lines(of: Array(file.utf8)) == ["echo héllo", "if x {\n}", "last \\ one"])
+}
+
+@Test func historyIsTrimmedOnlyWellPastItsLimit() throws {
+    let shell = Shell()
+    let path = try shell.capturing { shell.execute("mktemp") }.trimmingCharacters(in: .newlines)
+    let history = History(path: path)
+    for n in 1...11 { history.add("echo \(n)") }
+    // At 11 of 10 it's left as it is, so a full history isn't rewritten
+    // every time a shell starts; at 12, it's trimmed back to 10.
+    #expect(History(path: path, limit: 10).entries.count == 11)
+    history.add("echo 12")
+    #expect(History(path: path, limit: 10).entries == (3...12).map { "echo \($0)" })
+    #expect(History(path: path).entries.count == 10)
+}
+
 @Test func historyLivesInTheXDGStateDirectory() {
     let path = { (environment: [String: String]) in History.defaultPath(environment: environment) }
     #expect(path(["HOME": "/h"]) == "/h/.local/state/swish/history")
