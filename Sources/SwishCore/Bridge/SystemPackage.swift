@@ -10,6 +10,7 @@ extension Bridge {
             name: "FilePath", genericParameters: [],
             conformances: ["CustomStringConvertible": [:], "Encodable": [:], "Equatable": [:], "ExpressibleByStringLiteral": [:], "Hashable": [:]],
             associatedTypes: [:],
+            parse: nil, literal: { textLiteral(FilePath.self, $0).map { SwiftValue.make($0, as: "FilePath") } },
             members: [
                 BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
@@ -456,6 +457,7 @@ extension Bridge {
             name: "FilePath.Component", genericParameters: [],
             conformances: ["CustomStringConvertible": [:], "Encodable": [:], "Equatable": [:], "ExpressibleByStringLiteral": [:], "Hashable": [:]],
             associatedTypes: [:],
+            parse: { FilePath.Component($0).map { SwiftValue.make($0, as: "FilePath.Component") } }, literal: { textLiteral(FilePath.Component.self, $0).map { SwiftValue.make($0, as: "FilePath.Component") } },
             members: [
                 BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
@@ -552,6 +554,7 @@ extension Bridge {
             name: "FilePath.ComponentView", genericParameters: [],
             conformances: ["Encodable": [:], "Equatable": [:], "Hashable": [:], "Sequence": [:]],
             associatedTypes: ["Element": .named("FilePath.Component")],
+            parse: nil, literal: nil,
             members: [
                 BridgedMember(
                     kind: .method, name: "map", isStatic: false,

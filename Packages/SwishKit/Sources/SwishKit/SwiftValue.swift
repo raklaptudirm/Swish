@@ -19,8 +19,16 @@ public final class SwiftValue: SwishObject, @unchecked Sendable {
         self.lessThan = lessThan
     }
 
+    /// Hashes and sorts as the Swift value does whenever it can, found out
+    /// when it's boxed, so a value boxed from generic code (a sequence's
+    /// elements) compares as one boxed where its type is known.
     public static func make<T>(_ value: T, as typeName: String) -> Value {
-        .object(SwiftValue(value, typeName: typeName, hashable: nil, lessThan: nil))
+        .object(SwiftValue(value, typeName: typeName, hashable: (value as? any Hashable).map { AnyHashable($0) },
+                           lessThan: (value as? any Comparable).map { lessThan($0) }))
+    }
+
+    private static func lessThan<C: Comparable>(_ value: C) -> (Any) -> Bool {
+        { other in (other as? C).map { value < $0 } ?? false }
     }
 
     public static func make<T: Hashable>(_ value: T, as typeName: String) -> Value {

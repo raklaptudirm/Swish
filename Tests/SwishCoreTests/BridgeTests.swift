@@ -40,7 +40,7 @@ private func typeError(_ source: String) -> String? {
     #expect(typeError(parts + "let s: String = parts[0]") == "the value must be String, not Substring")
     // A literal is a Character where one is wanted, and a Character is one.
     #expect(try output(#""swish".first; "swish".first?.isLetter; "a b".contains(" ")"#) == "\"s\"\ntrue\ntrue\n")
-    #expect(typeError(#""a,b".split(separator: "ab")"#) == "a Character is one character, not 2")
+    #expect(typeError(#""a,b".split(separator: "ab")"#) == #""ab" isn't a Character literal"#)
     // Constrained members are there only when the constraint holds.
     #expect(try output(#"["a", "b"].joined(separator: "-")"#) == "\"a-b\"\n")
     #expect(typeError("[1, 2].joined(separator: \"-\")") != nil)

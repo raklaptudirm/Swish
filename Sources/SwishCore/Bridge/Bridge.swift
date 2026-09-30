@@ -13,17 +13,57 @@ enum Bridge {
         ($0.name, $0.adding(extensions[$0.name] ?? []))
     })
 
-    /// Whether a string literal can be one of the type: `FilePath`.
-    static func isStringLiteral(_ typeName: String) -> Bool {
-        types[typeName]?.conformances["ExpressibleByStringLiteral"] != nil
+    /// Text as a value of the type named, if the type can be text and the
+    /// text is one: through its failable initializer from text (`Int`), or
+    /// as a text literal (`Character`, `FilePath`). A word on the command
+    /// line, or a string literal where the type is wanted, is converted so.
+    static func value(of typeName: String, from text: String) -> Value?? {
+        guard let type = types[typeName], type.parse != nil || type.literal != nil else { return nil }
+        return .some(type.parse?(text) ?? type.literal?(text))
     }
 
-    /// The type's `init(stringLiteral:)`, and its label, if it's bridged.
-    static func literalInitializer(_ typeName: String) -> (Int, String?)? {
-        types[typeName]?.members.firstIndex {
-            $0.kind == .initializer && $0.parameters.count == 1 && $0.parameters[0].label == "stringLiteral"
-        }.map { ($0, "stringLiteral") }
+    /// The bridged type Swish's type annotation is, and its generic
+    /// parameters' bindings: `[Int]` is `Array` with Element Int.
+    static func type(of annotation: TypeAnnotation) -> (BridgedType, [String: TypeAnnotation])? {
+        let found: (String, [String: TypeAnnotation])? = switch annotation {
+        case .string: ("String", [:])
+        case .int: ("Int", [:])
+        case .double: ("Double", [:])
+        case .bool: ("Bool", [:])
+        case .list(let element): ("Array", ["Element": element])
+        // A command's output has its lines' members: `$(ls).sorted()`.
+        case .output: ("Array", ["Element": .string])
+        case .optional(let wrapped): ("Optional", ["Wrapped": wrapped])
+        case .dictionary(let key, let value): ("Dictionary", ["Key": key, "Value": value])
+        case .named(let name): (name, [:])
+        case .generic(let name, let arguments):
+            (name, Dictionary(uniqueKeysWithValues: zip(types[name]?.genericParameters ?? [], arguments)))
+        default: nil
+        }
+        guard let (name, bindings) = found, let type = types[name] else { return nil }
+        return (type, bindings)
     }
+}
+
+// Swift's rules for what text literals a type can be, picked the way Swift
+// picks: by the most specific literal protocol it conforms to. A string
+// literal is any text; a grapheme cluster literal, one Character; a
+// Unicode scalar literal, one scalar.
+
+func textLiteral<T: ExpressibleByStringLiteral>(_: T.Type, _ text: String) -> T? where T.StringLiteralType == String {
+    T(stringLiteral: text)
+}
+
+func textLiteral<T: ExpressibleByExtendedGraphemeClusterLiteral>(_: T.Type, _ text: String) -> T?
+where T.ExtendedGraphemeClusterLiteralType == Character {
+    guard let character = text.first, text.dropFirst().isEmpty else { return nil }
+    return T(extendedGraphemeClusterLiteral: character)
+}
+
+func textLiteral<T: ExpressibleByUnicodeScalarLiteral>(_: T.Type, _ text: String) -> T?
+where T.UnicodeScalarLiteralType == Unicode.Scalar {
+    guard let scalar = text.unicodeScalars.first, text.unicodeScalars.dropFirst().isEmpty else { return nil }
+    return T(unicodeScalarLiteral: scalar)
 }
 
 extension Bridge {
@@ -172,12 +212,18 @@ struct BridgedType {
     let conformances: [String: [String: [String]]]
     /// Its associated types: `Element` is `Character` for String.
     let associatedTypes: [String: TypeAnnotation]
+    /// Text as one, through the type's failable initializer from text
+    /// (`Int("42")`); nil if the text isn't one.
+    var parse: ((String) -> Value?)? = nil
+    /// Text as one by Swift's rules for text literals (`Character`,
+    /// `FilePath`); nil if the text can't be that literal.
+    var literal: ((String) -> Value?)? = nil
     let members: [BridgedMember]
 
     /// With Swish's own members after Swift's.
     func adding(_ extra: [BridgedMember]) -> BridgedType {
         BridgedType(name: name, genericParameters: genericParameters, conformances: conformances,
-                    associatedTypes: associatedTypes, members: members + extra)
+                    associatedTypes: associatedTypes, parse: parse, literal: literal, members: members + extra)
     }
 }
 
@@ -248,7 +294,7 @@ func bridgeTuple<T>(_ tuple: T, _ elements: (T) -> [(String?, Value)]) -> Value 
 func bridgeSequence(_ value: Value) throws -> [Value] {
     switch value {
     case .string(let text):
-        return text.map { SwiftValue.make($0, as: "Character") }
+        return Array(Shell.iterator(text))
     case .dictionary(let dictionary):
         return dictionary.map { bridgeTuple(($0.key, $0.value)) { [("key", $0.0), ("value", $0.1)] } }
     default:
@@ -311,25 +357,19 @@ extension Shell {
         }
     }
 
-    private static func iterator<S: Sequence>(_ sequence: S) -> AnyIterator<Value> {
+    /// A Swift sequence's elements as Swish values, boxed by their type's name.
+    static func iterator<S: Sequence>(_ sequence: S) -> AnyIterator<Value> {
         var iterator = sequence.makeIterator()
         return AnyIterator {
             guard let next = iterator.next() else { return nil }
             if let value = next as? Value { return value }
-            // A Substring's Characters.
-            if let character = next as? Character { return SwiftValue.make(character, as: "Character") }
-            // By the name Swish writes it with: FilePath.Component, not Component.
+            // By the name Swish writes it with, without its module:
+            // FilePath.Component, not SystemPackage.FilePath.Component.
             let name = String(reflecting: type(of: next))
-            let module = name.prefix { $0 != "." }
-            return SwiftValue.make(next, as: module == "Swift" || module == "SystemPackage" ? String(name.dropFirst(module.count + 1)) : name)
+            let unqualified = String(name.drop { $0 != "." }.dropFirst())
+            return SwiftValue.make(next, as: Bridge.types[unqualified] != nil ? unqualified : name)
         }
     }
-}
-
-/// A Character, or a String of one: `"a,b".split(separator: ",")`.
-func bridgeCharacter(_ value: Value) throws -> Character {
-    if case .string(let text) = value, text.count == 1 { return text.first! }
-    return try SwiftValue.unbox(Character.self, value)
 }
 
 /// A Swish function as a Swift closure.

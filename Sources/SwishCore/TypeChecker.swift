@@ -1092,16 +1092,12 @@ final class TypeChecker {
             switch value {
             case .int where expected == .double || expected == .optional(.double):
                 return .double // `let x: Double = 1`
-            case .string(let text) where expected.flatMap(stringLiteralType) != nil:
-                // A literal is a Character, a Substring or a FilePath where one
-                // is wanted, as in Swift: made with its literal initializer.
-                let name = stringLiteralType(expected!)!
-                if name == "Character" && text.count != 1 {
-                    throw TypeError("a Character is one character, not \(text.count)")
-                }
-                if let (index, label) = literalInitializer(name) {
-                    expr = .bridged(type: name, member: index, receiver: nil, arguments: [Argument(label: label, value: .literal(value))])
-                }
+            case .string(let text) where expected.flatMap(textLiteralType) != nil:
+                // A string literal is whatever text literal type is wanted, as in
+                // Swift: a Character, a Substring, a FilePath. Made now, once.
+                let (name, make) = textLiteralType(expected!)!
+                guard let made = make(text) else { throw TypeError("\(Value.quoted(text)) isn't a \(name) literal") }
+                expr = .literal(made)
                 return .named(name)
             case .nothing:
                 if let expected, case .optional = expected { return expected }
@@ -1895,23 +1891,7 @@ final class TypeChecker {
     /// The Swift type a Swish type is, with its generic parameters bound:
     /// `[Int]` is Array with Element Int.
     private func bridged(_ type: TypeAnnotation) -> (BridgedType, [String: TypeAnnotation])? {
-        let found: (String, [String: TypeAnnotation])? = switch type {
-        case .string: ("String", [:])
-        case .int: ("Int", [:])
-        case .double: ("Double", [:])
-        case .bool: ("Bool", [:])
-        case .list(let element): ("Array", ["Element": element])
-        // A command's output has its lines' members: `$(ls).sorted()`.
-        case .output: ("Array", ["Element": .string])
-        case .optional(let wrapped): ("Optional", ["Wrapped": wrapped])
-        case .dictionary(let key, let value): ("Dictionary", ["Key": key, "Value": value])
-        case .named(let name): (name, [:])
-        case .generic(let name, let arguments):
-            (name, Dictionary(uniqueKeysWithValues: zip(Bridge.types[name]?.genericParameters ?? [], arguments)))
-        default: nil
-        }
-        guard let (name, bindings) = found, let bridgedType = Bridge.types[name] else { return nil }
-        return (bridgedType, bindings)
+        Bridge.type(of: type)
     }
 
     /// Whether a bridged type, with its generic parameters bound, conforms
@@ -1936,11 +1916,7 @@ final class TypeChecker {
     /// What a Swift parameter taking any sequence gets from a value of
     /// `type`: a String's Characters, a dictionary's (key, value) pairs.
     private func anySequenceElement(_ type: TypeAnnotation) -> TypeAnnotation? {
-        switch type {
-        case .string: .named("Character")
-        case .unknown: .unknown
-        default: (try? elementType(of: type)) ?? nil
-        }
+        type == .unknown ? .unknown : bridgedElement(type) ?? (try? elementType(of: type)) ?? nil
     }
 
     /// A bridged property, `"abc".count` or `Int.max`, as a lookup the
@@ -1989,25 +1965,11 @@ final class TypeChecker {
     /// The initializer of `typeName` taking one unlabeled `from`, if any.
     /// The bridged type a string literal can be where `expected` is wanted:
     /// one that's ExpressibleByStringLiteral, or an optional of one.
-    private func stringLiteralType(_ expected: TypeAnnotation) -> String? {
+    private func textLiteralType(_ expected: TypeAnnotation) -> (String, (String) -> Value?)? {
         switch expected {
-        case .named(let name) where Bridge.isStringLiteral(name) || name == "Character" || name == "Substring":
-            return name
-        case .optional(let wrapped): return stringLiteralType(wrapped)
-        default: return nil
-        }
-    }
-
-    /// The initializer a string literal of a type is made with, and its
-    /// label: `init(stringLiteral:)` where it's bridged, as Swift uses, or
-    /// else `init(_: String)`.
-    private func literalInitializer(_ typeName: String) -> (Int, String?)? {
-        Bridge.literalInitializer(typeName) ?? bridgedInitializer(typeName, from: .string).map { ($0, nil) }
-    }
-
-    private func bridgedInitializer(_ typeName: String, from type: TypeAnnotation) -> Int? {
-        Bridge.types[typeName]?.members.firstIndex {
-            $0.kind == .initializer && $0.parameters.count == 1 && $0.parameters[0].label == nil && $0.parameters[0].type == type
+        case .named(let name): Bridge.types[name]?.literal.map { (name, $0) }
+        case .optional(let wrapped): textLiteralType(wrapped)
+        default: nil
         }
     }
 

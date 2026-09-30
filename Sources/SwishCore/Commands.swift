@@ -301,24 +301,24 @@ extension Shell {
     }
 
     func converted(_ text: String, to type: TypeAnnotation, for what: String, of function: String) throws -> Value {
-        // `show a/b.txt` for a FilePath: a word is what a literal would be.
-        if case .named(let name) = type, enumType(named: name) == nil, Bridge.isStringLiteral(name),
-           let (index, label) = Bridge.literalInitializer(name) {
-            return try runBridged(name, index, receiver: nil, [Argument(label: label, value: .literal(.string(text)))])
-        }
-        let value: Value? = switch type {
-        case .any, .unknown, .parameter, .string: .string(text)
-        // `sorted --by size`: a field's name is its key path.
-        case .keyPath: .function(KeyPathValue(path: text.split(separator: ".").map(String.init)))
-        case .int: Int(text).map(Value.int)
-        case .double: Double(text).map(Value.double)
-        case .bool: ["true": true, "false": false][text].map(Value.bool)
-        case .optional(let wrapped): try converted(text, to: wrapped, for: what, of: function)
-        case .filesize: parseFileSize(text).map(Value.filesize)
-        case .output: .output(CommandOutput(text: text, code: 0))
-        case .named(let name): enumType(named: name).flatMap { enumCase(fromText: text, $0) }
-        case .date: (try? Date(text, strategy: .iso8601)).map(Value.date)
-        case .record, .list, .function, .functionType, .void, .dictionary, .tuple, .generic, .someSequence: nil
+        let value: Value?
+        if case .named(let name) = type, let enumType = enumType(named: name) {
+            value = enumCase(fromText: text, enumType)
+        } else if let (bridgedType, _) = Bridge.type(of: type), let made = Bridge.value(of: bridgedType.name, from: text) {
+            // A Swift type text can be, by its own declarations: `--n 3` for
+            // an Int, `--separator " "` for a Character, a FilePath.
+            value = made
+        } else {
+            value = switch type {
+            case .any, .unknown, .parameter: .string(text)
+            // `sorted --by size`: a field's name is its key path.
+            case .keyPath: .function(KeyPathValue(path: text.split(separator: ".").map(String.init)))
+            case .optional(let wrapped): try converted(text, to: wrapped, for: what, of: function)
+            case .filesize: parseFileSize(text).map(Value.filesize)
+            case .output: .output(CommandOutput(text: text, code: 0))
+            case .date: (try? Date(text, strategy: .iso8601)).map(Value.date)
+            default: nil
+            }
         }
         guard let value else {
             throw RuntimeError("\(function): \(what) must be \(type), got '\(text)'")
@@ -466,10 +466,8 @@ extension Shell {
         switch defaultValue {
         case .literal(.string(let text)): "\"\(text)\""
         case .literal(.nothing): "nil"
-        case .literal(let value): value.description
-        // A literal made into its type: `"/tmp"` for a FilePath.
-        case .bridged(_, _, nil, let arguments) where arguments.count == 1:
-            if case .literal(.string(let text)) = arguments[0].value { "\"\(text)\"" } else { "computed" }
+        // As Swift writes it: `"/tmp"` for a FilePath made from a literal.
+        case .literal(let value): value.debugDescription
         default: "computed"
         }
     }

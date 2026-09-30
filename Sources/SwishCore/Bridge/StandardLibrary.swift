@@ -9,6 +9,7 @@ extension Bridge {
             name: "String", genericParameters: [],
             conformances: ["Comparable": [:], "CustomStringConvertible": [:], "Encodable": [:], "Equatable": [:], "ExpressibleByStringLiteral": [:], "Hashable": [:], "Sequence": [:]],
             associatedTypes: ["CharacterView": .string, "Element": .named("Character"), "ExtendedGraphemeClusterLiteralType": .string, "IndexDistance": .int, "StringLiteralType": .string, "SubSequence": .named("Substring"), "UnicodeScalarLiteralType": .string],
+            parse: nil, literal: { textLiteral(String.self, $0).map { $0.swishValue } },
             members: [
                 BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
@@ -18,7 +19,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let result = String(try bridgeCharacter(args["c"]!))
+                        let result = String(try SwiftValue.unbox(Character.self, args["c"]!))
                 return result.swishValue
                     }
                 ),
@@ -161,7 +162,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
-                let result = receiver.split(separator: try bridgeCharacter(args["separator"]!), maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!))
+                let result = receiver.split(separator: try SwiftValue.unbox(Character.self, args["separator"]!), maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!))
                 return .list(result.map { SwiftValue.make($0, as: "Substring") })
                     }
                 ),
@@ -212,7 +213,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let result = String(repeating: try bridgeCharacter(args["repeatedValue"]!), count: try Int(swishValue: args["count"]!))
+                        let result = String(repeating: try SwiftValue.unbox(Character.self, args["repeatedValue"]!), count: try Int(swishValue: args["count"]!))
                 return result.swishValue
                     }
                 ),
@@ -224,7 +225,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let result = String(try bridgeSequence(args["elements"]!).map { try bridgeCharacter($0) })
+                        let result = String(try bridgeSequence(args["elements"]!).map { try SwiftValue.unbox(Character.self, $0) })
                 return result.swishValue
                     }
                 ),
@@ -237,7 +238,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         var receiver: String = try String(swishValue: args["self"]!)
-                receiver.append(try bridgeCharacter(args["newElement"]!))
+                receiver.append(try SwiftValue.unbox(Character.self, args["newElement"]!))
                 return .list([.nothing, receiver.swishValue])
                     }
                 ),
@@ -250,7 +251,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         var receiver: String = try String(swishValue: args["self"]!)
-                receiver.append(contentsOf: try bridgeSequence(args["newElements"]!).map { try bridgeCharacter($0) })
+                receiver.append(contentsOf: try bridgeSequence(args["newElements"]!).map { try SwiftValue.unbox(Character.self, $0) })
                 return .list([.nothing, receiver.swishValue])
                     }
                 ),
@@ -471,7 +472,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
-                let result = receiver.starts(with: try bridgeSequence(args["possiblePrefix"]!).map { try bridgeCharacter($0) })
+                let result = receiver.starts(with: try bridgeSequence(args["possiblePrefix"]!).map { try SwiftValue.unbox(Character.self, $0) })
                 return result.swishValue
                     }
                 ),
@@ -497,7 +498,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
-                let result = receiver.elementsEqual(try bridgeSequence(args["other"]!).map { try bridgeCharacter($0) })
+                let result = receiver.elementsEqual(try bridgeSequence(args["other"]!).map { try SwiftValue.unbox(Character.self, $0) })
                 return result.swishValue
                     }
                 ),
@@ -510,7 +511,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
-                let result = try receiver.lexicographicallyPrecedes(try bridgeSequence(args["other"]!).map { try bridgeCharacter($0) }, by: { (a0: Character, a1: Character) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([SwiftValue.make(a0, as: "Character"), SwiftValue.make(a1, as: "Character")])) })
+                let result = try receiver.lexicographicallyPrecedes(try bridgeSequence(args["other"]!).map { try SwiftValue.unbox(Character.self, $0) }, by: { (a0: Character, a1: Character) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([SwiftValue.make(a0, as: "Character"), SwiftValue.make(a1, as: "Character")])) })
                 return result.swishValue
                     }
                 ),
@@ -523,7 +524,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
-                let result = receiver.lexicographicallyPrecedes(try bridgeSequence(args["other"]!).map { try bridgeCharacter($0) })
+                let result = receiver.lexicographicallyPrecedes(try bridgeSequence(args["other"]!).map { try SwiftValue.unbox(Character.self, $0) })
                 return result.swishValue
                     }
                 ),
@@ -562,7 +563,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
-                let result = receiver.contains(try bridgeCharacter(args["element"]!))
+                let result = receiver.contains(try SwiftValue.unbox(Character.self, args["element"]!))
                 return result.swishValue
                     }
                 ),
@@ -956,6 +957,7 @@ extension Bridge {
             name: "Substring", genericParameters: [],
             conformances: ["Comparable": [:], "CustomStringConvertible": [:], "Equatable": [:], "ExpressibleByStringLiteral": [:], "Hashable": [:], "Sequence": [:]],
             associatedTypes: ["CharacterView": .named("Substring"), "Element": .named("Character"), "ExtendedGraphemeClusterLiteralType": .string, "StringLiteralType": .string, "SubSequence": .named("Substring"), "UnicodeScalarLiteralType": .string],
+            parse: nil, literal: { textLiteral(Substring.self, $0).map { SwiftValue.make($0, as: "Substring") } },
             members: [
                 BridgedMember(
                     kind: .property, name: "isContiguousUTF8", isStatic: false,
@@ -1096,7 +1098,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
-                let result = receiver.split(separator: try bridgeCharacter(args["separator"]!), maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!))
+                let result = receiver.split(separator: try SwiftValue.unbox(Character.self, args["separator"]!), maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!))
                 return .list(result.map { SwiftValue.make($0, as: "Substring") })
                     }
                 ),
@@ -1147,7 +1149,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let result = Substring(repeating: try bridgeCharacter(args["repeatedValue"]!), count: try Int(swishValue: args["count"]!))
+                        let result = Substring(repeating: try SwiftValue.unbox(Character.self, args["repeatedValue"]!), count: try Int(swishValue: args["count"]!))
                 return SwiftValue.make(result, as: "Substring")
                     }
                 ),
@@ -1159,7 +1161,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let result = Substring(try bridgeSequence(args["elements"]!).map { try bridgeCharacter($0) })
+                        let result = Substring(try bridgeSequence(args["elements"]!).map { try SwiftValue.unbox(Character.self, $0) })
                 return SwiftValue.make(result, as: "Substring")
                     }
                 ),
@@ -1172,7 +1174,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         var receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
-                receiver.append(try bridgeCharacter(args["newElement"]!))
+                receiver.append(try SwiftValue.unbox(Character.self, args["newElement"]!))
                 return .list([.nothing, SwiftValue.make(receiver, as: "Substring")])
                     }
                 ),
@@ -1185,7 +1187,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         var receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
-                receiver.append(contentsOf: try bridgeSequence(args["newElements"]!).map { try bridgeCharacter($0) })
+                receiver.append(contentsOf: try bridgeSequence(args["newElements"]!).map { try SwiftValue.unbox(Character.self, $0) })
                 return .list([.nothing, SwiftValue.make(receiver, as: "Substring")])
                     }
                 ),
@@ -1393,7 +1395,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
-                let result = receiver.starts(with: try bridgeSequence(args["possiblePrefix"]!).map { try bridgeCharacter($0) })
+                let result = receiver.starts(with: try bridgeSequence(args["possiblePrefix"]!).map { try SwiftValue.unbox(Character.self, $0) })
                 return result.swishValue
                     }
                 ),
@@ -1419,7 +1421,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
-                let result = receiver.elementsEqual(try bridgeSequence(args["other"]!).map { try bridgeCharacter($0) })
+                let result = receiver.elementsEqual(try bridgeSequence(args["other"]!).map { try SwiftValue.unbox(Character.self, $0) })
                 return result.swishValue
                     }
                 ),
@@ -1432,7 +1434,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
-                let result = try receiver.lexicographicallyPrecedes(try bridgeSequence(args["other"]!).map { try bridgeCharacter($0) }, by: { (a0: Character, a1: Character) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([SwiftValue.make(a0, as: "Character"), SwiftValue.make(a1, as: "Character")])) })
+                let result = try receiver.lexicographicallyPrecedes(try bridgeSequence(args["other"]!).map { try SwiftValue.unbox(Character.self, $0) }, by: { (a0: Character, a1: Character) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([SwiftValue.make(a0, as: "Character"), SwiftValue.make(a1, as: "Character")])) })
                 return result.swishValue
                     }
                 ),
@@ -1445,7 +1447,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
-                let result = receiver.lexicographicallyPrecedes(try bridgeSequence(args["other"]!).map { try bridgeCharacter($0) })
+                let result = receiver.lexicographicallyPrecedes(try bridgeSequence(args["other"]!).map { try SwiftValue.unbox(Character.self, $0) })
                 return result.swishValue
                     }
                 ),
@@ -1484,7 +1486,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
-                let result = receiver.contains(try bridgeCharacter(args["element"]!))
+                let result = receiver.contains(try SwiftValue.unbox(Character.self, args["element"]!))
                 return result.swishValue
                     }
                 ),
@@ -1801,6 +1803,7 @@ extension Bridge {
             name: "Character", genericParameters: [],
             conformances: ["Comparable": [:], "CustomStringConvertible": [:], "Equatable": [:], "Hashable": [:]],
             associatedTypes: ["ExtendedGraphemeClusterLiteralType": .named("Character"), "UnicodeScalarLiteralType": .named("Character")],
+            parse: nil, literal: { textLiteral(Character.self, $0).map { SwiftValue.make($0, as: "Character") } },
             members: [
                 BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
@@ -1810,7 +1813,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let result = Character(extendedGraphemeClusterLiteral: try bridgeCharacter(args["value"]!))
+                        let result = Character(extendedGraphemeClusterLiteral: try SwiftValue.unbox(Character.self, args["value"]!))
                 return SwiftValue.make(result, as: "Character")
                     }
                 ),
@@ -1834,7 +1837,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: Character = try bridgeCharacter(args["self"]!)
+                        let receiver: Character = try SwiftValue.unbox(Character.self, args["self"]!)
                 let result = receiver.description
                 return result.swishValue
                     }
@@ -1847,7 +1850,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: Character = try bridgeCharacter(args["self"]!)
+                        let receiver: Character = try SwiftValue.unbox(Character.self, args["self"]!)
                 let result = receiver.debugDescription
                 return result.swishValue
                     }
@@ -1860,7 +1863,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: Character = try bridgeCharacter(args["self"]!)
+                        let receiver: Character = try SwiftValue.unbox(Character.self, args["self"]!)
                 let result = receiver.hashValue
                 return result.swishValue
                     }
@@ -1873,7 +1876,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: Character = try bridgeCharacter(args["self"]!)
+                        let receiver: Character = try SwiftValue.unbox(Character.self, args["self"]!)
                 let result = receiver.isASCII
                 return result.swishValue
                     }
@@ -1886,7 +1889,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: Character = try bridgeCharacter(args["self"]!)
+                        let receiver: Character = try SwiftValue.unbox(Character.self, args["self"]!)
                 let result = receiver.isWhitespace
                 return result.swishValue
                     }
@@ -1899,7 +1902,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: Character = try bridgeCharacter(args["self"]!)
+                        let receiver: Character = try SwiftValue.unbox(Character.self, args["self"]!)
                 let result = receiver.isNewline
                 return result.swishValue
                     }
@@ -1912,7 +1915,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: Character = try bridgeCharacter(args["self"]!)
+                        let receiver: Character = try SwiftValue.unbox(Character.self, args["self"]!)
                 let result = receiver.isNumber
                 return result.swishValue
                     }
@@ -1925,7 +1928,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: Character = try bridgeCharacter(args["self"]!)
+                        let receiver: Character = try SwiftValue.unbox(Character.self, args["self"]!)
                 let result = receiver.isWholeNumber
                 return result.swishValue
                     }
@@ -1938,7 +1941,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: Character = try bridgeCharacter(args["self"]!)
+                        let receiver: Character = try SwiftValue.unbox(Character.self, args["self"]!)
                 let result = receiver.wholeNumberValue
                 return (result.map { $0.swishValue } ?? .nothing)
                     }
@@ -1951,7 +1954,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: Character = try bridgeCharacter(args["self"]!)
+                        let receiver: Character = try SwiftValue.unbox(Character.self, args["self"]!)
                 let result = receiver.isHexDigit
                 return result.swishValue
                     }
@@ -1964,7 +1967,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: Character = try bridgeCharacter(args["self"]!)
+                        let receiver: Character = try SwiftValue.unbox(Character.self, args["self"]!)
                 let result = receiver.hexDigitValue
                 return (result.map { $0.swishValue } ?? .nothing)
                     }
@@ -1977,7 +1980,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: Character = try bridgeCharacter(args["self"]!)
+                        let receiver: Character = try SwiftValue.unbox(Character.self, args["self"]!)
                 let result = receiver.isLetter
                 return result.swishValue
                     }
@@ -1990,7 +1993,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: Character = try bridgeCharacter(args["self"]!)
+                        let receiver: Character = try SwiftValue.unbox(Character.self, args["self"]!)
                 let result = receiver.uppercased()
                 return result.swishValue
                     }
@@ -2003,7 +2006,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: Character = try bridgeCharacter(args["self"]!)
+                        let receiver: Character = try SwiftValue.unbox(Character.self, args["self"]!)
                 let result = receiver.lowercased()
                 return result.swishValue
                     }
@@ -2016,7 +2019,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: Character = try bridgeCharacter(args["self"]!)
+                        let receiver: Character = try SwiftValue.unbox(Character.self, args["self"]!)
                 let result = receiver.isUppercase
                 return result.swishValue
                     }
@@ -2029,7 +2032,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: Character = try bridgeCharacter(args["self"]!)
+                        let receiver: Character = try SwiftValue.unbox(Character.self, args["self"]!)
                 let result = receiver.isLowercase
                 return result.swishValue
                     }
@@ -2042,7 +2045,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: Character = try bridgeCharacter(args["self"]!)
+                        let receiver: Character = try SwiftValue.unbox(Character.self, args["self"]!)
                 let result = receiver.isCased
                 return result.swishValue
                     }
@@ -2055,7 +2058,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: Character = try bridgeCharacter(args["self"]!)
+                        let receiver: Character = try SwiftValue.unbox(Character.self, args["self"]!)
                 let result = receiver.isSymbol
                 return result.swishValue
                     }
@@ -2068,7 +2071,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: Character = try bridgeCharacter(args["self"]!)
+                        let receiver: Character = try SwiftValue.unbox(Character.self, args["self"]!)
                 let result = receiver.isMathSymbol
                 return result.swishValue
                     }
@@ -2081,7 +2084,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: Character = try bridgeCharacter(args["self"]!)
+                        let receiver: Character = try SwiftValue.unbox(Character.self, args["self"]!)
                 let result = receiver.isCurrencySymbol
                 return result.swishValue
                     }
@@ -2094,7 +2097,7 @@ extension Bridge {
                     discardableResult: false,
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: Character = try bridgeCharacter(args["self"]!)
+                        let receiver: Character = try SwiftValue.unbox(Character.self, args["self"]!)
                 let result = receiver.isPunctuation
                 return result.swishValue
                     }
@@ -2105,6 +2108,7 @@ extension Bridge {
             name: "Int", genericParameters: [],
             conformances: ["Comparable": [:], "CustomStringConvertible": [:], "Encodable": [:], "Equatable": [:], "Hashable": [:]],
             associatedTypes: ["IntegerLiteralType": .int, "SIMDMaskScalar": .int, "Stride": .int],
+            parse: { Int($0).map { $0.swishValue } }, literal: nil,
             members: [
                 BridgedMember(
                     kind: .method, name: "negate", isStatic: false,
@@ -2528,6 +2532,7 @@ extension Bridge {
             name: "Double", genericParameters: [],
             conformances: ["Comparable": [:], "CustomStringConvertible": [:], "Encodable": [:], "Equatable": [:], "Hashable": [:]],
             associatedTypes: ["Exponent": .int, "FloatLiteralType": .double, "Magnitude": .double, "Stride": .double],
+            parse: { Double($0).map { $0.swishValue } }, literal: nil,
             members: [
                 BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
@@ -3279,6 +3284,7 @@ extension Bridge {
             name: "Bool", genericParameters: [],
             conformances: ["CustomStringConvertible": [:], "Encodable": [:], "Equatable": [:], "Hashable": [:]],
             associatedTypes: ["BooleanLiteralType": .bool],
+            parse: { Bool($0).map { $0.swishValue } }, literal: nil,
             members: [
                 BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
@@ -3385,6 +3391,7 @@ extension Bridge {
             name: "Array", genericParameters: ["Element"],
             conformances: ["CustomStringConvertible": [:], "Encodable": ["Element": ["Encodable"]], "Equatable": ["Element": ["Equatable"]], "Hashable": ["Element": ["Hashable"]], "Sequence": [:]],
             associatedTypes: ["ArrayLiteralElement": .parameter("Element"), "Index": .int, "Indices": .generic("Range", [.int]), "SubSequence": .generic("ArraySlice", [.parameter("Element")])],
+            parse: nil, literal: nil,
             members: [
                 BridgedMember(
                     kind: .method, name: "filter", isStatic: false,
@@ -4403,6 +4410,7 @@ extension Bridge {
             name: "ArraySlice", genericParameters: ["Element"],
             conformances: ["CustomStringConvertible": [:], "Equatable": ["Element": ["Equatable"]], "Hashable": ["Element": ["Hashable"]], "Sequence": [:]],
             associatedTypes: ["ArrayLiteralElement": .parameter("Element"), "Index": .int, "Indices": .generic("Range", [.int]), "SubSequence": .generic("ArraySlice", [.parameter("Element")])],
+            parse: nil, literal: nil,
             members: [
                 BridgedMember(
                     kind: .method, name: "filter", isStatic: false,
@@ -5447,6 +5455,7 @@ extension Bridge {
             name: "Set", genericParameters: ["Element"],
             conformances: ["CustomStringConvertible": ["Element": ["Hashable"]], "Encodable": ["Element": ["Encodable", "Hashable"]], "Equatable": ["Element": ["Hashable"]], "Hashable": ["Element": ["Hashable"]], "Sequence": ["Element": ["Hashable"]]],
             associatedTypes: ["ArrayLiteralElement": .parameter("Element")],
+            parse: nil, literal: nil,
             members: [
                 BridgedMember(
                     kind: .method, name: "map", isStatic: false,
@@ -6309,6 +6318,7 @@ extension Bridge {
             name: "Dictionary", genericParameters: ["Key", "Value"],
             conformances: ["CustomStringConvertible": ["Key": ["Hashable"]], "Encodable": ["Key": ["Encodable", "Hashable"], "Value": ["Encodable"]], "Equatable": ["Key": ["Hashable"], "Value": ["Equatable"]], "Hashable": ["Key": ["Hashable"], "Value": ["Hashable"]], "Sequence": ["Key": ["Hashable"]]],
             associatedTypes: ["Element": .tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])],
+            parse: nil, literal: nil,
             members: [
                 BridgedMember(
                     kind: .method, name: "map", isStatic: false,
@@ -6832,6 +6842,7 @@ extension Bridge {
             name: "Optional", genericParameters: ["Wrapped"],
             conformances: ["Encodable": ["Wrapped": ["Encodable"]], "Equatable": ["Wrapped": ["Equatable"]], "Hashable": ["Wrapped": ["Hashable"]]],
             associatedTypes: [:],
+            parse: nil, literal: nil,
             members: [
                 BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
@@ -6916,6 +6927,7 @@ extension Bridge {
             name: "Range", genericParameters: ["Bound"],
             conformances: ["CustomStringConvertible": ["Bound": ["Comparable"]], "Encodable": ["Bound": ["Comparable", "Encodable"]], "Equatable": ["Bound": ["Comparable"]], "Hashable": ["Bound": ["Comparable", "Hashable"]], "Sequence": ["Bound": ["=Int"]]],
             associatedTypes: ["Element": .parameter("Bound"), "Index": .parameter("Bound"), "Indices": .generic("Range", [.parameter("Bound")]), "SubSequence": .generic("Range", [.parameter("Bound")])],
+            parse: nil, literal: nil,
             members: [
                 BridgedMember(
                     kind: .property, name: "lowerBound", isStatic: false,
@@ -7792,6 +7804,7 @@ extension Bridge {
             name: "ClosedRange", genericParameters: ["Bound"],
             conformances: ["CustomStringConvertible": ["Bound": ["Comparable"]], "Encodable": ["Bound": ["Comparable", "Encodable"]], "Equatable": ["Bound": ["Comparable"]], "Hashable": ["Bound": ["Comparable", "Hashable"]], "Sequence": ["Bound": ["=Int"]]],
             associatedTypes: ["Element": .parameter("Bound")],
+            parse: nil, literal: nil,
             members: [
                 BridgedMember(
                     kind: .property, name: "lowerBound", isStatic: false,

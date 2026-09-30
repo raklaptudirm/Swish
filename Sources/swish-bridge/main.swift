@@ -378,8 +378,6 @@ nonisolated(unsafe) var leaves: [String: (annotation: String, from: (String) -> 
     "Double": (".double", { "try Double(swishValue: \($0))" }, { "\($0).swishValue" }),
     "Bool": (".bool", { "try Bool(swishValue: \($0))" }, { "\($0).swishValue" }),
     "String": (".string", { "try String(swishValue: \($0))" }, { "\($0).swishValue" }),
-    "Character": (#".named("Character")"#, { "try bridgeCharacter(\($0))" }, { #"SwiftValue.make(\#($0), as: "Character")"# }),
-    "Substring": (#".named("Substring")"#, { "try SwiftValue.unbox(Substring.self, \($0))" }, { #"SwiftValue.make(\#($0), as: "Substring")"# }),
 ]
 
 /// Generic types Swish holds as they are, boxed (`SwiftValue`), with Swish's
@@ -679,11 +677,10 @@ guard let module = modules[graph.module.name] else {
     exit(2)
 }
 let bridgedTypeNames = module.types
-// Types of other modules than Swift's are held as they are, boxed.
-if graph.module.name != "Swift" {
-    for (name, _) in bridgedTypeNames {
-        leaves[name] = (".named(\(quoted(name)))", { "try SwiftValue.unbox(\(name).self, \($0))" }, { "SwiftValue.make(\($0), as: \(quoted(name)))" })
-    }
+// Other types that aren't generic, Swish having no value of its own for
+// them (Character, FilePath), are held as they are, boxed.
+for (name, parameters) in bridgedTypeNames where parameters.isEmpty && leaves[name] == nil {
+    leaves[name] = (".named(\(quoted(name)))", { "try SwiftValue.unbox(\(name).self, \($0))" }, { "SwiftValue.make(\($0), as: \(quoted(name)))" })
 }
 /// Members Swish has its own way: the textual form of the types it
 /// formats, and a dictionary's keys and values, which are arrays rather
@@ -766,6 +763,20 @@ func available(_ symbol: Symbol) -> Bool {
            introduced.major > 14 || introduced.major == 14 && (introduced.minor ?? 0) > 0 { return false }
     }
     return true
+}
+
+/// `init?(_ description: String)`, or `init?<S: StringProtocol>(_ text: S)`:
+/// a failable initializer taking one unlabeled piece of text.
+func isTextInitializer(_ symbol: Symbol) -> Bool {
+    let text = (symbol.declarationFragments ?? []).map(\.spelling).joined()
+    guard let declaration = try? parseDeclaration(text), declaration.isFailable, declaration.parameters.count == 1,
+          declaration.parameters[0].label == nil, declaration.parameters[0].defaultText == nil else { return false }
+    switch declaration.parameters[0].type {
+    case .named("String", []): return true
+    case .named(let generic, []): return declaration.generics[generic]?.contains("StringProtocol") ?? false
+        || (symbol.swiftGenerics?.constraints ?? []).contains { $0.lhs == generic && $0.rhs == "StringProtocol" }
+    default: return false
+    }
 }
 
 func parseType(_ text: String) throws -> SType {
@@ -1019,11 +1030,28 @@ for (name, _) in bridgedTypeNames {
         let needsCode = needs.isEmpty ? "[:]" : "[" + needs.sorted { $0.key < $1.key }.map { "\(quoted($0.key)): [\($0.value.map(quoted).joined(separator: ", "))]" }.joined(separator: ", ") + "]"
         return "\(quoted(proto)): \(needsCode)"
     }
+    // Text as one of these, from the type's own declarations. `parse`: a
+    // failable initializer from text, which can say no (Int, Bool, Double).
+    // `literal`: Swift's rules for text literals (String, Character,
+    // FilePath), picked by the most specific literal protocol it conforms to.
+    var parse = "nil"
+    var literal = "nil"
+    if owner.parameters.isEmpty {
+        let selfType = SType.named(name, [])
+        if graph.symbols.contains(where: { $0.pathComponents == name.split(separator: ".").map(String.init) + [$0.pathComponents.last!]
+            && $0.kind.identifier == "swift.init" && available($0) && isTextInitializer($0) }) {
+            parse = "{ \(name)($0).map { \(toSwish("$0", selfType)) } }"
+        }
+        if owner.allConformances.contains("ExpressibleByUnicodeScalarLiteral") {
+            literal = "{ textLiteral(\(name).self, $0).map { \(toSwish("$0", selfType)) } }"
+        }
+    }
     output += """
         BridgedType(
             name: \(quoted(name)), genericParameters: [\(owner.parameters.map(quoted).joined(separator: ", "))],
             conformances: [\(conformances.isEmpty ? ":" : conformances.joined(separator: ", "))],
             associatedTypes: [\(associated.isEmpty ? ":" : associated.joined(separator: ", "))],
+            parse: \(parse), literal: \(literal),
             members: [
 \(members.joined(separator: "\n"))
             ]

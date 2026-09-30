@@ -77,6 +77,9 @@ private func checkError(_ source: String) -> String? {
     // A single value that isn't a sequence is the receiver itself.
     #expect(try output(#""a b c" | split(separator: " ") | count; "abc" | count; let p: FilePath = "/a/b.txt"; p | lastComponent"#)
         == "3\n3\nb.txt\n")
+    // A word becomes a Character through Swift's LosslessStringConvertible.
+    #expect(try output(#""a b c" | split --separator " " | count; "a-b" | split --separator - | count"#) == "3\n2\n")
+    #expect(checkError(#""a b" | split --separator ab"#) != nil)
     // A command's output has its lines' members.
     #expect(try output(#"$(printf "b\na").sorted()"#) == #"["a", "b"]"# + "\n")
     // Nothing by that name, and a program can't take a closure.
