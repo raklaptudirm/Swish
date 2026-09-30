@@ -23,6 +23,16 @@ In commands, double-quoted strings interpolate `$name`, `$(…)` and `\(…)`,
 so `cat "$dir"/*.txt` works. In expressions they're pure Swift: only `\(…)`
 interpolates, and `"costs $5"` or `"$HOME"` are literal.
 
+An unquoted list alone in a command word is one argument per item, so
+arguments can be built up as values:
+
+```swift
+var flags = ["-la"]
+if all { flags += ["-R"] }
+ls $flags src          // ls -la -R src; an empty list is no arguments
+echo "$flags"          // quoted: one argument, [-la, -R]
+```
+
 ## The environment
 
 `env` is the environment as a value; `env.NAME` is nil when it's unset.
@@ -148,7 +158,15 @@ let d = ["a": 1, "b": 2]            // a Dictionary, [String: Int]
 let port: Int? = nil
 port ?? 8080                        // unwrap with ??, if let, ! or ?.
 func f() { 42 }                     // no `->`: returns nothing
+let size = big ? 10 : 1             // `?` with spaces around it, as in Swift
+let kind = if n < 0 { "negative" } else if n == 0 { "zero" } else { "positive" }
 ```
+
+`if` is an expression wherever a value goes, as in Swift: each branch one
+expression, and an `else`. A function or closure whose body is just such
+an `if` returns it. Functions, structs and enums can be used before their
+declarations, in a script or a block, so helpers can come after what uses
+them.
 
 ### Protocols and key paths
 

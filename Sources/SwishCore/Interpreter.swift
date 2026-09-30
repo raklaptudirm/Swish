@@ -207,6 +207,7 @@ extension Shell {
 
     func run(_ program: Program) throws -> Int32 {
         var status: Int32 = 0
+        try hoistDeclarations(program)
         // `defer` blocks run as the block ends, however it ends.
         var deferred: [Program] = []
         defer { runDeferred(deferred) }
@@ -215,11 +216,39 @@ extension Shell {
                 deferred.append(body)
                 continue
             }
+            if statement.declaresType { continue } // Hoisted.
             try checkInterrupt()
             status = try run(statement)
             lastStatus = status
         }
         return status
+    }
+
+    /// The branch of an `if` its condition picks, with what the condition
+    /// binds; nil for no `else`.
+    private func chooseBranch(_ node: IfStatement) throws -> (Program?, [String: Binding]) {
+        switch node.condition {
+        case .pattern(let pattern, let expr):
+            var bindings: [String: Binding] = [:]
+            if try match(pattern, try evaluate(expr), into: &bindings) { return (node.then, bindings) }
+        case .chain(let chain):
+            if try run(chain, context: .condition) == 0 { return (node.then, [:]) }
+        case .binding(let name, let mutable, let expr):
+            let value = try evaluate(expr)
+            if value != .nothing { return (node.then, [name: Binding(value: value, mutable: mutable)]) }
+        }
+        return (node.otherwise, [:])
+    }
+
+    /// Declares a block's functions and types before it runs, so they can
+    /// be used before their declarations, as in Swift. A function is
+    /// declared again where it's written, which captures what's been
+    /// declared by then, as it always has.
+    func hoistDeclarations(_ program: Program) throws {
+        for statement in program.statements {
+            if case .function = statement { _ = try run(statement) }
+            else if statement.declaresType { _ = try run(statement) }
+        }
     }
 
     /// Deferred blocks, last first. One that fails is reported; the rest
@@ -387,26 +416,9 @@ extension Shell {
             return try runSwitch(node)
 
         case .ifStatement(let node):
-            switch node.condition {
-            case .pattern(let pattern, let expr):
-                var bindings: [String: Binding] = [:]
-                if try match(pattern, try evaluate(expr), into: &bindings) {
-                    return try runBlock(node.then, declaring: bindings)
-                }
-            case .chain(let chain):
-                if try run(chain, context: .condition) == 0 {
-                    return try runBlock(node.then)
-                }
-            case .binding(let name, let mutable, let expr):
-                let value = try evaluate(expr)
-                if value != .nothing {
-                    return try runBlock(node.then, declaring: [name: Binding(value: value, mutable: mutable)])
-                }
-            }
-            if let otherwise = node.otherwise {
-                return try runBlock(otherwise)
-            }
-            return 0
+            let (branch, bindings) = try chooseBranch(node)
+            guard let branch else { return 0 }
+            return try runBlock(branch, declaring: bindings)
 
         case .forLoop(let loop):
             var status: Int32 = 0
@@ -633,6 +645,12 @@ extension Shell {
             return try runBridged(typeName, member, receiver: receiver, arguments)
         case .filePath:
             return .string(scriptPath ?? "<prompt>")
+        case .ifExpression(let node):
+            let (branch, bindings) = try chooseBranch(node)
+            guard let branch, let expr = IfStatement.branchExpression(branch) else { return .nothing }
+            scopes.append(Scope(bindings))
+            defer { scopes.removeLast() }
+            return try evaluate(expr)
         case .cast(let inner, let type, let kind):
             let value = try evaluate(inner)
             let converted = conform(value, to: type)
@@ -765,7 +783,7 @@ extension Shell {
         try parts.map { part in
             switch part {
             case .literal(let text), .glob(let text): text
-            case .expression(let expr): try evaluate(expr).description
+            case .expression(let expr), .spread(let expr): try evaluate(expr).description
             }
         }.joined()
     }
@@ -773,8 +791,12 @@ extension Shell {
     /// A command word's arguments: one, unless it has an unquoted wildcard,
     /// when it's the matching paths. Interpolated values are literal in the
     /// pattern, so `"$dir"/*.txt` works whatever `$dir` holds. A pattern
-    /// that matches nothing is an error, not passed on as it is.
+    /// that matches nothing is an error, not passed on as it is. An
+    /// unquoted list alone in the word is its items: `rm $files`.
     private func expandWord(_ parts: [StringPart]) throws -> [String] {
+        if parts.count == 1, case .spread(let expr) = parts[0], case .list(let items) = try evaluate(expr) {
+            return items.map(\.description)
+        }
         var text = ""
         var pattern = ""
         var hasGlob = false
@@ -788,7 +810,7 @@ extension Shell {
                 // `?` isn't a wildcard in Swish, so URLs need no quoting.
                 pattern += glob.replacingOccurrences(of: "?", with: "\\?")
                 hasGlob = true
-            case .expression(let expr):
+            case .expression(let expr), .spread(let expr):
                 let value = try evaluate(expr).description
                 text += value
                 pattern += Glob.escape(value)

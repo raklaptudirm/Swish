@@ -168,11 +168,17 @@ public final class Shell {
         guard let program = typeCheck(program, file: path) else { return lastStatus }
         var deferred: [Program] = []
         defer { runDeferred(deferred) }
+        // Functions and types first, so any line can use them.
+        runReportingErrors(Program(statements: program.statements.filter {
+            if case .function = $0 { return true }
+            return $0.declaresType
+        }))
         for statement in program.statements {
             if case .deferBlock(let body) = statement {
                 deferred.append(body)
                 continue
             }
+            if statement.declaresType { continue }
             runReportingErrors(Program(statements: [statement]))
             if scriptStopped { return lastStatus }
         }

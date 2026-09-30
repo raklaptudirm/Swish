@@ -290,6 +290,39 @@ final class TypeChecker {
     }
 
     private func checkIf(_ node: inout IfStatement) throws {
+        let bound = try checkCondition(&node)
+        try checkBlock(&node.then, declaring: bound, newScope: true)
+        if var otherwise = node.otherwise {
+            try checkBlock(&otherwise, newScope: true)
+            node.otherwise = otherwise
+        }
+    }
+
+    /// An `if` expression's type: what both branches are, as for a list's
+    /// elements, so `c ? 1 : nil` is an Int?.
+    private func ifExpressionType(_ node: inout IfStatement, expected: TypeAnnotation?) throws -> TypeAnnotation {
+        let bound = try checkCondition(&node)
+        guard var thenExpr = IfStatement.branchExpression(node.then),
+              var elseExpr = IfStatement.branchExpression(node.otherwise ?? Program(statements: [])) else {
+            throw TypeError("each branch of an if expression must be one expression")
+        }
+        scopes.append(bound)
+        let thenNil = thenExpr == .literal(.nothing)
+        let elseNil = elseExpr == .literal(.nothing)
+        var thenType = thenNil ? nil : try typeOf(&thenExpr, expecting: expected)
+        scopes.removeLast()
+        let elseType = try typeOf(&elseExpr, expecting: expected ?? thenType.map { elseNil ? .optional($0) : $0 })
+        if thenNil { thenType = try typeOf(&thenExpr, expecting: expected ?? .optional(elseType)) }
+        node.then = IfStatement.branch(thenExpr)
+        node.otherwise = IfStatement.branch(elseExpr)
+        guard let type = commonType([thenType!, elseType]) else {
+            throw TypeError("an if expression's branches must have one type, not \(thenType!) and \(elseType)")
+        }
+        return type
+    }
+
+    /// Checks an `if`'s condition, giving what it binds for the `then` branch.
+    private func checkCondition(_ node: inout IfStatement) throws -> [String: Symbol] {
         var bound: [String: Symbol] = [:]
         switch node.condition {
         case .chain(var chain):
@@ -309,11 +342,7 @@ final class TypeChecker {
             try checkPattern(&pattern, against: try typeOf(&value), binding: &bound)
             node.condition = .pattern(pattern, value)
         }
-        try checkBlock(&node.then, declaring: bound, newScope: true)
-        if var otherwise = node.otherwise {
-            try checkBlock(&otherwise, newScope: true)
-            node.otherwise = otherwise
-        }
+        return bound
     }
 
     private func checkSwitch(_ node: inout SwitchStatement) throws {
@@ -440,15 +469,24 @@ final class TypeChecker {
     }
 
     private func implicitReturn(_ body: Program) -> Expr? {
-        guard body.statements.count == 1, case .chain(let chain) = body.statements[0], chain.links.isEmpty,
-              case .expression(let expr) = chain.first else { return nil }
-        return expr
+        guard body.statements.count == 1, case .chain(let chain) = body.statements[0], chain.links.isEmpty else { return nil }
+        switch chain.first {
+        case .expression(let expr): return expr
+        // A body that's one `if` with one expression per branch is that
+        // `if` as an expression, as in Swift.
+        case .ifStatement(let node): return node.asExpression.map(Expr.ifExpression)
+        default: return nil
+        }
     }
 
     /// Whether running `program` always ends in a `return`: as simple as
     /// Swift's own check, from the last statement.
     private func definitelyReturns(_ program: Program) -> Bool {
-        guard let last = program.statements.last else { return false }
+        // Declarations after the last statement run nothing, as in Swift.
+        guard let last = program.statements.last(where: {
+            if case .function = $0 { return false }
+            return !$0.declaresType
+        }) else { return false }
         switch last {
         case .returnStatement:
             return true
@@ -888,9 +926,15 @@ final class TypeChecker {
 
     private func checkParts(_ parts: inout [StringPart]) throws {
         for index in parts.indices {
-            if case .expression(var expr) = parts[index] {
+            switch parts[index] {
+            case .expression(var expr):
                 _ = try typeOf(&expr)
                 parts[index] = .expression(expr)
+            case .spread(var expr):
+                _ = try typeOf(&expr)
+                parts[index] = .spread(expr)
+            case .literal, .glob:
+                break
             }
         }
     }
@@ -1167,6 +1211,10 @@ final class TypeChecker {
             }
         case .filePath:
             return .string
+        case .ifExpression(var node):
+            let type = try ifExpressionType(&node, expected: expected)
+            expr = .ifExpression(node)
+            return type
         case .keyPath(let rootName, let path):
             return try keyPathType(root: rootName, path, expected: expected)
         }

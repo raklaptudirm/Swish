@@ -43,6 +43,16 @@ enum Statement: Equatable, Sendable {
     case chain(Chain)
 }
 
+extension Statement {
+    /// A struct or enum declaration, which a block declares before it runs.
+    var declaresType: Bool {
+        switch self {
+        case .structDecl, .enumDecl: true
+        default: false
+        }
+    }
+}
+
 /// Units joined by `&&`/`||`, evaluated left to right on exit status.
 struct Chain: Equatable, Sendable {
     var first: Unit
@@ -80,6 +90,30 @@ struct IfStatement: Equatable, Sendable {
     var condition: Condition
     var then: Program
     var otherwise: Program?
+
+    /// A branch of an `if` expression: the one expression it is, or an
+    /// `else if`'s own `if` expression.
+    static func branchExpression(_ branch: Program) -> Expr? {
+        guard branch.statements.count == 1, case .chain(let chain) = branch.statements[0], chain.links.isEmpty else { return nil }
+        switch chain.first {
+        case .expression(let expr): return expr
+        case .ifStatement(let node): return node.asExpression.map(Expr.ifExpression)
+        default: return nil
+        }
+    }
+
+    /// A branch that is `expr`.
+    static func branch(_ expr: Expr) -> Program {
+        Program(statements: [.chain(Chain(first: .expression(expr)))])
+    }
+
+    /// This `if` as an expression, when it can be one: with an `else`, and
+    /// every branch one expression. `else if` branches become expressions too.
+    var asExpression: IfStatement? {
+        guard let otherwise, let thenExpr = IfStatement.branchExpression(then),
+              let elseExpr = IfStatement.branchExpression(otherwise) else { return nil }
+        return IfStatement(condition: condition, then: IfStatement.branch(thenExpr), otherwise: IfStatement.branch(elseExpr))
+    }
 }
 
 /// `enum Name: RawType { case a, b(label: Type) = raw }`
@@ -377,6 +411,9 @@ enum Word: Equatable, Sendable {
 enum StringPart: Equatable, Sendable {
     case literal(String)
     case expression(Expr)
+    /// An unquoted `$xs` or `\(xs)` in a command word. A list there, alone
+    /// in its word, is one argument per item; quoted, it's one argument.
+    case spread(Expr)
     /// Unquoted text with a wildcard, like `*.swift`; only unquoted
     /// wildcards expand to file names.
     case glob(String)
@@ -450,6 +487,9 @@ indirect enum Expr: Equatable, Sendable {
     case cast(Expr, TypeAnnotation, CastKind)
     /// `#filePath`: the path of the script it's in.
     case filePath
+    /// `if c { a } else { b }`, or `c ? a : b`: a value from one of two
+    /// branches, each one expression (see `IfStatement.branchExpression`).
+    case ifExpression(IfStatement)
     /// `\.size` or `\FileEntry.size`: a key path, its root type given or
     /// taken from context.
     case keyPath(root: String?, path: [String])
@@ -662,6 +702,12 @@ struct Parser {
     // MARK: Statements
 
     private mutating func parseProgram(until terminator: Character?) throws(SyntaxError) -> Program {
+        // Functions and types can be used before their declarations, as in
+        // Swift, so the names this block declares are bound from its start.
+        for (keyword, name) in declaredNames(["func", "struct", "enum"], statementsOnly: true)
+            where scopes[scopes.count - 1][name] == nil {
+            scopes[scopes.count - 1][name] = keyword == "func" ? .function : .type
+        }
         var statements: [Statement] = []
         var lines: [Int] = []
         while true {
@@ -1059,10 +1105,18 @@ struct Parser {
     /// The names a struct's body declares, found before parsing it so a
     /// member can use one declared further down.
     private func memberNames() -> [String] {
-        var names: [String] = []
+        declaredNames(["var", "let", "func"], statementsOnly: false).map(\.name)
+    }
+
+    /// The names declared ahead, at this level of nesting, up to the end of
+    /// the block: each with the keyword that declares it. With
+    /// `statementsOnly`, only where a statement starts, so `echo func x`
+    /// declares nothing.
+    private func declaredNames(_ keywords: Set<String>, statementsOnly: Bool) -> [(keyword: String, name: String)] {
+        var names: [(keyword: String, name: String)] = []
         var depth = 0
         var index = pos
-        var nameFollows = false
+        var nameFollows: String?
         while index < chars.count {
             let c = chars[index]
             if c == "\"" || c == "'" {
@@ -1082,11 +1136,11 @@ struct Parser {
                 var end = index
                 while end < chars.count && Parser.isIdentifierPart(chars[end]) { end += 1 }
                 let word = String(chars[index..<end])
-                if nameFollows {
-                    names.append(word)
-                    nameFollows = false
-                } else {
-                    nameFollows = ["var", "let", "func"].contains(word)
+                if let keyword = nameFollows {
+                    names.append((keyword, word))
+                    nameFollows = nil
+                } else if keywords.contains(word) && (!statementsOnly || startsStatement(index)) {
+                    nameFollows = word
                 }
                 index = end
                 continue
@@ -1094,6 +1148,14 @@ struct Parser {
             index += 1
         }
         return names
+    }
+
+    /// Whether a statement can start at `index`: only blanks since the
+    /// start, a newline, `;` or a brace.
+    private func startsStatement(_ index: Int) -> Bool {
+        var before = index - 1
+        while before >= 0, chars[before] == " " || chars[before] == "\t" { before -= 1 }
+        return before < 0 || "\n;{}".contains(chars[before])
     }
 
     /// The protocols a type can conform to, for now all builtin.
@@ -2168,7 +2230,7 @@ struct Parser {
                 guard let next = peek(1) else { throw .incomplete("expected a character after '\\'") }
                 if next == "(" {
                     flush()
-                    parts.append(.expression(try parseInterpolation()))
+                    parts.append(.spread(try parseInterpolation()))
                 } else if next == "\n" {
                     pos += 2
                 } else if "*[".contains(next) {
@@ -2183,7 +2245,7 @@ struct Parser {
             case "$":
                 if let expr = try parseDollar() {
                     flush()
-                    parts.append(.expression(expr))
+                    parts.append(.spread(expr))
                 } else {
                     literal.append(c)
                     pos += 1
@@ -2357,7 +2419,30 @@ struct Parser {
             let operand = try parseExpression(logical: logical)
             return .attempt(operand, kind ?? .plain)
         }
-        return try parseBinary(level: logical ? 0 : Parser.comparisonLevel)
+        let condition = try parseBinary(level: logical ? 0 : Parser.comparisonLevel)
+        guard ternaryAhead() else { return condition }
+        // `c ? a : b`, right-associative: `a ? b : c ? d : e`.
+        skipSpaces()
+        pos += 1
+        skipSpaces(newlines: true)
+        let then = try parseExpression()
+        skipSpaces(newlines: true)
+        guard consume(":") else { throw expected("':' in 'condition ? then : else'") }
+        skipSpaces(newlines: true)
+        let otherwise = try parseExpression()
+        return .ifExpression(IfStatement(
+            condition: .chain(Chain(first: .expression(condition))),
+            then: IfStatement.branch(then), otherwise: IfStatement.branch(otherwise)
+        ))
+    }
+
+    /// Whether a ternary's `?` comes next: with space on both sides, as
+    /// Swift wants, so `x?.y`, `try?` and `Int?` aren't one.
+    private func ternaryAhead() -> Bool {
+        var index = pos
+        while index < chars.count, chars[index] == " " || chars[index] == "\t" || (bracketDepth > 0 && chars[index] == "\n") { index += 1 }
+        guard index > 0, " \t\n".contains(chars[index - 1]), index + 1 < chars.count, chars[index] == "?" else { return false }
+        return " \t\n".contains(chars[index + 1])
     }
 
     /// `try` (.some(nil)), `try?` or `try!` at the current position; nil if none.
@@ -2557,6 +2642,15 @@ struct Parser {
         skipSpaces()
         guard let c = peek() else { throw .incomplete("expected an expression") }
         if Parser.isDigit(c) { return try parseNumber() }
+        if identifier() == "if" {
+            // `let x = if c { a } else { b }`, as in Swift.
+            let node = try parseIf()
+            guard node.otherwise != nil else { throw SyntaxError("an if expression needs an else") }
+            guard let expression = node.asExpression else {
+                throw SyntaxError("each branch of an if expression must be one expression")
+            }
+            return .ifExpression(expression)
+        }
 
         switch c {
         case "\"":

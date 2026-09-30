@@ -238,9 +238,11 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
 }
 
 @Test func interpolationInWords() throws {
-    #expect(try words(#"echo \(n)px "$HOME/x""#, bound: ["n"]).dropFirst() == [
-        [.expression(.variable("n")), .literal("px")],
+    // Unquoted, a value can spread (a list alone in its word); quoted, it can't.
+    #expect(try words(#"echo \(n)px "$HOME/x" $n"#, bound: ["n"]).dropFirst() == [
+        [.spread(.variable("n")), .literal("px")],
         [.expression(.dollar("HOME")), .literal("/x")],
+        [.spread(.dollar("n"))],
     ])
 }
 
