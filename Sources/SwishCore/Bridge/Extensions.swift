@@ -16,6 +16,7 @@ extension Bridge {
         kind: .method, name: "styled", isStatic: false,
         parameters: [Parameter(label: nil, name: "styles", type: .named("TextStyle"), variadic: true)],
         returns: .string, generics: [:], isThrowing: false, isRethrowing: false, isMutating: false, discardableResult: false,
+        summary: "The text in colors or emphasis, plain where color is off.",
         body: .native { shell, args in
             guard case .string(let text)? = args["self"] else { return .nothing }
             guard case .list(let styles)? = args["styles"], !styles.isEmpty, !text.isEmpty,

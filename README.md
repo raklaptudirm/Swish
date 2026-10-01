@@ -49,7 +49,7 @@ func greet(_ name: String, @flag("n") times: Int = 1, loud: Bool = false) {
 
 greet("Rak", times: 2)        // as Swift
 greet Rak -n 2 --loud         // as a command
-greet --help                  // or `help greet`; `help` lists every function
+greet --help                  // or `help greet`; `help` lists every function, `help String` a type's members
 ```
 
 ```
@@ -279,7 +279,7 @@ The tasks are functions in [`Tasks.swish`](Tasks.swish); inside Swish, `run` lis
 - [Plugins](docs/design/plugins.md): exporting from Swift, and how `import`
   builds, loads and registers a package
 - [One foundation](docs/design/foundations.md): every function, method and type as a Swift
-  declaration read from a symbol graph, so pipes, flags and `help` treat them all alike (planned)
+  declaration read from a symbol graph, so pipes, flags and `help` treat them all alike (in progress)
 
 ## Roadmap
 

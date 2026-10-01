@@ -249,6 +249,8 @@ struct BridgedMember {
     /// `@discardableResult`, like `removeLast()`: a statement that's just
     /// the call doesn't show what it gives.
     let discardableResult: Bool
+    /// Its documentation's first paragraph, from Swift's: what `help` shows.
+    let summary: String
     /// Converts the arguments (and `self`), calls Swift, and converts back.
     let body: FunctionBody
 }

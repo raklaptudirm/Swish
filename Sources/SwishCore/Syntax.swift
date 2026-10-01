@@ -3019,6 +3019,12 @@ struct Parser {
         c.isASCII && c.isNumber
     }
 
+    /// Whether `name` can be written as a name: `count`, not `$json`.
+    static func isIdentifier(_ name: String) -> Bool {
+        guard let first = name.first, isIdentifierStart(first) else { return false }
+        return name.dropFirst().allSatisfy(isIdentifierPart)
+    }
+
     private static func isIdentifierStart(_ c: Character) -> Bool {
         c == "_" || c.isLetter
     }

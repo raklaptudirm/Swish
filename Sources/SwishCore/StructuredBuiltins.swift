@@ -445,7 +445,7 @@ extension Shell {
     private func members() -> Function {
         builtin(
             "members", "Describes the input: each type's fields and members.", [input("items", .list(.any))],
-            .native { _, args in
+            .native { shell, args in
                 guard case .list(let items) = args["items"] else { return .list([]) }
                 var rows: [Value] = []
                 var seen: Set<String> = []
@@ -454,26 +454,29 @@ extension Shell {
                     rows.append(.record(Record(["type": .string(type), "name": .string(name), "kind": .string(kind)], typeName: "Member")))
                 }
                 for item in items {
+                    let before = rows.count
+                    // A record's fields, or an object's members, are its own.
                     switch item {
                     case .record(let record):
                         for (key, value) in record { add(record.typeName ?? "Record", key, value.typeName) }
-                        for member in ["count", "isEmpty", "keys", "values"] { add(record.typeName ?? "Record", member, "member") }
                     case .function(let set as OverloadSet):
                         for candidate in set.candidates { add("Function", candidate.signature, "signature") }
-                    case .object(let object):
+                    case .object(let object) where !(object is SwiftValue):
                         for name in object.memberNames {
                             add(object.typeName, name, object.member(name).map { $0.typeName } ?? "")
                         }
-                    default:
-                        let members = switch item {
-                        case .list: ["count", "isEmpty", "first", "last"]
-                        case .string: ["count", "isEmpty", "lines"]
-                        case .filesize: ["bytes"]
-                        default: [String]()
-                        }
-                        if members.isEmpty { add(item.typeName, "", "") }
-                        for member in members { add(item.typeName, member, "member") }
+                    // Until they're Swift types, a file size's and an output's
+                    // members are known only here.
+                    case .filesize: add(item.typeName, "bytes", "member")
+                    case .output: for member in ["text", "lines", "status"] { add(item.typeName, member, "member") }
+                    default: break
                     }
+                    // Then what its type has, as `help Type` shows it.
+                    if let name = shell.describedTypeName(of: item), let type = shell.typeDescription(named: name) {
+                        for member in type.members where member.kind != "initializer" { add(type.name, member.name, member.kind) }
+                    }
+                    // A type with nothing to list is still named.
+                    if rows.count == before && !seen.contains("\(item.typeName).") { add(item.typeName, "", "") }
                 }
                 return .list(rows)
             }

@@ -1,6 +1,6 @@
 # One foundation for everything callable
 
-Status: **in progress**: steps 1 and 2 are done. It follows on from [swift-interop.md](swift-interop.md),
+Status: **in progress**: steps 1 to 3 are done. It follows on from [swift-interop.md](swift-interop.md),
 whose step 2 ("Swish's own types in SwishKit") it takes all the way.
 
 Swish grew several ways for a name to be callable, each with its own lookup,
@@ -134,6 +134,12 @@ they change the shell is what they do, not how they're found.
    an initializer from any sequence for collections), and the binder asks
    only that.
 3. **`help` from the registry**, with `help Type`, and internals hidden.
+   *Done.* `help Type` and `members` share one description of a type: a
+   Swift type's members from the bridge, each with the first paragraph of
+   Swift's own documentation, which the generator now keeps; a sequence's
+   with the shell's additions; a struct's or enum's from its declaration.
+   `members` still lists a file size's and an output's members by hand,
+   until step 4 makes them Swift types.
 4. **The standard library module.** The generator learns free functions,
    protocol extensions and SwishKit's parameter attributes (`@Flag`,
    `@Input`); the prelude's text, the native bodies, the duplicate structs,

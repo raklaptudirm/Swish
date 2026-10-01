@@ -245,9 +245,7 @@ public final class Shell {
     private func listTasks(_ program: Program) {
         let tasks: [(name: String, summary: String)] = program.statements.compactMap {
             guard case .function(let decl) = $0, !decl.name.hasPrefix("_") else { return nil }
-            let summary = decl.documentation?.summary.replacingOccurrences(of: "\n", with: " ") ?? ""
-            let sentence = summary.range(of: ". ").map { String(summary[..<$0.lowerBound]) + "." } ?? summary
-            return (decl.name, sentence)
+            return (decl.name, decl.documentation?.summary.firstSentence ?? "")
         }
         guard !tasks.isEmpty else {
             writeAll(stdoutFD, "No tasks: a task is a function in the file.\n")

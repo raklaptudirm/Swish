@@ -193,6 +193,12 @@ what a name is before it runs.
 builtins, shell builtins like `cd`, your own functions (source `yours`),
 and imported ones (source: their module). `help name` shows what
 `name --help` does, and for a program, where it is and where to look.
+For a type, `help String` or `help FilePath` lists its members, with
+Swift's own documentation, and `help Point` a struct of yours; `members`
+describes the items piped into it the same way. A sequence's methods
+(`sorted`, `select`) are members, so they're under `help Array`, not in
+the list of functions, and names you can't write, like `$json`, are the
+shell's own and aren't listed.
 
 ```swift
 help

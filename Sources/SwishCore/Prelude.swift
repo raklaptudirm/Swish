@@ -105,8 +105,9 @@ extension Shell {
     /// Lists every function you can call.
     func help() -> [Help]
 
-    /// Shows a function, shell builtin or program in full.
-    /// - Parameter name: a function, shell builtin or program
+    /// Shows a function, shell builtin or program in full, or a type's
+    /// members: `help String`, `help FilePath`, or a struct of yours.
+    /// - Parameter name: a function, shell builtin, type or program
     func help(_ name: String) -> [String]
 
     /// Runs a closure with environment variables set.

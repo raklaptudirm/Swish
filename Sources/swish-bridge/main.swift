@@ -38,6 +38,12 @@ struct Symbol: Decodable {
     let availability: [Availability]?
     let accessLevel: String
     let docComment: Doc?
+
+    /// Its documentation's first paragraph, on one line: what `help` shows.
+    var summary: String {
+        let lines = (docComment?.lines ?? []).map { $0.text.trimmingCharacters(in: .whitespaces) }
+        return lines.drop { $0.isEmpty }.prefix { !$0.isEmpty }.joined(separator: " ")
+    }
 }
 struct Relationship: Decodable {
     let kind: String; let source: String; let target: String; let targetFallback: String?
@@ -956,7 +962,7 @@ func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Const
                     parameters: [Parameter(label: nil, name: "newValue", type: \(annotation(returns)))],
                     returns: .void, generics: [:],
                     isThrowing: false, isRethrowing: false, isMutating: true,
-                    discardableResult: false,
+                    discardableResult: false, summary: "",
                     body: .native { shell, args in
                         _ = shell
                         var receiver: \(swiftType) = \(fromSwish("args[\"self\"]!", receiverType))
@@ -973,7 +979,7 @@ func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Const
                     parameters: [\(parameterCode.joined(separator: ", "))],
                     returns: \(annotation(returns)), generics: \(genericsCode),
                     isThrowing: \(declaration.throwing), isRethrowing: \(declaration.rethrowing), isMutating: \(declaration.isMutating),
-                    discardableResult: \(text.contains("@discardableResult")),
+                    discardableResult: \(text.contains("@discardableResult")), summary: \(quoted(symbol.summary)),
                     body: .native { shell, args in
                         _ = shell
                         \(body)
