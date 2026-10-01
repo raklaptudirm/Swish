@@ -259,8 +259,18 @@ The tasks are functions in [`Tasks.swish`](Tasks.swish); inside Swish, `run` lis
 | Path | What |
 |---|---|
 | `Packages/SwishKit` | `Value` and the plugin API, with the `@SwishExport` and `@SwishObject` macros. A separate package so it links as a **dynamic library** shared by the shell and every plugin. |
-| `Sources/SwishCore` | Parser, interpreter, pipelines, job control, builtins, line editor. |
-| `Sources/SwishCore/Platform` | What differs between macOS and Linux: `posix_spawn` with process groups and terminal handoff, `ps`, file status, and reading a plugin library's exports. |
+| `Sources/SwishCore` | The shell, in a folder for each part: |
+| `…/Shell` | The `Shell` itself: the prompt's loop, scripts, tasks, the config file. |
+| `…/Syntax` | The syntax tree, and the parser that decides command or expression mode. |
+| `…/Checking` | The type checker, which runs before anything else. |
+| `…/Interpreter` | Running statements and expressions, calls, command lines, structs and enums. |
+| `…/Execution` | Pipelines, value streams, redirects, jobs and globs. |
+| `…/Builtins` | The prelude, builtin functions and shell builtins, and `help`. |
+| `…/Bridge` | Swift's types and members, generated into `Bridge/Generated` from symbol graphs. |
+| `…/Display` | Tables, pretty-printing, colors and JSON. |
+| `…/Editor` | The line editor: history, completion and highlighting. |
+| `…/Plugins` | Building and loading plugins. |
+| `…/Platform` | The operating system: `posix_spawn` with process groups and terminal handoff, `ps`, file status, resource limits, and what differs between macOS and Linux. |
 | `Sources/Swish` | The executable. |
 | `Tests/Interactive` | `expect` scripts that drive the shell through a real terminal. |
 | `Examples/Tools` | An example plugin, which the tests import. |

@@ -17,7 +17,7 @@ func test() {
     }
 }
 
-/// Regenerates the bridges in Sources/SwishCore/Bridge: StandardLibrary.swift
+/// Regenerates the bridges in Sources/SwishCore/Bridge/Generated: StandardLibrary.swift
 /// from the standard library's symbol graph, and SystemPackage.swift from
 /// swift-system's, for FilePath. Run it after changing swish-bridge, the
 /// Swift toolchain or swift-system. The checked-in files are made on macOS;
@@ -29,7 +29,7 @@ func bridge() {
     for module in ["Swift", "SystemPackage"] {
         try! _graph(module, into: graphs)
         let output = module == "Swift" ? "StandardLibrary" : module
-        try! swift run -c release swish-bridge "\(graphs)/\(module).symbols.json" "Sources/SwishCore/Bridge/\(output).swift"
+        try! swift run -c release swish-bridge "\(graphs)/\(module).symbols.json" "Sources/SwishCore/Bridge/Generated/\(output).swift"
     }
 }
 

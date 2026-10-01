@@ -1,5 +1,131 @@
 import Foundation
 import SwishKit
+import SystemPackage
+
+extension Shell {
+    // MARK: Help
+
+    /// `--help` or `-h`, unless a function claims them for itself.
+    func helpRequested(_ args: [CommandArgument], for set: OverloadSet) -> Bool {
+        guard !helpClaimed(by: set) else { return false }
+        for case .text(let arg) in args {
+            if arg == "--" { return false }
+            if arg == "--help" || arg == "-h" { return true }
+        }
+        return false
+    }
+
+    func helpClaimed(by set: OverloadSet) -> Bool {
+        set.candidates.contains { $0.parameters.contains { $0.label == "help" || $0.shortFlag == "h" } }
+    }
+
+    /// Section titles stand out when `styled`, and flags are colored as
+    /// the highlighter colors them.
+    func helpText(for set: OverloadSet, styled: Bool = false) -> String {
+        var lines: [String] = []
+        if let summary = set.candidates.compactMap({ $0.documentation?.summary }).first(where: { !$0.isEmpty }) {
+            lines += [summary, ""]
+        }
+        lines.append("Usage:".styled(Style.label, styled))
+        lines += set.candidates.map { "  " + usage(of: $0, named: set.name) }
+
+        var arguments: [(String, String)] = []
+        var options: [(String, String)] = []
+        var seen: Set<String> = []
+        for function in set.candidates {
+            for parameter in function.parameters {
+                var details: [String] = []
+                if let help = function.documentation?.parameters[parameter.name] { details.append(help) }
+                if parameter.isInput {
+                    details.append(parameter.type.isList ? "(or the whole pipeline input)" : "(or each pipeline input item)")
+                }
+                if let defaultValue = parameter.defaultValue, defaultValue != .literal(.nothing) {
+                    details.append("(default: \(describe(defaultValue)))")
+                } else if let source = parameter.externalDefault {
+                    details.append("(default: \(source))")
+                }
+                if let label = parameter.label {
+                    let short = parameter.shortFlag.map { "-\($0), " } ?? "    "
+                    let negatable = parameter.type == .bool && parameter.defaultValue == .literal(.bool(true))
+                    let long = "--" + (negatable ? "[no-]" : "") + kebabCase(label)
+                    let key = short + long + valuePlaceholder(for: parameter)
+                    if parameter.type.isList { details.append("(repeatable)") }
+                    if seen.insert(key).inserted { options.append((key, details.joined(separator: " "))) }
+                } else {
+                    let key = "<\(parameter.name)>" + (parameter.variadic ? "..." : "")
+                    if seen.insert(key).inserted {
+                        arguments.append((key, (details + ["(\(parameter.type))"]).joined(separator: " ")))
+                    }
+                }
+            }
+        }
+        options.append(("-h, --help", "Show this help"))
+
+        let width = (arguments + options).map(\.0.count).max()! + 2
+        func rows(_ title: String, _ entries: [(String, String)]) {
+            guard !entries.isEmpty else { return }
+            lines += ["", title.styled(Style.label, styled)]
+            lines += entries.map { key, detail in
+                let color: Style? = key.hasPrefix("-") ? Style.flag : nil
+                return detail.isEmpty ? "  " + key.styled(color, styled)
+                    : "  " + key.styled(color, styled) + String(repeating: " ", count: width - key.count) + detail
+            }
+        }
+        rows("Arguments:", arguments)
+        rows("Options:", options)
+        return lines.joined(separator: "\n") + "\n"
+    }
+
+    private func usage(of function: Function, named name: String) -> String {
+        var parts = [name]
+        for parameter in function.parameters where parameter.label != nil {
+            var flag = commandLineName(of: parameter) + valuePlaceholder(for: parameter)
+            if parameter.type == .bool && parameter.defaultValue == .literal(.bool(true)) {
+                flag = "--no-" + flag.dropFirst(2)
+            }
+            let optional = parameter.hasDefault || parameter.type == .bool || parameter.type.isList
+            parts.append(optional ? "[\(flag)]" : flag)
+        }
+        for parameter in function.parameters where parameter.label == nil {
+            var argument = "<\(parameter.name)>"
+            if parameter.variadic || (parameter.isInput && parameter.type.isList) {
+                argument = "[\(argument)...]"
+            } else if parameter.hasDefault || parameter.isInput {
+                argument = "[\(argument)]"
+            }
+            parts.append(argument)
+        }
+        return parts.joined(separator: " ")
+    }
+
+    /// ` <Int>` after a flag that takes a value; a list flag takes one
+    /// element per use.
+    private func valuePlaceholder(for parameter: Parameter) -> String {
+        switch parameter.type {
+        case .bool: ""
+        case .list(let element): " <\(placeholder(element))>"
+        default: " <\(placeholder(parameter.type))>"
+        }
+    }
+
+    /// A type as `--help` shows it: an enum as its choices.
+    private func placeholder(_ type: TypeAnnotation) -> String {
+        if case .named(let name) = type, let enumType = enumType(named: name) {
+            return enumType.cases.filter(\.labels.isEmpty).map(\.name).joined(separator: "|")
+        }
+        return type.description
+    }
+
+    private func describe(_ defaultValue: Expr) -> String {
+        switch defaultValue {
+        case .literal(.string(let text)): "\"\(text)\""
+        case .literal(.nothing): "nil"
+        // As Swift writes it: `"/tmp"` for a FilePath made from a literal.
+        case .literal(let value): value.debugDescription
+        default: "computed"
+        }
+    }
+}
 
 /// `help`: every function you can call, as records (so `help | filter …`
 /// works), sequence methods included; `help name`: one of them in full.

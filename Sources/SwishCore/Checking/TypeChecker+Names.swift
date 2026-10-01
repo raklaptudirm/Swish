@@ -1,0 +1,94 @@
+import Foundation
+import SwishKit
+
+extension TypeChecker {
+    // MARK: Names
+
+    func lookup(_ name: String) -> Symbol? {
+        for scope in scopes.reversed() {
+            if let symbol = scope[name] { return symbol }
+        }
+        guard let binding = shell.lookup(name) else { return nil }
+        switch binding.special {
+        case .environment?: return .environment
+        case .jobs?: return .variable(.list(.named("Job")), mutable: false)
+        default: break
+        }
+        switch binding.value {
+        case .object(let type as StructType):
+            return .structType(structInfo(type))
+        case .object(let type as EnumType):
+            return .enumType(enumInfo(type))
+        case .object(is Module):
+            return .module
+        case .object(let type as BridgedTypeName):
+            return .swiftType(type.name)
+        case .function(let set as OverloadSet):
+            return .functions(set.candidates.enumerated().map { index, function in
+                var signature = signature(function)
+                signature.index = index
+                return signature
+            })
+        default:
+            return .variable(shell.staticTypes[name] ?? type(of: binding.value), mutable: binding.mutable)
+        }
+    }
+
+    func signature(_ function: Function) -> Signature {
+        // A builtin that hasn't declared its result isn't known; a Swish
+        // function without `->` returns nothing.
+        var returns = function.returnType ?? (function.isBuiltin ? .unknown : .void)
+        if function.plugin != nil && returns == .any { returns = .unknown }
+        return Signature(name: function.name ?? "closure", parameters: function.parameters, returns: returns,
+                         isMutating: function.isMutating, isThrowing: function.isThrowing,
+                         isRethrowing: function.isRethrowing, generics: function.generics)
+    }
+
+    func structInfo(named name: String) -> StructInfo? {
+        if case .structType(let info)? = lookup(name) { return info }
+        return nil
+    }
+
+    func enumInfo(named name: String) -> EnumInfo? {
+        if case .enumType(let info)? = lookup(name) { return info }
+        return nil
+    }
+
+    func structInfo(_ type: StructType) -> StructInfo {
+        var methods: [String: [Signature]] = [:]
+        for (name, set) in type.methods {
+            methods[name] = set.candidates.enumerated().map { index, method in
+                var signature = signature(method)
+                signature.index = index
+                return signature
+            }
+        }
+        return StructInfo(
+            name: type.name, stored: type.stored,
+            computed: type.computed.mapValues { $0.returnType ?? .unknown },
+            methods: methods,
+            initializers: type.initializers?.candidates.enumerated().map { index, initializer in
+                Signature(name: initializer.name ?? type.name, parameters: initializer.parameters, returns: .named(type.name),
+                          isMutating: true, isThrowing: initializer.isThrowing, index: index)
+            } ?? [],
+            memberwise: Signature(name: type.name, parameters: type.memberwise.parameters, returns: .named(type.name)),
+            conformances: type.conformances
+        )
+    }
+
+    func enumInfo(_ type: EnumType) -> EnumInfo {
+        let payloads = shell.enumPayloadTypes[ObjectIdentifier(type)] ?? [:]
+        let cases = type.cases.map { enumCase in
+            (enumCase.name, zip(enumCase.labels, payloads[enumCase.name] ?? enumCase.labels.map { _ in .unknown })
+                .map { AssociatedValue(label: $0, type: $1) })
+        }
+        let rawType: TypeAnnotation? = switch type.cases.first?.rawValue {
+        case .int?: .int
+        case .string?: .string
+        case .double?: .double
+        default: nil
+        }
+        return EnumInfo(name: type.name, cases: cases, rawType: rawType,
+                        conformances: shell.enumConformances[ObjectIdentifier(type)] ?? [])
+    }
+}
