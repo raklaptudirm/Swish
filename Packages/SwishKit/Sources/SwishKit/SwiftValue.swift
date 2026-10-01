@@ -3,7 +3,7 @@ import Foundation
 /// A Swift value Swish has no form of its own for, like a `Substring`, a
 /// `Character` or a `URL`, kept as it is. Its type is its Swift type, to
 /// the checker and to you; its members are bridged (see
-/// docs/design/swift-interop.md). It compares, hashes and sorts as the Swift
+/// Docs/Design/swift-interop.md). It compares, hashes and sorts as the Swift
 /// value does, when its type can.
 public final class SwiftValue: SwishObject, @unchecked Sendable {
     public let value: Any

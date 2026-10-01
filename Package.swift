@@ -5,7 +5,9 @@ let package = Package(
     name: "Swish",
     platforms: [.macOS(.v14)],
     products: [
-        .executable(name: "swish", targets: ["swish"]),
+        // The commands keep their lowercase names, as Unix programs do.
+        .executable(name: "swish", targets: ["Swish"]),
+        .executable(name: "swish-bridge", targets: ["SwishBridge"]),
     ],
     dependencies: [
         // A separate package so the host links SwishKit as a dylib (products of
@@ -16,10 +18,10 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-system.git", from: "1.4.0"),
     ],
     targets: [
-        .executableTarget(name: "swish", dependencies: ["SwishCore"]),
+        .executableTarget(name: "Swish", dependencies: ["SwishCore"]),
         // Reads Swift's symbol graphs and writes the glue that bridges them
         // (`run bridge`); not part of the shell.
-        .executableTarget(name: "swish-bridge"),
+        .executableTarget(name: "SwishBridge"),
         .target(
             name: "SwishCore",
             dependencies: [

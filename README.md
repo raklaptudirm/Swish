@@ -261,24 +261,24 @@ The tasks are functions in [`Tasks.swish`](Tasks.swish); inside Swish, `run` lis
 | `Packages/SwishKit` | `Value` and the plugin API, with the `@SwishExport` and `@SwishObject` macros. A separate package so it links as a **dynamic library** shared by the shell and every plugin. |
 | `Sources/SwishCore` | Parser, interpreter, pipelines, job control, builtins, line editor. |
 | `Sources/SwishCore/Platform` | What differs between macOS and Linux: `posix_spawn` with process groups and terminal handoff, `ps`, file status, and reading a plugin library's exports. |
-| `Sources/swish` | The executable. |
+| `Sources/Swish` | The executable. |
 | `Tests/Interactive` | `expect` scripts that drive the shell through a real terminal. |
 | `Examples/Tools` | An example plugin, which the tests import. |
-| `Sources/swish-bridge` | Reads Swift's symbol graphs and generates the glue that bridges the standard library (`run bridge`). |
+| `Sources/SwishBridge` | Reads Swift's symbol graphs and generates the glue that bridges the standard library (`run bridge`). |
 
 </details>
 
 ## Design
 
-- [Structured pipelines](docs/design/pipeline.md): values instead of text,
+- [Structured pipelines](Docs/Design/pipeline.md): values instead of text,
   the boundaries with external programs, formatting at the end, failures
-- [Functions and commands](docs/design/callables.md): one callable, with a
+- [Functions and commands](Docs/Design/callables.md): one callable, with a
   Swift call syntax and a command-line syntax derived from its signature
-- [Shell syntax](docs/design/syntax.md): where Swish departs from POSIX:
+- [Shell syntax](Docs/Design/syntax.md): where Swish departs from POSIX:
   comments, the environment, command output, scripts, redirects, background jobs
-- [Plugins](docs/design/plugins.md): exporting from Swift, and how `import`
+- [Plugins](Docs/Design/plugins.md): exporting from Swift, and how `import`
   builds, loads and registers a package
-- [One foundation](docs/design/foundations.md): every function, method and type as a Swift
+- [One foundation](Docs/Design/foundations.md): every function, method and type as a Swift
   declaration read from a symbol graph, so pipes, flags and `help` treat them all alike (in progress)
 
 ## Roadmap
@@ -294,7 +294,7 @@ The tasks are functions in [`Tasks.swish`](Tasks.swish); inside Swish, `run` lis
   `do`/`catch`, `env`, `//` comments, scripts with `args`, `main`, `defer` and `#filePath`
 - [x] **Enums and switch**: cases, raw and associated values, `.case` resolved by context,
   `switch` with Swift's patterns, `if case`; `FileType` from `ls`, enum parameters on the command line
-- [ ] **Static types** ([plan](docs/design/types.md)): checked before anything runs, as in Swift
+- [ ] **Static types** ([plan](Docs/Design/types.md)): checked before anything runs, as in Swift
   - [x] The checker's core: inference, functions and `Void`, structs, enums, optionals with `!`
     and `?.`, tuples, dictionaries, `let x: T`
   - [x] Function values, closures' results inferred, static overloads, Swift's rules for `throws`
@@ -302,7 +302,7 @@ The tasks are functions in [`Tasks.swish`](Tasks.swish); inside Swish, `run` lis
     Swish prelude, typed pipelines with stages resolved from their input
   - [x] `Any` casts (`as?`, `as!`, `is`), the `JSON` type, optional subscripts
   - [ ] Swish types are Swift types: one type system read from Swift's symbol graphs, any package
-    usable as it is, generated Swift twins for Swish types ([design](docs/design/swift-interop.md));
+    usable as it is, generated Swift twins for Swish types ([design](Docs/Design/swift-interop.md));
     so far the standard library's members, mutating ones too, on `String`, `Int`, `Double`, `Bool`,
     `Array`, `Set`, `Dictionary`, `Optional` and ranges, with `1...5` a real `ClosedRange<Int>`,
     and swift-system's `FilePath`
@@ -310,7 +310,7 @@ The tasks are functions in [`Tasks.swish`](Tasks.swish); inside Swish, `run` lis
   collected (Swift's, `xs | max`, `| joined(separator: ",")`, and the shell's streaming `filter`,
   `map`, `compactMap`, `prefix`, plus `select`, `get`, `sorted(by: \.size)`), then each item's
   (`names | uppercased`, `points | describe`, `jobs | cancel`); stages written as calls; the checker
-  decides, never the interpreter ([design](docs/design/foundations.md))
+  decides, never the interpreter ([design](Docs/Design/foundations.md))
 - [x] **Structs**: typed records with the memberwise init or custom `init`s, computed
   properties, methods and `mutating`; assignment into values (`p.x = 1`, `xs[0] += 5`)
 - [x] **Callables**: command lines derived from signatures, `@input` streaming, `@flag`,

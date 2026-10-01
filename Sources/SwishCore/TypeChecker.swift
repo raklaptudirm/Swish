@@ -2,7 +2,7 @@ import Foundation
 import SwishKit
 
 /// A mistake in types, found before anything runs: the statement (or, in a
-/// script, the whole script) doesn't run. See docs/design/types.md.
+/// script, the whole script) doesn't run. See Docs/Design/types.md.
 struct TypeError: Error, CustomStringConvertible {
     let message: String
     /// The line of the statement it's in, when there's more than one.

@@ -5,7 +5,7 @@ import SwishKit
 /// standard library's symbol graph (and swift-system's, for FilePath) by
 /// `swish-bridge`, which writes StandardLibrary.swift and SystemPackage.swift
 /// beside this file (see `run bridge` in Tasks.swish
-/// and docs/design/swift-interop.md). Each member comes with its signature,
+/// and Docs/Design/swift-interop.md). Each member comes with its signature,
 /// for the checker, and its glue, which calls Swift.
 enum Bridge {
     /// The bridged types, by the name Swish writes them with.

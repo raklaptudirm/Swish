@@ -121,7 +121,7 @@ scripts, reusing the twins.
 
 1. **The standard library's members on Swish values**, from its symbol
    graph and generated glue, replacing the hand-written member tables.
-   *Built so far:* `swish-bridge` (Sources/swish-bridge) reads the graph
+   *Built so far:* `swish-bridge` (Sources/SwishBridge) reads the graph
    and writes Sources/SwishCore/Bridge/StandardLibrary.swift;
    `run bridge` reruns it. It bridges `String`,
    `Substring`, `Character`, `Int`, `Double`, `Bool`, `Array`,
