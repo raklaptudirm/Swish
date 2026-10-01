@@ -178,15 +178,12 @@ extension Shell {
                 preconditionFailure("call arguments are bound as a call")
             }
         }
+        // A collection's items, from repeated flags, made into it at the end.
+        var collected: [String: [Value]] = [:]
         func assign(_ parameter: Parameter, _ text: CommandArgument, flag: String) throws {
-            if case .list(let elementType) = parameter.type {
+            if let (element, _) = Shell.collection(parameter.type) {
                 // Repeated flags accumulate: --include a --include b.
-                let element = try take(text, as: elementType, for: flag)
-                if case .list(let existing) = bound[parameter.name] {
-                    bound[parameter.name] = .list(existing + [element])
-                } else {
-                    bound[parameter.name] = .list([element])
-                }
+                collected[parameter.name, default: []].append(try take(text, as: element, for: flag))
             } else {
                 guard bound[parameter.name] == nil else { throw RuntimeError("\(name): \(flag) given twice") }
                 bound[parameter.name] = try take(text, as: parameter.type, for: flag)
@@ -217,7 +214,14 @@ extension Shell {
                 }
                 if parameter.type == .bool && (inline == nil || negated) {
                     guard inline == nil else { throw RuntimeError("\(name): --\(flagName) doesn't take a value") }
-                    bound[parameter.name] = .bool(!negated)
+                    // `--verbose false`: a word Bool's own parser takes is its value.
+                    if !negated, index < args.count, case .text(let next) = args[index],
+                       let value = try? converted(next, to: parameter.type, for: "", of: name) {
+                        bound[parameter.name] = value
+                        index += 1
+                    } else {
+                        bound[parameter.name] = .bool(!negated)
+                    }
                 } else if let inline {
                     try assign(parameter, .text(inline), flag: "--\(flagName)")
                 } else {
@@ -265,9 +269,12 @@ extension Shell {
             let what = "<\(parameter.name)>"
             // A whole-stream @input parameter given on the command line
             // collects the rest, like a variadic.
-            if parameter.variadic || (parameter.isInput && parameter.type.isList) {
-                let elementType = parameter.variadic ? parameter.type : { if case .list(let t) = parameter.type { t } else { .any } }()
-                bound[parameter.name] = .list(try remaining.map { try take($0, as: elementType, for: what) })
+            if parameter.variadic {
+                bound[parameter.name] = .list(try remaining.map { try take($0, as: parameter.type, for: what) })
+                remaining = []
+            } else if let (element, make) = Shell.collection(parameter.type) {
+                // A collection takes the rest of the words, as a variadic does.
+                bound[parameter.name] = make(try remaining.map { try take($0, as: element, for: what) })
                 remaining = []
             } else if let text = remaining.popFirst() {
                 bound[parameter.name] = try take(text, as: parameter.type, for: what)
@@ -284,6 +291,10 @@ extension Shell {
             throw RuntimeError("\(name): unexpected argument '\(extra.description)'")
         }
 
+        for (name, items) in collected {
+            guard let parameter = parameters.first(where: { $0.name == name }), let (_, make) = Shell.collection(parameter.type) else { continue }
+            bound[name] = make(items)
+        }
         for parameter in parameters where bound[parameter.name] == nil {
             if let defaultValue = parameter.defaultValue {
                 bound[parameter.name] = try defaultArgument(defaultValue, for: parameter, of: function)
@@ -291,13 +302,37 @@ extension Shell {
                 continue // The plugin fills it in.
             } else if parameter.type == .bool && parameter.label != nil {
                 bound[parameter.name] = .bool(false)
-            } else if parameter.type.isList && parameter.label != nil {
-                bound[parameter.name] = .list([])
+            } else if parameter.label != nil, let (_, make) = Shell.collection(parameter.type) {
+                bound[parameter.name] = make([])
+            } else if case .optional = parameter.type {
+                // An optional flag or argument not given is nil.
+                bound[parameter.name] = .nothing
             } else {
                 throw RuntimeError("\(name): missing \(commandLineName(of: parameter))")
             }
         }
         return (bound, penalty)
+    }
+
+    /// What a parameter given several words is made of, and how: a
+    /// collection an array literal can be (`[Int]`, `Set<String>`).
+    static func collection(_ type: TypeAnnotation) -> (element: TypeAnnotation, make: ([Value]) -> Value)? {
+        guard let (bridged, bindings) = Bridge.type(of: type), let make = bridged.arrayLiteral,
+              let parameter = bridged.genericParameters.first, let element = bindings[parameter] else { return nil }
+        return (element, make)
+    }
+
+    /// Whether a word can be a value of `type` at all: a Swift type text
+    /// can be, an enum, or one of Swish's own that's read from text.
+    func takesWords(_ type: TypeAnnotation) -> Bool {
+        switch type {
+        case .any, .unknown, .parameter, .keyPath, .filesize, .output, .date: return true
+        case .optional(let wrapped): return takesWords(wrapped)
+        case .named(let name) where enumType(named: name) != nil: return true
+        default:
+            guard let (bridged, _) = Bridge.type(of: type) else { return false }
+            return bridged.parse != nil || bridged.literal != nil
+        }
     }
 
     func converted(_ text: String, to type: TypeAnnotation, for what: String, of function: String) throws -> Value {
@@ -321,6 +356,9 @@ extension Shell {
             }
         }
         guard let value else {
+            guard takesWords(type) else {
+                throw RuntimeError("\(function): \(what) is \(type), which a word can't be: call it with parentheses, as in \(function)(…)")
+            }
             throw RuntimeError("\(function): \(what) must be \(type), got '\(text)'")
         }
         return value

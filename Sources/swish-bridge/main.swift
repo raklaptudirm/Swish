@@ -779,6 +779,17 @@ func isTextInitializer(_ symbol: Symbol) -> Bool {
     }
 }
 
+/// `init<S: Sequence>(_ elements: S) where S.Element == Element`: an
+/// initializer taking one unlabeled sequence of any kind.
+func isSequenceInitializer(_ symbol: Symbol) -> Bool {
+    let text = (symbol.declarationFragments ?? []).map(\.spelling).joined()
+    guard let declaration = try? parseDeclaration(text), !declaration.isFailable, declaration.parameters.count == 1,
+          declaration.parameters[0].label == nil, case .named(let generic, []) = declaration.parameters[0].type else { return false }
+    let constraints = (symbol.swiftGenerics?.constraints ?? []) + declaration.constraints
+    return (declaration.generics[generic] ?? []).contains("Sequence")
+        || constraints.contains { $0.lhs == generic && $0.rhs == "Sequence" }
+}
+
 func parseType(_ text: String) throws -> SType {
     var reader = Reader(text)
     return try reader.type()
@@ -1036,6 +1047,16 @@ for (name, _) in bridgedTypeNames {
     // FilePath), picked by the most specific literal protocol it conforms to.
     var parse = "nil"
     var literal = "nil"
+    // `arrayLiteral`: items as one, for a generic collection an array
+    // literal can be (Array, Set, ArraySlice), through its initializer from
+    // any sequence: what several words for one parameter become.
+    var arrayLiteral = "nil"
+    if owner.parameters.count == 1, owner.allConformances.contains("ExpressibleByArrayLiteral"),
+       graph.symbols.contains(where: { $0.pathComponents == [name, $0.pathComponents.last!]
+           && $0.kind.identifier == "swift.init" && available($0) && isSequenceInitializer($0) }) {
+        let collection = selfType(owner)
+        arrayLiteral = "{ \(toSwish("\(spelling(collection))($0)", collection)) }"
+    }
     if owner.parameters.isEmpty {
         let selfType = SType.named(name, [])
         if graph.symbols.contains(where: { $0.pathComponents == name.split(separator: ".").map(String.init) + [$0.pathComponents.last!]
@@ -1051,7 +1072,7 @@ for (name, _) in bridgedTypeNames {
             name: \(quoted(name)), genericParameters: [\(owner.parameters.map(quoted).joined(separator: ", "))],
             conformances: [\(conformances.isEmpty ? ":" : conformances.joined(separator: ", "))],
             associatedTypes: [\(associated.isEmpty ? ":" : associated.joined(separator: ", "))],
-            parse: \(parse), literal: \(literal),
+            parse: \(parse), literal: \(literal), arrayLiteral: \(arrayLiteral),
             members: [
 \(members.joined(separator: "\n"))
             ]

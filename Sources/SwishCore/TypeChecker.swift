@@ -1766,6 +1766,7 @@ final class TypeChecker {
         var argumentsThrow = false
         func take(_ parameter: Parameter) throws {
             let natural = TypeChecker.hasNaturalType(arguments[index].value) ? try typeOf(&arguments[index].value) : nil
+            let isLiteral = if case .literal = arguments[index].value { true } else { false }
             let wanted = substitute(parameter.type, bindings)
             let actual = try typeOf(&arguments[index].value, expecting: wanted)
             guard fits(actual, wanted) else {
@@ -1776,6 +1777,10 @@ final class TypeChecker {
             switch (natural, wanted) {
             case (.unknown?, _): uncertain = true
             case (_, .any), (_, .unknown), (_, .function), (_, .record): cost += 3
+            // A literal made into another type than its own (`"x"` as a
+            // Character) ranks below one taken as it is, as in Swift:
+            // `String("x")` takes the String.
+            case (let type?, _) where isLiteral && actual != type: cost += 2
             // A generic sequence is less specific than a concrete type, as
             // Swift ranks them: `merging([:])` takes the dictionary one.
             case (_, .someSequence): cost += 1

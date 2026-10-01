@@ -218,12 +218,16 @@ struct BridgedType {
     /// Text as one by Swift's rules for text literals (`Character`,
     /// `FilePath`); nil if the text can't be that literal.
     var literal: ((String) -> Value?)? = nil
+    /// Items as one, for a collection an array literal can be (Array, Set):
+    /// what a parameter given several words gets.
+    var arrayLiteral: (([Value]) -> Value)? = nil
     let members: [BridgedMember]
 
     /// With Swish's own members after Swift's.
     func adding(_ extra: [BridgedMember]) -> BridgedType {
         BridgedType(name: name, genericParameters: genericParameters, conformances: conformances,
-                    associatedTypes: associatedTypes, parse: parse, literal: literal, members: members + extra)
+                    associatedTypes: associatedTypes, parse: parse, literal: literal, arrayLiteral: arrayLiteral,
+                    members: members + extra)
     }
 }
 

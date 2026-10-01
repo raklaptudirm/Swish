@@ -18,22 +18,37 @@ greet Rak --times 2 --loud         // command mode: the same function
 | Swift signature | Command mode |
 |---|---|
 | `_ name: String` (unlabeled) | positional argument |
-| `times: Int` | `--times 2` or `--times=2`; the string is converted to the declared type, with an error if that fails |
-| `loud: Bool = false` | the switch `--loud` |
+| `times: Int` | `--times 2` or `--times=2`; the word becomes the declared type by what that type declares (below), with an error if it isn't one |
+| `loud: Bool = false` | the switch `--loud`, or `--loud false` |
 | `color: Bool = true` | `--no-color` |
 | `ignoreCase:` | `--ignore-case` (camelCase becomes kebab-case) |
-| `_ files: String...` | the remaining positionals |
+| `_ files: String...`, `_ files: [String]`, `_ ids: Set<Int>` | the remaining positionals |
 | default value | optional flag |
 | no default | required; missing ones are reported by name |
-| `name: String? = nil` | an optional flag whose absence is `nil` |
+| `name: String?` | an optional flag whose absence is `nil` |
 | a runtime error | status 1, and the rest of the input is abandoned |
 | a `Bool` result | the status: `false` is a failure, for `&&`/`\|\|` and `if` |
 | return value | output to the pipeline |
 
 `--` ends flag parsing, so `rm -- --weird-name` works.
 
-**Array parameters take a repeated flag:** `--include a --include b` for
-`include: [String]`. There's no comma splitting, so values containing commas
+**A word becomes the parameter's type by what the type declares,** not by
+a list of types the shell knows:
+
+- a failable initializer from text, `init?(_ description: String)`: `Int`,
+  `Double`, `Bool`;
+- Swift's rules for text literals, by the most specific literal protocol
+  the type conforms to: any text for `String` or `FilePath`, one character
+  for `Character`;
+- a case's name, for an enum.
+
+A type no word can be, like a range or a struct, is an error that points to
+call syntax: `f(r: 1...3)`.
+
+**Collection parameters take a repeated flag:** `--include a --include b`
+for `include: [String]`. A collection is any type an array literal can be,
+made from its items (an Array, a Set), and unlabeled, it takes the
+remaining words. There's no comma splitting, so values containing commas
 need no escaping, and this matches Unix tools like `grep -e` and `curl -H`.
 
 **A dash followed by a number is a value** unless the callable has a short
