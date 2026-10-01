@@ -205,7 +205,8 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
     #expect(program.statements[1] == .chain(Chain(first: .expression(.member(.variable("r"), "size")))))
     #expect(program.statements[2] == .chain(Chain(first: .expression(.record([])))))
     #expect(try parse("2.kib; 1...3").statements.count == 2) // ranges still work
-    #expect(syntaxError("1.parsecs") != nil)
+    // Not a file size, so a command, which says why it isn't one if no program has the name.
+    #expect(try command("1.parsecs")?.notAnExpression == "unknown unit 'parsecs'; file sizes use b, kb, mb, gb, tb, or kib, mib, gib, tib")
     #expect(syntaxError(#"["a": 1, 2]"#) != nil)
 }
 
@@ -295,7 +296,7 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
 }
 
 @Test func realErrorsAreNotIncomplete() {
-    for source in ["| ls", "ls )", "echo (x)", "ls &", "}", "else { }", "1 < 2 < 3", "let if = 1", "(undefined + 1)", "(f(1))", "7zip", "1...2...3"] {
+    for source in ["| ls", "ls )", "echo (x)", "ls &", "}", "else { }", "1 < 2 < 3", "let if = 1", "(undefined + 1)", "(f(1))"] {
         let error = syntaxError(source)
         #expect(error != nil && error?.incomplete == false, "\(source)")
     }
@@ -456,7 +457,8 @@ private func command(_ source: String) throws -> CommandNode? {
         Issue.record("\(program.statements)")
         return
     }
-    #expect(syntaxError("$(x)?") != nil) // the old postfix form is gone
+    // The old postfix form is gone: a word after an expression makes a command.
+    #expect(try command("$(x)?")?.notAnExpression == "unexpected '?'")
 }
 
 @Test func tryDoesNotReachIntoClosures() throws {
@@ -555,4 +557,21 @@ private func command(_ source: String) throws -> CommandNode? {
     #expect(syntaxError("fallthrough") != nil)
     #expect(syntaxError("case 1: x") != nil)
     #expect(syntaxError("switch x {", bound: ["x"])?.incomplete == true)
+}
+
+@Test func whatParsesDecidesTheMode() throws {
+    // A program whose name doesn't start like one: quoted, or with a digit.
+    #expect(try modes(#""/opt/My App/run" x; 2to3 x; 7zip a; ./run"#) == ["command", "command", "command", "command"])
+    // A name that isn't bound, even when its start is: `git-lfs` is one word.
+    #expect(try modes("ls -la; git-lfs version", bound: ["git"]) == ["command", "command"])
+    // Expressions parse, and nothing but the end of the unit follows them.
+    #expect(try modes(#""text"; 1 + 2; x -1; .directory; !x; [1, 2]"#, bound: ["x"]) == Array(repeating: "expression", count: 6))
+    // A function's name is a command unless it's called or read.
+    #expect(try modes("greet Rak; greet; greet(); greet.self", functions: ["greet"]) == ["command", "command", "expression", "expression"])
+    // Shell syntax always starts a command.
+    #expect(try modes("$EDITOR notes; ^ls") == ["command", "command"])
+    // Only a word that starts like an expression says why it isn't one.
+    #expect(try command("1...2...3")?.notAnExpression == "'...' can't be chained; use parentheses or '&&'")
+    #expect(try command(#""text" nonsense"#)?.notAnExpression == "unexpected 'nonsense'")
+    #expect(try command("nosuchcommand")?.notAnExpression == nil)
 }

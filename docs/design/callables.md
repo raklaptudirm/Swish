@@ -110,8 +110,23 @@ thread, and two runs separated by an external would each wait on the other.
 
 ## Choosing the syntax
 
-- At the start of a statement, `name(` with **no space** is an expression
-  (a Swift call), and `name args…` is command mode.
+What parses decides, not the first character. A unit is an expression if
+one parses there and the unit ends after it; otherwise it's a command:
+
+- `ls -la` and `git-lfs version`: no expression parses within the first
+  word, so it's a command named by that word.
+- `"/opt/My App/run" x`: a word follows the string, so the string names
+  the program; `2to3 x` and `7zip a` too, not being numbers.
+- `x -1`, `"text"`, `[1, 2]`, `.directory`: expressions, ending the unit.
+- A function's name is a command unless it's called or read there:
+  `greet Rak` and `greet` run it, `greet(…)` and `greet.self` are
+  expressions. `name(` with **no space** is always a call.
+- `^name` and `$name` (`$EDITOR notes`) always start a command.
+
+A word that starts like an expression but isn't one, like `1...2...3`, is
+a command too; if no program has that name, the error says why it isn't
+an expression, rather than only that the command wasn't found.
+
 - Method calls (`x.foo()`) are always expression mode.
 - **External programs** are callable only in command mode. In expression
   mode they need `$(…)`, so `git(…)` can never secretly spawn a process.

@@ -1084,6 +1084,12 @@ extension Shell {
                     }
                     return text
                 }
+                // Not a program after all, and it was only a command because it
+                // isn't an expression: that's the error to show (`1...2...3`).
+                if let why = command.notAnExpression, !Shell.builtinNames.contains(name), !name.contains("/"),
+                   findExecutable(name) == nil {
+                    throw RuntimeError("\(name) isn't a command, and as an expression: \(why)")
+                }
                 // `run test`: the task file, in a Swish of its own.
                 let program = !command.external && name == "run" ? try taskCommand(Array(argv.dropFirst())) : argv
                 stages.append(.external(program, skipBuiltins: command.external || name == "run", redirects: redirects, environment: environment))

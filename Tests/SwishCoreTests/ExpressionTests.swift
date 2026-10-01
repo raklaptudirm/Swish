@@ -119,3 +119,12 @@ private func checkError(_ source: String) -> String? {
     #expect(checkError("guard let q = 5 else { exit 1 }") == "error: 'let' in a condition unwraps an optional, but this is Int")
     #expect(checkError("guard true { exit 1 }") == "syntax error: expected 'else' after guard's condition, found '{'")
 }
+
+@Test func aWordThatIsNeitherSaysWhy() throws {
+    // No program by that name, and it was only a command because it isn't an expression.
+    let shell = Shell()
+    _ = try output("1...2...3", in: shell)
+    #expect(shell.lastStatus != 0)
+    // Quoted, or starting with a digit, a program still runs.
+    #expect(try output(#""/bin/echo" quoted; ^echo plain"#) == "quoted\nplain\n")
+}
