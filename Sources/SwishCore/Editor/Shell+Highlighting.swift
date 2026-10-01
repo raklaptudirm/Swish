@@ -42,7 +42,7 @@ extension Shell {
         guard !name.isEmpty, !name.contains(where: { "$\\\"'(".contains($0) }) else { return nil }
         let known: Bool
         if !external && (commandFunctions(named: name) != nil || sequenceMethods[name] != nil
-                         || Shell.builtinNames.contains(name)) {
+                         || Shell.shellBuiltins[name] != nil) {
             known = true
         } else if !external && piped && isMemberName(name) {
             // After a `|`, a method of what's piped in: which type's isn't

@@ -70,7 +70,7 @@ extension Shell {
             created: status.created ?? status.modified, accessed: status.accessed
         )
         guard case .record(var record) = try? ValueEncoder().encode(entry) else { return nil }
-        record["type"] = .enumValue(EnumValue(type: Shell.fileType, name: type))
+        record["type"] = preludeCase("FileType", type)
         record["path"] = pathValue(path)
         // A nil target is still a field, as the struct declares it.
         let target = status.isSymlink ? try? FileManager.default.destinationOfSymbolicLink(atPath: path) : nil

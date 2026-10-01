@@ -70,3 +70,42 @@ indirect enum TypeAnnotation: Hashable, Sendable, CustomStringConvertible {
         }
     }
 }
+
+extension TypeAnnotation {
+    /// Swift's types that Swish writes with an annotation of its own, by
+    /// name: one table for the parser (`Int` is `.int`) and for finding the
+    /// Swift type an annotation is (`.int` is `Int`). The generic ones are
+    /// sugar: `[T]`, `T?`, `[K: V]`.
+    private static let spelled: [(name: String, make: @Sendable ([TypeAnnotation]) -> TypeAnnotation?)] = [
+        ("Int", { $0.isEmpty ? .int : nil }), ("Double", { $0.isEmpty ? .double : nil }),
+        ("String", { $0.isEmpty ? .string : nil }), ("Bool", { $0.isEmpty ? .bool : nil }),
+        ("Record", { $0.isEmpty ? .record : nil }), ("FileSize", { $0.isEmpty ? .filesize : nil }),
+        ("Date", { $0.isEmpty ? .date : nil }), ("Output", { $0.isEmpty ? .output : nil }),
+        ("Any", { $0.isEmpty ? .any : nil }), ("Value", { $0.isEmpty ? .any : nil }), ("Void", { $0.isEmpty ? .void : nil }),
+        ("Array", { $0.count == 1 ? .list($0[0]) : nil }),
+        ("Optional", { $0.count == 1 ? .optional($0[0]) : nil }),
+        ("Dictionary", { $0.count == 2 ? .dictionary($0[0], $0[1]) : nil }),
+    ]
+
+    /// The annotation Swish writes `name<arguments>` with, if it has one of
+    /// its own: `Int`, `Array<Int>` as `[Int]`.
+    static func spelled(_ name: String, _ arguments: [TypeAnnotation] = []) -> TypeAnnotation? {
+        spelled.lazy.compactMap { $0.name == name ? $0.make(arguments) : nil }.first
+    }
+
+    /// The Swift type this annotation stands for, by name, with its generic
+    /// arguments: `.int` is `Int`, `[String]` is `Array<String>`. The
+    /// inverse of `spelled`; nil for one that doesn't name a type.
+    var swiftType: (name: String, arguments: [TypeAnnotation])? {
+        switch self {
+        case .named(let name): return (name, [])
+        case .generic(let name, let arguments): return (name, arguments)
+        case .list(let element): return ("Array", [element])
+        case .optional(let wrapped): return ("Optional", [wrapped])
+        case .dictionary(let key, let value): return ("Dictionary", [key, value])
+        default:
+            return TypeAnnotation.spelled.first { $0.make([]) == self }.map { ($0.name, []) }
+        }
+    }
+}
+

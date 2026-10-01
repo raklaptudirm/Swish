@@ -2,7 +2,8 @@ import Foundation
 import SwishKit
 
 /// The columns shown by default for records of a type; the rest are still
-/// there for `where`, `select` and `get`, and `table` shows everything.
+/// there for `filter`, `select` and `get`, and `table` shows everything. By
+/// name until a type can say how it's shown (foundations step 5).
 let views: [String: [String]] = [
     "FileEntry": ["name", "type", "size", "modified"],
     "ProcessEntry": ["pid", "name", "user", "memory", "cpuTime"],
@@ -221,16 +222,17 @@ final class Formatter {
     }
 
     /// What stands out in a table: directories and links in `ls`, and how
-    /// jobs are going. Everything else is plain.
+    /// jobs are going. Everything else is plain. By the prelude's type
+    /// names until types can say how they display (foundations step 5).
     static func style(of value: Value, key: String, in record: Record) -> Style? {
-        if key == "name", case .enumValue(let type)? = record["type"], type.type === Shell.fileType {
+        if key == "name", case .enumValue(let type)? = record["type"], type.type.name == "FileType" {
             switch type.name {
             case "directory": return .boldBlue
             case "symlink": return .cyan
             default: return nil
             }
         }
-        if case .enumValue(let state) = value, state.type === Shell.jobState {
+        if case .enumValue(let state) = value, state.type.name == "JobState" {
             switch state.name {
             case "running": return .green
             case "stopped": return .yellow

@@ -78,6 +78,9 @@ extension Parser {
             (functionDepth, loopDepth, switchDepth) = (0, 0, 0)
             defer { (functionDepth, loopDepth, switchDepth) = saved }
             return .deferBlock(try parseBlock())
+        // Only the prelude extends, and only Sequence: its methods are
+        // looked up by name for any sequence. Extensions of your own need
+        // members found by type, which comes with step 4 of the foundations.
         case "extension" where prelude:
             return try parseExtension()
         case "fallthrough":

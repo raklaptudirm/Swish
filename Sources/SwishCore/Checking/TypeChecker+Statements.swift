@@ -46,7 +46,7 @@ extension TypeChecker {
         case .doCatch(var body, let errorName, var handler):
             // A `do` with a `catch` handles what its body throws.
             errorContexts.append(ErrorContext(handled: handler != nil || errorContexts.last!.handled,
-                                              function: errorContexts.last!.function))
+                                              boundary: errorContexts.last!.boundary))
             try checkBlock(&body, newScope: true)
             errorContexts.removeLast()
             if var caught = handler {
@@ -94,7 +94,7 @@ extension TypeChecker {
             break
         case .deferBlock(var body):
             // Nothing thrown can leave a `defer`, as in Swift.
-            errorContexts.append(ErrorContext(handled: false, function: "defer"))
+            errorContexts.append(ErrorContext(handled: false, boundary: .deferBlock))
             try checkBlock(&body, newScope: true)
             errorContexts.removeLast()
             statement = .deferBlock(body)
@@ -271,11 +271,7 @@ extension TypeChecker {
     /// A plain `try` covers something that throws: it has to be handled.
     func checkHandled(_ what: String) throws {
         guard let context = errorContexts.last, !context.handled else { return }
-        if context.function == "defer" {
-            throw TypeError("\(what) can throw, but nothing thrown can leave a defer: use do/catch, try? or try!")
-        }
-        let place = context.function.map { "\($0) isn't 'throws'" } ?? "nothing catches it"
-        throw TypeError("\(what) can throw, but \(place): mark it 'throws', or use do/catch, try? or try!")
+        throw TypeError("\(what) can throw, but \(context.boundary.unhandled)")
     }
 
     /// Something that can throw, like a call to a `throws` function: it

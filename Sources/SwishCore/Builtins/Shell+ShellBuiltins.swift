@@ -1,57 +1,102 @@
 import Foundation
 import SwishKit
 
-extension Shell {
-    /// The builtins that do something: they change the shell itself, so
-    /// they can't be programs. `run` becomes a program, Swish itself, when
-    /// its pipeline is made.
-    static let workingBuiltins: Set = ["cd", "exit", "which", "run", "umask", "ulimit", "exec", "source"]
+/// A builtin that isn't a function: it changes the shell itself, so it
+/// can't be a program, and it takes words, as a program does. One table
+/// says what each is, how it's used and what it does, for running it,
+/// `which`, `help`, completion and highlighting.
+struct ShellBuiltin: Sendable {
+    enum Action: Sendable {
+        /// Runs in the shell, as `cd` and `umask` do.
+        case run(@Sendable (Shell, [String]) -> Int32)
+        /// Becomes a program, as `run` becomes Swish started on a task file.
+        case program(@Sendable (Shell, [String]) throws -> [String])
+        /// Other shells' builtin, here only to say what Swish has instead.
+        /// Some are programs in /usr/bin too, which can't change the shell
+        /// they're run from, so they'd seem to work and do nothing.
+        case notSwish(instead: String)
+    }
 
-    /// Other shells' builtins, here only to say what Swish has instead. Some
-    /// are programs in /usr/bin too, which can't change the shell they're
-    /// run from, so they'd seem to work and do nothing.
-    static let notSwish: [String: String] = [
-        "fg": "`await` brings back the most recent job, `await jobs[n]` another",
-        "bg": "`jobs.last.resume()` carries a stopped job on in the background",
-        "alias": "declare a function, as in `func ll() { ls -la }`",
-        "unalias": "functions are aliases; a new `func` with the same name replaces one",
-        "wait": "`await` waits for the most recent job, `await jobs[n]` for another",
-        "read": "`readLine()` gives a line of input, or nil at its end",
-        "type": "`which name` says what a name runs",
-        "command": "`^name` runs the program, skipping functions of that name",
-        "hash": "programs are looked up on PATH each time",
-        "getopts": "a function's parameters are its options; see `help`",
-        "fc": "^R searches your history, and `history()` lists it",
-        "export": "`env.NAME = value` sets an environment variable for the programs you run",
-        "unset": "`env.NAME = nil` removes an environment variable",
-        "set": "`try!` stops a script when a command fails, as set -e would",
-        "trap": "`defer { … }` runs when a script ends, including by ^C, kill or hangup",
-        "eval": "`source file` runs a file in this shell",
-        "declare": "`let` and `var` declare variables",
-        "local": "a `var` in a function is its own",
-        "readonly": "`let` declares a constant",
-        "shift": "`args` is a list: `args.dropFirst()`",
-    ]
+    let name: String
+    let usage: String
+    let summary: String
+    let action: Action
 
-    static let builtinNames = workingBuiltins.union(notSwish.keys)
+    /// Whether it does something, rather than say what does.
+    var works: Bool {
+        if case .notSwish = action { false } else { true }
+    }
 }
 
 extension Shell {
-    /// Runs `argv` as a builtin, or returns nil if it isn't one.
+    static let shellBuiltins: [String: ShellBuiltin] = Dictionary(
+        uniqueKeysWithValues: (working + notSwish).map { ($0.name, $0) }
+    )
+
+    /// They change the shell itself, so they read their words as other
+    /// shells' do, before Swish's binder; step 4 of the foundations makes
+    /// them Swift functions with flags and help like the rest.
+    private static let working: [ShellBuiltin] = [
+        ShellBuiltin(name: "cd", usage: "cd [<dir> | -]",
+                     summary: "Changes the working directory: to <dir>, back to the previous one (-), or home.",
+                     action: .run { $0.cd($1) }),
+        ShellBuiltin(name: "exec", usage: "exec <program> [<argument>...]", summary: "Runs a program in the shell's place.",
+                     action: .run { $0.exec($1) }),
+        ShellBuiltin(name: "exit", usage: "exit [<status>]", summary: "Leaves the shell, with <status> or the last command's.",
+                     action: .run { $0.exitShell($1) }),
+        ShellBuiltin(name: "run", usage: "run [<task> [<argument>...]]",
+                     summary: "Runs a task: a function in the nearest Tasks.swish, here or in a parent directory, in a Swish of its own. Alone, lists the tasks.",
+                     action: .program { try $0.taskCommand($1) }),
+        ShellBuiltin(name: "source", usage: "source <file> [<argument>...]",
+                     summary: "Runs a Swish file in this shell, so what it declares stays declared.",
+                     action: .run { $0.source($1) }),
+        ShellBuiltin(name: "ulimit", usage: "ulimit [-a] [-S|-H] [\(ResourceLimit.all.map { "-\($0.flag)" }.joined(separator: "|"))] [<limit>|unlimited]",
+                     summary: "Shows or sets a resource limit for the shell and what it runs: file size (-f) unless another is named.",
+                     action: .run { $0.ulimit($1) }),
+        ShellBuiltin(name: "umask", usage: "umask [<mask>]",
+                     summary: "Shows or sets, in octal, the permissions new files are made without.",
+                     action: .run { $0.umask($1) }),
+        ShellBuiltin(name: "which", usage: "which <name>...",
+                     summary: "Says what each name runs: a function, a shell builtin or a program.",
+                     action: .run { $0.which($1) }),
+    ]
+
+    private static let notSwish: [ShellBuiltin] = [
+        ("fg", "`await` brings back the most recent job, `await jobs[n]` another"),
+        ("bg", "`jobs.last.resume()` carries a stopped job on in the background"),
+        ("alias", "declare a function, as in `func ll() { ls -la }`"),
+        ("unalias", "functions are aliases; a new `func` with the same name replaces one"),
+        ("wait", "`await` waits for the most recent job, `await jobs[n]` for another"),
+        ("read", "`readLine()` gives a line of input, or nil at its end"),
+        ("type", "`which name` says what a name runs"),
+        ("command", "`^name` runs the program, skipping functions of that name"),
+        ("hash", "programs are looked up on PATH each time"),
+        ("getopts", "a function's parameters are its options; see `help`"),
+        ("fc", "^R searches your history, and `history()` lists it"),
+        ("export", "`env.NAME = value` sets an environment variable for the programs you run"),
+        ("unset", "`env.NAME = nil` removes an environment variable"),
+        ("set", "`try!` stops a script when a command fails, as set -e would"),
+        ("trap", "`defer { … }` runs when a script ends, including by ^C, kill or hangup"),
+        ("eval", "`source file` runs a file in this shell"),
+        ("declare", "`let` and `var` declare variables"),
+        ("local", "a `var` in a function is its own"),
+        ("readonly", "`let` declares a constant"),
+        ("shift", "`args` is a list: `args.dropFirst()`"),
+    ].map { (name: String, instead: String) in ShellBuiltin(name: name, usage: "", summary: "", action: .notSwish(instead: instead)) }
+}
+
+extension Shell {
+    /// Runs `argv` as a builtin that runs in the shell, or returns nil if
+    /// it isn't one.
     func runBuiltin(_ argv: [String]) -> Int32? {
-        let args = Array(argv.dropFirst())
-        switch argv[0] {
-        case "cd": return cd(args)
-        case "exit": return exitShell(args)
-        case "which": return which(args)
-        case "umask": return umask(args)
-        case "ulimit": return ulimit(args)
-        case "exec": return exec(args)
-        case "source": return source(args)
-        default:
-            guard let instead = Shell.notSwish[argv[0]] else { return nil }
+        switch Shell.shellBuiltins[argv[0]]?.action {
+        case .run(let run)?:
+            return run(self, Array(argv.dropFirst()))
+        case .notSwish(let instead)?:
             report("\(argv[0]) isn't Swish: \(instead)")
             return 2
+        case .program?, nil:
+            return nil
         }
     }
 
@@ -235,10 +280,12 @@ extension Shell {
                     let kind = function.isBuiltin ? "builtin function" : "function"
                     writeAll(stdoutFD, "\(name): \(kind) \(function.signature)\n")
                 }
-            } else if Shell.workingBuiltins.contains(name) {
-                writeAll(stdoutFD, "\(name): shell builtin\n")
-            } else if let instead = Shell.notSwish[name] {
-                writeAll(stdoutFD, "\(name): not Swish; \(instead)\n")
+            } else if let builtin = Shell.shellBuiltins[name] {
+                if case .notSwish(let instead) = builtin.action {
+                    writeAll(stdoutFD, "\(name): not Swish; \(instead)\n")
+                } else {
+                    writeAll(stdoutFD, "\(name): shell builtin\n")
+                }
             } else if let path = findExecutable(name) {
                 writeAll(stdoutFD, path + "\n")
             } else {

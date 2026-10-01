@@ -433,30 +433,11 @@ extension Parser {
             guard arguments.count == generic.genericParameters.count else {
                 throw SyntaxError("\(name) takes \(generic.genericParameters.count) generic argument\(generic.genericParameters.count == 1 ? "" : "s")")
             }
-            switch name {
-            case "Array": return .list(arguments[0])
-            case "Optional": return .optional(arguments[0])
-            case "Dictionary": return .dictionary(arguments[0], arguments[1])
-            default: return .generic(name, arguments)
-            }
+            return TypeAnnotation.spelled(name, arguments) ?? .generic(name, arguments)
         }
-        let type: TypeAnnotation
-        switch name {
-        case "Int": type = .int
-        case "Double": type = .double
-        case "String": type = .string
-        case "Bool": type = .bool
-        case "Record": type = .record
-        case "FileSize": type = .filesize
-        case "Date": type = .date
-        case "Output": type = .output
-        case "Any", "Value": type = .any
-        case "Void": type = .void
-        default:
-            guard kind(of: name) == .type else { throw SyntaxError("unknown type '\(name)'") }
-            type = .named(name)
-        }
-        return type
+        if let spelled = TypeAnnotation.spelled(name) { return spelled }
+        guard kind(of: name) == .type else { throw SyntaxError("unknown type '\(name)'") }
+        return .named(name)
     }
 
     /// An identifier that isn't a keyword; `_` is allowed.

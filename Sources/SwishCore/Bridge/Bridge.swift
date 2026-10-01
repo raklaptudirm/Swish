@@ -25,23 +25,12 @@ enum Bridge {
     /// The bridged type Swish's type annotation is, and its generic
     /// parameters' bindings: `[Int]` is `Array` with Element Int.
     static func type(of annotation: TypeAnnotation) -> (BridgedType, [String: TypeAnnotation])? {
-        let found: (String, [String: TypeAnnotation])? = switch annotation {
-        case .string: ("String", [:])
-        case .int: ("Int", [:])
-        case .double: ("Double", [:])
-        case .bool: ("Bool", [:])
-        case .list(let element): ("Array", ["Element": element])
-        // A command's output has its lines' members: `$(ls).sorted()`.
-        case .output: ("Array", ["Element": .string])
-        case .optional(let wrapped): ("Optional", ["Wrapped": wrapped])
-        case .dictionary(let key, let value): ("Dictionary", ["Key": key, "Value": value])
-        case .named(let name): (name, [:])
-        case .generic(let name, let arguments):
-            (name, Dictionary(uniqueKeysWithValues: zip(types[name]?.genericParameters ?? [], arguments)))
-        default: nil
-        }
-        guard let (name, bindings) = found, let type = types[name] else { return nil }
-        return (type, bindings)
+        // A command's output has its lines' members, `$(ls).sorted()`: it's
+        // a collection of lines, though its own type isn't Swift's yet.
+        if annotation == .output { return type(of: .list(.string)) }
+        guard let (name, arguments) = annotation.swiftType, let type = types[name],
+              type.genericParameters.count == arguments.count else { return nil }
+        return (type, Dictionary(uniqueKeysWithValues: zip(type.genericParameters, arguments)))
     }
 }
 
@@ -97,7 +86,7 @@ extension Bridge {
 
 extension Bridge {
     /// Every bridged member's name that can be a stage, for highlighting.
-    nonisolated(unsafe) static let stageNames: Set<String> = Set(types.values.flatMap { type in
+    static let stageNames: Set<String> = Set(types.values.flatMap { type in
         type.members.filter { !$0.isStatic && !$0.isMutating && ($0.kind == .method || $0.kind == .property) }.map(\.name)
     })
 }
@@ -106,7 +95,7 @@ extension Shell {
     /// Whether some type has a member called `name` that a stage could
     /// call: a Swift type's, a struct's in scope, or a job's.
     func isMemberName(_ name: String) -> Bool {
-        if Bridge.stageNames.contains(name) || Job.memberNames.contains(name) { return true }
+        if Bridge.stageNames.contains(name) || Job.members.contains { $0.name == name } { return true }
         return scopes.contains { scope in
             scope.bindings.values.contains { binding in
                 if case .object(let type as StructType) = binding.value { type.methods[name] != nil } else { false }

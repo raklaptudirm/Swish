@@ -585,13 +585,17 @@ extension Shell {
                 }
                 // Not a program after all, and it was only a command because it
                 // isn't an expression: that's the error to show (`1...2...3`).
-                if let why = command.notAnExpression, !Shell.builtinNames.contains(name), !name.contains("/"),
+                if let why = command.notAnExpression, Shell.shellBuiltins[name] == nil, !name.contains("/"),
                    findExecutable(name) == nil {
                     throw RuntimeError("\(name) isn't a command, and as an expression: \(why)")
                 }
                 // `run test`: the task file, in a Swish of its own.
-                let program = !command.external && name == "run" ? try taskCommand(Array(argv.dropFirst())) : argv
-                stages.append(.external(program, skipBuiltins: command.external || name == "run", redirects: redirects, environment: environment))
+                // A builtin that becomes a program, as `run` becomes Swish on a task file.
+                if !command.external, case .program(let make)? = Shell.shellBuiltins[name]?.action {
+                    stages.append(.external(try make(self, Array(argv.dropFirst())), skipBuiltins: true, redirects: redirects, environment: environment))
+                } else {
+                    stages.append(.external(argv, skipBuiltins: command.external, redirects: redirects, environment: environment))
+                }
             }
         }
         return stages
@@ -629,6 +633,9 @@ extension Shell {
            let found = try structMember(name, of: record, type) {
             return found
         }
+        // Swish's own kinds, and its views of Swift's, as the checker's
+        // `memberType(of:_:)` types them, until foundations step 4 makes
+        // them Swift types.
         switch (value, name) {
         case (.output(let output), "text"): return .string(output.text)
         case (.output(let output), "lines"): return .list(output.lines.map(Value.string))

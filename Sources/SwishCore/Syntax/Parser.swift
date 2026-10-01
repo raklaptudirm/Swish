@@ -55,6 +55,14 @@ struct Parser {
         "as", "is", "defer", "guard",
     ]
     static let statementKeywords: Set = ["let", "var", "func", "return", "break", "continue", "do", "catch", "enum", "fallthrough", "import", "struct", "defer", "guard"]
+    /// The keywords a line can begin with: a statement's, a unit's
+    /// (`if make { … }`), or an expression's (`await job`). Completion
+    /// offers them where a command could go.
+    static let lineStarts = statementKeywords.subtracting(["catch"])
+        .union(["if", "for", "while", "switch", "try", "async", "await"])
+    /// The words a command can follow directly and still be in command
+    /// position: `if make {`, `while pgrep x {`, `} else make`, `foreign ls`.
+    static let beforeCommand: Set = ["if", "while", "else", "foreign"]
     static let precedence: [[BinaryOperator]] = [
         [.or],
         [.and],

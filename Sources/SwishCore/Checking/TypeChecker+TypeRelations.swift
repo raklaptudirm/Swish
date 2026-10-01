@@ -52,58 +52,34 @@ extension TypeChecker {
         // `=String`: a bridged member for one element type only
         // (`joined(separator:)` where Element == String).
         if proto.hasPrefix("=") { return type == .unknown || type.description == String(proto.dropFirst()) }
+        // JSON stands in for whatever it parsed as (see `conform`).
         if type == TypeChecker.json { return true }
-        if case .named(let name) = type, let bridgedType = Bridge.types[name] {
-            return bridgedConforms(bridgedType, [:], to: proto)
-        }
-        if case .generic = type, let (bridgedType, bindings) = bridged(type) {
+        // A Swift type conforms as it declares: Int, [T] where T does,
+        // ClosedRange<Int>. (An output reads as its lines, but isn't them.)
+        if type != .output, let (bridgedType, bindings) = bridged(type) {
             return bridgedConforms(bridgedType, bindings, to: proto)
         }
+        if proto == "CustomStringConvertible" { return true }
+        // Swish's own kinds, which aren't Swift types yet (foundations
+        // step 4 makes them so, and these rules go).
         switch type {
         case .unknown, .parameter, .record: return true
-        case .any, .function, .functionType, .void: return proto == "CustomStringConvertible"
-        case .keyPath: return proto == "Equatable" || proto == "Hashable" || proto == "CustomStringConvertible"
-        default: break
-        }
-        switch proto {
-        case "CustomStringConvertible":
-            return true
-        case "Sequence":
-            switch type {
-            case .list, .dictionary, .output, .string: return true
-            default: return false
+        case .filesize, .date: return ["Equatable", "Hashable", "Encodable", "Comparable"].contains(proto)
+        case .output: return proto == "Equatable" || proto == "Sequence"
+        case .keyPath: return proto == "Equatable" || proto == "Hashable"
+        // Tuples compare with `==`, but aren't Hashable or Encodable, as in Swift.
+        case .tuple(let elements): return proto == "Equatable" && elements.allSatisfy { conforms($0.type, to: proto) }
+        case .named(let name):
+            // A struct or enum conforms by declaring it; Hashable is Equatable too.
+            let declared = structInfo(named: name)?.conformances ?? enumInfo(named: name)?.conformances ?? []
+            if declared.contains(proto) || proto == "Equatable" && declared.contains("Hashable") {
+                // Swift only makes a Comparable enum's `<` without associated values.
+                guard proto == "Comparable", let info = enumInfo(named: name) else { return true }
+                return info.cases.allSatisfy { $0.payload.isEmpty }
             }
-        case "Comparable":
-            switch type {
-            case .int, .double, .string, .filesize, .date: return true
-            case .named(let name):
-                if let info = enumInfo(named: name) {
-                    return info.conformances.contains("Comparable") && info.cases.allSatisfy { $0.payload.isEmpty }
-                }
-                return false
-            default: return false
-            }
-        case "Equatable", "Hashable", "Encodable":
-            switch type {
-            case .int, .double, .bool, .string, .filesize, .date: return true
-            case .output: return proto == "Equatable"
-            case .optional(let wrapped), .list(let wrapped): return conforms(wrapped, to: proto)
-            case .dictionary(let key, let value): return conforms(key, to: "Hashable") && conforms(value, to: proto)
-            // Tuples compare with `==`, but aren't Hashable or Encodable.
-            case .tuple(let elements): return proto == "Equatable" && elements.allSatisfy { conforms($0.type, to: proto) }
-            case .named(let name):
-                if let info = structInfo(named: name) {
-                    return info.conformances.contains(proto) || proto == "Equatable" && info.conformances.contains("Hashable")
-                }
-                if let info = enumInfo(named: name) {
-                    if info.conformances.contains(proto) || proto == "Equatable" && info.conformances.contains("Hashable") { return true }
-                    // Without associated values, an enum is Equatable and Hashable already.
-                    return proto != "Encodable" && info.cases.allSatisfy { $0.payload.isEmpty }
-                }
-                return false
-            default:
-                return false
-            }
+            // Without associated values, an enum is Equatable and Hashable already.
+            guard let info = enumInfo(named: name), proto == "Equatable" || proto == "Hashable" else { return false }
+            return info.cases.allSatisfy { $0.payload.isEmpty }
         default:
             return false
         }

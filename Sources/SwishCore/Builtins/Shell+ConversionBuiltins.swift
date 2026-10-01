@@ -28,7 +28,8 @@ extension Shell {
                 case "json":
                     return .string(try JSON.text(items.count == 1 ? items[0] : .list(items)))
                 case "text":
-                    return .list(Shell.formattedLines(items, useViews: true))
+                    // One String, as its signature says, as JSON is.
+                    return .string(Shell.formattedLines(items, useViews: true).map(\.description).joined(separator: "\n"))
                 case let format:
                     throw RuntimeError("to: unknown format '\(format)' (supported: json, text)")
                 }
@@ -96,7 +97,7 @@ extension Shell {
                     }
                     // Then what its type has, as `help Type` shows it.
                     if let name = shell.describedTypeName(of: item), let type = shell.typeDescription(named: name) {
-                        for member in type.members where member.kind != "initializer" { add(type.name, member.name, member.kind) }
+                        for member in type.members where member.kind != .initializer { add(type.name, member.name, member.kind.rawValue) }
                     }
                     // A type with nothing to list is still named.
                     if rows.count == before && !seen.contains("\(item.typeName).") { add(item.typeName, "", "") }

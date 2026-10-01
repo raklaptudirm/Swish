@@ -64,23 +64,25 @@ final class Job: SwishObject, @unchecked Sendable {
 
     var typeName: String { "Job" }
 
-    static let memberNames = ["id", "command", "state", "pids", "output", "resume", "cancel"]
-    var memberNames: [String] { Job.memberNames }
+    /// A job's members: each one's type, for the checker, and its value.
+    static let members: [(name: String, type: TypeAnnotation, value: @Sendable (Job) -> Value)] = [
+        ("id", .int, { .int($0.id) }),
+        ("command", .string, { .string($0.source) }),
+        ("state", .named("JobState"), { job in
+            job.shell.preludeCase("JobState", job.cancelled && job.state == .done ? "cancelled" : job.state.rawValue)
+        }),
+        ("pids", .list(.int), { .list($0.running.map { .int(Int($0)) }) }),
+        ("output", .optional(.output), { $0.output.map(Value.output) ?? .nothing }),
+        ("resume", .functionType([], .void), { job in method("resume") { [unowned job] in job.shell.resume(job) } }),
+        ("cancel", .functionType([], .void), { job in method("cancel") { [unowned job] in job.shell.cancel(job) } }),
+    ]
+    var memberNames: [String] { Job.members.map(\.name) }
 
     func member(_ name: String) -> Value? {
-        switch name {
-        case "id": .int(id)
-        case "command": .string(source)
-        case "state": .enumValue(EnumValue(type: Shell.jobState, name: cancelled && state == .done ? "cancelled" : state.rawValue))
-        case "pids": .list(running.map { .int(Int($0)) })
-        case "output": output.map(Value.output) ?? .nothing
-        case "resume": method("resume") { [unowned self] in shell.resume(self) }
-        case "cancel": method("cancel") { [unowned self] in shell.cancel(self) }
-        default: nil
-        }
+        Job.members.first { $0.name == name }?.value(self)
     }
 
-    private func method(_ name: String, _ body: @escaping () -> Void) -> Value {
+    private static func method(_ name: String, _ body: @escaping () -> Void) -> Value {
         .function(OverloadSet(name: name, candidates: [
             Function(name: name, parameters: [], returnType: nil, body: .native { _, _ in
                 body()

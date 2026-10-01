@@ -10,6 +10,9 @@ extension TypeChecker {
         _ name: String, on base: TypeAnnotation, _ callee: inout Expr, _ arguments: inout [Argument]
     ) throws -> TypeAnnotation? {
         guard let methods = shell.sequenceMethods[name], let element = sequenceElement(base) else { return nil }
+        // `select`'s result is a tuple of the fields it names, which Swift could
+        // only type with parameter packs over key paths; until then its rule is
+        // here (Docs/Design/foundations.md, open questions).
         if name == "select" { return try selectType(element, arguments: &arguments) }
         let candidates = sequenceSignatures(methods)
         guard let chosen = try resolve(candidates, &arguments, name: name, bindings: ["Element": element]) else {
@@ -162,6 +165,9 @@ extension TypeChecker {
         if case .variable(let typeName) = baseExpr, let symbol = lookup(typeName) {
             switch symbol {
             case .enumType(let info):
+                // What Swift synthesizes for an enum: `allCases` and
+                // `rawValue`. A Swish enum isn't a Swift type the bridge
+                // could describe, so they're made here.
                 if name == "allCases" {
                     guard info.cases.allSatisfy({ $0.payload.isEmpty }) else {
                         throw TypeError("\(info.name) has no allCases: some cases have associated values")
@@ -186,6 +192,8 @@ extension TypeChecker {
         if base == TypeChecker.json {
             return TypeChecker.jsonAccessors[name] ?? .optional(TypeChecker.json)
         }
+        // Every value has its textual form, as interpolation shows it; a
+        // struct's own property of that name comes first.
         if name == "description" || name == "debugDescription" {
             if case .named(let structName) = base, let info = structInfo(named: structName),
                let property = info.property(name) { return property.type ?? .unknown }
@@ -229,6 +237,9 @@ extension TypeChecker {
         default:
             break
         }
+        // Swish's own kinds, and the views it gives Swift's: until step 4
+        // of the foundations makes them Swift types, their members are here
+        // and in the interpreter's `member(_:of:)`.
         let members: [String: TypeAnnotation]
         switch base {
         case .output:
@@ -254,11 +265,9 @@ extension TypeChecker {
     }
 
     /// The members of the shell's own types that aren't structs.
+    /// A job is the one: the shell makes it, so Swift doesn't declare it.
     static let builtinMembers: [String: [String: TypeAnnotation]] = [
-        "Job": [
-            "id": .int, "command": .string, "state": .named("JobState"), "pids": .list(.int), "output": .optional(.output),
-            "resume": .functionType([], .void), "cancel": .functionType([], .void),
-        ],
+        "Job": Dictionary(uniqueKeysWithValues: Job.members.map { ($0.name, $0.type) }),
     ]
 
     func caseType(_ name: String, _ arguments: inout [Argument]?, expected: TypeAnnotation?) throws -> TypeAnnotation {

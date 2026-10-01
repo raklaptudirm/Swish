@@ -6,10 +6,22 @@ import SwishKit
 /// shell's additions), a struct's or enum's from its declaration. One
 /// description, so what's shown is what can be called.
 struct TypeDescription {
+    /// What a member is; the order of the cases is the order `help` shows
+    /// them in.
+    enum Kind: String, CaseIterable {
+        case `case`, initializer, property, method
+        case staticProperty = "static property", staticMethod = "static method"
+
+        /// The heading `help` lists them under: "Properties", "Static methods".
+        var heading: String {
+            let plural = rawValue.hasSuffix("y") ? rawValue.dropLast() + "ies" : rawValue + "s"
+            return plural.prefix(1).uppercased() + plural.dropFirst()
+        }
+    }
+
     struct Member {
         let name: String
-        /// "initializer", "property", "method", "case", or "static …".
-        let kind: String
+        let kind: Kind
         /// As Swift writes it: `count: Int`, `uppercased() -> String`.
         let signature: String
         let summary: String
@@ -34,31 +46,22 @@ extension Shell {
 
     /// The name `typeDescription` knows a value's type by.
     func describedTypeName(of value: Value) -> String? {
-        switch value {
-        case .record(let record): return record.typeName
-        case .enumValue(let enumValue): return enumValue.type.name
-        case .object(let box as SwiftValue): return box.typeName
-        default:
-            let annotation: TypeAnnotation? = switch value {
-            case .string: .string
-            case .int: .int
-            case .double: .double
-            case .bool: .bool
-            case .list: .list(.any)
-            case .dictionary: .dictionary(.any, .any)
-            default: nil
-            }
-            return annotation.flatMap { Bridge.type(of: $0)?.0.name }
-        }
+        if case .record(let record) = value { return record.typeName }
+        return TypeChecker(shell: self).type(of: value).swiftType?.name
     }
 
     private func describe(_ type: BridgedType) -> TypeDescription {
         var members = type.members.filter { $0.kind != .setter }.map { member in
             let settable = member.kind == .property
                 && type.members.contains { $0.kind == .setter && $0.name == member.name }
+            let kind: TypeDescription.Kind = switch member.kind {
+            case .initializer: .initializer
+            case .property, .setter: member.isStatic ? .staticProperty : .property
+            case .method: member.isStatic ? .staticMethod : .method
+            }
             return TypeDescription.Member(
                 name: member.kind == .initializer ? "init" : member.name,
-                kind: (member.isStatic && member.kind != .initializer ? "static " : "") + "\(member.kind)",
+                kind: kind,
                 signature: TypeDescription.signature(member, settable: settable),
                 summary: member.summary
             )
@@ -67,7 +70,7 @@ extension Shell {
         if type.conformances["Sequence"] != nil {
             for (name, methods) in sequenceMethods.sorted(by: { $0.key < $1.key }) {
                 for method in methods.candidates {
-                    members.append(.init(name: name, kind: "method", signature: TypeDescription.signature(method),
+                    members.append(.init(name: name, kind: .method, signature: TypeDescription.signature(method),
                                          summary: method.documentation?.summary.firstLine ?? ""))
                 }
             }
@@ -79,22 +82,22 @@ extension Shell {
         var members: [TypeDescription.Member] = []
         let initializers = type.initializers?.candidates ?? [type.memberwise]
         for initializer in initializers {
-            members.append(.init(name: "init", kind: "initializer", signature: TypeDescription.signature(initializer, as: "init"),
+            members.append(.init(name: "init", kind: .initializer, signature: TypeDescription.signature(initializer, as: "init"),
                                  summary: initializer.documentation?.summary.firstLine ?? ""))
         }
         for property in type.stored {
-            members.append(.init(name: property.name, kind: "property",
+            members.append(.init(name: property.name, kind: .property,
                                  signature: "\(property.mutable ? "var" : "let") \(property.name): \(property.type.map { "\($0)" } ?? "Any")",
                                  summary: ""))
         }
         for (name, getter) in type.computed.sorted(by: { $0.key < $1.key }) {
-            members.append(.init(name: name, kind: "property",
+            members.append(.init(name: name, kind: .property,
                                  signature: "var \(name): \(getter.returnType.map { "\($0)" } ?? "Any") { get }",
                                  summary: getter.documentation?.summary.firstLine ?? ""))
         }
         for (name, methods) in type.methods.sorted(by: { $0.key < $1.key }) {
             for method in methods.candidates {
-                members.append(.init(name: name, kind: "method",
+                members.append(.init(name: name, kind: .method,
                                      signature: (method.isMutating ? "mutating " : "") + TypeDescription.signature(method),
                                      summary: method.documentation?.summary.firstLine ?? ""))
             }
@@ -114,7 +117,7 @@ extension Shell {
                 signature += "(\(values.joined(separator: ", ")))"
             }
             if let raw = enumCase.rawValue { signature += " = \(raw.debugDescription)" }
-            return .init(name: enumCase.name, kind: "case", signature: signature, summary: "")
+            return .init(name: enumCase.name, kind: .case, signature: signature, summary: "")
         }
         return TypeDescription(name: type.name, kind: "enum", members: members)
     }
@@ -124,11 +127,10 @@ extension Shell {
     func helpText(for type: TypeDescription) -> String {
         var text = "\(type.kind) \(type.name)\n"
         let groups = Dictionary(grouping: type.members, by: \.kind)
-        let order = ["case", "initializer", "property", "method", "static property", "static method"]
         let width = min(48, type.members.map(\.signature.count).max() ?? 0)
-        for kind in order + groups.keys.filter({ !order.contains($0) }).sorted() {
+        for kind in TypeDescription.Kind.allCases {
             guard let members = groups[kind], !members.isEmpty else { continue }
-            text += "\n" + (kind.hasSuffix("property") ? kind.dropLast() + "ies" : kind + "s").capitalizedFirst + ":\n"
+            text += "\n\(kind.heading):\n"
             for member in members.sorted(by: { $0.name < $1.name }) {
                 let padded = member.signature.padding(toLength: max(width, member.signature.count), withPad: " ", startingAt: 0)
                 text += "  " + (member.summary.isEmpty ? member.signature : padded + "  " + member.summary) + "\n"
@@ -168,6 +170,4 @@ extension TypeDescription {
 private extension String {
     /// The first line: a documentation summary's first sentence's line.
     var firstLine: String { String(prefix { $0 != "\n" }) }
-
-    var capitalizedFirst: String { prefix(1).uppercased() + dropFirst() }
 }

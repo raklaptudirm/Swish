@@ -3,13 +3,14 @@ import SwishKit
 import Testing
 
 private let wide = PrettyPrinter(width: .max)
+private let fileType = EnumType(name: "FileType", cases: ["file", "directory"].map { .init(name: $0) })
 
 @Test func onOneLineItIsTheDebugDescription() {
     let status = CommandOutput(text: "hi", code: 0)
     let values: [Value] = [
         .nothing, .int(3), .string("tab\there"), .list([.int(1), .string("x"), .nothing]),
         .record(Record(["k": .string("v")])), .record(Record()), .output(status), .record(status.status),
-        .enumValue(EnumValue(type: Shell.fileType, name: "directory")),
+        .enumValue(EnumValue(type: fileType, name: "directory")),
     ]
     for value in values {
         #expect(wide.format(value) == value.debugDescription)
@@ -55,5 +56,5 @@ private let wide = PrettyPrinter(width: .max)
 @Test func colorsFollowTheHighlighter() {
     let styled = PrettyPrinter(width: .max, styled: true)
     #expect(styled.format(.list([.int(1), .string("x")])) == "[\u{1B}[95m1\u{1B}[0m, \u{1B}[33m\"x\"\u{1B}[0m]")
-    #expect(styled.format(.enumValue(EnumValue(type: Shell.fileType, name: "file"))) == "\u{1B}[93mFileType\u{1B}[0m.file")
+    #expect(styled.format(.enumValue(EnumValue(type: fileType, name: "file"))) == "\u{1B}[93mFileType\u{1B}[0m.file")
 }

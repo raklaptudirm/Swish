@@ -50,7 +50,7 @@ extension Shell {
                     try withRedirects(redirects) { _, _ in try callCommand(set, args, display: display) }
                 }
             case .external(let argv, let skipBuiltins, let redirects, let environment)
-                where !skipBuiltins && Shell.builtinNames.contains(argv[0]):
+                where !skipBuiltins && Shell.shellBuiltins[argv[0]] != nil:
                 return try withEnvironment(environment) {
                     try withRedirects(redirects) { _, _ in runBuiltin(argv)! }
                 }

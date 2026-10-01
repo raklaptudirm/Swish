@@ -60,11 +60,11 @@ extension Shell {
                     described[name] = summary.map { String($0.prefix { $0 != "\n" }) } ?? "function"
                 }
             }
-            for name in Shell.workingBuiltins { described[name] = "shell builtin" }
+            for builtin in Shell.shellBuiltins.values where builtin.works { described[builtin.name] = "shell builtin" }
             for (name, set) in sequenceMethods {
                 described[name] = set.candidates.first?.documentation.map { String($0.summary.prefix { $0 != "\n" }) } ?? "sequence method"
             }
-            for keyword in ["if", "for", "while", "let", "var", "func", "async", "await", "do", "try", "enum", "switch", "import", "struct"] {
+            for keyword in Parser.lineStarts {
                 described[keyword] = "keyword"
             }
         }
@@ -179,9 +179,9 @@ private struct CompletionContext {
             index += 1
         }
         start = wordStart ?? characters.endIndex
-        // A command after `if`, `while`, `else` or `foreign`, or after
-        // `NAME=value`, is still in command position.
-        while let first = words.first, ["if", "while", "else", "foreign"].contains(first) || first.contains("=") {
+        // A command after `if` or `foreign`, or after `NAME=value`, is
+        // still in command position.
+        while let first = words.first, Parser.beforeCommand.contains(first) || first.contains("=") {
             words.removeFirst()
         }
     }

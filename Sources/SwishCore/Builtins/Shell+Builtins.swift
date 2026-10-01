@@ -7,13 +7,6 @@ import SwishKit
 extension Shell {
     func installBuiltinFunctions() {
         scopes[0].bindings["env"] = Binding(value: .nothing, mutable: false, special: .environment)
-        scopes[0].bindings["FileType"] = Binding(value: .object(Shell.fileType), mutable: false)
-        scopes[0].bindings["JobState"] = Binding(value: .object(Shell.jobState), mutable: false)
-        scopes[0].bindings["TextStyle"] = Binding(value: .object(Shell.textStyle), mutable: false)
-        // In declaration order, so `ls | sorted --by type` puts files first.
-        for type in [Shell.fileType, Shell.jobState, Shell.textStyle] {
-            enumConformances[ObjectIdentifier(type)] = ["Equatable", "Hashable", "Comparable"]
-        }
         scopes[0].bindings["jobs"] = Binding(value: .nothing, mutable: false, special: .jobs)
         scopes[0].bindings["args"] = Binding(value: .list([]), mutable: false)
         installPrelude()
@@ -92,18 +85,10 @@ extension Shell {
         )
     }
 
-    /// What kind of entry `ls` found: `ls | where { $0.type == .directory }`.
-    static let fileType = EnumType(name: "FileType", cases: ["file", "directory", "symlink", "other"].map { .init(name: $0) })
-
-    /// A job's `state`.
-    static let jobState = EnumType(name: "JobState", cases: ["running", "stopped", "done", "cancelled"].map { .init(name: $0) })
-
-    /// What `String.styled` can make text, with each one's terminal code.
-    static let textStyleCodes: KeyValuePairs = [
-        "bold": "1", "dim": "2", "italic": "3", "underline": "4",
-        "red": "31", "green": "32", "yellow": "33", "blue": "34", "magenta": "35", "cyan": "36", "white": "37", "gray": "90",
-    ]
-    static let textStyle = EnumType(name: "TextStyle", cases: textStyleCodes.map { .init(name: $0.key) })
+    /// A case of an enum the prelude declares: `FileType.directory`.
+    func preludeCase(_ type: String, _ name: String) -> Value {
+        .enumValue(EnumValue(type: enumType(named: type)!, name: name))
+    }
 }
 
 // MARK: - Declaring builtins

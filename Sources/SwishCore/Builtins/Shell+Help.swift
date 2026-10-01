@@ -15,6 +15,8 @@ extension Shell {
         return false
     }
 
+    /// Whether a function has a `--help` or `-h` of its own; if not, the
+    /// shell answers them with the function's help, as programs do.
     func helpClaimed(by set: OverloadSet) -> Bool {
         set.candidates.contains { $0.parameters.contains { $0.label == "help" || $0.shortFlag == "h" } }
     }
@@ -132,19 +134,6 @@ extension Shell {
 extension Shell {
     /// The builtins that aren't functions, since they change the shell
     /// itself: their usage and what they do.
-    static let shellBuiltins: [(name: String, usage: String, summary: String)] = [
-        ("cd", "cd [<dir> | -]", "Changes the working directory: to <dir>, back to the previous one (-), or home."),
-        ("exec", "exec <program> [<argument>...]", "Runs a program in the shell's place."),
-        ("exit", "exit [<status>]", "Leaves the shell, with <status> or the last command's."),
-        ("run", "run [<task> [<argument>...]]",
-         "Runs a task: a function in the nearest Tasks.swish, here or in a parent directory, in a Swish of its own. Alone, lists the tasks."),
-        ("source", "source <file> [<argument>...]", "Runs a Swish file in this shell, so what it declares stays declared."),
-        ("ulimit", "ulimit [-a] [-S|-H] [-c|-d|-f|-n|-s|-t|-u|-v] [<limit>|unlimited]",
-         "Shows or sets a resource limit for the shell and what it runs: file size (-f) unless another is named."),
-        ("umask", "umask [<mask>]", "Shows or sets, in octal, the permissions new files are made without."),
-        ("which", "which <name>...", "Says what each name runs: a function, a shell builtin or a program."),
-    ]
-
     func help() -> Function {
         Function(
             name: "help",
@@ -182,7 +171,7 @@ extension Shell {
                                               descriptions: summaries)))
             }
         }
-        for builtin in Shell.shellBuiltins where !seen.contains(builtin.name) {
+        for builtin in Shell.shellBuiltins.values where builtin.works && !seen.contains(builtin.name) {
             rows.append((builtin.name, helpRecord(builtin.name, source: "shell", usage: builtin.usage, descriptions: [builtin.summary])))
         }
         return rows.sorted { $0.0 < $1.0 }.map { .record($0.1) }
@@ -203,7 +192,7 @@ extension Shell {
         var text: String
         if let set = commandFunctions(named: name) ?? sequenceMethods[name] ?? functionSet(named: name) {
             text = helpText(for: set)
-        } else if let builtin = Shell.shellBuiltins.first(where: { $0.name == name }) {
+        } else if let builtin = Shell.shellBuiltins[name], builtin.works {
             text = "\(builtin.summary)\n\nUsage:\n  \(builtin.usage)\n"
         } else if let type = typeDescription(named: name) {
             // `help String`: what the type has.

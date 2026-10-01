@@ -23,9 +23,10 @@ extension Bridge {
                   Style.enabled(for: shell.stdoutFD) else {
                 return .string(text)
             }
+            // Each style's raw value is its terminal code.
             let codes = styles.compactMap { style -> String? in
-                guard case .enumValue(let value) = style else { return nil }
-                return Shell.textStyleCodes.first { $0.key == value.name }?.value
+                guard case .enumValue(let value) = style, case .string(let code)? = value.definition?.rawValue else { return nil }
+                return code
             }
             return .string("\u{1B}[\(codes.joined(separator: ";"))m" + text + Style.reset)
         }

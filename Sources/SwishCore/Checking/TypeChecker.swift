@@ -94,8 +94,21 @@ final class TypeChecker {
     /// closure, a `do` with a `catch`, or at the top level.
     struct ErrorContext {
         var handled: Bool
-        /// The function it's in, for messages.
-        var function: String?
+        /// What an error would have to leave, for messages.
+        var boundary: Boundary = .topLevel
+
+        enum Boundary {
+            case topLevel, function(String), deferBlock
+
+            /// Why an error can't get out, and what would let it.
+            var unhandled: String {
+                switch self {
+                case .topLevel: "nothing catches it: use do/catch, try? or try!"
+                case .function(let name): "\(name) isn't 'throws': mark it 'throws', or use do/catch, try? or try!"
+                case .deferBlock: "nothing thrown can leave a defer: use do/catch, try? or try!"
+                }
+            }
+        }
     }
 
     unowned let shell: Shell

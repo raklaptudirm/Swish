@@ -191,6 +191,9 @@ extension TypeChecker {
             if case .chosen(_, let overload) = callee { command.overload = overload }
             return streamElement(result)
         }
+        // `select`'s result is a tuple of the fields it names, which Swift could
+        // only type with parameter packs over key paths; until then its rule is
+        // here (Docs/Design/foundations.md, open questions).
         if name == "select" {
             let fields = TypeChecker.literalWords(command)
             guard let fields else { return .unknown }
@@ -247,7 +250,6 @@ extension TypeChecker {
             return streamElement(commonReturn(overloads))
         }
         let result = try checkCommandLine(name, runtime, visible, &command, bindings: [:], excludingInput: piped)
-        if name == "to", let format = TypeChecker.literalWords(command)?.first, format == "text" { return .string }
         return streamElement(result)
     }
 

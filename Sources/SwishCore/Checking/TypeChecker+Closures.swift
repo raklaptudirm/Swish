@@ -32,7 +32,7 @@ extension TypeChecker {
         let sitesBefore = throwingSites
         let tryBefore = tryDepth
         returns.append(context)
-        errorContexts.append(ErrorContext(handled: true, function: nil))
+        errorContexts.append(ErrorContext(handled: true))
         scopes.append(names)
         tryDepth = 0 // A `try` outside doesn't reach in.
         defer {

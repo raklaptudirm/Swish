@@ -7,6 +7,23 @@ import SwishKit
 /// and `--help` show.
 extension Shell {
     static let prelude = #"""
+    /// What kind of entry `ls` found: `ls | filter { $0.type == .directory }`.
+    /// In this order, so `ls | sorted --by type` puts files first.
+    enum FileType: Hashable, Comparable {
+        case file, directory, symlink, other
+    }
+
+    /// How a job is going: its `state`.
+    enum JobState: Hashable, Comparable {
+        case running, stopped, done, cancelled
+    }
+
+    /// What `String.styled` can make text, each with its terminal code.
+    enum TextStyle: String, Hashable {
+        case bold = "1", dim = "2", italic = "3", underline = "4"
+        case red = "31", green = "32", yellow = "33", blue = "34", magenta = "35", cyan = "36", white = "37", gray = "90"
+    }
+
     /// An entry `ls` lists.
     struct FileEntry: Equatable, Hashable, Encodable {
         let name: String
@@ -158,7 +175,7 @@ extension Shell {
     func installPrelude() {
         let program: Program
         do {
-            program = try Parser.parsePrelude(Shell.prelude, bound: ["FileType": .type, "JobState": .type, "TextStyle": .type, "FilePath": .type])
+            program = try Parser.parsePrelude(Shell.prelude, bound: ["FilePath": .type])
         } catch {
             preconditionFailure("the prelude doesn't parse: \(error)")
         }
@@ -169,15 +186,17 @@ extension Shell {
                 // Declared as any struct is, then moved out to the builtins.
                 declare(decl)
                 scopes[0].bindings[decl.name] = scopes[scopes.count - 1].bindings.removeValue(forKey: decl.name)
+            case .enumDecl(let decl):
+                do { try declare(decl) } catch { preconditionFailure("the prelude's \(decl.name): \(error)") }
+                scopes[0].bindings[decl.name] = scopes[scopes.count - 1].bindings.removeValue(forKey: decl.name)
             case .function(let decl):
                 guard let native = natives[decl.name] else { preconditionFailure("no body for \(decl.name)") }
                 let function = builtinFunction(decl, native.body, input: nil)
                 var candidates: [Function] = []
                 if case .function(let set as OverloadSet)? = scopes[0].bindings[decl.name]?.value { candidates = set.candidates }
-                // `with` is only called with a closure, so it isn't a command.
                 scopes[0].bindings[decl.name] = Binding(
                     value: .function(OverloadSet(name: decl.name, candidates: candidates + [function])),
-                    mutable: false, isFunction: decl.name != "with"
+                    mutable: false, isFunction: true
                 )
             case .extensionDecl(_, let methods):
                 for method in methods {
