@@ -7,12 +7,6 @@ import SwishKit
 /// and `--help` show.
 extension Shell {
     static let prelude = #"""
-    /// What kind of entry `ls` found: `ls | filter { $0.type == .directory }`.
-    /// In this order, so `ls | sorted --by type` puts files first.
-    enum FileType: Hashable, Comparable {
-        case file, directory, symlink, other
-    }
-
     /// How a job is going: its `state`.
     enum JobState: Hashable, Comparable {
         case running, stopped, done, cancelled
@@ -22,31 +16,6 @@ extension Shell {
     enum TextStyle: String, Hashable {
         case bold = "1", dim = "2", italic = "3", underline = "4"
         case red = "31", green = "32", yellow = "33", blue = "34", magenta = "35", cyan = "36", white = "37", gray = "90"
-    }
-
-    /// An entry `ls` lists.
-    struct FileEntry: Equatable, Hashable, Encodable {
-        let name: String
-        let type: FileType
-        let size: FileSize
-        let modified: Date
-        let permissions: String
-        let owner: String
-        let created: Date
-        let accessed: Date
-        let path: FilePath
-        let target: FilePath?
-    }
-
-    /// A process `ps` lists.
-    struct ProcessEntry: Equatable, Hashable, Encodable {
-        let pid: Int
-        let ppid: Int
-        let name: String
-        let user: String
-        let memory: FileSize?
-        let cpuTime: Double?
-        let threads: Int?
     }
 
     /// How a command exited: `output.status`.
@@ -83,17 +52,6 @@ extension Shell {
     /// (json[0]), each giving JSON?, and as a type with .string, .int,
     /// .double, .bool, .array, .object and .isNull.
     struct JSON {}
-
-    /// Lists directory contents.
-    /// - Parameter paths: files or directories to list (default: the current directory)
-    /// - Parameter all: include hidden files
-    func ls(_ paths: FilePath..., @flag("a") all: Bool = false) -> [FileEntry]
-
-    /// What you've entered at the prompt, oldest first.
-    func history() -> [String]
-
-    /// Lists running processes. Memory and CPU time are only known for your own processes.
-    func ps() -> [ProcessEntry]
 
     /// Parses text into values.
     /// - Parameter format: json
@@ -168,7 +126,7 @@ extension Shell {
     func installPrelude() {
         let program: Program
         do {
-            program = try Parser.parsePrelude(Shell.prelude, bound: ["FilePath": .type])
+            program = try Parser.parsePrelude(Shell.prelude + "\n" + Bridge.standardTypes, bound: ["FilePath": .type])
         } catch {
             preconditionFailure("the prelude doesn't parse: \(error)")
         }

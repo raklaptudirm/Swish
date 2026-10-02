@@ -7,85 +7,43 @@ import Musl
 #endif
 import Foundation
 import SwishKit
-
-// What the shell asks of the system that isn't the same everywhere: a
-// file's status, the processes running, a user's name. Everything else
-// goes through Foundation or POSIX calls every platform has.
-
-/// What `lstat` says about a path, named the same on every platform.
-struct FileStatus {
-    let mode: mode_t
-    let size: Int64
-    let owner: uid_t
-    let modified: Date
-    let accessed: Date
-    /// When it was made, if the system keeps that.
-    let created: Date?
-
-    /// The path's status, not following a symlink; the error number if
-    /// there's none.
-    init(_ path: String) throws(Errno) {
-        var info = stat()
-        guard lstat(path, &info) == 0 else { throw Errno(errno) }
-        mode = info.st_mode
-        size = Int64(info.st_size)
-        owner = info.st_uid
-        #if canImport(Darwin)
-        modified = Self.date(info.st_mtimespec)
-        accessed = Self.date(info.st_atimespec)
-        created = Self.date(info.st_birthtimespec)
-        #else
-        modified = Self.date(info.st_mtim)
-        accessed = Self.date(info.st_atim)
-        // stat has no birth time here; Foundation asks statx for it.
-        created = (try? FileManager.default.attributesOfItem(atPath: path))?[.creationDate] as? Date
-        #endif
-    }
-
-    var isDirectory: Bool { mode & mode_t(S_IFMT) == mode_t(S_IFDIR) }
-    var isSymlink: Bool { mode & mode_t(S_IFMT) == mode_t(S_IFLNK) }
-    var isFile: Bool { mode & mode_t(S_IFMT) == mode_t(S_IFREG) }
-
-    /// `rwxr-xr-x`.
-    var permissions: String {
-        let bits = [S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IWGRP, S_IXGRP, S_IROTH, S_IWOTH, S_IXOTH]
-        return bits.enumerated().map { index, bit in mode & mode_t(bit) != 0 ? ["r", "w", "x"][index % 3] : "-" }.joined()
-    }
-
-    private static func date(_ time: timespec) -> Date {
-        Date(timeIntervalSince1970: TimeInterval(time.tv_sec) + TimeInterval(time.tv_nsec) / 1e9)
-    }
-}
+import SystemPackage
 
 /// A user's name, or their number if they have none.
-func userName(_ uid: uid_t) -> String {
+package func userName(_ uid: uid_t) -> String {
     getpwuid(uid).map { String(cString: $0.pointee.pw_name) } ?? String(uid)
 }
 
 /// A process `ps` lists.
-struct ProcessEntry: Encodable {
-    var pid: Int
-    var ppid: Int
-    var name: String
-    var user: String
-    var memory: FileSize?
+public struct ProcessEntry: Encodable, Equatable, Hashable {
+    public var pid: Int
+    public var ppid: Int
+    public var name: String
+    public var user: String
+    public var memory: FileSize?
     /// Seconds.
-    var cpuTime: Double?
-    var threads: Int?
+    public var cpuTime: Double?
+    public var threads: Int?
+}
+
+/// Lists running processes. Memory and CPU time are only known for your own processes.
+public func ps() -> [ProcessEntry] {
+    // The system always says; if it somehow doesn't, there's nothing to list.
+    (try? runningProcesses()) ?? []
 }
 
 #if canImport(Darwin)
 /// Every process, by pid. sysctl lists every process without privileges;
 /// proc_pidinfo adds detail, but only for processes we're allowed to
 /// inspect.
-func runningProcesses() throws(Errno) -> [ProcessEntry] {
+private func runningProcesses() throws(Errno) -> [ProcessEntry] {
     var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_ALL]
     var size = 0
-    guard sysctl(&mib, 3, nil, &size, nil, 0) == 0 else { throw Errno(errno) }
+    guard sysctl(&mib, 3, nil, &size, nil, 0) == 0 else { throw Errno(rawValue: errno) }
     let stride = MemoryLayout<kinfo_proc>.stride
     var processes = [kinfo_proc](repeating: kinfo_proc(), count: size / stride + 64)
     size = processes.count * stride
-    guard sysctl(&mib, 3, &processes, &size, nil, 0) == 0 else { throw Errno(errno) }
+    guard sysctl(&mib, 3, &processes, &size, nil, 0) == 0 else { throw Errno(rawValue: errno) }
     var timebase = mach_timebase_info()
     mach_timebase_info(&timebase)
     let secondsPerTick = Double(timebase.numer) / Double(timebase.denom) / 1e9
@@ -111,12 +69,12 @@ func runningProcesses() throws(Errno) -> [ProcessEntry] {
 }
 #else
 /// Every process, by pid, from /proc.
-func runningProcesses() throws(Errno) -> [ProcessEntry] {
+private func runningProcesses() throws(Errno) -> [ProcessEntry] {
     let names: [String]
     do {
         names = try FileManager.default.contentsOfDirectory(atPath: "/proc")
     } catch {
-        throw Errno(ENOENT)
+        throw Errno(rawValue: ENOENT)
     }
     let pageSize = Int64(sysconf(Int32(_SC_PAGESIZE)))
     let ticksPerSecond = Double(sysconf(Int32(_SC_CLK_TCK)))

@@ -7,7 +7,40 @@ import SystemPackage
 
 extension Bridge {
 
-    nonisolated(unsafe) static let standardFunctions: [BridgedMember] = [member0, member1]
+    /// The module's structs, as Swish source: declared with the prelude.
+    static let standardTypes = #"""
+/// What kind of entry `ls` found: `ls | filter { $0.type == .directory }`. In this order, so `ls | sorted --by type` puts files first.
+enum FileType: Equatable, Hashable, Comparable {
+    case file, directory, symlink, other
+}
+
+/// An entry `ls` lists.
+struct FileEntry: Equatable, Hashable, Encodable {
+    let name: String
+    let type: FileType
+    let size: FileSize
+    let modified: Date
+    let permissions: String
+    let owner: String
+    let created: Date
+    let accessed: Date
+    let path: FilePath
+    let target: FilePath?
+}
+
+/// A process `ps` lists.
+struct ProcessEntry: Equatable, Hashable, Encodable {
+    let pid: Int
+    let ppid: Int
+    let name: String
+    let user: String
+    let memory: FileSize?
+    let cpuTime: Double?
+    let threads: Int?
+}
+"""#
+
+    nonisolated(unsafe) static let standardFunctions: [BridgedMember] = [member0, member1, member2, member3, member4]
     nonisolated(unsafe) private static let member0: BridgedMember =                 BridgedMember(
                     kind: .method, name: "pwd", isStatic: false,
                     parameters: [],
@@ -22,6 +55,35 @@ extension Bridge {
                 )
 
     nonisolated(unsafe) private static let member1: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "ls", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "paths", type: .named("FilePath"), variadic: true), Parameter(label: "all", name: "all", type: .bool, defaultValue: .literal(.bool(false)), shortFlag: "a")],
+                    returns: .list(.named("FileEntry")), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Lists directory contents.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let partial = SwishStandardLibrary.ls((args["paths"] == nil ? [] : try bridgeList(args["paths"]!).map { try SwiftValue.unbox(FilePath.self, $0) }), all: try Bool(swishValue: args["all"]!))
+                for error in partial.errors { shell.reportItemError(error) }
+                let result: [FileEntry] = partial.value
+                return .list(result.map { bridgeRecord(shell, $0, patches: ["type": .enumeration("FileType"), "path": .path, "target": .path]) })
+                    },
+                    parameterDocs: ["all": "include hidden files", "paths": "files or directories to list (default: the current directory)"]
+                )
+
+    nonisolated(unsafe) private static let member2: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "history", isStatic: false,
+                    parameters: [],
+                    returns: .list(.string), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "What you've entered at the prompt, oldest first.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result: [String] = SwishStandardLibrary.history(in: shell.context)
+                return .list(result.map { $0.swishValue })
+                    }
+                )
+
+    nonisolated(unsafe) private static let member3: BridgedMember =                 BridgedMember(
                     kind: .method, name: "readLine", isStatic: false,
                     parameters: [Parameter(label: "strippingNewline", name: "strippingNewline", type: .bool, defaultValue: .literal(.bool(true)))],
                     returns: .optional(.string), generics: [:],
@@ -33,5 +95,18 @@ extension Bridge {
                 return (result.map { $0.swishValue } ?? .nothing)
                     },
                     parameterDocs: ["strippingNewline": "leave the line's newline off"]
+                )
+
+    nonisolated(unsafe) private static let member4: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "ps", isStatic: false,
+                    parameters: [],
+                    returns: .list(.named("ProcessEntry")), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Lists running processes. Memory and CPU time are only known for your own processes.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result: [ProcessEntry] = SwishStandardLibrary.ps()
+                return .list(result.map { bridgeRecord(shell, $0) })
+                    }
                 )
 }

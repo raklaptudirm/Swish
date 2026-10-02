@@ -1,5 +1,6 @@
 import Foundation
 import SwishKit
+import SystemPackage
 
 /// Swift's own types and members, as Swish sees them: read from the
 /// standard library's symbol graph (and swift-system's, for FilePath) by
@@ -247,6 +248,49 @@ struct BridgedMember {
 }
 
 // MARK: Conversions the glue uses
+
+/// A path as Swish holds it: a FilePath.
+func pathValue(_ path: String) -> Value {
+    SwiftValue.make(FilePath(path), as: "FilePath")
+}
+
+/// What a record's field is that encoding loses: an enum is encoded as its
+/// raw text and a path as an object, and Swish holds them as what they are.
+enum FieldKind {
+    case enumeration(String)
+    case path
+}
+
+/// A Swift struct as a record, its fields by name: how a struct of the
+/// standard library module reaches Swish (declared there from its fields).
+/// A field of `patches` is read from the Swift value itself and made what
+/// it is declared as, nil included (the encoder leaves a nil out; the
+/// declaration says it's there).
+func bridgeRecord<T: Encodable>(_ shell: Shell, _ value: T, patches: [String: FieldKind] = [:]) -> Value {
+    guard case .record(var record)? = try? ValueEncoder().encode(value) else { return .nothing }
+    let fields = Dictionary(Mirror(reflecting: value).children.compactMap { child in child.label.map { ($0, child.value) } },
+                            uniquingKeysWith: { first, _ in first })
+    for (field, kind) in patches {
+        var held = fields[field]
+        // An optional holds its value, or nothing.
+        if let optional = held.map(Mirror.init(reflecting:)), optional.displayStyle == .optional {
+            held = optional.children.first?.value
+        }
+        record[field] = switch (kind, held) {
+        case (.enumeration(let type), let held?): shell.declaredCase(type, "\(held)")
+        case (.path, let path as FilePath): pathValue(path.string)
+        default: .nothing
+        }
+    }
+    return .record(record)
+}
+
+extension Shell {
+    /// What a standard library function that asks for it is lent.
+    var context: ShellContext {
+        ShellContext(history: historyEntries, colorOutput: Style.enabled(for: stdoutFD))
+    }
+}
 
 /// A list's items, or an Output's lines.
 func bridgeList(_ value: Value) throws -> [Value] {

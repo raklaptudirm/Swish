@@ -38,6 +38,8 @@ struct Symbol: Decodable {
     let availability: [Availability]?
     let accessLevel: String
     let docComment: Doc?
+    struct Location: Decodable { struct Position: Decodable { let line: Int }; let position: Position }
+    let location: Location?
 
     /// Its documentation's first paragraph, on one line: what `help` shows.
     var summary: String {
@@ -216,6 +218,12 @@ struct Parameter {
     let name: String
     let type: SType
     let defaultText: String?
+    /// `@Flag("a")`: a short flag on the command line.
+    var shortFlag: Character?
+    /// `@Input`: what's piped in.
+    var isInput = false
+    /// `@Rest`: an array that takes all the remaining arguments.
+    var isRest = false
 }
 
 /// A member's declaration, as far as its text says; its constraints come
@@ -313,6 +321,30 @@ func parseDeclaration(_ text: String) throws -> Declaration {
         var parameters: [Parameter] = []
         if reader.consume(")") { return parameters }
         repeat {
+            // SwishKit's `@Flag("a")` and `@Input`, which mark a parameter.
+            var shortFlag: Character?
+            var firstLetter = false
+            var isInput = false
+            var isRest = false
+            reader.skipSpaces()
+            while reader.consume("@") {
+                switch reader.identifier() {
+                case "Flag":
+                    // `@Flag("a")`, or `@Flag` alone: the parameter's first letter.
+                    if reader.consume("(") {
+                        guard reader.consume("\""), let letter = reader.peek() else { throw Unsupported(reason: "@Flag") }
+                        reader.pos += 1
+                        guard reader.consume("\""), reader.consume(")") else { throw Unsupported(reason: "@Flag") }
+                        shortFlag = letter
+                    } else {
+                        firstLetter = true
+                    }
+                case "Input": isInput = true
+                case "Rest": isRest = true
+                default: throw Unsupported(reason: "attribute")
+                }
+                reader.skipSpaces()
+            }
             guard let first = reader.identifier() else { throw Unsupported(reason: "parameter") }
             var name = first
             var label: String? = first
@@ -334,7 +366,8 @@ func parseDeclaration(_ text: String) throws -> Declaration {
                 }
                 defaultText = text.trimmingCharacters(in: .whitespaces)
             }
-            parameters.append(Parameter(label: label, name: name, type: type, defaultText: defaultText))
+            if firstLetter { shortFlag = (label ?? name).first }
+            parameters.append(Parameter(label: label, name: name, type: type, defaultText: defaultText, shortFlag: shortFlag, isInput: isInput, isRest: isRest))
         } while reader.consume(",")
         guard reader.consume(")") else { throw Unsupported(reason: "parameters end") }
         return parameters
@@ -714,6 +747,83 @@ let bridgedTypeNames = module.types
 for name in module.external where leaves[name] == nil {
     leaves[name] = (".named(\(quoted(name)))", { "try SwiftValue.unbox(\(name).self, \($0))" }, { "SwiftValue.make(\($0), as: \(quoted(name)))" })
 }
+
+/// A public enum or struct of the module is declared in Swish from its
+/// cases or fields (`standardTypes`, Swish source read with the prelude).
+/// Results only: a struct is made a record by encoding it, an enum a case
+/// by name. Enums come first, for the structs that have them.
+nonisolated(unsafe) var resultOnly: Set<String> = []
+nonisolated(unsafe) var enumNames: Set<String> = []
+var typeSources: [String] = []
+/// A field's type as Swish source, and what encoding leaves for the glue to
+/// fix (an enum or a path is text there); nil if Swish can't hold it so.
+func fieldType(_ type: SType) -> (source: String, patch: String?)? {
+    switch type {
+    case .named(let name, []):
+        if ["Int", "Double", "String", "Bool", "FileSize", "Date"].contains(name) { return (name, nil) }
+        if name == "FilePath" { return (name, ".path") }
+        if enumNames.contains(name) { return (name, ".enumeration(\(quoted(name)))") }
+        return nil
+    case .array(let element):
+        // Patches are by field, not by item.
+        guard let found = fieldType(element), found.patch == nil else { return nil }
+        return ("[\(found.source)]", nil)
+    case .optional(let wrapped): return fieldType(wrapped).map { ("\($0.source)?", $0.patch) }
+    default: return nil
+    }
+}
+func publicMembers(of name: String, _ kind: String) -> [Symbol] {
+    graph.symbols.filter { $0.pathComponents.count == 2 && $0.pathComponents[0] == name
+        && $0.kind.identifier == kind && $0.accessLevel == "public" }
+        // In declaration order, which the graph gives as source lines.
+        .sorted { ($0.location?.position.line ?? 0) < ($1.location?.position.line ?? 0) }
+}
+func conformances(of symbol: Symbol, among kept: [String]) -> [String] {
+    let all = graph.relationships.filter { $0.kind == "conformsTo" && $0.source == symbol.identifier.precise }
+        .compactMap { $0.targetFallback.map { String($0.split(separator: ".").last!) } }
+    return kept.filter(all.contains)
+}
+func declaredType(_ symbol: Symbol) -> String {
+    symbol.summary.isEmpty ? "" : "/// \(symbol.summary)\n"
+}
+if module.functions != nil {
+    let publicTypes = graph.symbols.filter { $0.pathComponents.count == 1 && $0.accessLevel == "public" }
+    for symbol in publicTypes where symbol.kind.identifier == "swift.enum" {
+        let name = symbol.pathComponents[0]
+        let cases = publicMembers(of: name, "swift.enum.case")
+        // Cases with associated values would need their payloads bridged.
+        guard !cases.isEmpty, !cases.contains(where: { ($0.declarationFragments ?? []).contains { $0.spelling.contains("(") } }) else { continue }
+        let protocols = conformances(of: symbol, among: ["Equatable", "Hashable", "Comparable"])
+        typeSources.append("\(declaredType(symbol))enum \(name)\(protocols.isEmpty ? "" : ": " + protocols.joined(separator: ", ")) {\n    case \(cases.map { $0.pathComponents[1] }.joined(separator: ", "))\n}")
+        resultOnly.insert(name)
+        enumNames.insert(name)
+        leaves[name] = (".named(\(quoted(name)))", { _ in fatalError("an enum is a result, not an argument") },
+                        { "shell.declaredCase(\(quoted(name)), String(describing: \($0)))" })
+    }
+    for symbol in publicTypes where symbol.kind.identifier == "swift.struct" {
+        let name = symbol.pathComponents[0]
+        let protocols = conformances(of: symbol, among: ["Equatable", "Hashable", "Encodable"])
+        guard protocols.contains("Encodable") else { continue }
+        let fields = publicMembers(of: name, "swift.property")
+        var declared: [String] = []
+        var patches: [String] = []
+        for field in fields {
+            let text = (field.declarationFragments ?? []).map(\.spelling).joined()
+            guard let declaration = try? parseDeclaration(text), let type = declaration.returns, let found = fieldType(type) else { break }
+            declared.append("    let \(field.pathComponents[1]): \(found.source)")
+            if let patch = found.patch { patches.append("\(quoted(field.pathComponents[1])): \(patch)") }
+        }
+        guard declared.count == fields.count else {
+            FileHandle.standardError.write(Data("\(name): a field Swish can't hold; left out\n".utf8))
+            continue
+        }
+        typeSources.append("\(declaredType(symbol))struct \(name): \(protocols.joined(separator: ", ")) {\n\(declared.joined(separator: "\n"))\n}")
+        resultOnly.insert(name)
+        let patchesCode = patches.isEmpty ? "" : ", patches: [\(patches.joined(separator: ", "))]"
+        leaves[name] = (".named(\(quoted(name)))", { _ in fatalError("a record is a result, not an argument") },
+                        { "bridgeRecord(shell, \($0)\(patchesCode))" })
+    }
+}
 // Other types that aren't generic, Swish having no value of its own for
 // them (Character, FilePath), are held as they are, boxed.
 for (name, parameters) in bridgedTypeNames where parameters.isEmpty && leaves[name] == nil {
@@ -914,18 +1024,31 @@ func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Const
     }
     for parameter in allGenerics where generics[parameter] == nil { generics[parameter] = [] }
 
+    // A parameter of type ShellContext is lent by the shell: not Swish's.
+    func isContext(_ parameter: Parameter) -> Bool {
+        if case .named("ShellContext", []) = parameter.type { return true }
+        return false
+    }
     var parameters: [(Parameter, SType)] = []
-    for parameter in declaration.parameters {
-        guard let type = resolve(parameter.type, context), supported(type, generics: allGenerics, asParameter: true) else {
+    for parameter in declaration.parameters where !isContext(parameter) {
+        guard let type = resolve(parameter.type, context), supported(type, generics: allGenerics, asParameter: true),
+              !resultOnly.contains(where: { annotation(type).contains("\(quoted($0))") }) else {
             throw Unsupported(reason: "parameter \(parameter.type)")
         }
         parameters.append((parameter, type))
     }
     var returns: SType = .tuple([])
+    var partial = false
     if declaration.kind == .initializer {
         returns = selfType(owner)
         if declaration.isFailable { returns = .optional(returns) }
-    } else if let declared = declaration.returns {
+    } else if var declared = declaration.returns {
+        // `Partial<T>`: a result and the errors met making it, which the
+        // shell reports as errors in items, then goes on with the result.
+        if case .named("Partial", let inner) = declared, inner.count == 1 {
+            declared = inner[0]
+            partial = true
+        }
         guard let type = resolve(declared, context), supported(type, generics: allGenerics, asParameter: false) else {
             throw Unsupported(reason: "result \(declared)")
         }
@@ -944,15 +1067,23 @@ func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Const
 
     // The signature.
     let parameterCode = parameters.map { parameter, type in
-        var fields = ["label: \(parameter.label.map(quoted) ?? "nil")", "name: \(quoted(parameter.name))", "type: \(annotation(type))"]
-        if let text = parameter.defaultText {
-            if let literal = literalDefault(text) { fields.append("defaultValue: \(literal)") }
-            else { fields.append("externalDefault: \(quoted(text))") }
-        }
+        // In the order `Parameter` declares them.
+        // `@Rest` on an array: Swish's variadic parameter, of the element's type.
+        var swishType = type
+        if parameter.isRest, case .array(let element) = type { swishType = element }
+        var fields = ["label: \(parameter.label.map(quoted) ?? "nil")", "name: \(quoted(parameter.name))", "type: \(annotation(swishType))"]
+        if parameter.isRest { fields.append("variadic: true") }
+        let literal = parameter.defaultText.flatMap(literalDefault)
+        if let literal { fields.append("defaultValue: \(literal)") }
+        if parameter.isInput { fields.append("isInput: true") }
+        if let flag = parameter.shortFlag { fields.append("shortFlag: \(quoted(String(flag)))") }
+        if let text = parameter.defaultText, literal == nil, !parameter.isRest { fields.append("externalDefault: \(quoted(text))") }
         return "Parameter(\(fields.joined(separator: ", ")))"
     }
     // The glue.
-    let arguments = parameters.map { parameter, type -> String in
+    let arguments = declaration.parameters.map { parameter -> String in
+        if isContext(parameter) { return (parameter.label.map { "\($0): " } ?? "") + "shell.context" }
+        let type = parameters.first { $0.0.name == parameter.name }!.1
         let value = "args[\(quoted(parameter.name))]"
         var expr = fromSwish("\(value)!", type)
         if let text = parameter.defaultText, literalDefault(text) == nil {
@@ -990,6 +1121,9 @@ func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Const
         body += "return .list([\(isVoid ? ".nothing" : toSwish("result", returns)), \(toSwish("receiver", receiverType))])"
     } else if isVoid {
         body += "\(tryPrefix)\(target)\n                return .nothing"
+    } else if partial {
+        body += "let partial = \(tryPrefix)\(target)\n                for error in partial.errors { shell.reportItemError(error) }\n"
+        body += "                let result\(resultType) = partial.value\n                return \(toSwish("result", returns))"
     } else {
         body += "let result\(resultType) = \(tryPrefix)\(target)\n                return \(toSwish("result", returns))"
     }
@@ -1157,6 +1291,8 @@ for (name, _) in bridgedTypeNames {
 }
 if !module.types.isEmpty { output += "    ]\n" }
 if let list = module.functions {
+    output += "    /// The module's structs, as Swish source: declared with the prelude.\n"
+    output += "    static let standardTypes = #\"\"\"\n" + typeSources.joined(separator: "\n\n") + "\n\"\"\"#\n\n"
     var functions: [String] = []
     for symbol in graph.symbols where symbol.kind.identifier == "swift.func" && symbol.pathComponents.count == 1
         && symbol.accessLevel == "public" && available(symbol) {

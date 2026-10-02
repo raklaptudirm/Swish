@@ -78,7 +78,7 @@ extension Shell {
     /// (`filter`), or all of them (`sorted`).
     func builtinBodies() -> [String: (body: FunctionBody, input: Parameter?)] {
         var bodies: [String: (body: FunctionBody, input: Parameter?)] = [:]
-        for function in [ls(), history(), ps(), from(), to(), table(), list(), members(), help(), with()] {
+        for function in [ from(), to(), table(), list(), members(), help(), with()] {
             bodies[function.name!] = (function.body, nil)
         }
         for method in [sorted(), filter(), map(), compactMap(), prefix(), reversed(), count(), uniqued(), select(), get()] {
@@ -104,8 +104,9 @@ extension Shell {
         )
     }
 
-    /// A case of an enum the prelude declares: `FileType.directory`.
-    func preludeCase(_ type: String, _ name: String) -> Value {
+    /// A case of an enum the prelude or the standard library module
+    /// declares: `FileType.directory`.
+    func declaredCase(_ type: String, _ name: String) -> Value {
         .enumValue(EnumValue(type: enumType(named: type)!, name: name))
     }
 }

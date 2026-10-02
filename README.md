@@ -209,7 +209,7 @@ over lines when they're wide.
 ## Getting started
 
 Swish needs Swift 6 on macOS or Linux. It's all Swift: what differs between the two (starting
-programs, `ps`, file details, plugin libraries) is in `Sources/SwishCore/Platform`.
+programs, plugin libraries) is in `Sources/SwishCore/Platform`.
 
 ```sh
 swift build -c release
@@ -270,10 +270,11 @@ The tasks are functions in [`Tasks.swish`](Tasks.swish); inside Swish, `run` lis
 | `…/Display` | Tables, pretty-printing, colors and JSON. |
 | `…/Editor` | The line editor: history, completion and highlighting. |
 | `…/Plugins` | Building and loading plugins. |
-| `…/Platform` | The operating system: `posix_spawn` with process groups and terminal handoff, `ps`, file status, resource limits, and what differs between macOS and Linux. |
+| `…/Platform` | The operating system: `posix_spawn` with process groups and terminal handoff, resource limits, and what differs between macOS and Linux. |
 | `Sources/Swish` | The executable. |
 | `Tests/Interactive` | `expect` scripts that drive the shell through a real terminal. |
 | `Examples/Tools` | An example plugin, which the tests import. |
+| `Sources/SwishStandardLibrary` | The shell's own functions and types in plain Swift (`pwd`, `readLine`, `history`, `ls` and `FileEntry`, `ps` and `ProcessEntry`), bridged like the standard library. |
 | `Sources/SwishBridge` | Reads Swift's symbol graphs and generates the glue that bridges the standard library (`run bridge`). |
 
 </details>

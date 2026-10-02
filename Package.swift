@@ -26,7 +26,10 @@ let package = Package(
         // their declarations (`run bridge`) and SwishCore calls them.
         .target(
             name: "SwishStandardLibrary",
-            dependencies: [.product(name: "SystemPackage", package: "swift-system")]
+            dependencies: [
+                .product(name: "SwishKit", package: "SwishKit"),
+                .product(name: "SystemPackage", package: "swift-system"),
+            ]
         ),
         .target(
             name: "SwishCore",

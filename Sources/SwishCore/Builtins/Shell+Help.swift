@@ -17,6 +17,12 @@ extension Shell {
 
     /// Whether a function has a `--help` or `-h` of its own; if not, the
     /// shell answers them with the function's help, as programs do.
+    /// Whether an unlabeled parameter is given every remaining word: a
+    /// variadic one, or one that's a collection (`_ paths: [FilePath]`).
+    func takesRemainingWords(_ parameter: Parameter) -> Bool {
+        parameter.variadic || (parameter.label == nil && !parameter.isInput && Shell.collection(parameter.type) != nil)
+    }
+
     func helpClaimed(by set: OverloadSet) -> Bool {
         set.candidates.contains { $0.parameters.contains { $0.label == "help" || $0.shortFlag == "h" } }
     }
@@ -43,7 +49,8 @@ extension Shell {
                 }
                 if let defaultValue = parameter.defaultValue, defaultValue != .literal(.nothing) {
                     details.append("(default: \(describe(defaultValue)))")
-                } else if let source = parameter.externalDefault {
+                } else if let source = parameter.externalDefault, source != "[]" {
+                    // An empty array as the default says "none", which is no news.
                     details.append("(default: \(source))")
                 }
                 if let label = parameter.label {
@@ -54,7 +61,7 @@ extension Shell {
                     if parameter.type.isList { details.append("(repeatable)") }
                     if seen.insert(key).inserted { options.append((key, details.joined(separator: " "))) }
                 } else {
-                    let key = "<\(parameter.name)>" + (parameter.variadic ? "..." : "")
+                    let key = "<\(parameter.name)>" + (takesRemainingWords(parameter) ? "..." : "")
                     if seen.insert(key).inserted {
                         arguments.append((key, (details + ["(\(parameter.type))"]).joined(separator: " ")))
                     }
@@ -90,7 +97,7 @@ extension Shell {
         }
         for parameter in function.parameters where parameter.label == nil {
             var argument = "<\(parameter.name)>"
-            if parameter.variadic || (parameter.isInput && parameter.type.isList) {
+            if takesRemainingWords(parameter) || (parameter.isInput && parameter.type.isList) {
                 argument = "[\(argument)...]"
             } else if parameter.hasDefault || parameter.isInput {
                 argument = "[\(argument)]"
