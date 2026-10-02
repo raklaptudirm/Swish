@@ -81,7 +81,7 @@ extension Shell {
         for function in [ from(), to(), table(), list(), members(), help(), with()] {
             bodies[function.name!] = (function.body, nil)
         }
-        for method in [sorted(), filter(), map(), compactMap(), prefix(), reversed(), count(), select(), get()] {
+        for method in [sorted(), filter(), map(), compactMap(), prefix(), select(), get()] {
             let input = method.parameters.first(where: \.isInput)!
             // Each item is an Element; all of them, a list of Elements.
             let type: TypeAnnotation = input.type.isList ? .list(.parameter("Element")) : .parameter("Element")

@@ -114,35 +114,4 @@ extension Shell {
             }
         )
     }
-
-    func count() -> Function {
-        .builtin(
-            "count", "How many items there are, or how many the predicate is true for.",
-            [.input("items", .list(.any)), .option("where", .optional(.function), default: .nothing)],
-            docs: ["where": "a closure like { $0.size > 1.mb }"],
-            .native { shell, args in
-                guard case .list(let items) = args["items"] else { return .int(0) }
-                guard let predicate = args["predicate"], case .function = predicate else { return .int(items.count) }
-                var count = 0
-                for item in items {
-                    let verdict = try shell.call(predicate, with: [item])
-                    guard case .bool(let matches) = verdict else {
-                        throw RuntimeError("count: the predicate must return a Bool, not \(verdict.typeName)")
-                    }
-                    if matches { count += 1 }
-                }
-                return .int(count)
-            }
-        )
-    }
-
-    func reversed() -> Function {
-        .builtin(
-            "reversed", "The items in reverse order.", [.input("items", .list(.any))],
-            .native { _, args in
-                guard case .list(let items) = args["items"] else { return .list([]) }
-                return .list(items.reversed())
-            }
-        )
-    }
 }

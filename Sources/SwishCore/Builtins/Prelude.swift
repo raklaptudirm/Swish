@@ -91,13 +91,6 @@ extension Shell {
         /// The first items; stops reading after them.
         func prefix(_ maxLength: Int = 1) -> [Element]
 
-        /// The items in reverse order.
-        func reversed() -> [Element]
-
-        /// How many items there are, or how many the predicate is true for.
-        /// - Parameter where: a closure like { $0.size > 1.mb }
-        func count(where predicate: ((Element) throws -> Bool)? = nil) rethrows -> Int
-
         /// Keeps only the named fields of each record.
         func select(_ fields: String...) -> [Any]
 
