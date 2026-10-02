@@ -151,3 +151,11 @@ private func typeError(_ source: String) -> String? {
     #expect(typeError(#"var p: FilePath = "/a"; p.isAbsolute = false"#) == "cannot assign to 'isAbsolute': it's a get-only property of FilePath")
     #expect(typeError(#"let p: FilePath = "/a"; p.extension = "md""#) == "cannot assign to 'p': it's a 'let' constant")
 }
+
+@Test func protocolMembersCompleteWhatATypeHasItself() throws {
+    // String's own `reversed` gives a ReversedCollection, which Swish has no
+    // value for; Sequence's, an array, is what's left.
+    #expect(try output(#""abc".reversed(); "abc".sorted()"#) == #"["c", "b", "a"]"# + "\n" + #"["a", "b", "c"]"# + "\n")
+    // A type's own member hides the protocol's of the same name and labels.
+    #expect(try output("Set([1, 2]).union([9]).sorted(); (1...5).contains(3)") == "[1, 2, 9]\ntrue\n")
+}

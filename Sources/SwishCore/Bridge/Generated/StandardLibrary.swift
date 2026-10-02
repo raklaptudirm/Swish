@@ -84,7 +84,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
-                let result = try receiver.map({ (a0: Character) throws -> Value in try bridgeClosure(shell, args["transform"]!)([SwiftValue.make(a0, as: "Character")]) })
+                let result: [Value] = try receiver.map({ (a0: Character) throws -> Value in try bridgeClosure(shell, args["transform"]!)([SwiftValue.make(a0, as: "Character")]) })
                 return .list(result)
                     }
                 ),
@@ -149,7 +149,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
-                let result = try receiver.split(maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!), whereSeparator: { (a0: Character) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isSeparator"]!)([SwiftValue.make(a0, as: "Character")])) })
+                let result: [Substring] = try receiver.split(maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!), whereSeparator: { (a0: Character) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isSeparator"]!)([SwiftValue.make(a0, as: "Character")])) })
                 return .list(result.map { SwiftValue.make($0, as: "Substring") })
                     }
                 ),
@@ -162,7 +162,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
-                let result = receiver.split(separator: try SwiftValue.unbox(Character.self, args["separator"]!), maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!))
+                let result: [Substring] = receiver.split(separator: try SwiftValue.unbox(Character.self, args["separator"]!), maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!))
                 return .list(result.map { SwiftValue.make($0, as: "Substring") })
                     }
                 ),
@@ -201,7 +201,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
-                let result = receiver.shuffled()
+                let result: [Character] = receiver.shuffled()
                 return .list(result.map { SwiftValue.make($0, as: "Character") })
                     }
                 ),
@@ -602,7 +602,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
-                let result = try receiver.flatMap({ (a0: Character) throws -> [Value] in try bridgeSequence(try bridgeClosure(shell, args["transform"]!)([SwiftValue.make(a0, as: "Character")])) })
+                let result: [Value] = try receiver.flatMap({ (a0: Character) throws -> [Value] in try bridgeSequence(try bridgeClosure(shell, args["transform"]!)([SwiftValue.make(a0, as: "Character")])) })
                 return .list(result)
                     }
                 ),
@@ -615,7 +615,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
-                let result = try receiver.compactMap({ (a0: Character) throws -> Value? in (try bridgeClosure(shell, args["transform"]!)([SwiftValue.make(a0, as: "Character")]) == .nothing ? nil : try bridgeClosure(shell, args["transform"]!)([SwiftValue.make(a0, as: "Character")])) })
+                let result: [Value] = try receiver.compactMap({ (a0: Character) throws -> Value? in (try bridgeClosure(shell, args["transform"]!)([SwiftValue.make(a0, as: "Character")]) == .nothing ? nil : try bridgeClosure(shell, args["transform"]!)([SwiftValue.make(a0, as: "Character")])) })
                 return .list(result)
                     }
                 ),
@@ -628,7 +628,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
-                let result = receiver.sorted()
+                let result: [Character] = receiver.sorted()
                 return .list(result.map { SwiftValue.make($0, as: "Character") })
                     }
                 ),
@@ -641,7 +641,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: String = try String(swishValue: args["self"]!)
-                let result = try receiver.sorted(by: { (a0: Character, a1: Character) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([SwiftValue.make(a0, as: "Character"), SwiftValue.make(a1, as: "Character")])) })
+                let result: [Character] = try receiver.sorted(by: { (a0: Character, a1: Character) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([SwiftValue.make(a0, as: "Character"), SwiftValue.make(a1, as: "Character")])) })
                 return .list(result.map { SwiftValue.make($0, as: "Character") })
                     }
                 ),
@@ -951,6 +951,19 @@ extension Bridge {
                 return result.swishValue
                     }
                 ),
+                BridgedMember(
+                    kind: .method, name: "reversed", isStatic: false,
+                    parameters: [],
+                    returns: .list(.named("Character")), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns an array containing the elements of this sequence in reverse order.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: String = try String(swishValue: args["self"]!)
+                let result: [Character] = receiver.reversed()
+                return .list(result.map { SwiftValue.make($0, as: "Character") })
+                    }
+                ),
             ]
         ),
         BridgedType(
@@ -1020,7 +1033,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
-                let result = try receiver.map({ (a0: Character) throws -> Value in try bridgeClosure(shell, args["transform"]!)([SwiftValue.make(a0, as: "Character")]) })
+                let result: [Value] = try receiver.map({ (a0: Character) throws -> Value in try bridgeClosure(shell, args["transform"]!)([SwiftValue.make(a0, as: "Character")]) })
                 return .list(result)
                     }
                 ),
@@ -1085,7 +1098,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
-                let result = try receiver.split(maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!), whereSeparator: { (a0: Character) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isSeparator"]!)([SwiftValue.make(a0, as: "Character")])) })
+                let result: [Substring] = try receiver.split(maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!), whereSeparator: { (a0: Character) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isSeparator"]!)([SwiftValue.make(a0, as: "Character")])) })
                 return .list(result.map { SwiftValue.make($0, as: "Substring") })
                     }
                 ),
@@ -1098,7 +1111,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
-                let result = receiver.split(separator: try SwiftValue.unbox(Character.self, args["separator"]!), maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!))
+                let result: [Substring] = receiver.split(separator: try SwiftValue.unbox(Character.self, args["separator"]!), maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!))
                 return .list(result.map { SwiftValue.make($0, as: "Substring") })
                     }
                 ),
@@ -1137,7 +1150,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
-                let result = receiver.shuffled()
+                let result: [Character] = receiver.shuffled()
                 return .list(result.map { SwiftValue.make($0, as: "Character") })
                     }
                 ),
@@ -1525,7 +1538,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
-                let result = try receiver.flatMap({ (a0: Character) throws -> [Value] in try bridgeSequence(try bridgeClosure(shell, args["transform"]!)([SwiftValue.make(a0, as: "Character")])) })
+                let result: [Value] = try receiver.flatMap({ (a0: Character) throws -> [Value] in try bridgeSequence(try bridgeClosure(shell, args["transform"]!)([SwiftValue.make(a0, as: "Character")])) })
                 return .list(result)
                     }
                 ),
@@ -1538,7 +1551,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
-                let result = try receiver.compactMap({ (a0: Character) throws -> Value? in (try bridgeClosure(shell, args["transform"]!)([SwiftValue.make(a0, as: "Character")]) == .nothing ? nil : try bridgeClosure(shell, args["transform"]!)([SwiftValue.make(a0, as: "Character")])) })
+                let result: [Value] = try receiver.compactMap({ (a0: Character) throws -> Value? in (try bridgeClosure(shell, args["transform"]!)([SwiftValue.make(a0, as: "Character")]) == .nothing ? nil : try bridgeClosure(shell, args["transform"]!)([SwiftValue.make(a0, as: "Character")])) })
                 return .list(result)
                     }
                 ),
@@ -1551,7 +1564,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
-                let result = receiver.sorted()
+                let result: [Character] = receiver.sorted()
                 return .list(result.map { SwiftValue.make($0, as: "Character") })
                     }
                 ),
@@ -1564,7 +1577,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
-                let result = try receiver.sorted(by: { (a0: Character, a1: Character) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([SwiftValue.make(a0, as: "Character"), SwiftValue.make(a1, as: "Character")])) })
+                let result: [Character] = try receiver.sorted(by: { (a0: Character, a1: Character) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([SwiftValue.make(a0, as: "Character"), SwiftValue.make(a1, as: "Character")])) })
                 return .list(result.map { SwiftValue.make($0, as: "Character") })
                     }
                 ),
@@ -1795,6 +1808,45 @@ extension Bridge {
                         _ = shell
                         let result = Substring(stringLiteral: try String(swishValue: args["value"]!))
                 return SwiftValue.make(result, as: "Substring")
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "reversed", isStatic: false,
+                    parameters: [],
+                    returns: .list(.named("Character")), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns an array containing the elements of this sequence in reverse order.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
+                let result: [Character] = receiver.reversed()
+                return .list(result.map { SwiftValue.make($0, as: "Character") })
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "hasPrefix", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "prefix", type: .string)],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
+                let result = receiver.hasPrefix(try String(swishValue: args["prefix"]!))
+                return result.swishValue
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "hasSuffix", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "suffix", type: .string)],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
+                let result = receiver.hasSuffix(try String(swishValue: args["suffix"]!))
+                return result.swishValue
                     }
                 ),
             ]
@@ -3402,7 +3454,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
-                let result = try receiver.filter({ (a0: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isIncluded"]!)([a0])) })
+                let result: [Value] = try receiver.filter({ (a0: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isIncluded"]!)([a0])) })
                 return .list(result)
                     }
                 ),
@@ -3441,7 +3493,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
-                let result = try receiver.map({ (a0: Value) throws -> Value in try bridgeClosure(shell, args["transform"]!)([a0]) })
+                let result: [Value] = try receiver.map({ (a0: Value) throws -> Value in try bridgeClosure(shell, args["transform"]!)([a0]) })
                 return .list(result)
                     }
                 ),
@@ -3545,7 +3597,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
-                let result = try receiver.split(maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!), whereSeparator: { (a0: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isSeparator"]!)([a0])) })
+                let result: [ArraySlice<Value>] = try receiver.split(maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!), whereSeparator: { (a0: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isSeparator"]!)([a0])) })
                 return .list(result.map { SwiftValue.make($0, as: "ArraySlice") })
                     }
                 ),
@@ -3623,7 +3675,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
-                let result = receiver.shuffled()
+                let result: [Value] = receiver.shuffled()
                 return .list(result)
                     }
                 ),
@@ -3661,7 +3713,7 @@ extension Bridge {
                     discardableResult: false, summary: "Creates a new collection containing the specified number of a single, repeated value.",
                     body: .native { shell, args in
                         _ = shell
-                        let result = [Value](repeating: args["repeatedValue"]!, count: try Int(swishValue: args["count"]!))
+                        let result: [Value] = [Value](repeating: args["repeatedValue"]!, count: try Int(swishValue: args["count"]!))
                 return .list(result)
                     }
                 ),
@@ -3673,7 +3725,7 @@ extension Bridge {
                     discardableResult: false, summary: "Creates a new instance of a collection containing the elements of a sequence.",
                     body: .native { shell, args in
                         _ = shell
-                        let result = [Value](try bridgeSequence(args["elements"]!))
+                        let result: [Value] = [Value](try bridgeSequence(args["elements"]!))
                 return .list(result)
                     }
                 ),
@@ -4011,7 +4063,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
-                let result = try receiver.flatMap({ (a0: Value) throws -> [Value] in try bridgeSequence(try bridgeClosure(shell, args["transform"]!)([a0])) })
+                let result: [Value] = try receiver.flatMap({ (a0: Value) throws -> [Value] in try bridgeSequence(try bridgeClosure(shell, args["transform"]!)([a0])) })
                 return .list(result)
                     }
                 ),
@@ -4024,7 +4076,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
-                let result = try receiver.compactMap({ (a0: Value) throws -> Value? in (try bridgeClosure(shell, args["transform"]!)([a0]) == .nothing ? nil : try bridgeClosure(shell, args["transform"]!)([a0])) })
+                let result: [Value] = try receiver.compactMap({ (a0: Value) throws -> Value? in (try bridgeClosure(shell, args["transform"]!)([a0]) == .nothing ? nil : try bridgeClosure(shell, args["transform"]!)([a0])) })
                 return .list(result)
                     }
                 ),
@@ -4037,7 +4089,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
-                let result = try receiver.sorted(by: { (a0: Value, a1: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0, a1])) })
+                let result: [Value] = try receiver.sorted(by: { (a0: Value, a1: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0, a1])) })
                 return .list(result)
                     }
                 ),
@@ -4154,7 +4206,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
-                let result = receiver.sorted()
+                let result: [Value] = receiver.sorted()
                 return .list(result)
                     }
                 ),
@@ -4180,7 +4232,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value] = try bridgeList(args["self"]!)
-                let result = receiver.split(separator: args["separator"]!, maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!))
+                let result: [ArraySlice<Value>] = receiver.split(separator: args["separator"]!, maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!))
                 return .list(result.map { SwiftValue.make($0, as: "ArraySlice") })
                     }
                 ),
@@ -4387,7 +4439,7 @@ extension Bridge {
                     discardableResult: false, summary: "Creates a new, empty array.",
                     body: .native { shell, args in
                         _ = shell
-                        let result = [Value]()
+                        let result: [Value] = [Value]()
                 return .list(result)
                     }
                 ),
@@ -4402,6 +4454,32 @@ extension Bridge {
                         let receiver: [Value] = try bridgeList(args["self"]!)
                 let result = receiver.hashValue
                 return result.swishValue
+                    }
+                ),
+                BridgedMember(
+                    kind: .property, name: "indices", isStatic: false,
+                    parameters: [],
+                    returns: .generic("Range", [.int]), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "The indices that are valid for subscripting the collection, in ascending order.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: [Value] = try bridgeList(args["self"]!)
+                let result = receiver.indices
+                return bridgeBox(result, as: "Range") { r in Range<Value>(uncheckedBounds: (lower: r.lowerBound.swishValue, upper: r.upperBound.swishValue)) }
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "reversed", isStatic: false,
+                    parameters: [],
+                    returns: .list(.parameter("Element")), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns an array containing the elements of this sequence in reverse order.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: [Value] = try bridgeList(args["self"]!)
+                let result: [Value] = receiver.reversed()
+                return .list(result)
                     }
                 ),
             ]
@@ -4421,7 +4499,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
-                let result = try receiver.filter({ (a0: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isIncluded"]!)([a0])) })
+                let result: [Value] = try receiver.filter({ (a0: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isIncluded"]!)([a0])) })
                 return .list(result)
                     }
                 ),
@@ -4460,7 +4538,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
-                let result = try receiver.map({ (a0: Value) throws -> Value in try bridgeClosure(shell, args["transform"]!)([a0]) })
+                let result: [Value] = try receiver.map({ (a0: Value) throws -> Value in try bridgeClosure(shell, args["transform"]!)([a0]) })
                 return .list(result)
                     }
                 ),
@@ -4564,7 +4642,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
-                let result = try receiver.split(maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!), whereSeparator: { (a0: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isSeparator"]!)([a0])) })
+                let result: [ArraySlice<Value>] = try receiver.split(maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!), whereSeparator: { (a0: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isSeparator"]!)([a0])) })
                 return .list(result.map { SwiftValue.make($0, as: "ArraySlice") })
                     }
                 ),
@@ -4642,7 +4720,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
-                let result = receiver.shuffled()
+                let result: [Value] = receiver.shuffled()
                 return .list(result)
                     }
                 ),
@@ -5030,7 +5108,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
-                let result = try receiver.flatMap({ (a0: Value) throws -> [Value] in try bridgeSequence(try bridgeClosure(shell, args["transform"]!)([a0])) })
+                let result: [Value] = try receiver.flatMap({ (a0: Value) throws -> [Value] in try bridgeSequence(try bridgeClosure(shell, args["transform"]!)([a0])) })
                 return .list(result)
                     }
                 ),
@@ -5043,7 +5121,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
-                let result = try receiver.compactMap({ (a0: Value) throws -> Value? in (try bridgeClosure(shell, args["transform"]!)([a0]) == .nothing ? nil : try bridgeClosure(shell, args["transform"]!)([a0])) })
+                let result: [Value] = try receiver.compactMap({ (a0: Value) throws -> Value? in (try bridgeClosure(shell, args["transform"]!)([a0]) == .nothing ? nil : try bridgeClosure(shell, args["transform"]!)([a0])) })
                 return .list(result)
                     }
                 ),
@@ -5056,7 +5134,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
-                let result = try receiver.sorted(by: { (a0: Value, a1: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0, a1])) })
+                let result: [Value] = try receiver.sorted(by: { (a0: Value, a1: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0, a1])) })
                 return .list(result)
                     }
                 ),
@@ -5173,7 +5251,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
-                let result = receiver.sorted()
+                let result: [Value] = receiver.sorted()
                 return .list(result)
                     }
                 ),
@@ -5199,7 +5277,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
-                let result = receiver.split(separator: args["separator"]!, maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!))
+                let result: [ArraySlice<Value>] = receiver.split(separator: args["separator"]!, maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!))
                 return .list(result.map { SwiftValue.make($0, as: "ArraySlice") })
                     }
                 ),
@@ -5449,6 +5527,32 @@ extension Bridge {
                 return result.swishValue
                     }
                 ),
+                BridgedMember(
+                    kind: .property, name: "indices", isStatic: false,
+                    parameters: [],
+                    returns: .generic("Range", [.int]), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "The indices that are valid for subscripting the collection, in ascending order.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                let result = receiver.indices
+                return bridgeBox(result, as: "Range") { r in Range<Value>(uncheckedBounds: (lower: r.lowerBound.swishValue, upper: r.upperBound.swishValue)) }
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "reversed", isStatic: false,
+                    parameters: [],
+                    returns: .list(.parameter("Element")), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns an array containing the elements of this sequence in reverse order.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                let result: [Value] = receiver.reversed()
+                return .list(result)
+                    }
+                ),
             ]
         ),
         BridgedType(
@@ -5466,7 +5570,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
-                let result = try receiver.map({ (a0: Value) throws -> Value in try bridgeClosure(shell, args["transform"]!)([a0]) })
+                let result: [Value] = try receiver.map({ (a0: Value) throws -> Value in try bridgeClosure(shell, args["transform"]!)([a0]) })
                 return .list(result)
                     }
                 ),
@@ -5479,7 +5583,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
-                let result = receiver.shuffled()
+                let result: [Value] = receiver.shuffled()
                 return .list(result)
                     }
                 ),
@@ -5661,7 +5765,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
-                let result = receiver.reversed()
+                let result: [Value] = receiver.reversed()
                 return .list(result)
                     }
                 ),
@@ -5674,7 +5778,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
-                let result = try receiver.flatMap({ (a0: Value) throws -> [Value] in try bridgeSequence(try bridgeClosure(shell, args["transform"]!)([a0])) })
+                let result: [Value] = try receiver.flatMap({ (a0: Value) throws -> [Value] in try bridgeSequence(try bridgeClosure(shell, args["transform"]!)([a0])) })
                 return .list(result)
                     }
                 ),
@@ -5687,7 +5791,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
-                let result = try receiver.compactMap({ (a0: Value) throws -> Value? in (try bridgeClosure(shell, args["transform"]!)([a0]) == .nothing ? nil : try bridgeClosure(shell, args["transform"]!)([a0])) })
+                let result: [Value] = try receiver.compactMap({ (a0: Value) throws -> Value? in (try bridgeClosure(shell, args["transform"]!)([a0]) == .nothing ? nil : try bridgeClosure(shell, args["transform"]!)([a0])) })
                 return .list(result)
                     }
                 ),
@@ -5700,7 +5804,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
-                let result = try receiver.sorted(by: { (a0: Value, a1: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0, a1])) })
+                let result: [Value] = try receiver.sorted(by: { (a0: Value, a1: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0, a1])) })
                 return .list(result)
                     }
                 ),
@@ -5816,7 +5920,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
-                let result = receiver.sorted()
+                let result: [Value] = receiver.sorted()
                 return .list(result)
                     }
                 ),
@@ -6312,6 +6416,71 @@ extension Bridge {
                 return .list([.nothing, SwiftValue.make(receiver, as: "Set")])
                     }
                 ),
+                BridgedMember(
+                    kind: .method, name: "split", isStatic: false,
+                    parameters: [Parameter(label: "separator", name: "separator", type: .parameter("Element")), Parameter(label: "maxSplits", name: "maxSplits", type: .int, externalDefault: "Int.max"), Parameter(label: "omittingEmptySubsequences", name: "omittingEmptySubsequences", type: .bool, defaultValue: .literal(.bool(true)))],
+                    returns: .list(.generic("ArraySlice", [.parameter("Element")])), generics: ["Element": ["Equatable"]],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns the longest possible subsequences of the sequence, in order, around elements equal to the given element.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
+                let result: [ArraySlice<Value>] = receiver.split(separator: args["separator"]!, maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!))
+                return .list(result.map { SwiftValue.make($0, as: "ArraySlice") })
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "split", isStatic: false,
+                    parameters: [Parameter(label: "maxSplits", name: "maxSplits", type: .int, externalDefault: "Int.max"), Parameter(label: "omittingEmptySubsequences", name: "omittingEmptySubsequences", type: .bool, defaultValue: .literal(.bool(true))), Parameter(label: "whereSeparator", name: "isSeparator", type: .functionType([.parameter("Element")], .bool, throws: true))],
+                    returns: .list(.generic("ArraySlice", [.parameter("Element")])), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Returns the longest possible subsequences of the sequence, in order, that don't contain elements satisfying the given predicate. Elements that are used to split the sequence are not returned as part of any subsequence.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
+                let result: [ArraySlice<Value>] = try receiver.split(maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!), whereSeparator: { (a0: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isSeparator"]!)([a0])) })
+                return .list(result.map { SwiftValue.make($0, as: "ArraySlice") })
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "suffix", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "maxLength", type: .int)],
+                    returns: .list(.parameter("Element")), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a subsequence, up to the given maximum length, containing the final elements of the sequence.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
+                let result: [Value] = receiver.suffix(try Int(swishValue: args["maxLength"]!))
+                return .list(result)
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "dropLast", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "k", type: .int, defaultValue: .literal(.int(1)))],
+                    returns: .list(.parameter("Element")), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a sequence containing all but the given number of final elements.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
+                let result: [Value] = receiver.dropLast(try Int(swishValue: args["k"]!))
+                return .list(result)
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "prefix", isStatic: false,
+                    parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
+                    returns: .list(.parameter("Element")), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Returns a sequence containing the initial, consecutive elements that satisfy the given predicate.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
+                let result: [Value] = try receiver.prefix(while: { (a0: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([a0])) })
+                return .list(result)
+                    }
+                ),
             ]
         ),
         BridgedType(
@@ -6329,7 +6498,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
-                let result = try receiver.map({ (a0: (key: Value, value: Value)) throws -> Value in try bridgeClosure(shell, args["transform"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }]) })
+                let result: [Value] = try receiver.map({ (a0: (key: Value, value: Value)) throws -> Value in try bridgeClosure(shell, args["transform"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }]) })
                 return .list(result)
                     }
                 ),
@@ -6342,7 +6511,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
-                let result = receiver.shuffled()
+                let result: [(key: Value, value: Value)] = receiver.shuffled()
                 return .list(result.map { bridgeTuple($0) { t in [("key", t.0), ("value", t.1)] } })
                     }
                 ),
@@ -6498,7 +6667,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
-                let result = receiver.reversed()
+                let result: [(key: Value, value: Value)] = receiver.reversed()
                 return .list(result.map { bridgeTuple($0) { t in [("key", t.0), ("value", t.1)] } })
                     }
                 ),
@@ -6511,7 +6680,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
-                let result = try receiver.flatMap({ (a0: (key: Value, value: Value)) throws -> [Value] in try bridgeSequence(try bridgeClosure(shell, args["transform"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }])) })
+                let result: [Value] = try receiver.flatMap({ (a0: (key: Value, value: Value)) throws -> [Value] in try bridgeSequence(try bridgeClosure(shell, args["transform"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }])) })
                 return .list(result)
                     }
                 ),
@@ -6524,7 +6693,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
-                let result = try receiver.compactMap({ (a0: (key: Value, value: Value)) throws -> Value? in (try bridgeClosure(shell, args["transform"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }]) == .nothing ? nil : try bridgeClosure(shell, args["transform"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }])) })
+                let result: [Value] = try receiver.compactMap({ (a0: (key: Value, value: Value)) throws -> Value? in (try bridgeClosure(shell, args["transform"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }]) == .nothing ? nil : try bridgeClosure(shell, args["transform"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }])) })
                 return .list(result)
                     }
                 ),
@@ -6537,7 +6706,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
-                let result = try receiver.sorted(by: { (a0: (key: Value, value: Value), a1: (key: Value, value: Value)) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }, bridgeTuple(a1) { t in [("key", t.0), ("value", t.1)] }])) })
+                let result: [(key: Value, value: Value)] = try receiver.sorted(by: { (a0: (key: Value, value: Value), a1: (key: Value, value: Value)) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }, bridgeTuple(a1) { t in [("key", t.0), ("value", t.1)] }])) })
                 return .list(result.map { bridgeTuple($0) { t in [("key", t.0), ("value", t.1)] } })
                     }
                 ),
@@ -6834,6 +7003,45 @@ extension Bridge {
                         var receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
                 receiver.reserveCapacity(try Int(swishValue: args["minimumCapacity"]!))
                 return .list([.nothing, bridgeDictionary(receiver)])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "suffix", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "maxLength", type: .int)],
+                    returns: .list(.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])), generics: ["Key": [], "Value": []],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a subsequence, up to the given maximum length, containing the final elements of the sequence.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
+                let result: [(key: Value, value: Value)] = receiver.suffix(try Int(swishValue: args["maxLength"]!))
+                return .list(result.map { bridgeTuple($0) { t in [("key", t.0), ("value", t.1)] } })
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "dropLast", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "k", type: .int, defaultValue: .literal(.int(1)))],
+                    returns: .list(.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])), generics: ["Key": [], "Value": []],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a sequence containing all but the given number of final elements.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
+                let result: [(key: Value, value: Value)] = receiver.dropLast(try Int(swishValue: args["k"]!))
+                return .list(result.map { bridgeTuple($0) { t in [("key", t.0), ("value", t.1)] } })
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "prefix", isStatic: false,
+                    parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])], .bool, throws: true))],
+                    returns: .list(.tuple([.init(label: "key", type: .parameter("Key")), .init(label: "value", type: .parameter("Value"))])), generics: ["Key": [], "Value": []],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Returns a sequence containing the initial, consecutive elements that satisfy the given predicate.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: [Value: Value] = try bridgeDictionary(args["self"]!)
+                let result: [(key: Value, value: Value)] = try receiver.prefix(while: { (a0: (key: Value, value: Value)) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([bridgeTuple(a0) { t in [("key", t.0), ("value", t.1)] }])) })
+                return .list(result.map { bridgeTuple($0) { t in [("key", t.0), ("value", t.1)] } })
                     }
                 ),
             ]
@@ -7300,7 +7508,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = try receiver.map({ (a0: Int) throws -> Value in try bridgeClosure(shell, args["transform"]!)([a0.swishValue]) })
+                let result: [Value] = try receiver.map({ (a0: Int) throws -> Value in try bridgeClosure(shell, args["transform"]!)([a0.swishValue]) })
                 return .list(result)
                     }
                 ),
@@ -7404,7 +7612,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = try receiver.split(maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!), whereSeparator: { (a0: Int) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isSeparator"]!)([a0.swishValue])) })
+                let result: [Range<Int>] = try receiver.split(maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!), whereSeparator: { (a0: Int) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isSeparator"]!)([a0.swishValue])) })
                 return .list(result.map { bridgeBox($0, as: "Range") { r in Range<Value>(uncheckedBounds: (lower: r.lowerBound.swishValue, upper: r.upperBound.swishValue)) } })
                     }
                 ),
@@ -7417,7 +7625,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = receiver.split(separator: try Int(swishValue: args["separator"]!), maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!))
+                let result: [Range<Int>] = receiver.split(separator: try Int(swishValue: args["separator"]!), maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!))
                 return .list(result.map { bridgeBox($0, as: "Range") { r in Range<Value>(uncheckedBounds: (lower: r.lowerBound.swishValue, upper: r.upperBound.swishValue)) } })
                     }
                 ),
@@ -7508,7 +7716,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = receiver.shuffled()
+                let result: [Int] = receiver.shuffled()
                 return .list(result.map { $0.swishValue })
                     }
                 ),
@@ -7521,7 +7729,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = try receiver.filter({ (a0: Int) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isIncluded"]!)([a0.swishValue])) })
+                let result: [Int] = try receiver.filter({ (a0: Int) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isIncluded"]!)([a0.swishValue])) })
                 return .list(result.map { $0.swishValue })
                     }
                 ),
@@ -7742,7 +7950,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = receiver.reversed()
+                let result: [Int] = receiver.reversed()
                 return .list(result.map { $0.swishValue })
                     }
                 ),
@@ -7755,7 +7963,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = try receiver.flatMap({ (a0: Int) throws -> [Value] in try bridgeSequence(try bridgeClosure(shell, args["transform"]!)([a0.swishValue])) })
+                let result: [Value] = try receiver.flatMap({ (a0: Int) throws -> [Value] in try bridgeSequence(try bridgeClosure(shell, args["transform"]!)([a0.swishValue])) })
                 return .list(result)
                     }
                 ),
@@ -7768,7 +7976,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = try receiver.compactMap({ (a0: Int) throws -> Value? in (try bridgeClosure(shell, args["transform"]!)([a0.swishValue]) == .nothing ? nil : try bridgeClosure(shell, args["transform"]!)([a0.swishValue])) })
+                let result: [Value] = try receiver.compactMap({ (a0: Int) throws -> Value? in (try bridgeClosure(shell, args["transform"]!)([a0.swishValue]) == .nothing ? nil : try bridgeClosure(shell, args["transform"]!)([a0.swishValue])) })
                 return .list(result)
                     }
                 ),
@@ -7781,7 +7989,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = receiver.sorted()
+                let result: [Int] = receiver.sorted()
                 return .list(result.map { $0.swishValue })
                     }
                 ),
@@ -7794,7 +8002,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = try receiver.sorted(by: { (a0: Int, a1: Int) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0.swishValue, a1.swishValue])) })
+                let result: [Int] = try receiver.sorted(by: { (a0: Int, a1: Int) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0.swishValue, a1.swishValue])) })
                 return .list(result.map { $0.swishValue })
                     }
                 ),
@@ -8047,7 +8255,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = try receiver.map({ (a0: Int) throws -> Value in try bridgeClosure(shell, args["transform"]!)([a0.swishValue]) })
+                let result: [Value] = try receiver.map({ (a0: Int) throws -> Value in try bridgeClosure(shell, args["transform"]!)([a0.swishValue]) })
                 return .list(result)
                     }
                 ),
@@ -8086,7 +8294,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = receiver.shuffled()
+                let result: [Int] = receiver.shuffled()
                 return .list(result.map { $0.swishValue })
                     }
                 ),
@@ -8099,7 +8307,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = try receiver.filter({ (a0: Int) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isIncluded"]!)([a0.swishValue])) })
+                let result: [Int] = try receiver.filter({ (a0: Int) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isIncluded"]!)([a0.swishValue])) })
                 return .list(result.map { $0.swishValue })
                     }
                 ),
@@ -8138,7 +8346,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = receiver.split(separator: try Int(swishValue: args["separator"]!), maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!))
+                let result: [ArraySlice<Int>] = receiver.split(separator: try Int(swishValue: args["separator"]!), maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!))
                 return .list(result.map { bridgeBox($0, as: "ArraySlice") { ArraySlice<Value>($0.map { $0.swishValue }) } })
                     }
                 ),
@@ -8151,7 +8359,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = try receiver.split(maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!), whereSeparator: { (a0: Int) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isSeparator"]!)([a0.swishValue])) })
+                let result: [ArraySlice<Int>] = try receiver.split(maxSplits: (args["maxSplits"] == nil ? Int.max : try Int(swishValue: args["maxSplits"]!)), omittingEmptySubsequences: try Bool(swishValue: args["omittingEmptySubsequences"]!), whereSeparator: { (a0: Int) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isSeparator"]!)([a0.swishValue])) })
                 return .list(result.map { bridgeBox($0, as: "ArraySlice") { ArraySlice<Value>($0.map { $0.swishValue }) } })
                     }
                 ),
@@ -8164,7 +8372,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = receiver.suffix(try Int(swishValue: args["maxLength"]!))
+                let result: [Int] = receiver.suffix(try Int(swishValue: args["maxLength"]!))
                 return .list(result.map { $0.swishValue })
                     }
                 ),
@@ -8177,7 +8385,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = receiver.dropLast(try Int(swishValue: args["k"]!))
+                let result: [Int] = receiver.dropLast(try Int(swishValue: args["k"]!))
                 return .list(result.map { $0.swishValue })
                     }
                 ),
@@ -8190,7 +8398,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = try receiver.prefix(while: { (a0: Int) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([a0.swishValue])) })
+                let result: [Int] = try receiver.prefix(while: { (a0: Int) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([a0.swishValue])) })
                 return .list(result.map { $0.swishValue })
                     }
                 ),
@@ -8385,7 +8593,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = receiver.reversed()
+                let result: [Int] = receiver.reversed()
                 return .list(result.map { $0.swishValue })
                     }
                 ),
@@ -8398,7 +8606,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = try receiver.flatMap({ (a0: Int) throws -> [Value] in try bridgeSequence(try bridgeClosure(shell, args["transform"]!)([a0.swishValue])) })
+                let result: [Value] = try receiver.flatMap({ (a0: Int) throws -> [Value] in try bridgeSequence(try bridgeClosure(shell, args["transform"]!)([a0.swishValue])) })
                 return .list(result)
                     }
                 ),
@@ -8411,7 +8619,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = try receiver.compactMap({ (a0: Int) throws -> Value? in (try bridgeClosure(shell, args["transform"]!)([a0.swishValue]) == .nothing ? nil : try bridgeClosure(shell, args["transform"]!)([a0.swishValue])) })
+                let result: [Value] = try receiver.compactMap({ (a0: Int) throws -> Value? in (try bridgeClosure(shell, args["transform"]!)([a0.swishValue]) == .nothing ? nil : try bridgeClosure(shell, args["transform"]!)([a0.swishValue])) })
                 return .list(result)
                     }
                 ),
@@ -8424,7 +8632,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = receiver.sorted()
+                let result: [Int] = receiver.sorted()
                 return .list(result.map { $0.swishValue })
                     }
                 ),
@@ -8437,7 +8645,7 @@ extension Bridge {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
-                let result = try receiver.sorted(by: { (a0: Int, a1: Int) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0.swishValue, a1.swishValue])) })
+                let result: [Int] = try receiver.sorted(by: { (a0: Int, a1: Int) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0.swishValue, a1.swishValue])) })
                 return .list(result.map { $0.swishValue })
                     }
                 ),

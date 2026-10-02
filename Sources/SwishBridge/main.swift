@@ -710,6 +710,9 @@ func strideFix(_ constraint: Constraint) -> Bool {
     constraint.kind == "conformance" && constraint.rhs == "Strideable" && constraint.lhs == "Bound"
 }
 
+/// The protocols the module declares: where their members are listed.
+let protocolNames = Set(graph.symbols.filter { $0.kind.identifier == "swift.protocol" }.map(\.pathComponents[0]))
+
 nonisolated(unsafe) var types: [String: BridgedType] = [:]
 for (name, parameters) in bridgedTypeNames {
     var type = BridgedType(name: name, parameters: parameters)
@@ -808,7 +811,7 @@ func sequenceParameter(_ type: SType, _ sequences: Set<String>) -> String? {
 }
 
 /// The Swift for one member: its signature and glue.
-func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Constraint] = []) throws -> (key: String, code: String) {
+func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Constraint] = []) throws -> (key: String, shape: String, code: String) {
     let text = (symbol.declarationFragments ?? []).map(\.spelling).joined()
     let declaration = try parseDeclaration(text)
     if declaration.isMutating && declaration.isStatic { throw Unsupported(reason: "mutating") }
@@ -905,6 +908,7 @@ func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Const
         if !mentioned { throw Unsupported(reason: "uninferrable generic \(parameter)") }
     }
 
+    let shape = "\(declaration.kind) \(declaration.isStatic) \(declaration.name)(" + parameters.map { "\($0.0.label ?? "_"):" }.joined() + ")"
     let key = "\(declaration.kind) \(declaration.isStatic) \(declaration.name)(" + parameters.map { "\($0.0.label ?? "_"):\(annotation($0.1))" }.joined(separator: ",") + ")"
 
     // The signature.
@@ -940,15 +944,20 @@ func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Const
         body += "\(binding) receiver: \(swiftType) = \(fromSwish("args[\"self\"]!", receiverType))\n                "
     }
     let isVoid = if case .tuple(let elements) = returns, elements.isEmpty { true } else { false }
+    // A result that's an array is typed, so Swift picks the overload the
+    // signature came from: `Sequence.dropLast() -> [Element]`, not the
+    // Slice a Set's own Collection conformance would give.
+    let resultType: String
+    if case .array = returns { resultType = ": \(spelling(returns))" } else { resultType = "" }
     if declaration.isMutating {
         // The result, and the receiver as the call left it, for the shell to
         // put back where it came from (see `Shell.runBridged`).
-        body += isVoid ? "\(tryPrefix)\(target)\n                " : "let result = \(tryPrefix)\(target)\n                "
+        body += isVoid ? "\(tryPrefix)\(target)\n                " : "let result\(resultType) = \(tryPrefix)\(target)\n                "
         body += "return .list([\(isVoid ? ".nothing" : toSwish("result", returns)), \(toSwish("receiver", receiverType))])"
     } else if isVoid {
         body += "\(tryPrefix)\(target)\n                return .nothing"
     } else {
-        body += "let result = \(tryPrefix)\(target)\n                return \(toSwish("result", returns))"
+        body += "let result\(resultType) = \(tryPrefix)\(target)\n                return \(toSwish("result", returns))"
     }
     let kind = declaration.kind == .initializer ? ".initializer" : declaration.kind == .property ? ".property" : ".method"
     // `var extension: String? { get set }`: a setter too, which changes a
@@ -973,7 +982,7 @@ func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Const
 """
     }
     let genericsCode = generics.isEmpty ? "[:]" : "[" + generics.sorted { $0.key < $1.key }.map { "\(quoted($0.key)): [\($0.value.map(quoted).joined(separator: ", "))]" }.joined(separator: ", ") + "]"
-    return (key, """
+    return (key, shape, """
                 BridgedMember(
                     kind: \(kind), name: \(quoted(declaration.name)), isStatic: \(declaration.isStatic),
                     parameters: [\(parameterCode.joined(separator: ", "))],
@@ -1006,28 +1015,41 @@ for (name, _) in bridgedTypeNames {
     var seen: Set<String> = []
     var members: [String] = []
     let kinds = ["swift.method", "swift.property", "swift.init", "swift.type.method", "swift.type.property"]
-    // Its own members, then, for a range, those of the collection protocols
-    // it conforms to when Bound is Int, which the graph doesn't list.
+    // Its own members, then those of the protocols it conforms to, whether
+    // required or added by an extension (`Collection.contains`,
+    // `Sequence.max`), which the graph lists under the protocol, not the
+    // type. The type's own member of the same name and labels hides the
+    // protocol's, as in Swift (`Set.union(_: Sequence)` over
+    // `SetAlgebra.union(_: Self)`); if it can't be bridged, the protocol's is
+    // what there is (String's `reversed` gives a ReversedCollection, which
+    // Swish has no value for, but Sequence's gives an array).
     let path = name.split(separator: ".").map(String.init)
-    var candidates = graph.symbols.filter { $0.pathComponents.dropLast() == path[...] }.map { ($0, [Constraint]()) }
-    if name == "Range" || name == "ClosedRange" {
-        let conditions = [Constraint(kind: "conformance", lhs: "Bound", rhs: "Strideable"),
-                          Constraint(kind: "conformance", lhs: "Bound.Stride", rhs: "SignedInteger")]
-        let protocols: Set = ["Sequence", "Collection", "BidirectionalCollection", "RandomAccessCollection"]
-        // A member the type has itself shadows the protocol's default.
-        let own = Set(candidates.map { $0.0.pathComponents.last! })
-        candidates += graph.symbols.filter {
-            $0.pathComponents.count == 2 && protocols.contains($0.pathComponents[0]) && !own.contains($0.pathComponents[1])
-        }.map { ($0, conditions) }
-    }
-    for (symbol, conditions) in candidates {
+    let ownSymbols = graph.symbols.filter { $0.pathComponents.dropLast() == path[...] }
+    var candidates = ownSymbols.map { ($0, [Constraint]()) }
+    // A range is a sequence only when `Bound: Strideable` with a
+    // SignedInteger stride: for Swish, when Bound is Int.
+    let conditions = name == "Range" || name == "ClosedRange"
+        ? [Constraint(kind: "conformance", lhs: "Bound", rhs: "Strideable"),
+           Constraint(kind: "conformance", lhs: "Bound.Stride", rhs: "SignedInteger")]
+        : []
+    candidates += graph.symbols.filter {
+        // Not initializers: a protocol's is a requirement the type meets
+        // with its own, which isn't the same call.
+        $0.pathComponents.count == 2 && protocolNames.contains($0.pathComponents[0]) && $0.kind.identifier != "swift.init"
+            && owner.allConformances.contains($0.pathComponents[0])
+    }.map { ($0, conditions) }
+    var bridgedShapes: Set<String> = []
+    let ownCount = ownSymbols.count
+    for (index, (symbol, conditions)) in candidates.enumerated() {
         guard kinds.contains(symbol.kind.identifier), symbol.accessLevel == "public", available(symbol) else { continue }
         let title = symbol.pathComponents.last!
         guard !title.hasPrefix("_"), title.first?.isLetter ?? false else { continue }
         if swishOwn[name]?.contains(title) ?? false { continue }
         do {
-            let (key, code) = try bridge(symbol, of: owner, given: conditions)
+            let (key, shape, code) = try bridge(symbol, of: owner, given: conditions)
+            if index >= ownCount, bridgedShapes.contains(shape) { continue }
             guard seen.insert(key).inserted else { continue }
+            if index < ownCount { bridgedShapes.insert(shape) }
             members.append(code)
             counts[name, default: 0] += 1
         } catch let unsupported as Unsupported {
