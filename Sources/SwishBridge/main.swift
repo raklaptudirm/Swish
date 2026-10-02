@@ -2,7 +2,7 @@
 // its types' members to Swish: each member's signature, for the checker,
 // and glue that converts Swish values, calls Swift and converts back.
 //
-//   swish-bridge <Module.symbols.json> <output.swift>
+//   swish-bridge <Module.symbols.json> <output.swift> [<Other@Module.symbols.json>...]
 //
 // `run bridge` (Tasks.swish) runs it on the standard library and on
 // swift-system (for FilePath). A member is
@@ -660,11 +660,25 @@ func quoted(_ text: String) -> String {
 // MARK: Main
 
 let arguments = CommandLine.arguments
-guard arguments.count == 3 else {
-    FileHandle.standardError.write(Data("usage: swish-bridge <Module.symbols.json> <output.swift>\n".utf8))
+guard arguments.count >= 3 else {
+    FileHandle.standardError.write(Data("usage: swish-bridge <Module.symbols.json> <output.swift> [<Other@Module.symbols.json>...]\n".utf8))
     exit(2)
 }
-let graph = try JSONDecoder().decode(Graph.self, from: Data(contentsOf: URL(fileURLWithPath: arguments[1])))
+func readGraph(_ path: String) throws -> Graph {
+    try JSONDecoder().decode(Graph.self, from: Data(contentsOf: URL(fileURLWithPath: path)))
+}
+/// The module's graph, with what other modules add to its types and
+/// protocols (`_StringProcessing`'s `contains(_:)` on Collection).
+nonisolated(unsafe) var addedByOthers: Set<String> = []
+let graph: Graph = try {
+    var graph = try readGraph(arguments[1])
+    for path in arguments.dropFirst(3) {
+        let extra = try readGraph(path)
+        addedByOthers.formUnion(extra.symbols.map(\.identifier.precise))
+        graph = Graph(module: graph.module, symbols: graph.symbols + extra.symbols, relationships: graph.relationships + extra.relationships)
+    }
+    return graph
+}()
 
 /// What's bridged from each module: its types, with their generic
 /// parameters, and the name of the list the output declares.
@@ -1047,7 +1061,8 @@ for (name, _) in bridgedTypeNames {
         if swishOwn[name]?.contains(title) ?? false { continue }
         do {
             let (key, shape, code) = try bridge(symbol, of: owner, given: conditions)
-            if index >= ownCount, bridgedShapes.contains(shape) { continue }
+            // What another module adds is an overload, not a default.
+            if index >= ownCount, bridgedShapes.contains(shape), !addedByOthers.contains(symbol.identifier.precise) { continue }
             guard seen.insert(key).inserted else { continue }
             if index < ownCount { bridgedShapes.insert(shape) }
             members.append(code)

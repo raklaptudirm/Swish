@@ -26,10 +26,17 @@ func bridge() {
     let graphs = $(mktemp -d).text
     defer { rm -rf $graphs }
     try! swift build
+    // Other modules that extend a module's types, whose graphs are read with it.
+    let extensions = ["Swift": ["_StringProcessing"]]
     for module in ["Swift", "SystemPackage"] {
         try! _graph(module, into: graphs)
+        var extra: [String] = []
+        for other in extensions[module] ?? [] {
+            try! _graph(other, into: graphs)
+            extra.append("\(graphs)/\(other)@\(module).symbols.json")
+        }
         let output = module == "Swift" ? "StandardLibrary" : module
-        try! swift run -c release swish-bridge "\(graphs)/\(module).symbols.json" "Sources/SwishCore/Bridge/Generated/\(output).swift"
+        try! swift run -c release swish-bridge "\(graphs)/\(module).symbols.json" "Sources/SwishCore/Bridge/Generated/\(output).swift" $extra
     }
 }
 

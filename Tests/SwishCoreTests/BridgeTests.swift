@@ -158,4 +158,7 @@ private func typeError(_ source: String) -> String? {
     #expect(try output(#""abc".reversed(); "abc".sorted()"#) == #"["c", "b", "a"]"# + "\n" + #"["a", "b", "c"]"# + "\n")
     // A type's own member hides the protocol's of the same name and labels.
     #expect(try output("Set([1, 2]).union([9]).sorted(); (1...5).contains(3)") == "[1, 2, 9]\ntrue\n")
+    // What another module adds to a type is an overload: `_StringProcessing`'s
+    // `contains(_: String)` beside Sequence's `contains(_: Character)`.
+    #expect(try output(#""abc".contains("bc"); "abc".contains("b"); "hello" | contains "ell""#) == "true\ntrue\ntrue\n")
 }

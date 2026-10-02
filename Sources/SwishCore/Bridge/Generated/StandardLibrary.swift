@@ -964,6 +964,84 @@ extension Bridge {
                 return .list(result.map { SwiftValue.make($0, as: "Character") })
                     }
                 ),
+                BridgedMember(
+                    kind: .method, name: "contains", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "other", type: .string)],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: String = try String(swishValue: args["self"]!)
+                let result = receiver.contains(try String(swishValue: args["other"]!))
+                return result.swishValue
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "contains", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "other", type: .named("Substring"))],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: String = try String(swishValue: args["self"]!)
+                let result = receiver.contains(try SwiftValue.unbox(Substring.self, args["other"]!))
+                return result.swishValue
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "trimmingPrefix", isStatic: false,
+                    parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.named("Character")], .bool, throws: true))],
+                    returns: .named("Substring"), generics: [:],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: String = try String(swishValue: args["self"]!)
+                let result = try receiver.trimmingPrefix(while: { (a0: Character) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([SwiftValue.make(a0, as: "Character")])) })
+                return SwiftValue.make(result, as: "Substring")
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "trimPrefix", isStatic: false,
+                    parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.named("Character")], .bool, throws: true))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: true, isMutating: true,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: String = try String(swishValue: args["self"]!)
+                try receiver.trimPrefix(while: { (a0: Character) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([SwiftValue.make(a0, as: "Character")])) })
+                return .list([.nothing, receiver.swishValue])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "trimmingPrefix", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "prefix", type: .someSequence(.named("Character")))],
+                    returns: .named("Substring"), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a new collection of the same type by removing `prefix` from the start of the collection. - Parameter prefix: The collection to remove from this collection. - Returns: A collection containing the elements of the collection that are not removed by `prefix`.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: String = try String(swishValue: args["self"]!)
+                let result = receiver.trimmingPrefix(try bridgeSequence(args["prefix"]!).map { try SwiftValue.unbox(Character.self, $0) })
+                return SwiftValue.make(result, as: "Substring")
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "trimPrefix", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "prefix", type: .someSequence(.named("Character")))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false, summary: "Removes `prefix` from the start of the collection. - Parameter prefix: The collection to remove from this collection.",
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: String = try String(swishValue: args["self"]!)
+                receiver.trimPrefix(try bridgeSequence(args["prefix"]!).map { try SwiftValue.unbox(Character.self, $0) })
+                return .list([.nothing, receiver.swishValue])
+                    }
+                ),
             ]
         ),
         BridgedType(
@@ -1847,6 +1925,84 @@ extension Bridge {
                         let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
                 let result = receiver.hasSuffix(try String(swishValue: args["suffix"]!))
                 return result.swishValue
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "contains", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "other", type: .string)],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
+                let result = receiver.contains(try String(swishValue: args["other"]!))
+                return result.swishValue
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "contains", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "other", type: .named("Substring"))],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
+                let result = receiver.contains(try SwiftValue.unbox(Substring.self, args["other"]!))
+                return result.swishValue
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "trimmingPrefix", isStatic: false,
+                    parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.named("Character")], .bool, throws: true))],
+                    returns: .named("Substring"), generics: [:],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
+                let result = try receiver.trimmingPrefix(while: { (a0: Character) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([SwiftValue.make(a0, as: "Character")])) })
+                return SwiftValue.make(result, as: "Substring")
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "trimPrefix", isStatic: false,
+                    parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.named("Character")], .bool, throws: true))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: true, isMutating: true,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
+                try receiver.trimPrefix(while: { (a0: Character) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([SwiftValue.make(a0, as: "Character")])) })
+                return .list([.nothing, SwiftValue.make(receiver, as: "Substring")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "trimmingPrefix", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "prefix", type: .someSequence(.named("Character")))],
+                    returns: .named("Substring"), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a new collection of the same type by removing `prefix` from the start of the collection. - Parameter prefix: The collection to remove from this collection. - Returns: A collection containing the elements of the collection that are not removed by `prefix`.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
+                let result = receiver.trimmingPrefix(try bridgeSequence(args["prefix"]!).map { try SwiftValue.unbox(Character.self, $0) })
+                return SwiftValue.make(result, as: "Substring")
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "trimPrefix", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "prefix", type: .someSequence(.named("Character")))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false, summary: "Removes `prefix` from the start of the collection. - Parameter prefix: The collection to remove from this collection.",
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: Substring = try SwiftValue.unbox(Substring.self, args["self"]!)
+                receiver.trimPrefix(try bridgeSequence(args["prefix"]!).map { try SwiftValue.unbox(Character.self, $0) })
+                return .list([.nothing, SwiftValue.make(receiver, as: "Substring")])
                     }
                 ),
             ]
@@ -4482,6 +4638,58 @@ extension Bridge {
                 return .list(result)
                     }
                 ),
+                BridgedMember(
+                    kind: .method, name: "trimmingPrefix", isStatic: false,
+                    parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
+                    returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: [Value] = try bridgeList(args["self"]!)
+                let result = try receiver.trimmingPrefix(while: { (a0: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([a0])) })
+                return SwiftValue.make(result, as: "ArraySlice")
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "trimPrefix", isStatic: false,
+                    parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: true, isMutating: true,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value] = try bridgeList(args["self"]!)
+                try receiver.trimPrefix(while: { (a0: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([a0])) })
+                return .list([.nothing, .list(receiver)])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "trimmingPrefix", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "prefix", type: .someSequence(.parameter("Element")))],
+                    returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": ["Equatable"]],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a new collection of the same type by removing `prefix` from the start of the collection. - Parameter prefix: The collection to remove from this collection. - Returns: A collection containing the elements of the collection that are not removed by `prefix`.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: [Value] = try bridgeList(args["self"]!)
+                let result = receiver.trimmingPrefix(try bridgeSequence(args["prefix"]!))
+                return SwiftValue.make(result, as: "ArraySlice")
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "trimPrefix", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "prefix", type: .someSequence(.parameter("Element")))],
+                    returns: .void, generics: ["Element": ["Equatable"]],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false, summary: "Removes `prefix` from the start of the collection. - Parameter prefix: The collection to remove from this collection.",
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: [Value] = try bridgeList(args["self"]!)
+                receiver.trimPrefix(try bridgeSequence(args["prefix"]!))
+                return .list([.nothing, .list(receiver)])
+                    }
+                ),
             ]
         ),
         BridgedType(
@@ -5551,6 +5759,58 @@ extension Bridge {
                         let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
                 let result: [Value] = receiver.reversed()
                 return .list(result)
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "trimmingPrefix", isStatic: false,
+                    parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
+                    returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                let result = try receiver.trimmingPrefix(while: { (a0: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([a0])) })
+                return SwiftValue.make(result, as: "ArraySlice")
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "trimPrefix", isStatic: false,
+                    parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.parameter("Element")], .bool, throws: true))],
+                    returns: .void, generics: ["Element": []],
+                    isThrowing: false, isRethrowing: true, isMutating: true,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                try receiver.trimPrefix(while: { (a0: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([a0])) })
+                return .list([.nothing, SwiftValue.make(receiver, as: "ArraySlice")])
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "trimmingPrefix", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "prefix", type: .someSequence(.parameter("Element")))],
+                    returns: .generic("ArraySlice", [.parameter("Element")]), generics: ["Element": ["Equatable"]],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a new collection of the same type by removing `prefix` from the start of the collection. - Parameter prefix: The collection to remove from this collection. - Returns: A collection containing the elements of the collection that are not removed by `prefix`.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                let result = receiver.trimmingPrefix(try bridgeSequence(args["prefix"]!))
+                return SwiftValue.make(result, as: "ArraySlice")
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "trimPrefix", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "prefix", type: .someSequence(.parameter("Element")))],
+                    returns: .void, generics: ["Element": ["Equatable"]],
+                    isThrowing: false, isRethrowing: false, isMutating: true,
+                    discardableResult: false, summary: "Removes `prefix` from the start of the collection. - Parameter prefix: The collection to remove from this collection.",
+                    body: .native { shell, args in
+                        _ = shell
+                        var receiver: ArraySlice<Value> = try SwiftValue.unbox(ArraySlice<Value>.self, args["self"]!)
+                receiver.trimPrefix(try bridgeSequence(args["prefix"]!))
+                return .list([.nothing, SwiftValue.make(receiver, as: "ArraySlice")])
                     }
                 ),
             ]
@@ -8004,6 +8264,32 @@ extension Bridge {
                         let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
                 let result: [Int] = try receiver.sorted(by: { (a0: Int, a1: Int) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0.swishValue, a1.swishValue])) })
                 return .list(result.map { $0.swishValue })
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "trimmingPrefix", isStatic: false,
+                    parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.int], .bool, throws: true))],
+                    returns: .generic("Range", [.int]), generics: ["Bound": ["=Int"]],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
+                let result = try receiver.trimmingPrefix(while: { (a0: Int) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([a0.swishValue])) })
+                return bridgeBox(result, as: "Range") { r in Range<Value>(uncheckedBounds: (lower: r.lowerBound.swishValue, upper: r.upperBound.swishValue)) }
+                    }
+                ),
+                BridgedMember(
+                    kind: .method, name: "trimmingPrefix", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "prefix", type: .someSequence(.int))],
+                    returns: .generic("Range", [.int]), generics: ["Bound": ["=Int"]],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a new collection of the same type by removing `prefix` from the start of the collection. - Parameter prefix: The collection to remove from this collection. - Returns: A collection containing the elements of the collection that are not removed by `prefix`.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Range<Int> = try bridgeRange(args["self"]!) { try Int(swishValue: $0) }
+                let result = receiver.trimmingPrefix(try bridgeSequence(args["prefix"]!).map { try Int(swishValue: $0) })
+                return bridgeBox(result, as: "Range") { r in Range<Value>(uncheckedBounds: (lower: r.lowerBound.swishValue, upper: r.upperBound.swishValue)) }
                     }
                 ),
             ]
