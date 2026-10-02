@@ -28,14 +28,14 @@ func bridge() {
     try! swift build
     // Other modules that extend a module's types, whose graphs are read with it.
     let extensions = ["Swift": ["_StringProcessing"]]
-    for module in ["Swift", "SystemPackage"] {
+    for module in ["Swift", "SystemPackage", "SwishStandardLibrary"] {
         try! _graph(module, into: graphs)
         var extra: [String] = []
         for other in extensions[module] ?? [] {
             try! _graph(other, into: graphs)
             extra.append("\(graphs)/\(other)@\(module).symbols.json")
         }
-        let output = module == "Swift" ? "StandardLibrary" : module
+        let output = module == "Swift" ? "StandardLibrary" : module == "SwishStandardLibrary" ? "SwishLibrary" : module
         try! swift run -c release swish-bridge "\(graphs)/\(module).symbols.json" "Sources/SwishCore/Bridge/Generated/\(output).swift" $extra
     }
 }

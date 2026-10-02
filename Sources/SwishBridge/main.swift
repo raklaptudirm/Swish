@@ -42,7 +42,18 @@ struct Symbol: Decodable {
     /// Its documentation's first paragraph, on one line: what `help` shows.
     var summary: String {
         let lines = (docComment?.lines ?? []).map { $0.text.trimmingCharacters(in: .whitespaces) }
-        return lines.drop { $0.isEmpty }.prefix { !$0.isEmpty }.joined(separator: " ")
+        return lines.drop { $0.isEmpty }.prefix { !$0.isEmpty && !$0.hasPrefix("- ") }.joined(separator: " ")
+    }
+
+    /// Its `- Parameter name: text` lines, for `help`'s flags.
+    var parameterDocs: [String: String] {
+        var docs: [String: String] = [:]
+        for line in (docComment?.lines ?? []).map({ $0.text.trimmingCharacters(in: .whitespaces) }) {
+            guard line.hasPrefix("- Parameter "), let colon = line.firstIndex(of: ":") else { continue }
+            let name = line[line.index(line.startIndex, offsetBy: 12)..<colon].trimmingCharacters(in: .whitespaces)
+            docs[name] = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
+        }
+        return docs
     }
 }
 struct Relationship: Decodable {
@@ -682,21 +693,27 @@ let graph: Graph = try {
 
 /// What's bridged from each module: its types, with their generic
 /// parameters, and the name of the list the output declares.
-let modules: [String: (list: String, types: [(String, [String])])] = [
+let modules: [String: (list: String, types: [(String, [String])], functions: String?, external: [String])] = [
     "Swift": ("standardLibrary", [
         ("String", []), ("Substring", []), ("Character", []), ("Int", []), ("Double", []), ("Bool", []),
         ("Array", ["Element"]), ("ArraySlice", ["Element"]), ("Set", ["Element"]), ("Dictionary", ["Key", "Value"]),
         ("Optional", ["Wrapped"]), ("Range", ["Bound"]), ("ClosedRange", ["Bound"]),
-    ]),
+    ], nil, []),
     // FilePath.Root is left out: the standard library's FilePath (SE-0529)
     // calls it Anchor.
-    "SystemPackage": ("system", [("FilePath", []), ("FilePath.Component", []), ("FilePath.ComponentView", [])]),
+    "SystemPackage": ("system", [("FilePath", []), ("FilePath.Component", []), ("FilePath.ComponentView", [])], nil, []),
+    // The shell's own functions: every public free function. Their types are
+    // Swift's (bridged from the other modules, so held here as they are).
+    "SwishStandardLibrary": ("", [], "standardFunctions", ["FilePath"]),
 ]
 guard let module = modules[graph.module.name] else {
     FileHandle.standardError.write(Data("swish-bridge: nothing to bridge from \(graph.module.name)\n".utf8))
     exit(2)
 }
 let bridgedTypeNames = module.types
+for name in module.external where leaves[name] == nil {
+    leaves[name] = (".named(\(quoted(name)))", { "try SwiftValue.unbox(\(name).self, \($0))" }, { "SwiftValue.make(\($0), as: \(quoted(name)))" })
+}
 // Other types that aren't generic, Swish having no value of its own for
 // them (Character, FilePath), are held as they are, boxed.
 for (name, parameters) in bridgedTypeNames where parameters.isEmpty && leaves[name] == nil {
@@ -825,7 +842,7 @@ func sequenceParameter(_ type: SType, _ sequences: Set<String>) -> String? {
 }
 
 /// The Swift for one member: its signature and glue.
-func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Constraint] = []) throws -> (key: String, shape: String, code: String) {
+func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Constraint] = [], free: Bool = false) throws -> (key: String, shape: String, codes: [String]) {
     let text = (symbol.declarationFragments ?? []).map(\.spelling).joined()
     let declaration = try parseDeclaration(text)
     if declaration.isMutating && declaration.isStatic { throw Unsupported(reason: "mutating") }
@@ -948,12 +965,15 @@ func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Const
     let target: String
     switch declaration.kind {
     case .initializer: target = "\(swiftType)(\(arguments))"
-    case .method: target = (declaration.isStatic ? swiftType : "receiver") + ".\(swiftName(declaration.name))(\(arguments))"
+    case .method:
+        // A free function is the module's own: qualified, so a standard
+        // library function of the same name (readLine) isn't ambiguous.
+        target = (free ? graph.module.name : declaration.isStatic ? swiftType : "receiver") + ".\(swiftName(declaration.name))(\(arguments))"
     case .property: target = (declaration.isStatic ? swiftType : "receiver") + ".\(swiftName(declaration.name))"
     }
     let tryPrefix = declaration.throwing || declaration.rethrowing ? "try " : ""
     var body = ""
-    if !declaration.isStatic && declaration.kind != .initializer {
+    if !declaration.isStatic && declaration.kind != .initializer && !free {
         let binding = declaration.isMutating ? "var" : "let"
         body += "\(binding) receiver: \(swiftType) = \(fromSwish("args[\"self\"]!", receiverType))\n                "
     }
@@ -976,10 +996,9 @@ func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Const
     let kind = declaration.kind == .initializer ? ".initializer" : declaration.kind == .property ? ".property" : ".method"
     // `var extension: String? { get set }`: a setter too, which changes a
     // copy of the receiver and gives it back, as a mutating method does.
-    var setter = ""
+    var setter: String?
     if declaration.kind == .property, !declaration.isStatic, text.contains("set }") {
         setter = """
-
                 BridgedMember(
                     kind: .setter, name: \(quoted(declaration.name)), isStatic: false,
                     parameters: [Parameter(label: nil, name: "newValue", type: \(annotation(returns)))],
@@ -992,11 +1011,14 @@ func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Const
                         receiver.\(swiftName(declaration.name)) = \(fromSwish("args[\"newValue\"]!", returns))
                         return .list([.nothing, \(toSwish("receiver", receiverType))])
                     }
-                ),
+                )
 """
     }
+    // A function's flags are documented in `help`; a member's are not shown.
+    let docs = free ? symbol.parameterDocs : [:]
+    let parameterDocs = docs.isEmpty ? "" : ",\n                    parameterDocs: [" + docs.sorted { $0.key < $1.key }.map { "\(quoted($0.key)): \(quoted($0.value))" }.joined(separator: ", ") + "]"
     let genericsCode = generics.isEmpty ? "[:]" : "[" + generics.sorted { $0.key < $1.key }.map { "\(quoted($0.key)): [\($0.value.map(quoted).joined(separator: ", "))]" }.joined(separator: ", ") + "]"
-    return (key, shape, """
+    let member = """
                 BridgedMember(
                     kind: \(kind), name: \(quoted(declaration.name)), isStatic: \(declaration.isStatic),
                     parameters: [\(parameterCode.joined(separator: ", "))],
@@ -1006,9 +1028,10 @@ func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Const
                     body: .native { shell, args in
                         _ = shell
                         \(body)
-                    }
-                ),\(setter)
-""")
+                    }\(parameterDocs)
+                )
+"""
+    return (key, shape, [member] + (setter.map { [$0] } ?? []))
 }
 
 var output = """
@@ -1016,13 +1039,22 @@ var output = """
 // Don't edit: `run bridge` remakes it.
 import Foundation
 import SwishKit
-\(graph.module.name == "Swift" ? "" : "import \(graph.module.name)\n")
+\(graph.module.name == "Swift" ? "" : "import \(graph.module.name)\n")\(module.external.isEmpty ? "" : "import SystemPackage\n")
 extension Bridge {
-    nonisolated(unsafe) static let \(module.list): [BridgedType] = [
+\(module.types.isEmpty ? "" : "    nonisolated(unsafe) static let \(module.list): [BridgedType] = [\n")
 
 """
 var skipped: [String: Int] = [:]
 var counts: [String: Int] = [:]
+/// Each member is a declaration of its own, not an element of one big
+/// array: Swift checks an expression at a time, and 80 closures in a literal
+/// take gigabytes to check together.
+nonisolated(unsafe) var declarations: [String] = []
+func declare(_ expression: String) -> String {
+    let name = "member\(declarations.count)"
+    declarations.append("    nonisolated(unsafe) private static let \(name): BridgedMember = \(expression)\n")
+    return name
+}
 
 for (name, _) in bridgedTypeNames {
     let owner = types[name]!
@@ -1060,12 +1092,12 @@ for (name, _) in bridgedTypeNames {
         guard !title.hasPrefix("_"), title.first?.isLetter ?? false else { continue }
         if swishOwn[name]?.contains(title) ?? false { continue }
         do {
-            let (key, shape, code) = try bridge(symbol, of: owner, given: conditions)
+            let (key, shape, codes) = try bridge(symbol, of: owner, given: conditions)
             // What another module adds is an overload, not a default.
             if index >= ownCount, bridgedShapes.contains(shape), !addedByOthers.contains(symbol.identifier.precise) { continue }
             guard seen.insert(key).inserted else { continue }
             if index < ownCount { bridgedShapes.insert(shape) }
-            members.append(code)
+            members.append(contentsOf: codes.map(declare))
             counts[name, default: 0] += 1
         } catch let unsupported as Unsupported {
             // SWISH_BRIDGE_DEBUG=Set: why each of a type's members is left out.
@@ -1117,13 +1149,27 @@ for (name, _) in bridgedTypeNames {
             associatedTypes: [\(associated.isEmpty ? ":" : associated.joined(separator: ", "))],
             parse: \(parse), literal: \(literal), arrayLiteral: \(arrayLiteral),
             members: [
-\(members.joined(separator: "\n"))
+                \(members.joined(separator: ", "))
             ]
         ),
 
 """
 }
-output += "    ]\n}\n"
+if !module.types.isEmpty { output += "    ]\n" }
+if let list = module.functions {
+    var functions: [String] = []
+    for symbol in graph.symbols where symbol.kind.identifier == "swift.func" && symbol.pathComponents.count == 1
+        && symbol.accessLevel == "public" && available(symbol) {
+        do {
+            let (_, _, codes) = try bridge(symbol, of: BridgedType(name: "", parameters: []), free: true)
+            functions += codes.map(declare)
+        } catch let unsupported as Unsupported {
+            FileHandle.standardError.write(Data("\(symbol.pathComponents[0]): \(unsupported.reason)\n".utf8))
+        }
+    }
+    output += "    nonisolated(unsafe) static let \(list): [BridgedMember] = [\(functions.joined(separator: ", "))]\n"
+}
+output += declarations.joined(separator: "\n") + "}\n"
 try output.write(to: URL(fileURLWithPath: arguments[2]), atomically: true, encoding: .utf8)
 let total = counts.values.reduce(0, +)
 FileHandle.standardError.write(Data("bridged \(total) members (\(bridgedTypeNames.map { "\($0.0) \(counts[$0.0] ?? 0)" }.joined(separator: ", "))); left out: \(skipped.sorted { $0.value > $1.value }.prefix(12).map { "\($0.key) \($0.value)" }.joined(separator: ", "))\n".utf8))

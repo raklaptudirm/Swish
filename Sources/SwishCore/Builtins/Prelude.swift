@@ -89,15 +89,8 @@ extension Shell {
     /// - Parameter all: include hidden files
     func ls(_ paths: FilePath..., @flag("a") all: Bool = false) -> [FileEntry]
 
-    /// The working directory.
-    func pwd() -> FilePath
-
     /// What you've entered at the prompt, oldest first.
     func history() -> [String]
-
-    /// A line of standard input, or nil at its end.
-    /// - Parameter strippingNewline: leave the line's newline off
-    func readLine(strippingNewline: Bool = true) -> String?
 
     /// Lists running processes. Memory and CPU time are only known for your own processes.
     func ps() -> [ProcessEntry]

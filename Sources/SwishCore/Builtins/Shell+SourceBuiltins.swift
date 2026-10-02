@@ -78,35 +78,10 @@ extension Shell {
         return .record(record)
     }
 
-    func pwd() -> Function {
-        .builtin("pwd", "The working directory.", [], .native { _, _ in
-            pathValue(FileManager.default.currentDirectoryPath)
-        })
-    }
-
     func history() -> Function {
         .builtin("history", "What you've entered at the prompt, oldest first.", [], .native { shell, _ in
             .list(shell.historyEntries.map(Value.string))
         })
-    }
-
-    func readLine() -> Function {
-        .builtin(
-            "readLine", "A line of standard input, or nil at its end.",
-            [.option("strippingNewline", .bool, default: .bool(true))],
-            .native { _, args in
-                // A byte at a time, so nothing past the line is taken from
-                // programs that read the rest.
-                var bytes: [UInt8] = []
-                while let byte = readByte(STDIN_FILENO) {
-                    bytes.append(byte)
-                    if byte == UInt8(ascii: "\n") { break }
-                }
-                guard !bytes.isEmpty else { return .nothing }
-                if args["strippingNewline"] != .bool(false), bytes.last == UInt8(ascii: "\n") { bytes.removeLast() }
-                return .string(String(decoding: bytes, as: UTF8.self))
-            }
-        )
     }
 
     func ps() -> Function {

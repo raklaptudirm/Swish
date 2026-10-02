@@ -22,9 +22,16 @@ let package = Package(
         // Reads Swift's symbol graphs and writes the glue that bridges them
         // (`run bridge`); not part of the shell.
         .executableTarget(name: "SwishBridge"),
+        // The shell's own functions, written in Swift: `swish-bridge` reads
+        // their declarations (`run bridge`) and SwishCore calls them.
+        .target(
+            name: "SwishStandardLibrary",
+            dependencies: [.product(name: "SystemPackage", package: "swift-system")]
+        ),
         .target(
             name: "SwishCore",
             dependencies: [
+                "SwishStandardLibrary",
                 .product(name: "SwishKit", package: "SwishKit"),
                 .product(name: "SystemPackage", package: "swift-system"),
             ]

@@ -6,13 +6,36 @@ import SystemPackage
 
 extension Bridge {
     nonisolated(unsafe) static let system: [BridgedType] = [
+
         BridgedType(
             name: "FilePath", genericParameters: [],
             conformances: ["CustomStringConvertible": [:], "Encodable": [:], "Equatable": [:], "ExpressibleByStringLiteral": [:], "Hashable": [:]],
             associatedTypes: [:],
             parse: nil, literal: { textLiteral(FilePath.self, $0).map { SwiftValue.make($0, as: "FilePath") } }, arrayLiteral: nil,
             members: [
-                BridgedMember(
+                member0, member1, member2, member3, member4, member5, member6, member7, member8, member9, member10, member11, member12, member13, member14, member15, member16, member17, member18, member19, member20, member21, member22, member23, member24, member25, member26, member27, member28, member29, member30, member31, member32, member33
+            ]
+        ),
+        BridgedType(
+            name: "FilePath.Component", genericParameters: [],
+            conformances: ["CustomStringConvertible": [:], "Encodable": [:], "Equatable": [:], "ExpressibleByStringLiteral": [:], "Hashable": [:]],
+            associatedTypes: [:],
+            parse: { FilePath.Component($0).map { SwiftValue.make($0, as: "FilePath.Component") } }, literal: { textLiteral(FilePath.Component.self, $0).map { SwiftValue.make($0, as: "FilePath.Component") } }, arrayLiteral: nil,
+            members: [
+                member34, member35, member36, member37, member38, member39, member40
+            ]
+        ),
+        BridgedType(
+            name: "FilePath.ComponentView", genericParameters: [],
+            conformances: ["Encodable": [:], "Equatable": [:], "Hashable": [:], "Sequence": [:]],
+            associatedTypes: ["Element": .named("FilePath.Component")],
+            parse: nil, literal: nil, arrayLiteral: nil,
+            members: [
+                member41, member42, member43, member44, member45, member46, member47, member48, member49, member50, member51, member52, member53, member54, member55, member56, member57, member58, member59, member60, member61, member62, member63, member64, member65, member66, member67, member68, member69, member70, member71, member72, member73, member74, member75, member76, member77, member78, member79, member80, member81, member82
+            ]
+        ),
+    ]
+    nonisolated(unsafe) private static let member0: BridgedMember =                 BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [],
                     returns: .named("FilePath"), generics: [:],
@@ -23,8 +46,9 @@ extension Bridge {
                         let result = FilePath()
                 return SwiftValue.make(result, as: "FilePath")
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member1: BridgedMember =                 BridgedMember(
                     kind: .property, name: "length", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
@@ -36,8 +60,9 @@ extension Bridge {
                 let result = receiver.length
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member2: BridgedMember =                 BridgedMember(
                     kind: .property, name: "components", isStatic: false,
                     parameters: [],
                     returns: .named("FilePath.ComponentView"), generics: [:],
@@ -49,8 +74,9 @@ extension Bridge {
                 let result = receiver.components
                 return SwiftValue.make(result, as: "FilePath.ComponentView")
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member3: BridgedMember =                 BridgedMember(
                     kind: .setter, name: "components", isStatic: false,
                     parameters: [Parameter(label: nil, name: "newValue", type: .named("FilePath.ComponentView"))],
                     returns: .void, generics: [:],
@@ -62,8 +88,9 @@ extension Bridge {
                         receiver.components = try SwiftValue.unbox(FilePath.ComponentView.self, args["newValue"]!)
                         return .list([.nothing, SwiftValue.make(receiver, as: "FilePath")])
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member4: BridgedMember =                 BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "stringLiteral", name: "stringLiteral", type: .string)],
                     returns: .named("FilePath"), generics: [:],
@@ -74,8 +101,9 @@ extension Bridge {
                         let result = FilePath(stringLiteral: try String(swishValue: args["stringLiteral"]!))
                 return SwiftValue.make(result, as: "FilePath")
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member5: BridgedMember =                 BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "string", type: .string)],
                     returns: .named("FilePath"), generics: [:],
@@ -86,8 +114,9 @@ extension Bridge {
                         let result = FilePath(try String(swishValue: args["string"]!))
                 return SwiftValue.make(result, as: "FilePath")
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member6: BridgedMember =                 BridgedMember(
                     kind: .property, name: "description", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
@@ -99,8 +128,9 @@ extension Bridge {
                 let result = receiver.description
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member7: BridgedMember =                 BridgedMember(
                     kind: .property, name: "debugDescription", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
@@ -112,8 +142,9 @@ extension Bridge {
                 let result = receiver.debugDescription
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member8: BridgedMember =                 BridgedMember(
                     kind: .property, name: "string", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
@@ -125,8 +156,9 @@ extension Bridge {
                 let result = receiver.string
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member9: BridgedMember =                 BridgedMember(
                     kind: .property, name: "isAbsolute", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
@@ -138,8 +170,9 @@ extension Bridge {
                 let result = receiver.isAbsolute
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member10: BridgedMember =                 BridgedMember(
                     kind: .property, name: "isRelative", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
@@ -151,8 +184,9 @@ extension Bridge {
                 let result = receiver.isRelative
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member11: BridgedMember =                 BridgedMember(
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "other", type: .named("FilePath"))],
                     returns: .bool, generics: [:],
@@ -164,8 +198,9 @@ extension Bridge {
                 let result = receiver.starts(with: try SwiftValue.unbox(FilePath.self, args["other"]!))
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member12: BridgedMember =                 BridgedMember(
                     kind: .method, name: "ends", isStatic: false,
                     parameters: [Parameter(label: "with", name: "other", type: .named("FilePath"))],
                     returns: .bool, generics: [:],
@@ -177,8 +212,9 @@ extension Bridge {
                 let result = receiver.ends(with: try SwiftValue.unbox(FilePath.self, args["other"]!))
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member13: BridgedMember =                 BridgedMember(
                     kind: .property, name: "isEmpty", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
@@ -190,8 +226,9 @@ extension Bridge {
                 let result = receiver.isEmpty
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member14: BridgedMember =                 BridgedMember(
                     kind: .method, name: "removingRoot", isStatic: false,
                     parameters: [],
                     returns: .named("FilePath"), generics: [:],
@@ -203,8 +240,9 @@ extension Bridge {
                 let result = receiver.removingRoot()
                 return SwiftValue.make(result, as: "FilePath")
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member15: BridgedMember =                 BridgedMember(
                     kind: .property, name: "lastComponent", isStatic: false,
                     parameters: [],
                     returns: .optional(.named("FilePath.Component")), generics: [:],
@@ -216,8 +254,9 @@ extension Bridge {
                 let result = receiver.lastComponent
                 return (result.map { SwiftValue.make($0, as: "FilePath.Component") } ?? .nothing)
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member16: BridgedMember =                 BridgedMember(
                     kind: .method, name: "removingLastComponent", isStatic: false,
                     parameters: [],
                     returns: .named("FilePath"), generics: [:],
@@ -229,8 +268,9 @@ extension Bridge {
                 let result = receiver.removingLastComponent()
                 return SwiftValue.make(result, as: "FilePath")
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member17: BridgedMember =                 BridgedMember(
                     kind: .method, name: "removeLastComponent", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
@@ -242,8 +282,9 @@ extension Bridge {
                 let result = receiver.removeLastComponent()
                 return .list([result.swishValue, SwiftValue.make(receiver, as: "FilePath")])
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member18: BridgedMember =                 BridgedMember(
                     kind: .property, name: "extension", isStatic: false,
                     parameters: [],
                     returns: .optional(.string), generics: [:],
@@ -255,8 +296,9 @@ extension Bridge {
                 let result = receiver.`extension`
                 return (result.map { $0.swishValue } ?? .nothing)
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member19: BridgedMember =                 BridgedMember(
                     kind: .setter, name: "extension", isStatic: false,
                     parameters: [Parameter(label: nil, name: "newValue", type: .optional(.string))],
                     returns: .void, generics: [:],
@@ -268,8 +310,9 @@ extension Bridge {
                         receiver.`extension` = (args["newValue"]! == .nothing ? nil : try String(swishValue: args["newValue"]!))
                         return .list([.nothing, SwiftValue.make(receiver, as: "FilePath")])
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member20: BridgedMember =                 BridgedMember(
                     kind: .property, name: "stem", isStatic: false,
                     parameters: [],
                     returns: .optional(.string), generics: [:],
@@ -281,8 +324,9 @@ extension Bridge {
                 let result = receiver.stem
                 return (result.map { $0.swishValue } ?? .nothing)
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member21: BridgedMember =                 BridgedMember(
                     kind: .property, name: "isLexicallyNormal", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
@@ -294,8 +338,9 @@ extension Bridge {
                 let result = receiver.isLexicallyNormal
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member22: BridgedMember =                 BridgedMember(
                     kind: .method, name: "lexicallyNormalize", isStatic: false,
                     parameters: [],
                     returns: .void, generics: [:],
@@ -307,8 +352,9 @@ extension Bridge {
                 receiver.lexicallyNormalize()
                 return .list([.nothing, SwiftValue.make(receiver, as: "FilePath")])
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member23: BridgedMember =                 BridgedMember(
                     kind: .method, name: "lexicallyNormalized", isStatic: false,
                     parameters: [],
                     returns: .named("FilePath"), generics: [:],
@@ -320,8 +366,9 @@ extension Bridge {
                 let result = receiver.lexicallyNormalized()
                 return SwiftValue.make(result, as: "FilePath")
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member24: BridgedMember =                 BridgedMember(
                     kind: .method, name: "lexicallyResolving", isStatic: false,
                     parameters: [Parameter(label: nil, name: "subpath", type: .named("FilePath"))],
                     returns: .optional(.named("FilePath")), generics: [:],
@@ -333,8 +380,9 @@ extension Bridge {
                 let result = receiver.lexicallyResolving(try SwiftValue.unbox(FilePath.self, args["subpath"]!))
                 return (result.map { SwiftValue.make($0, as: "FilePath") } ?? .nothing)
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member25: BridgedMember =                 BridgedMember(
                     kind: .method, name: "removePrefix", isStatic: false,
                     parameters: [Parameter(label: nil, name: "prefix", type: .named("FilePath"))],
                     returns: .bool, generics: [:],
@@ -346,8 +394,9 @@ extension Bridge {
                 let result = receiver.removePrefix(try SwiftValue.unbox(FilePath.self, args["prefix"]!))
                 return .list([result.swishValue, SwiftValue.make(receiver, as: "FilePath")])
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member26: BridgedMember =                 BridgedMember(
                     kind: .method, name: "append", isStatic: false,
                     parameters: [Parameter(label: nil, name: "component", type: .named("FilePath.Component"))],
                     returns: .void, generics: [:],
@@ -359,8 +408,9 @@ extension Bridge {
                 receiver.append(try SwiftValue.unbox(FilePath.Component.self, args["component"]!))
                 return .list([.nothing, SwiftValue.make(receiver, as: "FilePath")])
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member27: BridgedMember =                 BridgedMember(
                     kind: .method, name: "append", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .string)],
                     returns: .void, generics: [:],
@@ -372,8 +422,9 @@ extension Bridge {
                 receiver.append(try String(swishValue: args["other"]!))
                 return .list([.nothing, SwiftValue.make(receiver, as: "FilePath")])
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member28: BridgedMember =                 BridgedMember(
                     kind: .method, name: "appending", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .named("FilePath.Component"))],
                     returns: .named("FilePath"), generics: [:],
@@ -385,8 +436,9 @@ extension Bridge {
                 let result = receiver.appending(try SwiftValue.unbox(FilePath.Component.self, args["other"]!))
                 return SwiftValue.make(result, as: "FilePath")
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member29: BridgedMember =                 BridgedMember(
                     kind: .method, name: "appending", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .string)],
                     returns: .named("FilePath"), generics: [:],
@@ -398,8 +450,9 @@ extension Bridge {
                 let result = receiver.appending(try String(swishValue: args["other"]!))
                 return SwiftValue.make(result, as: "FilePath")
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member30: BridgedMember =                 BridgedMember(
                     kind: .method, name: "push", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .named("FilePath"))],
                     returns: .void, generics: [:],
@@ -411,8 +464,9 @@ extension Bridge {
                 receiver.push(try SwiftValue.unbox(FilePath.self, args["other"]!))
                 return .list([.nothing, SwiftValue.make(receiver, as: "FilePath")])
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member31: BridgedMember =                 BridgedMember(
                     kind: .method, name: "pushing", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .named("FilePath"))],
                     returns: .named("FilePath"), generics: [:],
@@ -424,8 +478,9 @@ extension Bridge {
                 let result = receiver.pushing(try SwiftValue.unbox(FilePath.self, args["other"]!))
                 return SwiftValue.make(result, as: "FilePath")
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member32: BridgedMember =                 BridgedMember(
                     kind: .method, name: "removeAll", isStatic: false,
                     parameters: [Parameter(label: "keepingCapacity", name: "keepingCapacity", type: .bool, defaultValue: .literal(.bool(false)))],
                     returns: .void, generics: [:],
@@ -437,8 +492,9 @@ extension Bridge {
                 receiver.removeAll(keepingCapacity: try Bool(swishValue: args["keepingCapacity"]!))
                 return .list([.nothing, SwiftValue.make(receiver, as: "FilePath")])
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member33: BridgedMember =                 BridgedMember(
                     kind: .method, name: "reserveCapacity", isStatic: false,
                     parameters: [Parameter(label: nil, name: "minimumCapacity", type: .int)],
                     returns: .void, generics: [:],
@@ -450,16 +506,9 @@ extension Bridge {
                 receiver.reserveCapacity(try Int(swishValue: args["minimumCapacity"]!))
                 return .list([.nothing, SwiftValue.make(receiver, as: "FilePath")])
                     }
-                ),
-            ]
-        ),
-        BridgedType(
-            name: "FilePath.Component", genericParameters: [],
-            conformances: ["CustomStringConvertible": [:], "Encodable": [:], "Equatable": [:], "ExpressibleByStringLiteral": [:], "Hashable": [:]],
-            associatedTypes: [:],
-            parse: { FilePath.Component($0).map { SwiftValue.make($0, as: "FilePath.Component") } }, literal: { textLiteral(FilePath.Component.self, $0).map { SwiftValue.make($0, as: "FilePath.Component") } }, arrayLiteral: nil,
-            members: [
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member34: BridgedMember =                 BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "stringLiteral", name: "stringLiteral", type: .string)],
                     returns: .named("FilePath.Component"), generics: [:],
@@ -470,8 +519,9 @@ extension Bridge {
                         let result = FilePath.Component(stringLiteral: try String(swishValue: args["stringLiteral"]!))
                 return SwiftValue.make(result, as: "FilePath.Component")
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member35: BridgedMember =                 BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "string", type: .string)],
                     returns: .optional(.named("FilePath.Component")), generics: [:],
@@ -482,8 +532,9 @@ extension Bridge {
                         let result = FilePath.Component(try String(swishValue: args["string"]!))
                 return (result.map { SwiftValue.make($0, as: "FilePath.Component") } ?? .nothing)
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member36: BridgedMember =                 BridgedMember(
                     kind: .property, name: "description", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
@@ -495,8 +546,9 @@ extension Bridge {
                 let result = receiver.description
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member37: BridgedMember =                 BridgedMember(
                     kind: .property, name: "debugDescription", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
@@ -508,8 +560,9 @@ extension Bridge {
                 let result = receiver.debugDescription
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member38: BridgedMember =                 BridgedMember(
                     kind: .property, name: "string", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
@@ -521,8 +574,9 @@ extension Bridge {
                 let result = receiver.string
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member39: BridgedMember =                 BridgedMember(
                     kind: .property, name: "extension", isStatic: false,
                     parameters: [],
                     returns: .optional(.string), generics: [:],
@@ -534,8 +588,9 @@ extension Bridge {
                 let result = receiver.`extension`
                 return (result.map { $0.swishValue } ?? .nothing)
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member40: BridgedMember =                 BridgedMember(
                     kind: .property, name: "stem", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
@@ -547,16 +602,9 @@ extension Bridge {
                 let result = receiver.stem
                 return result.swishValue
                     }
-                ),
-            ]
-        ),
-        BridgedType(
-            name: "FilePath.ComponentView", genericParameters: [],
-            conformances: ["Encodable": [:], "Equatable": [:], "Hashable": [:], "Sequence": [:]],
-            associatedTypes: ["Element": .named("FilePath.Component")],
-            parse: nil, literal: nil, arrayLiteral: nil,
-            members: [
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member41: BridgedMember =                 BridgedMember(
                     kind: .method, name: "map", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.named("FilePath.Component")], .parameter("T"), throws: true))],
                     returns: .list(.parameter("T")), generics: ["T": []],
@@ -568,8 +616,9 @@ extension Bridge {
                 let result: [Value] = try receiver.map({ (a0: FilePath.Component) throws -> Value in try bridgeClosure(shell, args["transform"]!)([SwiftValue.make(a0, as: "FilePath.Component")]) })
                 return .list(result)
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member42: BridgedMember =                 BridgedMember(
                     kind: .property, name: "last", isStatic: false,
                     parameters: [],
                     returns: .optional(.named("FilePath.Component")), generics: [:],
@@ -581,8 +630,9 @@ extension Bridge {
                 let result = receiver.last
                 return (result.map { SwiftValue.make($0, as: "FilePath.Component") } ?? .nothing)
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member43: BridgedMember =                 BridgedMember(
                     kind: .method, name: "last", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.named("FilePath.Component")], .bool, throws: true))],
                     returns: .optional(.named("FilePath.Component")), generics: [:],
@@ -594,8 +644,9 @@ extension Bridge {
                 let result = try receiver.last(where: { (a0: FilePath.Component) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([SwiftValue.make(a0, as: "FilePath.Component")])) })
                 return (result.map { SwiftValue.make($0, as: "FilePath.Component") } ?? .nothing)
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member44: BridgedMember =                 BridgedMember(
                     kind: .method, name: "shuffled", isStatic: false,
                     parameters: [],
                     returns: .list(.named("FilePath.Component")), generics: [:],
@@ -607,8 +658,9 @@ extension Bridge {
                 let result: [FilePath.Component] = receiver.shuffled()
                 return .list(result.map { SwiftValue.make($0, as: "FilePath.Component") })
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member45: BridgedMember =                 BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "repeating", name: "repeatedValue", type: .named("FilePath.Component")), Parameter(label: "count", name: "count", type: .int)],
                     returns: .named("FilePath.ComponentView"), generics: [:],
@@ -619,8 +671,9 @@ extension Bridge {
                         let result = FilePath.ComponentView(repeating: try SwiftValue.unbox(FilePath.Component.self, args["repeatedValue"]!), count: try Int(swishValue: args["count"]!))
                 return SwiftValue.make(result, as: "FilePath.ComponentView")
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member46: BridgedMember =                 BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: nil, name: "elements", type: .someSequence(.named("FilePath.Component")))],
                     returns: .named("FilePath.ComponentView"), generics: [:],
@@ -631,8 +684,9 @@ extension Bridge {
                         let result = FilePath.ComponentView(try bridgeSequence(args["elements"]!).map { try SwiftValue.unbox(FilePath.Component.self, $0) })
                 return SwiftValue.make(result, as: "FilePath.ComponentView")
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member47: BridgedMember =                 BridgedMember(
                     kind: .method, name: "append", isStatic: false,
                     parameters: [Parameter(label: nil, name: "newElement", type: .named("FilePath.Component"))],
                     returns: .void, generics: [:],
@@ -644,8 +698,9 @@ extension Bridge {
                 receiver.append(try SwiftValue.unbox(FilePath.Component.self, args["newElement"]!))
                 return .list([.nothing, SwiftValue.make(receiver, as: "FilePath.ComponentView")])
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member48: BridgedMember =                 BridgedMember(
                     kind: .method, name: "append", isStatic: false,
                     parameters: [Parameter(label: "contentsOf", name: "newElements", type: .someSequence(.named("FilePath.Component")))],
                     returns: .void, generics: [:],
@@ -657,8 +712,9 @@ extension Bridge {
                 receiver.append(contentsOf: try bridgeSequence(args["newElements"]!).map { try SwiftValue.unbox(FilePath.Component.self, $0) })
                 return .list([.nothing, SwiftValue.make(receiver, as: "FilePath.ComponentView")])
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member49: BridgedMember =                 BridgedMember(
                     kind: .method, name: "removeFirst", isStatic: false,
                     parameters: [Parameter(label: nil, name: "k", type: .int)],
                     returns: .void, generics: [:],
@@ -670,8 +726,9 @@ extension Bridge {
                 receiver.removeFirst(try Int(swishValue: args["k"]!))
                 return .list([.nothing, SwiftValue.make(receiver, as: "FilePath.ComponentView")])
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member50: BridgedMember =                 BridgedMember(
                     kind: .method, name: "removeFirst", isStatic: false,
                     parameters: [],
                     returns: .named("FilePath.Component"), generics: [:],
@@ -683,8 +740,9 @@ extension Bridge {
                 let result = receiver.removeFirst()
                 return .list([SwiftValue.make(result, as: "FilePath.Component"), SwiftValue.make(receiver, as: "FilePath.ComponentView")])
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member51: BridgedMember =                 BridgedMember(
                     kind: .method, name: "removeAll", isStatic: false,
                     parameters: [Parameter(label: "keepingCapacity", name: "keepCapacity", type: .bool, defaultValue: .literal(.bool(false)))],
                     returns: .void, generics: [:],
@@ -696,8 +754,9 @@ extension Bridge {
                 receiver.removeAll(keepingCapacity: try Bool(swishValue: args["keepCapacity"]!))
                 return .list([.nothing, SwiftValue.make(receiver, as: "FilePath.ComponentView")])
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member52: BridgedMember =                 BridgedMember(
                     kind: .method, name: "reserveCapacity", isStatic: false,
                     parameters: [Parameter(label: nil, name: "n", type: .int)],
                     returns: .void, generics: [:],
@@ -709,8 +768,9 @@ extension Bridge {
                 receiver.reserveCapacity(try Int(swishValue: args["n"]!))
                 return .list([.nothing, SwiftValue.make(receiver, as: "FilePath.ComponentView")])
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member53: BridgedMember =                 BridgedMember(
                     kind: .method, name: "popLast", isStatic: false,
                     parameters: [],
                     returns: .optional(.named("FilePath.Component")), generics: [:],
@@ -722,8 +782,9 @@ extension Bridge {
                 let result = receiver.popLast()
                 return .list([(result.map { SwiftValue.make($0, as: "FilePath.Component") } ?? .nothing), SwiftValue.make(receiver, as: "FilePath.ComponentView")])
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member54: BridgedMember =                 BridgedMember(
                     kind: .method, name: "removeLast", isStatic: false,
                     parameters: [],
                     returns: .named("FilePath.Component"), generics: [:],
@@ -735,8 +796,9 @@ extension Bridge {
                 let result = receiver.removeLast()
                 return .list([SwiftValue.make(result, as: "FilePath.Component"), SwiftValue.make(receiver, as: "FilePath.ComponentView")])
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member55: BridgedMember =                 BridgedMember(
                     kind: .method, name: "removeLast", isStatic: false,
                     parameters: [Parameter(label: nil, name: "k", type: .int)],
                     returns: .void, generics: [:],
@@ -748,8 +810,9 @@ extension Bridge {
                 receiver.removeLast(try Int(swishValue: args["k"]!))
                 return .list([.nothing, SwiftValue.make(receiver, as: "FilePath.ComponentView")])
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member56: BridgedMember =                 BridgedMember(
                     kind: .method, name: "filter", isStatic: false,
                     parameters: [Parameter(label: nil, name: "isIncluded", type: .functionType([.named("FilePath.Component")], .bool, throws: true))],
                     returns: .named("FilePath.ComponentView"), generics: [:],
@@ -761,8 +824,9 @@ extension Bridge {
                 let result = try receiver.filter({ (a0: FilePath.Component) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isIncluded"]!)([SwiftValue.make(a0, as: "FilePath.Component")])) })
                 return SwiftValue.make(result, as: "FilePath.ComponentView")
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member57: BridgedMember =                 BridgedMember(
                     kind: .method, name: "removeAll", isStatic: false,
                     parameters: [Parameter(label: "where", name: "shouldBeRemoved", type: .functionType([.named("FilePath.Component")], .bool, throws: true))],
                     returns: .void, generics: [:],
@@ -774,8 +838,9 @@ extension Bridge {
                 try receiver.removeAll(where: { (a0: FilePath.Component) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["shouldBeRemoved"]!)([SwiftValue.make(a0, as: "FilePath.Component")])) })
                 return .list([.nothing, SwiftValue.make(receiver, as: "FilePath.ComponentView")])
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member58: BridgedMember =                 BridgedMember(
                     kind: .method, name: "forEach", isStatic: false,
                     parameters: [Parameter(label: nil, name: "body", type: .functionType([.named("FilePath.Component")], .void, throws: true))],
                     returns: .void, generics: [:],
@@ -787,8 +852,9 @@ extension Bridge {
                 try receiver.forEach({ (a0: FilePath.Component) throws -> Void in _ = try bridgeClosure(shell, args["body"]!)([SwiftValue.make(a0, as: "FilePath.Component")]) })
                 return .nothing
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member59: BridgedMember =                 BridgedMember(
                     kind: .method, name: "first", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.named("FilePath.Component")], .bool, throws: true))],
                     returns: .optional(.named("FilePath.Component")), generics: [:],
@@ -800,8 +866,9 @@ extension Bridge {
                 let result = try receiver.first(where: { (a0: FilePath.Component) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([SwiftValue.make(a0, as: "FilePath.Component")])) })
                 return (result.map { SwiftValue.make($0, as: "FilePath.Component") } ?? .nothing)
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member60: BridgedMember =                 BridgedMember(
                     kind: .method, name: "min", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.named("FilePath.Component"), .named("FilePath.Component")], .bool, throws: true))],
                     returns: .optional(.named("FilePath.Component")), generics: [:],
@@ -813,8 +880,9 @@ extension Bridge {
                 let result = try receiver.min(by: { (a0: FilePath.Component, a1: FilePath.Component) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([SwiftValue.make(a0, as: "FilePath.Component"), SwiftValue.make(a1, as: "FilePath.Component")])) })
                 return (result.map { SwiftValue.make($0, as: "FilePath.Component") } ?? .nothing)
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member61: BridgedMember =                 BridgedMember(
                     kind: .method, name: "max", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.named("FilePath.Component"), .named("FilePath.Component")], .bool, throws: true))],
                     returns: .optional(.named("FilePath.Component")), generics: [:],
@@ -826,8 +894,9 @@ extension Bridge {
                 let result = try receiver.max(by: { (a0: FilePath.Component, a1: FilePath.Component) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([SwiftValue.make(a0, as: "FilePath.Component"), SwiftValue.make(a1, as: "FilePath.Component")])) })
                 return (result.map { SwiftValue.make($0, as: "FilePath.Component") } ?? .nothing)
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member62: BridgedMember =                 BridgedMember(
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.parameter("PossiblePrefix.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.named("FilePath.Component"), .parameter("PossiblePrefix.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["PossiblePrefix.Element": []],
@@ -839,8 +908,9 @@ extension Bridge {
                 let result = try receiver.starts(with: try bridgeSequence(args["possiblePrefix"]!), by: { (a0: FilePath.Component, a1: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areEquivalent"]!)([SwiftValue.make(a0, as: "FilePath.Component"), a1])) })
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member63: BridgedMember =                 BridgedMember(
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.named("FilePath.Component")))],
                     returns: .bool, generics: [:],
@@ -852,8 +922,9 @@ extension Bridge {
                 let result = receiver.starts(with: try bridgeSequence(args["possiblePrefix"]!).map { try SwiftValue.unbox(FilePath.Component.self, $0) })
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member64: BridgedMember =                 BridgedMember(
                     kind: .method, name: "elementsEqual", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("OtherSequence.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.named("FilePath.Component"), .parameter("OtherSequence.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["OtherSequence.Element": []],
@@ -865,8 +936,9 @@ extension Bridge {
                 let result = try receiver.elementsEqual(try bridgeSequence(args["other"]!), by: { (a0: FilePath.Component, a1: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areEquivalent"]!)([SwiftValue.make(a0, as: "FilePath.Component"), a1])) })
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member65: BridgedMember =                 BridgedMember(
                     kind: .method, name: "elementsEqual", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.named("FilePath.Component")))],
                     returns: .bool, generics: [:],
@@ -878,8 +950,9 @@ extension Bridge {
                 let result = receiver.elementsEqual(try bridgeSequence(args["other"]!).map { try SwiftValue.unbox(FilePath.Component.self, $0) })
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member66: BridgedMember =                 BridgedMember(
                     kind: .method, name: "lexicographicallyPrecedes", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.named("FilePath.Component"))), Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.named("FilePath.Component"), .named("FilePath.Component")], .bool, throws: true))],
                     returns: .bool, generics: [:],
@@ -891,8 +964,9 @@ extension Bridge {
                 let result = try receiver.lexicographicallyPrecedes(try bridgeSequence(args["other"]!).map { try SwiftValue.unbox(FilePath.Component.self, $0) }, by: { (a0: FilePath.Component, a1: FilePath.Component) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([SwiftValue.make(a0, as: "FilePath.Component"), SwiftValue.make(a1, as: "FilePath.Component")])) })
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member67: BridgedMember =                 BridgedMember(
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.named("FilePath.Component")], .bool, throws: true))],
                     returns: .bool, generics: [:],
@@ -904,8 +978,9 @@ extension Bridge {
                 let result = try receiver.contains(where: { (a0: FilePath.Component) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([SwiftValue.make(a0, as: "FilePath.Component")])) })
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member68: BridgedMember =                 BridgedMember(
                     kind: .method, name: "allSatisfy", isStatic: false,
                     parameters: [Parameter(label: nil, name: "predicate", type: .functionType([.named("FilePath.Component")], .bool, throws: true))],
                     returns: .bool, generics: [:],
@@ -917,8 +992,9 @@ extension Bridge {
                 let result = try receiver.allSatisfy({ (a0: FilePath.Component) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([SwiftValue.make(a0, as: "FilePath.Component")])) })
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member69: BridgedMember =                 BridgedMember(
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: nil, name: "element", type: .named("FilePath.Component"))],
                     returns: .bool, generics: [:],
@@ -930,8 +1006,9 @@ extension Bridge {
                 let result = receiver.contains(try SwiftValue.unbox(FilePath.Component.self, args["element"]!))
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member70: BridgedMember =                 BridgedMember(
                     kind: .method, name: "reduce", isStatic: false,
                     parameters: [Parameter(label: nil, name: "initialResult", type: .parameter("Result")), Parameter(label: nil, name: "nextPartialResult", type: .functionType([.parameter("Result"), .named("FilePath.Component")], .parameter("Result"), throws: true))],
                     returns: .parameter("Result"), generics: ["Result": []],
@@ -943,8 +1020,9 @@ extension Bridge {
                 let result = try receiver.reduce(args["initialResult"]!, { (a0: Value, a1: FilePath.Component) throws -> Value in try bridgeClosure(shell, args["nextPartialResult"]!)([a0, SwiftValue.make(a1, as: "FilePath.Component")]) })
                 return result
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member71: BridgedMember =                 BridgedMember(
                     kind: .method, name: "flatMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.named("FilePath.Component")], .someSequence(.parameter("SegmentOfResult.Element")), throws: true))],
                     returns: .list(.parameter("SegmentOfResult.Element")), generics: ["SegmentOfResult.Element": []],
@@ -956,8 +1034,9 @@ extension Bridge {
                 let result: [Value] = try receiver.flatMap({ (a0: FilePath.Component) throws -> [Value] in try bridgeSequence(try bridgeClosure(shell, args["transform"]!)([SwiftValue.make(a0, as: "FilePath.Component")])) })
                 return .list(result)
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member72: BridgedMember =                 BridgedMember(
                     kind: .method, name: "compactMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.named("FilePath.Component")], .optional(.parameter("ElementOfResult")), throws: true))],
                     returns: .list(.parameter("ElementOfResult")), generics: ["ElementOfResult": []],
@@ -969,8 +1048,9 @@ extension Bridge {
                 let result: [Value] = try receiver.compactMap({ (a0: FilePath.Component) throws -> Value? in (try bridgeClosure(shell, args["transform"]!)([SwiftValue.make(a0, as: "FilePath.Component")]) == .nothing ? nil : try bridgeClosure(shell, args["transform"]!)([SwiftValue.make(a0, as: "FilePath.Component")])) })
                 return .list(result)
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member73: BridgedMember =                 BridgedMember(
                     kind: .method, name: "sorted", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.named("FilePath.Component"), .named("FilePath.Component")], .bool, throws: true))],
                     returns: .list(.named("FilePath.Component")), generics: [:],
@@ -982,8 +1062,9 @@ extension Bridge {
                 let result: [FilePath.Component] = try receiver.sorted(by: { (a0: FilePath.Component, a1: FilePath.Component) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([SwiftValue.make(a0, as: "FilePath.Component"), SwiftValue.make(a1, as: "FilePath.Component")])) })
                 return .list(result.map { SwiftValue.make($0, as: "FilePath.Component") })
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member74: BridgedMember =                 BridgedMember(
                     kind: .method, name: "trimPrefix", isStatic: false,
                     parameters: [Parameter(label: "while", name: "predicate", type: .functionType([.named("FilePath.Component")], .bool, throws: true))],
                     returns: .void, generics: [:],
@@ -995,21 +1076,23 @@ extension Bridge {
                 try receiver.trimPrefix(while: { (a0: FilePath.Component) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([SwiftValue.make(a0, as: "FilePath.Component")])) })
                 return .list([.nothing, SwiftValue.make(receiver, as: "FilePath.ComponentView")])
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member75: BridgedMember =                 BridgedMember(
                     kind: .method, name: "trimPrefix", isStatic: false,
                     parameters: [Parameter(label: nil, name: "prefix", type: .someSequence(.named("FilePath.Component")))],
                     returns: .void, generics: [:],
                     isThrowing: false, isRethrowing: false, isMutating: true,
-                    discardableResult: false, summary: "Removes `prefix` from the start of the collection. - Parameter prefix: The collection to remove from this collection.",
+                    discardableResult: false, summary: "Removes `prefix` from the start of the collection.",
                     body: .native { shell, args in
                         _ = shell
                         var receiver: FilePath.ComponentView = try SwiftValue.unbox(FilePath.ComponentView.self, args["self"]!)
                 receiver.trimPrefix(try bridgeSequence(args["prefix"]!).map { try SwiftValue.unbox(FilePath.Component.self, $0) })
                 return .list([.nothing, SwiftValue.make(receiver, as: "FilePath.ComponentView")])
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member76: BridgedMember =                 BridgedMember(
                     kind: .method, name: "count", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.named("FilePath.Component")], .bool, throws: true))],
                     returns: .int, generics: [:],
@@ -1021,8 +1104,9 @@ extension Bridge {
                 let result = try receiver.count(where: { (a0: FilePath.Component) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["predicate"]!)([SwiftValue.make(a0, as: "FilePath.Component")])) })
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member77: BridgedMember =                 BridgedMember(
                     kind: .method, name: "randomElement", isStatic: false,
                     parameters: [],
                     returns: .optional(.named("FilePath.Component")), generics: [:],
@@ -1034,8 +1118,9 @@ extension Bridge {
                 let result = receiver.randomElement()
                 return (result.map { SwiftValue.make($0, as: "FilePath.Component") } ?? .nothing)
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member78: BridgedMember =                 BridgedMember(
                     kind: .property, name: "isEmpty", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
@@ -1047,8 +1132,9 @@ extension Bridge {
                 let result = receiver.isEmpty
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member79: BridgedMember =                 BridgedMember(
                     kind: .property, name: "first", isStatic: false,
                     parameters: [],
                     returns: .optional(.named("FilePath.Component")), generics: [:],
@@ -1060,8 +1146,9 @@ extension Bridge {
                 let result = receiver.first
                 return (result.map { SwiftValue.make($0, as: "FilePath.Component") } ?? .nothing)
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member80: BridgedMember =                 BridgedMember(
                     kind: .property, name: "underestimatedCount", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
@@ -1073,8 +1160,9 @@ extension Bridge {
                 let result = receiver.underestimatedCount
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member81: BridgedMember =                 BridgedMember(
                     kind: .property, name: "count", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
@@ -1086,8 +1174,9 @@ extension Bridge {
                 let result = receiver.count
                 return result.swishValue
                     }
-                ),
-                BridgedMember(
+                )
+
+    nonisolated(unsafe) private static let member82: BridgedMember =                 BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [],
                     returns: .named("FilePath.ComponentView"), generics: [:],
@@ -1098,8 +1187,5 @@ extension Bridge {
                         let result = FilePath.ComponentView()
                 return SwiftValue.make(result, as: "FilePath.ComponentView")
                     }
-                ),
-            ]
-        ),
-    ]
+                )
 }

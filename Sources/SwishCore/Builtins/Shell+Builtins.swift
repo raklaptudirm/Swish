@@ -11,9 +11,28 @@ extension Shell {
         scopes[0].bindings["args"] = Binding(value: .list([]), mutable: false)
         installPrelude()
         installJSONAccess()
+        installStandardFunctions()
         // Swift's types by name, for their initializers and static members.
         for name in Bridge.types.keys {
             scopes[0].bindings[name] = Binding(value: .object(BridgedTypeName(name)), mutable: false)
+        }
+    }
+
+    /// The shell's own functions, written in Swift (SwishStandardLibrary) and
+    /// bridged: `pwd`, `readLine`. Each is an ordinary function to the rest
+    /// of the shell, with its flags, help and overloads.
+    private func installStandardFunctions() {
+        for member in Bridge.standardFunctions {
+            let function = Function(
+                name: member.name, parameters: member.parameters, returnType: member.returns, body: member.body,
+                documentation: Documentation(summary: member.summary, parameters: member.parameterDocs),
+                isThrowing: member.isThrowing, isRethrowing: member.isRethrowing, generics: member.generics
+            )
+            var candidates: [Function] = []
+            if case .function(let set as OverloadSet)? = scopes[0].bindings[member.name]?.value { candidates = set.candidates }
+            scopes[0].bindings[member.name] = Binding(
+                value: .function(OverloadSet(name: member.name, candidates: candidates + [function])), mutable: false, isFunction: true
+            )
         }
     }
 
@@ -59,7 +78,7 @@ extension Shell {
     /// (`filter`), or all of them (`sorted`).
     func builtinBodies() -> [String: (body: FunctionBody, input: Parameter?)] {
         var bodies: [String: (body: FunctionBody, input: Parameter?)] = [:]
-        for function in [ls(), pwd(), history(), readLine(), ps(), from(), to(), table(), list(), members(), help(), with()] {
+        for function in [ls(), history(), ps(), from(), to(), table(), list(), members(), help(), with()] {
             bodies[function.name!] = (function.body, nil)
         }
         for method in [sorted(), filter(), map(), compactMap(), prefix(), reversed(), count(), uniqued(), select(), get()] {

@@ -242,6 +242,8 @@ struct BridgedMember {
     let summary: String
     /// Converts the arguments (and `self`), calls Swift, and converts back.
     let body: FunctionBody
+    /// What each parameter is, from `- Parameter name:` lines: `help`'s flags.
+    var parameterDocs: [String: String] = [:]
 }
 
 // MARK: Conversions the glue uses
