@@ -14,6 +14,16 @@ enum FileType: Equatable, Hashable, Comparable {
     case file, directory, symlink, other
 }
 
+/// How a job is going: its `state`.
+enum JobState: Equatable, Hashable, Comparable {
+    case running, stopped, done, cancelled
+}
+
+/// What `String.styled` can make text, each with its terminal code as its raw value.
+enum TextStyle: Equatable, Hashable {
+    case bold, dim, italic, underline, red, green, yellow, blue, magenta, cyan, white, gray
+}
+
 /// An entry `ls` lists.
 struct FileEntry: Equatable, Hashable, Encodable {
     let name: String
@@ -63,7 +73,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let partial = SwishStandardLibrary.ls((args["paths"] == nil ? [] : try bridgeList(args["paths"]!).map { try SwiftValue.unbox(FilePath.self, $0) }), all: try Bool(swishValue: args["all"]!))
-                for error in partial.errors { shell.reportItemError(error) }
+                for error in partial.errors { shell.reportItemError("\("ls"): \(error)") }
                 let result: [FileEntry] = partial.value
                 return .list(result.map { bridgeRecord(shell, $0, patches: ["type": .enumeration("FileType"), "path": .path, "target": .path]) })
                     },

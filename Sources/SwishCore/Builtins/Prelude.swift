@@ -7,17 +7,6 @@ import SwishKit
 /// and `--help` show.
 extension Shell {
     static let prelude = #"""
-    /// How a job is going: its `state`.
-    enum JobState: Hashable, Comparable {
-        case running, stopped, done, cancelled
-    }
-
-    /// What `String.styled` can make text, each with its terminal code.
-    enum TextStyle: String, Hashable {
-        case bold = "1", dim = "2", italic = "3", underline = "4"
-        case red = "31", green = "32", yellow = "33", blue = "34", magenta = "35", cyan = "36", white = "37", gray = "90"
-    }
-
     /// How a command exited: `output.status`.
     struct Status: Equatable, Hashable, Encodable {
         let code: Int?
@@ -108,9 +97,6 @@ extension Shell {
         /// How many items there are, or how many the predicate is true for.
         /// - Parameter where: a closure like { $0.size > 1.mb }
         func count(where predicate: ((Element) throws -> Bool)? = nil) rethrows -> Int
-
-        /// The items without repeats, first ones kept.
-        func uniqued() -> [Element] where Element: Hashable
 
         /// Keeps only the named fields of each record.
         func select(_ fields: String...) -> [Any]

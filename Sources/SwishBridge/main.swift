@@ -714,10 +714,12 @@ func readGraph(_ path: String) throws -> Graph {
 /// The module's graph, with what other modules add to its types and
 /// protocols (`_StringProcessing`'s `contains(_:)` on Collection).
 nonisolated(unsafe) var addedByOthers: Set<String> = []
+nonisolated(unsafe) var extraModules: [String] = []
 let graph: Graph = try {
     var graph = try readGraph(arguments[1])
     for path in arguments.dropFirst(3) {
         let extra = try readGraph(path)
+        if !extraModules.contains(extra.module.name) { extraModules.append(extra.module.name) }
         addedByOthers.formUnion(extra.symbols.map(\.identifier.precise))
         graph = Graph(module: graph.module, symbols: graph.symbols + extra.symbols, relationships: graph.relationships + extra.relationships)
     }
@@ -786,8 +788,11 @@ func conformances(of symbol: Symbol, among kept: [String]) -> [String] {
 func declaredType(_ symbol: Symbol) -> String {
     symbol.summary.isEmpty ? "" : "/// \(symbol.summary)\n"
 }
-if module.functions != nil {
-    let publicTypes = graph.symbols.filter { $0.pathComponents.count == 1 && $0.accessLevel == "public" }
+do {
+    // The module's own types, and when it's read as another module's
+    // addition, the same: what it adds is known as it is declared.
+    let candidates = module.functions != nil ? graph.symbols : graph.symbols.filter { addedByOthers.contains($0.identifier.precise) }
+    let publicTypes = candidates.filter { $0.pathComponents.count == 1 && $0.accessLevel == "public" }
     for symbol in publicTypes where symbol.kind.identifier == "swift.enum" {
         let name = symbol.pathComponents[0]
         let cases = publicMembers(of: name, "swift.enum.case")
@@ -795,9 +800,12 @@ if module.functions != nil {
         guard !cases.isEmpty, !cases.contains(where: { ($0.declarationFragments ?? []).contains { $0.spelling.contains("(") } }) else { continue }
         let protocols = conformances(of: symbol, among: ["Equatable", "Hashable", "Comparable"])
         typeSources.append("\(declaredType(symbol))enum \(name)\(protocols.isEmpty ? "" : ": " + protocols.joined(separator: ", ")) {\n    case \(cases.map { $0.pathComponents[1] }.joined(separator: ", "))\n}")
-        resultOnly.insert(name)
         enumNames.insert(name)
-        leaves[name] = (".named(\(quoted(name)))", { _ in fatalError("an enum is a result, not an argument") },
+        // A case is found by name among all of them, so it can be an
+        // argument if the enum lists them; if not, it's a result only.
+        let iterable = !conformances(of: symbol, among: ["CaseIterable"]).isEmpty
+        if !iterable { resultOnly.insert(name) }
+        leaves[name] = (".named(\(quoted(name)))", { iterable ? "try bridgeCase(\(name).self, \($0))" : "fatalError()" },
                         { "shell.declaredCase(\(quoted(name)), String(describing: \($0)))" })
     }
     for symbol in publicTypes where symbol.kind.identifier == "swift.struct" {
@@ -1122,7 +1130,7 @@ func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Const
     } else if isVoid {
         body += "\(tryPrefix)\(target)\n                return .nothing"
     } else if partial {
-        body += "let partial = \(tryPrefix)\(target)\n                for error in partial.errors { shell.reportItemError(error) }\n"
+        body += "let partial = \(tryPrefix)\(target)\n                for error in partial.errors { shell.reportItemError(\"\\(\(quoted(declaration.name))): \\(error)\") }\n"
         body += "                let result\(resultType) = partial.value\n                return \(toSwish("result", returns))"
     } else {
         body += "let result\(resultType) = \(tryPrefix)\(target)\n                return \(toSwish("result", returns))"
@@ -1173,7 +1181,7 @@ var output = """
 // Don't edit: `run bridge` remakes it.
 import Foundation
 import SwishKit
-\(graph.module.name == "Swift" ? "" : "import \(graph.module.name)\n")\(module.external.isEmpty ? "" : "import SystemPackage\n")
+\(graph.module.name == "Swift" ? "" : "import \(graph.module.name)\n")\(module.external.isEmpty ? "" : "import SystemPackage\n")\(extraModules.map { "import \($0)\n" }.joined())
 extension Bridge {
 \(module.types.isEmpty ? "" : "    nonisolated(unsafe) static let \(module.list): [BridgedType] = [\n")
 

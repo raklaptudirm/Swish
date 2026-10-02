@@ -10,9 +10,7 @@ import SystemPackage
 /// for the checker, and its glue, which calls Swift.
 enum Bridge {
     /// The bridged types, by the name Swish writes them with.
-    nonisolated(unsafe) static let types: [String: BridgedType] = Dictionary(uniqueKeysWithValues: (standardLibrary + system).map {
-        ($0.name, $0.adding(extensions[$0.name] ?? []))
-    })
+    nonisolated(unsafe) static let types: [String: BridgedType] = Dictionary(uniqueKeysWithValues: (standardLibrary + system).map { ($0.name, $0) })
 
     /// Text as a value of the type named, if the type can be text and the
     /// text is one: through its failable initializer from text (`Int`), or
@@ -213,12 +211,6 @@ struct BridgedType {
     var arrayLiteral: (([Value]) -> Value)? = nil
     let members: [BridgedMember]
 
-    /// With Swish's own members after Swift's.
-    func adding(_ extra: [BridgedMember]) -> BridgedType {
-        BridgedType(name: name, genericParameters: genericParameters, conformances: conformances,
-                    associatedTypes: associatedTypes, parse: parse, literal: literal, arrayLiteral: arrayLiteral,
-                    members: members + extra)
-    }
 }
 
 struct BridgedMember {
@@ -248,6 +240,15 @@ struct BridgedMember {
 }
 
 // MARK: Conversions the glue uses
+
+/// A case of a Swift enum from a Swish value: the case of that name, among
+/// all the enum's.
+func bridgeCase<T: CaseIterable>(_ type: T.Type, _ value: Value) throws -> T {
+    guard case .enumValue(let found) = value, let match = T.allCases.first(where: { "\($0)" == found.name }) else {
+        throw SwishError("expected a \(T.self), not \(value.typeName)")
+    }
+    return match
+}
 
 /// A path as Swish holds it: a FilePath.
 func pathValue(_ path: String) -> Value {

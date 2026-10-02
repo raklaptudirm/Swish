@@ -38,11 +38,11 @@ public struct FileEntry: Encodable, Equatable, Hashable {
 /// - Parameter all: include hidden files
 public func ls(@Rest _ paths: [FilePath] = [], @Flag all: Bool = false) -> Partial<[FileEntry]> {
     var entries: [FileEntry] = []
-    var errors: [String] = []
+    var errors: [any Error] = []
     for path in (paths.isEmpty ? [FilePath(".")] : paths).map(\.string) {
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else {
-            errors.append("ls: \(path): no such file or directory")
+            errors.append(PathError(path: path, reason: "no such file or directory"))
             continue
         }
         guard isDirectory.boolValue else {
@@ -53,7 +53,7 @@ public func ls(@Rest _ paths: [FilePath] = [], @Flag all: Bool = false) -> Parti
         do {
             names = try FileManager.default.contentsOfDirectory(atPath: path)
         } catch {
-            errors.append("ls: \(path): permission denied")
+            errors.append(PathError(path: path, reason: "permission denied"))
             continue
         }
         for name in names.sorted() where all || !name.hasPrefix(".") {
@@ -64,12 +64,19 @@ public func ls(@Rest _ paths: [FilePath] = [], @Flag all: Bool = false) -> Parti
     return Partial(entries, errors: errors)
 }
 
-private func entry(named name: String, at path: String, into entries: inout [FileEntry], errors: inout [String]) {
+/// What went wrong with a path: `ls: /nope: no such file or directory`.
+struct PathError: Error, CustomStringConvertible {
+    let path: String
+    let reason: String
+    var description: String { "\(path): \(reason)" }
+}
+
+private func entry(named name: String, at path: String, into entries: inout [FileEntry], errors: inout [any Error]) {
     let status: FileStatus
     do {
         status = try FileStatus(path)
     } catch {
-        errors.append("ls: \(path): \(String(cString: strerror(error.rawValue)).lowercased())")
+        errors.append(PathError(path: path, reason: String(cString: strerror(error.rawValue)).lowercased()))
         return
     }
     let (type, letter): (FileType, String) = status.isDirectory ? (.directory, "d") : status.isSymlink ? (.symlink, "l")

@@ -97,17 +97,6 @@ extension Shell {
         )
     }
 
-    func uniqued() -> Function {
-        .builtin(
-            "uniqued", "The items without repeats, first ones kept.", [.input("items", .list(.any))],
-            .native { _, args in
-                guard case .list(let items) = args["items"] else { return .list([]) }
-                var seen: Set<Value> = []
-                return .list(items.filter { seen.insert($0).inserted })
-            }
-        )
-    }
-
     func prefix() -> Function {
         .builtin(
             "prefix", "The first items; stops reading after them.",
