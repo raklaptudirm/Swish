@@ -28,11 +28,7 @@ extension Shell {
                 documentation: Documentation(summary: member.summary, parameters: member.parameterDocs),
                 isThrowing: member.isThrowing, isRethrowing: member.isRethrowing, generics: member.generics
             )
-            var candidates: [Function] = []
-            if case .function(let set as OverloadSet)? = scopes[0].bindings[member.name]?.value { candidates = set.candidates }
-            scopes[0].bindings[member.name] = Binding(
-                value: .function(OverloadSet(name: member.name, candidates: candidates + [function])), mutable: false, isFunction: true
-            )
+            scopes[0].declare(function, named: member.name)
         }
     }
 

@@ -52,6 +52,17 @@ final class Scope {
         self.bindings = bindings
     }
 
+    /// Declares a function by its name: another of that name is overloaded,
+    /// unless the signature is the same, which replaces it.
+    func declare(_ function: Function, named name: String) {
+        var candidates = [function]
+        if let existing = bindings[name], existing.isFunction,
+           case .function(let callable) = existing.value, let set = callable as? OverloadSet {
+            candidates = set.candidates.filter { !$0.hasSameSignature(as: function) } + candidates
+        }
+        bindings[name] = Binding(value: .function(OverloadSet(name: name, candidates: candidates)), mutable: false, isFunction: true)
+    }
+
     /// The scope binding `name`: this one, or where it was made.
     func holding(_ name: String) -> Scope? {
         if bindings[name] != nil { return self }

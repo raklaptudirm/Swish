@@ -120,17 +120,7 @@ extension Shell {
                 body: .swish(decl.body), captured: captureScopes(decl.names), documentation: decl.documentation,
                 isThrowing: decl.isThrowing
             )
-            // A second declaration with a different signature overloads the
-            // name; one with the same signature replaces the old one.
-            let scope = scopes[scopes.count - 1]
-            var candidates = [function]
-            if let existing = scope.bindings[decl.name], existing.isFunction,
-               case .function(let callable) = existing.value, let set = callable as? OverloadSet {
-                candidates = set.candidates.filter { !$0.hasSameSignature(as: function) } + candidates
-            }
-            scope.bindings[decl.name] = Binding(
-                value: .function(OverloadSet(name: decl.name, candidates: candidates)), mutable: false, isFunction: true
-            )
+            scopes[scopes.count - 1].declare(function, named: decl.name)
             return 0
         case .setEnvironment(let nameExpr, let valueExpr):
             guard lookup("env")?.special == .environment else {

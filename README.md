@@ -275,7 +275,7 @@ The tasks are functions in [`Tasks.swish`](Tasks.swish); inside Swish, `run` lis
 | `Tests/Interactive` | `expect` scripts that drive the shell through a real terminal. |
 | `Examples/Tools` | An example plugin, which the tests import. |
 | `Sources/SwishStandardLibrary` | The shell's own functions and types in plain Swift (`pwd`, `readLine`, `history`, `ls` and `FileEntry`, `ps` and `ProcessEntry`), bridged like the standard library. |
-| `Sources/SwishBridge` | Reads Swift's symbol graphs and generates the glue that bridges the standard library (`run bridge`). |
+| `Sources/SwishBridge` | Reads Swift's symbol graphs and generates the glue that bridges the standard library, swift-system and `SwishStandardLibrary` (`run bridge`): the graph, declaration parsing, what Swish can hold and how values cross, and one member's glue each have a file. |
 
 </details>
 

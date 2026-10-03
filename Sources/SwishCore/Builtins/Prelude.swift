@@ -113,12 +113,7 @@ extension Shell {
             case .function(let decl):
                 guard let native = natives[decl.name] else { preconditionFailure("no body for \(decl.name)") }
                 let function = builtinFunction(decl, native.body, input: nil)
-                var candidates: [Function] = []
-                if case .function(let set as OverloadSet)? = scopes[0].bindings[decl.name]?.value { candidates = set.candidates }
-                scopes[0].bindings[decl.name] = Binding(
-                    value: .function(OverloadSet(name: decl.name, candidates: candidates + [function])),
-                    mutable: false, isFunction: true
-                )
+                scopes[0].declare(function, named: decl.name)
             case .extensionDecl(_, let methods):
                 for method in methods {
                     guard let native = natives["Sequence." + method.name] else {
