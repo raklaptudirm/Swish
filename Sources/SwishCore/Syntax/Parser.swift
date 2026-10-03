@@ -74,10 +74,6 @@ struct Parser {
         [.multiply, .divide, .remainder],
     ]
     static let comparisonLevel = 2
-    static let fileSizeUnits: [String: Int64] = [
-        "b": 1, "kb": 1_000, "mb": 1_000_000, "gb": 1_000_000_000, "tb": 1_000_000_000_000,
-        "kib": 1 << 10, "mib": 1 << 20, "gib": 1 << 30, "tib": 1 << 40,
-    ]
     /// Levels whose operators can't be chained, like `a < b < c`.
     static let nonAssociativeLevels: Set = [2, 4]
 

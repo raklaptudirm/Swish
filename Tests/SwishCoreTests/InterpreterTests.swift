@@ -421,7 +421,7 @@ private func fixture() throws -> String {
 @Test func formatterFitsTheWidth() {
     var lines: [String] = []
     let formatter = Formatter(maxWidth: 20) { lines.append($0); return true }
-    formatter.add(.record(Record(["name": .string("a-rather-long-file-name"), "size": .filesize(1)])))
+    formatter.add(.record(Record(["name": .string("a-rather-long-file-name"), "size": .fileSize(FileSize(bytes: 1))])))
     formatter.finish()
     // The name column shrinks from 23 to 14 so the table fits in 20.
     #expect(lines == ["name            size\n", "a-rather-long…   1 B\n"])

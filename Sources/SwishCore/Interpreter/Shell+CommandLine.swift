@@ -219,7 +219,7 @@ extension Shell {
     /// can be, an enum, or one of Swish's own that's read from text.
     func takesWords(_ type: TypeAnnotation) -> Bool {
         switch type {
-        case .any, .unknown, .parameter, .keyPath, .filesize, .output, .date: return true
+        case .any, .unknown, .parameter, .keyPath, .output, .date: return true
         case .optional(let wrapped): return takesWords(wrapped)
         case .named(let name) where enumType(named: name) != nil: return true
         default:
@@ -242,7 +242,6 @@ extension Shell {
             // `sorted --by size`: a field's name is its key path.
             case .keyPath: .function(KeyPathValue(path: text.split(separator: ".").map(String.init)))
             case .optional(let wrapped): try converted(text, to: wrapped, for: what, of: function)
-            case .filesize: parseFileSize(text).map(Value.filesize)
             case .output: .output(CommandOutput(text: text, code: 0))
             case .date: (try? Date(text, strategy: .iso8601)).map(Value.date)
             default: nil
@@ -255,15 +254,6 @@ extension Shell {
             throw RuntimeError("\(function): \(what) must be \(type), got '\(text)'")
         }
         return value
-    }
-
-    /// `1024`, `1.5mb`, `1.5 MB`, `2kib`.
-    private func parseFileSize(_ text: String) -> Int64? {
-        let trimmed = text.trimmingCharacters(in: .whitespaces).lowercased()
-        let number = trimmed.prefix { $0.isNumber || $0 == "." }
-        let unit = trimmed.dropFirst(number.count).trimmingCharacters(in: .whitespaces)
-        guard let value = Double(number), let multiplier = unit.isEmpty ? 1 : Parser.fileSizeUnits[unit] else { return nil }
-        return Int64(exactly: (value * Double(multiplier)).rounded())
     }
 
     func kebabCase(_ label: String) -> String {

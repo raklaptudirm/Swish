@@ -205,8 +205,8 @@ final class Formatter {
             let values = sample.compactMap { $0[keys[index]] }.filter { $0 != .nothing }
             let numeric = !values.isEmpty && values.allSatisfy {
                 switch $0 {
-                case .int, .double, .filesize: true
-                default: false
+                case .int, .double: true
+                default: $0.fileSize != nil
                 }
             }
             return Column(key: keys[index], width: widths[index], rightAligned: numeric)

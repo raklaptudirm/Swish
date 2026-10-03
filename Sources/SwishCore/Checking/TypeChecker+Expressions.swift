@@ -172,8 +172,10 @@ extension TypeChecker {
             expr = .unary(op, operand)
             switch (op, type) {
             case (.not, .bool), (.not, .unknown): return .bool
-            case (.negate, .int), (.negate, .double), (.negate, .filesize), (.negate, .unknown): return type
-            default: throw TypeError("'\(op.rawValue)' can't be applied to \(type)")
+            case (.negate, .int), (.negate, .double), (.negate, .unknown): return type
+            default:
+                if op == .negate, let result = bridgedOperatorType(op.rawValue, [type]) { return result }
+                throw TypeError("'\(op.rawValue)' can't be applied to \(type)")
             }
         case .binary(let op, var lhs, var rhs):
             let type = try binaryExprType(op, &lhs, &rhs, expected: expected)
@@ -312,7 +314,6 @@ extension TypeChecker {
         case .int: .int
         case .double: .double
         case .string: .string
-        case .filesize: .filesize
         case .date: .date
         case .output: .output
         case .list(let items): .list(commonType(items.map(type(of:))) ?? .unknown)

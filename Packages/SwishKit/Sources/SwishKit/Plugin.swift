@@ -4,7 +4,12 @@ import Foundation
 
 /// Raised when a plugin built against an older SwishKit can no longer be
 /// loaded. Library evolution lets SwishKit add to these types without it.
-public let swishPluginABIVersion = 1
+/// 2: a file size is a boxed Swift value, no longer a case of `Value`.
+///
+/// Transparent, so it's compiled into each plugin as its number when the
+/// plugin was built, not read from SwishKit when it's loaded, which would
+/// always agree.
+@_transparent public var swishPluginABIVersion: Int { 2 }
 
 /// Each `@SwishExport` function also defines a C symbol with this prefix
 /// and its name, `swish_export_greet`, returning a retained
@@ -216,13 +221,15 @@ extension Date: SwishConvertible {
 extension FileSize: SwishConvertible {
     public static var swishType: SwishType { .filesize }
     public init(swishValue: Value) throws {
-        switch swishValue {
-        case .filesize(let bytes): self.init(bytes: bytes)
-        case .int(let bytes): self.init(bytes: Int64(bytes))
-        default: throw SwishError.expected("FileSize", swishValue)
+        if let size = swishValue.fileSize {
+            self = size
+        } else if case .int(let bytes) = swishValue {
+            self.init(bytes: bytes)
+        } else {
+            throw SwishError.expected("FileSize", swishValue)
         }
     }
-    public var swishValue: Value { .filesize(bytes) }
+    public var swishValue: Value { .fileSize(self) }
 }
 
 extension CommandOutput: SwishConvertible {
@@ -274,7 +281,6 @@ extension Value {
         case .list: "List"
         case .record(let record): record.typeName ?? "Record"
         case .dictionary: "Dictionary"
-        case .filesize: "FileSize"
         case .date: "Date"
         case .output: "Output"
         case .enumValue(let value): value.type.name

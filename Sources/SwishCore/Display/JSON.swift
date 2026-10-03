@@ -35,7 +35,6 @@ enum JSON {
                 record[label ?? String(index)] = item
             }
             return try text(.record(Record([value.name: .record(record)])), indent: indent)
-        case .filesize(let bytes): return String(bytes)
         case .date(let date): return quoted(date.formatted(.iso8601))
         case .list(let items):
             guard !items.isEmpty else { return "[]" }
@@ -57,8 +56,12 @@ enum JSON {
             throw RuntimeError("to json: a function has no JSON form")
         case .object(let object):
             if let fields = object.fields { return try text(.record(fields), indent: indent) }
-            // What a text literal can be (a FilePath, a Character) is its text.
-            if let box = object as? SwiftValue, Bridge.types[box.typeName]?.literal != nil { return quoted(box.description) }
+            // What a text literal can be (a FilePath, a Character) is its text;
+            // else a Swift value is as Swift encodes it (a file size is its bytes).
+            if let box = object as? SwiftValue {
+                if Bridge.types[box.typeName]?.literal != nil { return quoted(box.description) }
+                if let json = try box.json() { return json }
+            }
             throw RuntimeError("to json: a \(object.typeName) has no JSON form")
         @unknown default:
             throw RuntimeError("to json: unsupported value")

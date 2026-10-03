@@ -253,7 +253,7 @@ extension TypeAnnotation {
         case .double: .double
         case .string: .string
         case .record: .record
-        case .filesize: .filesize
+        case .filesize: .named("FileSize")
         case .date: .date
         case .output: .output
         case .function: .function

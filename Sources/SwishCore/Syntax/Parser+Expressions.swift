@@ -395,13 +395,12 @@ extension Parser {
         if peek() == ".", let next = peek(1), Parser.isIdentifierStart(next) {
             pos += 1
             let unit = identifier()!
-            guard let multiplier = Parser.fileSizeUnits[unit] else {
+            guard FileSize.units[unit] != nil else {
                 throw SyntaxError("unknown unit '\(unit)'; file sizes use b, kb, mb, gb, tb, or kib, mib, gib, tib")
             }
             pos += unit.count
-            let bytes = Double(text)! * Double(multiplier)
-            guard bytes.magnitude < Double(Int64.max) else { throw SyntaxError("file size \(text).\(unit) is too large") }
-            return .literal(.filesize(Int64(bytes)))
+            guard let size = FileSize(Double(text)!, unit: unit) else { throw SyntaxError("file size \(text).\(unit) is too large") }
+            return .literal(.fileSize(size))
         }
         if let c = peek(), Parser.isIdentifierPart(c) {
             throw SyntaxError("unexpected '\(c)' after a number (use ^ to run a command whose name starts with a digit)")

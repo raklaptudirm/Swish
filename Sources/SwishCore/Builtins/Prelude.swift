@@ -94,9 +94,11 @@ extension Shell {
     /// Reads the prelude, binding its types, functions and sequence
     /// methods in the outermost scope with their Swift bodies.
     func installPrelude() {
+        // The Swift types the declarations may name.
+        let bridgedTypeNames = Dictionary(uniqueKeysWithValues: Bridge.types.keys.map { ($0, NameKind.type) })
         let program: Program
         do {
-            program = try Parser.parsePrelude(Shell.prelude + "\n" + Bridge.standardTypes, bound: ["FilePath": .type])
+            program = try Parser.parsePrelude(Shell.prelude + "\n" + Bridge.standardTypes, bound: bridgedTypeNames)
         } catch {
             preconditionFailure("the prelude doesn't parse: \(error)")
         }

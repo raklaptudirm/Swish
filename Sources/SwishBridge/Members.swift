@@ -192,7 +192,7 @@ func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Const
         return "Parameter(\(fields.joined(separator: ", ")))"
     }
     // The glue.
-    let arguments = declaration.parameters.map { parameter -> String in
+    let argumentList = declaration.parameters.map { parameter -> String in
         if isContext(parameter) { return (parameter.label.map { "\($0): " } ?? "") + "shell.context" }
         let type = parameters.first { $0.0.name == parameter.name }!.1
         let value = "args[\(quoted(parameter.name))]"
@@ -201,12 +201,17 @@ func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Const
             expr = "(\(value) == nil ? \(text) : \(fromSwish("\(value)!", type)))"
         }
         return (parameter.label.map { "\($0): " } ?? "") + expr
-    }.joined(separator: ", ")
+    }
+    let arguments = argumentList.joined(separator: ", ")
     let receiverType = selfType(owner)
     let swiftType = spelling(receiverType)
     let target: String
     switch declaration.kind {
     case .initializer: target = "\(swiftType)(\(arguments))"
+    case .method where declaration.isOperator:
+        // Written as Swift writes it: `-(a)`, `(a) + (b)`.
+        target = argumentList.count == 1 ? "\(declaration.name)(\(argumentList[0]))"
+            : "(\(argumentList[0])) \(declaration.name) (\(argumentList[1]))"
     case .method:
         // A free function is the module's own: qualified, so a standard
         // library function of the same name (readLine) isn't ambiguous.

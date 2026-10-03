@@ -16,8 +16,6 @@ public enum Value: Sendable {
     case record(Record)
     /// `["a": 1]`: keys to values, as Swift's Dictionary, unordered.
     case dictionary(ValueDictionary)
-    /// A size in bytes, shown as `1.2 MB`.
-    case filesize(Int64)
     case date(Date)
     /// What `$(…)` gives: a command's output and how it exited.
     case output(CommandOutput)
@@ -222,12 +220,22 @@ public struct ValueDictionary: Sendable, Hashable, Sequence, CustomStringConvert
 }
 
 extension Value {
+    /// A file size, held as the Swift value it is.
+    public static func fileSize(_ size: FileSize) -> Value {
+        SwiftValue.make(size, as: "FileSize")
+    }
+
+    /// The file size it holds, if it's one.
+    public var fileSize: FileSize? {
+        if case .object(let box as SwiftValue) = self { box.value as? FileSize } else { nil }
+    }
+
     /// The order a dictionary's keys are shown in: only for showing, so it
     /// needn't mean anything beyond being the same every time.
     static func displaysBefore(_ a: Value, _ b: Value) -> Bool {
         switch (a, b) {
         case (.int(let x), .int(let y)): return x < y
-        case (.int, .double), (.double, .int), (.double, .double), (.filesize, .filesize):
+        case (.int, .double), (.double, .int), (.double, .double):
             return a.displayNumber! < b.displayNumber!
         case (.string(let x), .string(let y)): return x < y
         case (.bool(let x), .bool(let y)): return !x && y
@@ -242,28 +250,8 @@ extension Value {
         switch self {
         case .int(let n): Double(n)
         case .double(let d): d
-        case .filesize(let bytes): Double(bytes)
         default: nil
         }
-    }
-}
-
-/// Encodes as a `.filesize` value through `ValueEncoder`, and as a plain
-/// byte count elsewhere.
-public struct FileSize: Codable, Hashable, Sendable {
-    public var bytes: Int64
-
-    public init(bytes: Int64) {
-        self.bytes = bytes
-    }
-
-    public init(from decoder: any Decoder) throws {
-        bytes = try decoder.singleValueContainer().decode(Int64.self)
-    }
-
-    public func encode(to encoder: any Encoder) throws {
-        var container = encoder.singleValueContainer()
-        try container.encode(bytes)
     }
 }
 
@@ -279,7 +267,6 @@ extension Value: Hashable {
         case (.list(let a), .list(let b)): a == b
         case (.record(let a), .record(let b)): a == b
         case (.dictionary(let a), .dictionary(let b)): a == b
-        case (.filesize(let a), .filesize(let b)): a == b
         case (.date(let a), .date(let b)): a == b
         case (.output(let a), .output(let b)): a == b
         case (.enumValue(let a), .enumValue(let b)): a == b
@@ -299,7 +286,6 @@ extension Value: Hashable {
         case .list(let values): hasher.combine(values)
         case .record(let record): hasher.combine(record)
         case .dictionary(let dictionary): hasher.combine(dictionary)
-        case .filesize(let bytes): hasher.combine(bytes)
         case .date(let date): hasher.combine(date)
         case .output(let output): hasher.combine(output)
         case .enumValue(let value): hasher.combine(value)
@@ -320,7 +306,6 @@ extension Value: CustomStringConvertible {
         case .list(let values): "[" + values.map(\.description).joined(separator: ", ") + "]"
         case .record(let record): record.description
         case .dictionary(let dictionary): dictionary.description
-        case .filesize(let bytes): Value.formatFileSize(bytes)
         case .date(let date): Value.dateFormatter.string(from: date)
         case .output(let output): output.text
         case .enumValue(let value): value.description
@@ -372,21 +357,6 @@ extension Value: CustomDebugStringConvertible {
 }
 
 extension Value {
-    /// Decimal units, as Finder shows them: `532 B`, `1.2 KB`, `123 MB`.
-    public static func formatFileSize(_ bytes: Int64) -> String {
-        let units = ["B", "KB", "MB", "GB", "TB", "PB"]
-        var size = Double(bytes.magnitude)
-        var unit = 0
-        while size >= 1000 && unit < units.count - 1 {
-            size /= 1000
-            unit += 1
-        }
-        let sign = bytes < 0 ? "-" : ""
-        if unit == 0 { return "\(sign)\(bytes.magnitude) B" }
-        let number = size < 100 ? String(format: "%.1f", size) : String(format: "%.0f", size)
-        return "\(sign)\(number) \(units[unit])"
-    }
-
     private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
