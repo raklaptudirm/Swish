@@ -7,9 +7,11 @@ set env(SWISH_HISTORY) ""
 set env(SWISH_CONFIG) ""
 set script [exec mktemp]
 set file [open $script w]
+# The loop says when it's running: a signal sent before then could be lost.
+# It says so with a value, not a command, whose end would take the signal.
 puts $file {defer { echo "cleaned up" }
-echo started
-while true {}}
+var spins = 0
+while true { if spins == 0 { "started" }; spins += 1 }}
 close $file
 
 foreach signal {INT TERM HUP} {

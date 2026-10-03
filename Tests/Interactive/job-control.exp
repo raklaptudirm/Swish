@@ -60,10 +60,13 @@ send "if true {\r"
 send "\x03"
 send "echo after\r"
 step "^C discards a pending block" "\nafter\r\n"
-send "while true {}\r"
-# ^C typed before the editor has handed the terminal back is just a queued
-# byte, not a signal, so give the loop time to start.
-after 1000
+# A ^C before the loop has started is lost (a line starts by dropping stale
+# ones), so the loop says when it's running, and the ^C waits for that. It
+# says so with a value, not a command: after a command the shell drops the ^C
+# it sees, as the command's own status has it. The word is joined from two,
+# so the echo of what's typed doesn't match.
+send "var spins = 0; while true { if spins == 0 { \"run\" + \"ning\" }; spins += 1 }\r"
+step "the loop is running" "running"
 send "\x03"
 step "^C stops a loop running in the shell itself" {\[130\]}
 send "func greet(_ name: String) { echo \"hi \\(name)\" }\r"
