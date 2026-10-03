@@ -15,6 +15,9 @@ extension Shell {
         return false
     }
 
+    /// What a table of `help` entries starts with.
+    static let helpColumns: [DisplayColumn] = ["name", "source", "summary"]
+
     /// Whether a function has a `--help` or `-h` of its own; if not, the
     /// shell answers them with the function's help, as programs do.
     /// Whether an unlabeled parameter is given every remaining word: a

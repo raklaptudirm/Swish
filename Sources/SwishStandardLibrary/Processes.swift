@@ -26,6 +26,10 @@ public struct ProcessEntry: Encodable, Equatable, Hashable {
     public var threads: Int?
 }
 
+extension ProcessEntry: Tabular {
+    public static let columns: [DisplayColumn] = ["pid", "name", "user", "memory", "cpuTime"]
+}
+
 /// Lists running processes. Memory and CPU time are only known for your own processes.
 public func ps() -> [ProcessEntry] {
     // The system always says; if it somehow doesn't, there's nothing to list.

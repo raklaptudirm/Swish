@@ -64,6 +64,9 @@ final class Job: SwishObject, @unchecked Sendable {
 
     var typeName: String { "Job" }
 
+    /// What a table of jobs starts with: the state shown as it's going.
+    static let columns: [DisplayColumn] = ["id", DisplayColumn("state", styledBy: "state"), "command"]
+
     /// A job's members: each one's type, for the checker, and its value.
     static let members: [(name: String, type: TypeAnnotation, value: @Sendable (Job) -> Value)] = [
         ("id", .int, { .int($0.id) }),

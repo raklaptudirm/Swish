@@ -19,6 +19,16 @@ public enum FileType: String, CaseIterable, Comparable, Codable {
     }
 }
 
+extension FileType: DisplayStyled {
+    public var displayStyle: DisplayStyle? {
+        switch self {
+        case .directory: .boldBlue
+        case .symlink: .cyan
+        default: nil
+        }
+    }
+}
+
 /// An entry `ls` lists.
 public struct FileEntry: Encodable, Equatable, Hashable {
     public let name: String
@@ -31,6 +41,10 @@ public struct FileEntry: Encodable, Equatable, Hashable {
     public let accessed: Date
     public let path: FilePath
     public let target: FilePath?
+}
+
+extension FileEntry: Tabular {
+    public static let columns: [DisplayColumn] = [DisplayColumn("name", styledBy: "type"), "type", "size", "modified"]
 }
 
 /// Lists directory contents.

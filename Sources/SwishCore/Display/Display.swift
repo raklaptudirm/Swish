@@ -1,15 +1,14 @@
 import Foundation
 import SwishKit
 
-/// The columns shown by default for records of a type; the rest are still
-/// there for `filter`, `select` and `get`, and `table` shows everything. By
-/// name until a type can say how it's shown (foundations step 5).
-let views: [String: [String]] = [
-    "FileEntry": ["name", "type", "size", "modified"],
-    "ProcessEntry": ["pid", "name", "user", "memory", "cpuTime"],
-    "Job": ["id", "state", "command"],
-    "Help": ["name", "source", "summary"],
-]
+/// The columns shown by default for records of a type, and what styles them;
+/// the rest are still there for `filter`, `select` and `get`, and `table`
+/// shows everything. Each type says so itself (`Tabular`): the standard
+/// library module's structs, and the shell's own, beside where they're made.
+let displayColumns: [String: [DisplayColumn]] = Bridge.standardColumns.merging([
+    "Job": Job.columns,
+    "Help": Shell.helpColumns,
+]) { first, _ in first }
 
 extension Shell {
     /// Shows a value to a person: a table for a list of records, a
@@ -175,9 +174,9 @@ final class Formatter {
 
     private func layout(for sample: [Record]) -> [Column] {
         var keys: [String]
-        if useViews, let typeName = sample.first?.typeName, let view = views[typeName],
+        if useViews, let typeName = sample.first?.typeName, let view = displayColumns[typeName],
            sample.allSatisfy({ $0.typeName == typeName }) {
-            keys = view
+            keys = view.map(\.name)
         } else {
             keys = []
             var seen: Set<String> = []
@@ -221,26 +220,15 @@ final class Formatter {
         }.joined(separator: "  "))
     }
 
-    /// What stands out in a table: directories and links in `ls`, and how
-    /// jobs are going. Everything else is plain. By the prelude's type
-    /// names until types can say how they display (foundations step 5).
+    /// What stands out in a table: a column the type says is styled by a
+    /// field, whose value is an enum that says how its cases are shown (a
+    /// file's name by its type, a job's state by itself). Else it's plain.
     static func style(of value: Value, key: String, in record: Record) -> Style? {
-        if key == "name", case .enumValue(let type)? = record["type"], type.type.name == "FileType" {
-            switch type.name {
-            case "directory": return .boldBlue
-            case "symlink": return .cyan
-            default: return nil
-            }
-        }
-        if case .enumValue(let state) = value, state.type.name == "JobState" {
-            switch state.name {
-            case "running": return .green
-            case "stopped": return .yellow
-            case "cancelled": return .dim
-            default: return nil
-            }
-        }
-        return nil
+        guard let typeName = record.typeName,
+              let source = displayColumns[typeName]?.first(where: { $0.name == key })?.styledBy,
+              case .enumValue(let found)? = record[source],
+              let style = Bridge.standardEnumStyles[found.type.name]?(found.name) else { return nil }
+        return Style(rawValue: style.rawValue)
     }
 
     /// Leading spaces are a right-aligned column's padding, so only the end

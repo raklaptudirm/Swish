@@ -765,6 +765,10 @@ for name in module.external where leaves[name] == nil {
 nonisolated(unsafe) var resultOnly: Set<String> = []
 nonisolated(unsafe) var enumNames: Set<String> = []
 var typeSources: [String] = []
+/// How the module's types say they're shown (`Tabular`, `DisplayStyled`):
+/// by type name, calling the Swift that says so.
+var columnSources: [String] = []
+var styleSources: [String] = []
 /// A field's type as Swish source, and what encoding leaves for the glue to
 /// fix (an enum or a path is text there); nil if Swish can't hold it so.
 func fieldType(_ type: SType) -> (source: String, patch: String?)? {
@@ -813,6 +817,9 @@ do {
         // argument if the enum lists them; if not, it's a result only.
         let iterable = !conformances(of: symbol, among: ["CaseIterable"]).isEmpty
         if !iterable { resultOnly.insert(name) }
+        if iterable, !conformances(of: symbol, among: ["DisplayStyled"]).isEmpty {
+            styleSources.append("\(quoted(name)): { name in \(name).allCases.first { \"\\($0)\" == name }?.displayStyle }")
+        }
         leaves[name] = (".named(\(quoted(name)))", { iterable ? "try bridgeCase(\(name).self, \($0))" : "fatalError()" },
                         { "shell.declaredCase(\(quoted(name)), String(describing: \($0)))" })
     }
@@ -820,6 +827,7 @@ do {
         let name = symbol.pathComponents[0]
         let protocols = conformances(of: symbol, among: ["Equatable", "Hashable", "Encodable"])
         guard protocols.contains("Encodable") else { continue }
+        if !conformances(of: symbol, among: ["Tabular"]).isEmpty { columnSources.append("\(quoted(name)): \(name).columns") }
         let fields = publicMembers(of: name, "swift.property")
         var declared: [String] = []
         var patches: [String] = []
@@ -1313,6 +1321,10 @@ if !module.types.isEmpty { output += "    ]\n" }
 if let list = module.functions {
     output += "    /// The module's structs, as Swish source: declared with the prelude.\n"
     output += "    static let standardTypes = #\"\"\"\n" + typeSources.joined(separator: "\n\n") + "\n\"\"\"#\n\n"
+    output += "    /// How the module's structs say which columns a table starts with.\n"
+    output += "    nonisolated(unsafe) static let standardColumns: [String: [DisplayColumn]] = [\(columnSources.isEmpty ? ":" : columnSources.joined(separator: ", "))]\n\n"
+    output += "    /// How the module's enums say how a case is shown, by case name.\n"
+    output += "    nonisolated(unsafe) static let standardEnumStyles: [String: (String) -> DisplayStyle?] = [\(styleSources.isEmpty ? ":" : styleSources.joined(separator: ", "))]\n\n"
     var functions: [String] = []
     for symbol in graph.symbols where symbol.kind.identifier == "swift.func" && symbol.pathComponents.count == 1
         && symbol.accessLevel == "public" && available(symbol) {
