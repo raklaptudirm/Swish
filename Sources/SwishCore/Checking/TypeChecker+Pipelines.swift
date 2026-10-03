@@ -111,10 +111,10 @@ extension TypeChecker {
         // Decided here, even when the items' type isn't known: the
         // interpreter doesn't guess.
         if input != nil { command.resolution = .other }
-        // A sequence method with nothing piped in, and no function or
-        // program by that name, has nothing to work on.
-        if input == nil, shell.sequenceMethods[name] != nil, lookup(name) == nil, shell.findExecutable(name) == nil {
-            throw TypeError("\(name) is a method of sequences: pipe something into it, as in `ls | \(name)`, or call it on a list, as in `xs.\(name)(…)`")
+        // A method with nothing piped in, and no function or program by
+        // that name, has nothing to work on.
+        if input == nil, shell.isStageMethod(name), lookup(name) == nil, shell.findExecutable(name) == nil {
+            throw TypeError("\(name) is a method: pipe something into it, as in `ls | \(name)`, or call it on a value, as in `xs.\(name)(…)`")
         }
         if case .functions(let overloads)? = lookup(name) {
             let runtime = shell.commandFunctions(named: name)

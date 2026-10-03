@@ -102,6 +102,22 @@ extension Shell {
         }
     }
 
+    /// Whether `name` is a method some type has that a stage could call,
+    /// and that makes no sense without something piped in.
+    func isStageMethod(_ name: String) -> Bool {
+        sequenceMethods[name] != nil || Bridge.stageNames.contains(name)
+    }
+
+    /// Every bridged type's stage members named `name`, as one set of
+    /// functions: what's known of a stage while typing, before the type of
+    /// what's piped into it is.
+    func stageFunctions(named name: String) -> OverloadSet? {
+        let candidates = Bridge.types.keys.sorted().flatMap {
+            bridgedStage($0, name, receiver: .collected)?.candidates ?? []
+        }
+        return candidates.isEmpty ? nil : OverloadSet(name: name, candidates: candidates)
+    }
+
     /// `xs | max` or `names | uppercased`: a bridged type's members named
     /// `name`, as functions whose input is the receiver, so a stage runs
     /// them as it runs any function.
@@ -240,6 +256,33 @@ struct BridgedMember {
 }
 
 // MARK: Conversions the glue uses
+
+/// A Swish key path (`\.status.code`, or `--by size`) as a Swift one over
+/// values: each name a subscript that reads the field, one after another.
+func bridgeKeyPath(_ value: Value) throws -> KeyPath<Value, Value> {
+    guard case .function(let keyPath as KeyPathValue) = value else {
+        throw SwishError("expected a key path, not \(value.typeName)")
+    }
+    return keyPath.path.reduce(\Value.self) { path, name in path.appending(path: \Value.[field: name]) }
+}
+
+/// Runs `body`, which reads fields through key paths, with fields read as the
+/// shell reads them; the first failure (a field that isn't there) is thrown
+/// after it, since a key path can't throw.
+func withFieldReader<T>(_ shell: Shell, _ body: () throws -> T) throws -> T {
+    var failure: Error?
+    let saved = FieldAccess.reader
+    FieldAccess.reader = { value, name in
+        do { return try shell.member(name, of: value) } catch {
+            failure = failure ?? error
+            return .nothing
+        }
+    }
+    defer { FieldAccess.reader = saved }
+    let result = try body()
+    if let failure { throw failure }
+    return result
+}
 
 /// A case of a Swift enum from a Swish value: the case of that name, among
 /// all the enum's.

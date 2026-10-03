@@ -550,6 +550,12 @@ func supported(_ type: SType, generics: Set<String>, asParameter: Bool) -> Bool 
     switch type {
     case .named(let name, let arguments):
         if arguments.isEmpty { return isSimple(type, generics: generics) }
+        // A key path, which Swish reads by field name: `KeyPath<Element, V>`.
+        // Only over generic parameters, which are Swish's values: the path
+        // reads fields of them, as it can't of a Character.
+        if name == "KeyPath", arguments.count == 2 {
+            return asParameter && arguments.allSatisfy { if case .named(let n, []) = $0 { generics.contains(n) } else { false } }
+        }
         return boxes.contains(name) && arguments.allSatisfy { isSimple($0, generics: generics) }
     case .array(let element), .optional(let element), .someSequence(let element):
         return supported(element, generics: generics, asParameter: false)
@@ -571,6 +577,7 @@ func supported(_ type: SType, generics: Set<String>, asParameter: Bool) -> Bool 
 func annotation(_ type: SType) -> String {
     switch type {
     case .named(let name, []): return leaves[name]?.annotation ?? ".parameter(\(quoted(name)))"
+    case .named("KeyPath", let arguments) where arguments.count == 2: return ".keyPath(\(annotation(arguments[0])), \(annotation(arguments[1])))"
     case .named(let name, let arguments): return ".generic(\(quoted(name)), [\(arguments.map(annotation).joined(separator: ", "))])"
     case .array(let element): return ".list(\(annotation(element)))"
     case .optional(let wrapped): return ".optional(\(annotation(wrapped)))"
@@ -618,6 +625,7 @@ func isLeaf(_ type: SType) -> Bool {
 func fromSwish(_ value: String, _ type: SType) -> String {
     switch type {
     case .named(let name, []): return leaves[name]?.from(value) ?? value
+    case .named("KeyPath", let arguments) where arguments.count == 2: return "try bridgeKeyPath(\(value))"
     case .named(let name, let arguments):
         let box = "try SwiftValue.unbox(\(canonical(name, arguments)).self, \(value))"
         guard arguments.contains(where: isLeaf) else { return box }
@@ -1160,6 +1168,10 @@ func bridge(_ symbol: Symbol, of original: BridgedType, given conditions: [Const
     let docs = free ? symbol.parameterDocs : [:]
     let parameterDocs = docs.isEmpty ? "" : ",\n                    parameterDocs: [" + docs.sorted { $0.key < $1.key }.map { "\(quoted($0.key)): \(quoted($0.value))" }.joined(separator: ", ") + "]"
     let genericsCode = generics.isEmpty ? "[:]" : "[" + generics.sorted { $0.key < $1.key }.map { "\(quoted($0.key)): [\($0.value.map(quoted).joined(separator: ", "))]" }.joined(separator: ", ") + "]"
+    // A key path reads fields as the shell reads them, for as long as the call.
+    if parameters.contains(where: { annotation($0.1).hasPrefix(".keyPath") }) {
+        body = "return try withFieldReader(shell) { () throws -> Value in\n\(body)\n                }"
+    }
     let member = """
                 BridgedMember(
                     kind: \(kind), name: \(quoted(declaration.name)), isStatic: \(declaration.isStatic),

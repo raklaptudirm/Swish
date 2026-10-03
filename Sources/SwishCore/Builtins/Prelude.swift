@@ -83,20 +83,11 @@ extension Shell {
         /// - Parameter transform: a closure like { $0.name }, or a key path like \.name
         func compactMap<T>(_ transform: (Element) throws -> T?) rethrows -> [T]
 
-        /// The items in order of a field; Swift's sorted() and sorted(by:)
-        /// sort by the items themselves or a closure.
-        /// - Parameter by: the field, as in --by size or by: \.size
-        func sorted<V: Comparable>(@flag("b") by key: KeyPath<Element, V>) -> [Element]
-
         /// The first items; stops reading after them.
         func prefix(_ maxLength: Int = 1) -> [Element]
 
         /// Keeps only the named fields of each record.
         func select(_ fields: String...) -> [Any]
-
-        /// The value of one field of each item.
-        /// - Parameter key: a field, as in get name or get(\.name)
-        func get<V>(_ key: KeyPath<Element, V>) -> [V]
     }
     """#
 

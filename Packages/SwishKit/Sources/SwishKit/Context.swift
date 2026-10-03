@@ -27,3 +27,21 @@ public struct Partial<Value> {
         self.errors = errors
     }
 }
+
+// MARK: Fields by name
+
+/// How a value's field is read by name, set by the shell for the length of a
+/// call that takes a key path: the shell knows what a record, a struct or an
+/// object has.
+public enum FieldAccess {
+    nonisolated(unsafe) public static var reader: ((Value, String) -> Value)?
+}
+
+extension Value {
+    /// A field by name, nil as `.nothing`: what a key path over values
+    /// (`\Value.[field: "size"]`) reads, so a Swift function taking a
+    /// `KeyPath<Element, V>` works on Swish's values as on Swift's.
+    public subscript(field name: String) -> Value {
+        FieldAccess.reader?(self, name) ?? .nothing
+    }
+}

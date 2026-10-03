@@ -67,36 +67,6 @@ extension Shell {
         )
     }
 
-    func get() -> Function {
-        .builtin(
-            "get", "The value of one field of each item.",
-            [.input("item", .any), .positional("key", .any)],
-            .native { shell, args in
-                if case .function(let keyPath as KeyPathValue)? = args["key"] {
-                    return try keyPath.read(from: args["item"]!, in: shell)
-                }
-                return try shell.member(args.strings("key")[0], of: args["item"]!)
-            }
-        )
-    }
-
-    func sorted() -> Function {
-        .builtin(
-            "sorted", "The items in order.",
-            [.input("items", .list(.any)), .option("by", .any)],
-            .native { shell, args in
-                guard case .list(let items) = args["items"],
-                      case .function(let keyPath as KeyPathValue)? = args["key"] ?? args["by"] else { return .list([]) }
-                // By a field: ties keep their input order.
-                let keyed = try items.enumerated().map { (key: try keyPath.read(from: $1, in: shell), index: $0, item: $1) }
-                return .list(keyed.sorted { a, b in
-                    let order = a.key.order(comparedTo: b.key)
-                    return order != .orderedSame ? order == .orderedAscending : a.index < b.index
-                }.map(\.item))
-            }
-        )
-    }
-
     func prefix() -> Function {
         .builtin(
             "prefix", "The first items; stops reading after them.",

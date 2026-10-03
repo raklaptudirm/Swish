@@ -29,7 +29,8 @@ extension Shell {
             candidates = commandCandidates(prefix: word, externalOnly: false)
                 .filter { !["variable", "keyword"].contains($0.description) }
         } else if word.hasPrefix("-") && context.quote == nil,
-                  let functions = sequenceMethods[context.words[0]] ?? commandFunctions(named: context.words[0]) {
+                  let functions = sequenceMethods[context.words[0]] ?? commandFunctions(named: context.words[0])
+                    ?? stageFunctions(named: context.words[0]) {
             candidates = flagCandidates(for: functions, prefix: word)
         } else {
             candidates = pathCandidates(for: word, quote: context.quote, executablesOnly: false)

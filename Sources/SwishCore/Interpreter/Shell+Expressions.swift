@@ -574,8 +574,8 @@ extension Shell {
                 stages.append(.method(name, rest, redirects: redirects, environment: environment))
             } else if !command.external, let functions = commandFunctions(named: name) {
                 stages.append(.function(narrowed(functions, command.overload), rest, redirects: redirects, environment: environment))
-            } else if !command.external, !piped, sequenceMethods[name] != nil, findExecutable(name) == nil {
-                throw RuntimeError("\(name) is a method of sequences: pipe something into it, as in `ls | \(name)`, or call it on a list, as in `xs.\(name)(…)`")
+            } else if !command.external, !piped, isStageMethod(name), findExecutable(name) == nil {
+                throw RuntimeError("\(name) is a method: pipe something into it, as in `ls | \(name)`, or call it on a value, as in `xs.\(name)(…)`")
             } else {
                 let argv = try arguments.map { argument -> String in
                     guard case .text(let text) = argument else {
