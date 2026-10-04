@@ -16,7 +16,7 @@
     "FileSize\tswift.func.op\t...(_:_:)",
     "FileSize\tswift.func.op\t..<(_:)",
     "FileSize\tswift.func.op\t..<(_:_:)",
-    "FileSize\tswift.func.op\t/(_:_:)",
+    "FileSize\tswift.func.op\t\/(_:_:)",
     "FileSize\tswift.func.op\t<(_:_:)",
     "FileSize\tswift.func.op\t<=(_:_:)",
     "FileSize\tswift.func.op\t>(_:_:)",
