@@ -74,7 +74,7 @@ extension Shell {
     /// (`filter`), or all of them (`sorted`).
     func builtinBodies() -> [String: (body: FunctionBody, input: Parameter?)] {
         var bodies: [String: (body: FunctionBody, input: Parameter?)] = [:]
-        for function in [ from(), to(), table(), list(), members(), help(), with()] {
+        for function in [to(), table(), list(), members(), help()] {
             bodies[function.name!] = (function.body, nil)
         }
         for method in [select()] {
@@ -84,20 +84,6 @@ extension Shell {
             bodies["Sequence." + method.name!] = (method.body, Parameter(label: nil, name: input.name, type: type, isInput: true))
         }
         return bodies
-    }
-
-    /// `with(env: ["EDITOR": "vim"]) { git commit }`: runs the closure with
-    /// environment variables set, then puts them back.
-    private func with() -> Function {
-        .builtin(
-            "with", "Runs a closure with environment variables set.",
-            [.option("env", .dictionary(.string, .string)), .positional("body", .function)],
-            .native { shell, args in
-                guard case .dictionary(let variables) = args["env"] else { return .nothing }
-                let pairs = variables.map { ($0.key.description, $0.value.description) }
-                return try shell.withEnvironment(pairs) { try shell.call(args["body"]!, with: []) }
-            }
-        )
     }
 
     /// A case of an enum the prelude or the standard library module

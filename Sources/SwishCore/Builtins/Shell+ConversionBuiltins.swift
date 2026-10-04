@@ -1,21 +1,9 @@
 import Foundation
 import SwishKit
+import SwishStandardLibrary
 
 extension Shell {
     // MARK: Conversions
-
-    func from() -> Function {
-        .builtin(
-            "from", "Parses text into values.",
-            [.positional("format", .string), .input("text", .list(.any))],
-            docs: ["format": "json"],
-            .native { _, args in
-                let format = args.strings("format")[0]
-                guard format == "json" else { throw RuntimeError("from: unknown format '\(format)' (supported: json)") }
-                return try JSON.parse(args.strings("text").joined(separator: "\n"))
-            }
-        )
-    }
 
     func to() -> Function {
         .builtin(

@@ -145,6 +145,11 @@ do {
     }
     for symbol in publicTypes where symbol.kind.identifier == "swift.struct" {
         let name = symbol.pathComponents[0]
+        // A value held as it is: given as the value, taken from it.
+        if !conformances(of: symbol, among: ["WrapsValue"]).isEmpty {
+            leaves[name] = (".named(\(quoted(name)))", { "\(name)(\($0))" }, { "\($0).value" })
+            continue
+        }
         let protocols = conformances(of: symbol, among: ["Equatable", "Hashable", "Encodable"])
         guard protocols.contains("Encodable") else { continue }
         if !conformances(of: symbol, among: ["Tabular"]).isEmpty { columnSources.append("\(quoted(name)): \(name).columns") }

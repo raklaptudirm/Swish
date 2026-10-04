@@ -1,10 +1,17 @@
 import Foundation
 import SwishKit
 
-/// JSON with object keys kept in order, which Foundation's parser doesn't
-/// do and which tables need: key order is column order.
-enum JSON {
-    static func parse(_ text: String) throws -> Value {
+/// Parsed JSON: whatever it parsed as, a `Value`, which Swish reads by field
+/// and element. Object keys are kept in order, which Foundation's parser
+/// doesn't do and which tables need: key order is column order.
+public struct JSON: WrapsValue {
+    public let value: Value
+
+    public init(_ value: Value) {
+        self.value = value
+    }
+
+    public static func parse(_ text: String) throws -> Value {
         var parser = JSONParser(bytes: Array(text.utf8))
         parser.skipWhitespace()
         let value = try parser.parseValue()
@@ -13,14 +20,15 @@ enum JSON {
         return value
     }
 
-    static func text(_ value: Value, indent: String = "") throws -> String {
+    /// A value as JSON text, indented two spaces to a level.
+    public static func text(_ value: Value, indent: String = "") throws -> String {
         let inner = indent + "  "
         switch value {
         case .nothing: return "null"
         case .bool(let bool): return String(bool)
         case .int(let int): return String(int)
         case .double(let double):
-            guard double.isFinite else { throw RuntimeError("to json: \(double) isn't valid JSON") }
+            guard double.isFinite else { throw SwishError("to json: \(double) isn't valid JSON") }
             return String(double)
         case .string(let string): return quoted(string)
         case .enumValue(let value):
@@ -45,25 +53,26 @@ enum JSON {
             guard dictionary.count > 0 else { return "{}" }
             let fields = try dictionary.sortedForDisplay.map { key, value in
                 guard case .string(let name) = key else {
-                    throw RuntimeError("to json: an object's keys are Strings, not \(key.typeName)")
+                    throw SwishError("to json: an object's keys are Strings, and \(key.debugDescription) isn't one")
                 }
                 return inner + quoted(name) + ": " + (try text(value, indent: inner))
             }
             return "{\n" + fields.joined(separator: ",\n") + "\n\(indent)}"
         case .function:
-            throw RuntimeError("to json: a function has no JSON form")
+            throw SwishError("to json: a function has no JSON form")
         case .object(let object):
             if let fields = object.fields { return try text(.record(fields), indent: indent) }
-            // What a text literal can be (a FilePath, a Character) is its text;
-            // else a Swift value is as Swift encodes it (a file size is its bytes).
+            // What stands for text is its text; else a Swift value is as Swift
+            // encodes it (a file size is its bytes).
             if let box = object as? SwiftValue {
                 if let text = (box.value as? any StandsForText)?.text { return quoted(text) }
-                if Bridge.types[box.typeName]?.literal != nil { return quoted(box.description) }
+                // What a text literal can be, like a FilePath.
+                if box.value is any ExpressibleByUnicodeScalarLiteral { return quoted(box.description) }
                 if let json = try box.json() { return json }
             }
-            throw RuntimeError("to json: a \(object.typeName) has no JSON form")
+            throw SwishError("to json: a \(object.typeName) has no JSON form")
         @unknown default:
-            throw RuntimeError("to json: unsupported value")
+            throw SwishError("to json: unsupported value")
         }
     }
 
@@ -88,8 +97,8 @@ private struct JSONParser {
     let bytes: [UInt8]
     var index = 0
 
-    func error(_ message: String) -> RuntimeError {
-        RuntimeError("from json: \(message) at byte \(index)")
+    func error(_ message: String) -> SwishError {
+        SwishError("from json: \(message) at byte \(index)")
     }
 
     mutating func skipWhitespace() {

@@ -62,6 +62,14 @@ extension SwishObject {
     }
 }
 
+/// A type that holds a Swish value as it is, whose type says how it's read:
+/// `JSON`, which is whatever it parsed as. A function that gives one gives
+/// the value it holds.
+public protocol WrapsValue {
+    var value: Value { get }
+    init(_ value: Value)
+}
+
 /// A function value. The interpreter implements this for Swish functions and
 /// closures; plugins will implement it for bridged Swift functions.
 public protocol Callable: AnyObject, Sendable, CustomStringConvertible {}

@@ -42,10 +42,6 @@ extension Shell {
     /// .double, .bool, .array, .object and .isNull.
     struct JSON {}
 
-    /// Parses text into values.
-    /// - Parameter format: json
-    func from(_ format: String, @input _ text: [String]) -> JSON
-
     /// Converts the input to text: json, or text for how it would be displayed.
     /// - Parameter format: json or text
     func to(_ format: String, @input _ items: [Any]) -> String
@@ -66,9 +62,6 @@ extension Shell {
     /// members: `help String`, `help FilePath`, or a struct of yours.
     /// - Parameter name: a function, shell builtin, type or program
     func help(_ name: String) -> [AttributedString]
-
-    /// Runs a closure with environment variables set.
-    func with<T>(env: [String: String], _ body: () throws -> T) rethrows -> T
 
     extension Sequence {
         /// Keeps only the named fields of each record.

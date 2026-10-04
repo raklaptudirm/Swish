@@ -196,7 +196,7 @@ files.sorted(by: \.modified).map(\.name)
 let x: Any = 5
 (x as? Int ?? 0) + 1              // as? gives nil if it isn't one
 x is String                       // false
-let config = from("json", $(cat config.json).lines)
+let config = try from(.json, $(cat config.json).lines)
 config.server?.port?.int ?? 8080  // each field is a JSON?
 config["tags"]?[0]?.string
 ```

@@ -1,5 +1,6 @@
 import Foundation
 import SwishKit
+import SwishStandardLibrary
 
 extension Shell {
     func isEnvironment(_ expr: Expr) -> Bool {
@@ -23,15 +24,8 @@ extension Shell {
 
     /// Sets environment variables around `body`, then puts them back.
     func withEnvironment<T>(_ variables: [(String, String)], _ body: () throws -> T) rethrows -> T {
-        guard !variables.isEmpty else { return try body() }
-        let saved = variables.map { ($0.0, env($0.0)) }
-        for (name, value) in variables { setenv(name, value, 1) }
-        defer {
-            for (name, value) in saved.reversed() {
-                if let value { setenv(name, value, 1) } else { unsetenv(name) }
-            }
-        }
-        return try body()
+        // A name given twice is the last one's.
+        try with(env: Dictionary(variables, uniquingKeysWith: { $1 }), body)
     }
 
     /// Joins a string's parts into one string. Interpolation never splits.

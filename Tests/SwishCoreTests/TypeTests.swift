@@ -226,7 +226,7 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
 }
 
 @Test func jsonIsReadByFieldAndElement() throws {
-    let json = #"let j = from("json", ['{"server": {"port": 8080}, "tags": ["a", "b"], "on": true}']); "#
+    let json = #"let j = try from(.json, ['{"server": {"port": 8080}, "tags": ["a", "b"], "on": true}']); "#
     #expect(try output(json + #"j.server?.port?.int ?? 1; j.missing?.port?.int ?? 1; j["tags"]?[1]?.string; j.tags?.array?.count; j.on?.bool"#)
         == "8080\n1\n\"b\"\n2\ntrue\n")
     // A missing field and a JSON null are both nil, so isNull is true for either.
