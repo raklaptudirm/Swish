@@ -71,7 +71,7 @@ public func ls(@Rest _ paths: [FilePath] = [], @Flag all: Bool = false) -> Parti
             continue
         }
         for name in names.sorted() where all || !name.hasPrefix(".") {
-            let fullPath = path == "." ? name : (path as NSString).appendingPathComponent(name)
+            let fullPath = path == "." ? name : FilePath(path).appending(name).string
             entry(named: name, at: fullPath, into: &entries, errors: &errors)
         }
     }

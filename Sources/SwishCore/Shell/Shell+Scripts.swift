@@ -1,5 +1,6 @@
 import Foundation
 import SwishKit
+import SystemPackage
 
 extension Shell {
     /// Runs a script file. A `try!` that fails stops it; any other error
@@ -15,7 +16,7 @@ extension Shell {
         return runFile(at: path, arguments: arguments) { _ in
             guard let main = topLevelFunction("main") else { return }
             // `main` stands for the script, so its help and errors use the script's name.
-            callAsCommand(main, named: (path as NSString).lastPathComponent, arguments)
+            callAsCommand(main, named: FilePath(path).lastComponent?.string ?? path, arguments)
         }
     }
 

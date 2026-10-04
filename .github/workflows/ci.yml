@@ -1,0 +1,100 @@
+name: CI
+
+# Builds and tests Swish where it's meant to run: macOS and Linux. The same
+# steps as `run test` (Tasks.swish): both packages' unit tests, then the
+# shell driven through a real terminal by the expect scripts.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The terminal tests expect a color terminal, as a person's would be.
+  TERM: xterm-256color
+
+jobs:
+  macos:
+    name: macOS
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      # The bridges in Sources/SwishCore/Bridge/Generated are read from this
+      # Swift's symbol graphs, so the newest Xcode is the one they match.
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            Packages/SwishKit/.build
+            Examples/Tools/.build
+          key: macos-${{ runner.arch }}-swift-${{ hashFiles('**/Package.resolved', '**/Package.swift') }}
+          restore-keys: macos-${{ runner.arch }}-swift-
+
+      - name: Swift version
+        run: swift --version
+
+      - name: Build
+        run: swift build
+
+      - name: Unit tests
+        run: swift test
+
+      - name: SwishKit unit tests
+        run: swift test --package-path Packages/SwishKit
+
+      - name: Terminal tests
+        run: |
+          for script in job-control line-editor background-jobs config signals; do
+            expect "Tests/Interactive/$script.exp"
+          done
+
+  linux:
+    name: Linux
+    runs-on: ubuntu-latest
+    container: swift:6.2
+    timeout-minutes: 60
+    steps:
+      - name: Install expect
+        run: apt-get update && apt-get install -y expect
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            Packages/SwishKit/.build
+            Examples/Tools/.build
+          key: linux-${{ runner.arch }}-swift-${{ hashFiles('**/Package.resolved', '**/Package.swift') }}
+          restore-keys: linux-${{ runner.arch }}-swift-
+
+      - name: Swift version
+        run: swift --version
+
+      - name: Build
+        run: swift build
+
+      - name: Unit tests
+        run: swift test
+
+      - name: SwishKit unit tests
+        run: swift test --package-path Packages/SwishKit
+
+      - name: Terminal tests
+        run: |
+          for script in job-control line-editor background-jobs config signals; do
+            expect "Tests/Interactive/$script.exp"
+          done

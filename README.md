@@ -1,5 +1,7 @@
 # Swish
 
+[![CI](https://github.com/raklaptudirm/Swish/actions/workflows/ci.yml/badge.svg)](https://github.com/raklaptudirm/Swish/actions/workflows/ci.yml)
+
 **A shell that speaks Swift.** Commands work the way they do in any shell;
 everything else is a small Swift-flavored language, with values instead of
 text flowing through pipelines, and Swift packages you can `import` and use
@@ -255,6 +257,9 @@ The tasks are functions in [`Tasks.swish`](Tasks.swish); inside Swish, `run` lis
 `run test` runs one. `run test` works with just the Command Line Tools installed, where
 `swift test` alone can't find the Testing framework. The terminal tests need
 `expect`, which macOS ships (on Linux, install it from your package manager).
+
+[CI](.github/workflows/ci.yml) runs the same steps on every push to `main` and every pull
+request, on a macOS runner and on Linux (the `swift:6.2` image).
 
 | Path | What |
 |---|---|
