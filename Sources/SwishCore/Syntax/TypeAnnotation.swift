@@ -40,15 +40,15 @@ indirect enum TypeAnnotation: Hashable, Sendable, CustomStringConvertible {
         var type: TypeAnnotation
     }
 
-    var description: String { StyledText(styled).text }
+    var description: String { AttributedString(joining: styled).text }
 
     /// As Swift writes it, in pieces by what each is (the name of a type, a
     /// label, a keyword, or punctuation), so help can color it and no one has
     /// to read the text back to find out.
-    var styled: [StyledText.Segment] {
-        func name(_ text: String) -> StyledText.Segment { .init(text, .type) }
-        func punctuation(_ text: String) -> StyledText.Segment { .init(text) }
-        func list(_ items: [[StyledText.Segment]]) -> [StyledText.Segment] {
+    var styled: [AttributedString] {
+        func name(_ text: String) -> AttributedString { .init(text, .type) }
+        func punctuation(_ text: String) -> AttributedString { .init(text) }
+        func list(_ items: [[AttributedString]]) -> [AttributedString] {
             items.enumerated().flatMap { index, item in (index > 0 ? [punctuation(", ")] : []) + item }
         }
         switch self {
@@ -64,7 +64,7 @@ indirect enum TypeAnnotation: Hashable, Sendable, CustomStringConvertible {
             return [punctuation("[")] + key.styled + [punctuation(": ")] + value.styled + [punctuation("]")]
         case .tuple(let elements):
             return [punctuation("(")] + list(elements.map { element in
-                (element.label.map { [StyledText.Segment($0, .variable), punctuation(": ")] } ?? []) + element.type.styled
+                (element.label.map { [AttributedString($0, .variable), punctuation(": ")] } ?? []) + element.type.styled
             }) + [punctuation(")")]
         case .function: return [name("function")]
         case .functionType(let parameters, let result, let throwing):

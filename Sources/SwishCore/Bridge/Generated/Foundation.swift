@@ -4,6 +4,7 @@ import Foundation
 import SwishKit
 import Foundation
 import SwishStandardLibrary
+import SwishKit
 
 extension Bridge {
     nonisolated(unsafe) static let foundation: [BridgedType] = [
@@ -15,6 +16,15 @@ extension Bridge {
             parse: { Date($0).map { SwiftValue.make($0, as: "Date") } }, literal: nil, arrayLiteral: nil,
             members: [
                 member0, member1, member2, member3, member4, member5, member6, member7, member8, member9, member10, member11, member12, member13, member14, member15, member16, member17, member18, member19, member20, member21, member22, member23, member24, member25, member26, member27, member28, member29, member30, member31, member32, member33, member34, member35
+            ]
+        ),
+        BridgedType(
+            name: "AttributedString", genericParameters: [],
+            conformances: ["CustomStringConvertible": [:], "Encodable": [:], "Equatable": [:], "ExpressibleByStringLiteral": [:], "Hashable": [:]],
+            associatedTypes: ["ExtendedGraphemeClusterLiteralType": .string, "StringLiteralType": .string, "UnicodeScalarLiteralType": .string],
+            parse: nil, literal: { textLiteral(AttributedString.self, $0).map { SwiftValue.make($0, as: "AttributedString") } }, arrayLiteral: nil,
+            members: [
+                member36, member37, member38, member39, member40, member41, member42, member43, member44, member45, member46, member47, member48
             ]
         ),
     ]
@@ -495,6 +505,182 @@ extension Bridge {
                         _ = shell
                         let result = (try SwiftValue.unbox(Date.self, args["lhs"]!)) - (try Int(swishValue: args["rhs"]!))
                 return SwiftValue.make(result, as: "Date")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member36: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "description", isStatic: false,
+                    parameters: [],
+                    returns: .string, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "A textual representation of this instance.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: AttributedString = try SwiftValue.unbox(AttributedString.self, args["self"]!)
+                let result = receiver.description
+                return result.swishValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member37: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "!=", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "lhs", type: .named("AttributedString")), Parameter(label: nil, name: "rhs", type: .named("AttributedString"))],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a Boolean value indicating whether two values are not equal.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = (try SwiftValue.unbox(AttributedString.self, args["lhs"]!)) != (try SwiftValue.unbox(AttributedString.self, args["rhs"]!))
+                return result.swishValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member38: BridgedMember =                 BridgedMember(
+                    kind: .initializer, name: "init", isStatic: true,
+                    parameters: [],
+                    returns: .named("AttributedString"), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = AttributedString()
+                return SwiftValue.make(result, as: "AttributedString")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member39: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "==", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "lhs", type: .named("AttributedString")), Parameter(label: nil, name: "rhs", type: .named("AttributedString"))],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a Boolean value indicating whether two values are equal.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = (try SwiftValue.unbox(AttributedString.self, args["lhs"]!)) == (try SwiftValue.unbox(AttributedString.self, args["rhs"]!))
+                return result.swishValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member40: BridgedMember =                 BridgedMember(
+                    kind: .initializer, name: "init", isStatic: true,
+                    parameters: [Parameter(label: "stringLiteral", name: "value", type: .string)],
+                    returns: .named("AttributedString"), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Creates an instance initialized to the given string value.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = AttributedString(stringLiteral: try String(swishValue: args["value"]!))
+                return SwiftValue.make(result, as: "AttributedString")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member41: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "hashValue", isStatic: false,
+                    parameters: [],
+                    returns: .int, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "The hash value.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: AttributedString = try SwiftValue.unbox(AttributedString.self, args["self"]!)
+                let result = receiver.hashValue
+                return result.swishValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member42: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "+", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "lhs", type: .named("AttributedString")), Parameter(label: nil, name: "rhs", type: .named("AttributedString"))],
+                    returns: .named("AttributedString"), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = (try SwiftValue.unbox(AttributedString.self, args["lhs"]!)) + (try SwiftValue.unbox(AttributedString.self, args["rhs"]!))
+                return SwiftValue.make(result, as: "AttributedString")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member43: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "inflected", isStatic: false,
+                    parameters: [],
+                    returns: .named("AttributedString"), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: AttributedString = try SwiftValue.unbox(AttributedString.self, args["self"]!)
+                let result = receiver.inflected()
+                return SwiftValue.make(result, as: "AttributedString")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member44: BridgedMember =                 BridgedMember(
+                    kind: .initializer, name: "init", isStatic: true,
+                    parameters: [Parameter(label: "joining", name: "pieces", type: .list(.named("AttributedString")))],
+                    returns: .named("AttributedString"), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Pieces one after the other.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = AttributedString(joining: try bridgeList(args["pieces"]!).map { try SwiftValue.unbox(AttributedString.self, $0) })
+                return SwiftValue.make(result, as: "AttributedString")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member45: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "plain", isStatic: false,
+                    parameters: [],
+                    returns: .string, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Without the styles.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: AttributedString = try SwiftValue.unbox(AttributedString.self, args["self"]!)
+                let result = receiver.plain
+                return result.swishValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member46: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "colored", isStatic: false,
+                    parameters: [],
+                    returns: .string, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "With the terminal's escapes for each style.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: AttributedString = try SwiftValue.unbox(AttributedString.self, args["self"]!)
+                let result = receiver.colored
+                return result.swishValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member47: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "rendered", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "styled", type: .bool)],
+                    returns: .string, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "As a String: with the terminal's escapes if `styled`.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: AttributedString = try SwiftValue.unbox(AttributedString.self, args["self"]!)
+                let result = receiver.rendered(try Bool(swishValue: args["styled"]!))
+                return result.swishValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member48: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "text", isStatic: false,
+                    parameters: [],
+                    returns: .string, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: AttributedString = try SwiftValue.unbox(AttributedString.self, args["self"]!)
+                let result = receiver.text
+                return result.swishValue
                     }
                 )
 }

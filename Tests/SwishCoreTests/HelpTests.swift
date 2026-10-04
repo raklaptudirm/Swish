@@ -66,36 +66,31 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
     #expect(try output(#""a" | members | filter { $0.name == "uppercased" } | get kind"#) == "method\n")
 }
 
-@Test func signaturesAreColoredByWhatEachPartIs() throws {
+@Test func signaturesAreColoredByWhatEachPartIs() {
     let shell = Shell()
-    /// The pieces of a member's signature, found by its type and its text.
-    func pieces(_ type: String, _ signature: String) throws -> [StyledText.Segment] {
-        let members = try #require(shell.typeDescription(named: type)).members
-        return try #require(members.first { $0.signature.text == signature }).signature.segments
+    func style(_ word: String, in signature: String, of type: String) -> DisplayStyle?? {
+        runStyle(of: word, inSignature: signature, ofType: type, shell: shell)
     }
-    func style(_ word: String, in pieces: [StyledText.Segment]) -> DisplayStyle?? {
-        pieces.first { $0.text == word }.map(\.style)
-    }
-    let initializer = try pieces("Int", "init(_ description: String)")
-    #expect(style("init", in: initializer) == .keyword)
-    #expect(style("description", in: initializer) == .variable)
-    #expect(style("String", in: initializer) == .type)
+    let initializer = "init(_ description: String)"
+    #expect(style("init", in: initializer, of: "Int") == .keyword)
+    #expect(style("description", in: initializer, of: "Int") == .variable)
+    #expect(style("String", in: initializer, of: "Int") == .type)
     // A property: its keyword, its name, its type.
-    let property = try pieces("ProcessEntry", "let cpuTime: Double?")
-    #expect(style("let", in: property) == .keyword)
-    #expect(style("cpuTime", in: property) == .command)
-    #expect(style("Double", in: property) == .type)
+    let property = "let cpuTime: Double?"
+    #expect(style("let", in: property, of: "ProcessEntry") == .keyword)
+    #expect(style("cpuTime", in: property, of: "ProcessEntry") == .command)
+    #expect(style("Double", in: property, of: "ProcessEntry") == .type)
     // A method: its name, labels, and the types of what it takes and gives.
-    let method = try pieces("Array", "contains(where predicate: (Element) throws -> Bool) -> Bool")
-    #expect(style("contains", in: method) == .command)
-    #expect(style("where", in: method) == .variable)
-    #expect(style("throws", in: method) == .keyword)
-    #expect(style("Bool", in: method) == .type)
+    let method = "contains(where predicate: (Element) throws -> Bool) -> Bool"
+    #expect(style("contains", in: method, of: "Array") == .command)
+    #expect(style("where", in: method, of: "Array") == .variable)
+    #expect(style("throws", in: method, of: "Array") == .keyword)
+    #expect(style("Bool", in: method, of: "Array") == .type)
 }
 
 @Test func styledTextIsColoredOnlyWhereItsAskedFor() throws {
-    let line = StyledText([.init("ls", .green), .init(" [--all]")])
-    #expect(line.text == "ls [--all]")
+    let line = sampleStyledLine()
+    #expect(line.plain == "ls [--all]")
     #expect(line.colored == "\u{1B}[32mls\u{1B}[0m [--all]")
     // Piped or captured, help is its plain text, and it's text where a String is.
     #expect(try output("help ls | grep -c Usage") == "1\n")

@@ -7,8 +7,8 @@ enum HelpStyle {
     /// A hand-written usage (a shell builtin's): `--name`, `-a`, `<value>` and
     /// the rest, each colored as what it is, the command's name first. A
     /// function's usage is built from its parameters instead.
-    static func usage(_ text: String) -> [StyledText.Segment] {
-        var segments: [StyledText.Segment] = []
+    static func usage(_ text: String) -> [AttributedString] {
+        var segments: [AttributedString] = []
         var first = true
         for (index, word) in text.split(separator: " ", omittingEmptySubsequences: false).enumerated() {
             if index > 0 { segments.append(.init(" ")) }
@@ -18,10 +18,10 @@ enum HelpStyle {
         return segments
     }
 
-    private static func usageWord(_ word: String, isName: Bool) -> [StyledText.Segment] {
+    private static func usageWord(_ word: String, isName: Bool) -> [AttributedString] {
         if isName { return [.init(word, .command)] }
         // Brackets and bars around a flag or a placeholder stay plain.
-        var segments: [StyledText.Segment] = []
+        var segments: [AttributedString] = []
         var current = ""
         func flush() {
             guard !current.isEmpty else { return }
@@ -42,13 +42,7 @@ enum HelpStyle {
     }
 }
 
-extension StyledText {
-    /// One piece of a line: with a style, or without.
-    static func line(_ segments: [Segment]) -> StyledText { StyledText(segments) }
-
+extension AttributedString {
     /// The width it takes on a line.
-    var width: Int { text.count }
-
-    /// As a String: with the terminal's escapes if `styled`.
-    func rendered(_ styled: Bool) -> String { styled ? colored : text }
+    var width: Int { plain.count }
 }

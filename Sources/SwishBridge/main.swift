@@ -53,11 +53,11 @@ let modules: [String: (list: String, types: [(String, [String])], functions: Str
     // calls it Anchor.
     "SystemPackage": ("system", [("FilePath", []), ("FilePath.Component", []), ("FilePath.ComponentView", [])], nil, [], []),
     // Foundation's types Swish holds as Swift's: a date.
-    "Foundation": ("foundation", [("Date", [])], nil, [], []),
+    "Foundation": ("foundation", [("Date", []), ("AttributedString", [])], nil, [], []),
     // SwishKit's own types, which Swish holds as Swift's: a file size, a
     // command's output. `Status` is a struct Swish declares itself (the
     // prelude), made from the Swift value as a record.
-    "SwishKit": ("swishKit", [("FileSize", []), ("Output", []), ("StyledText", [])], nil, [], ["Status"]),
+    "SwishKit": ("swishKit", [("FileSize", []), ("Output", [])], nil, [], ["Status"]),
     // The shell's own functions: every public free function. Their types are
     // Swift's (bridged from the other modules, so held here as they are).
     "SwishStandardLibrary": ("", [], "standardFunctions", ["FilePath", "FileSize", "Date"], []),

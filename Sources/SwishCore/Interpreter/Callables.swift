@@ -20,8 +20,8 @@ final class OverloadSet: Callable, @unchecked Sendable {
 extension Parameter {
     /// As a declaration writes it: `_ name: String`, `by key: Int`,
     /// `@input items: [Int]`, `paths: FilePath...`.
-    var declaration: [StyledText.Segment] {
-        var pieces: [StyledText.Segment] = []
+    var declaration: [AttributedString] {
+        var pieces: [AttributedString] = []
         if isInput { pieces += [.init("@input", .keyword), .init(" ")] }
         if label == name {
             pieces.append(.init(name, .variable))
@@ -37,8 +37,8 @@ extension Function {
     /// without the parameters `hiding` says, in pieces by what each is.
     func declaration(
         as name: String? = nil, nameStyle: DisplayStyle = .command, hiding hidden: (Parameter) -> Bool
-    ) -> [StyledText.Segment] {
-        var pieces: [StyledText.Segment] = [.init(name ?? self.name ?? "closure", nameStyle), .init("(")]
+    ) -> [AttributedString] {
+        var pieces: [AttributedString] = [.init(name ?? self.name ?? "closure", nameStyle), .init("(")]
         for (index, parameter) in parameters.filter({ !hidden($0) }).enumerated() {
             pieces += (index > 0 ? [.init(", ")] : []) + parameter.declaration
         }
@@ -50,10 +50,10 @@ extension Function {
     /// Like a Swift declaration: `greet(_ name: String, times: Int) -> String`.
     /// A Swift member's receiver, as a stage's input, isn't written.
     var signature: String {
-        StyledText(declaration { $0.isInput && $0.name == "self" }).text
+        AttributedString(joining: declaration { $0.isInput && $0.name == "self" }).text
     }
 
-    func declaration(hiding hidden: (Parameter) -> Bool) -> [StyledText.Segment] {
+    func declaration(hiding hidden: (Parameter) -> Bool) -> [AttributedString] {
         declaration(as: nil, nameStyle: .command, hiding: hidden)
     }
 }
