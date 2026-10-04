@@ -4,7 +4,8 @@ import Foundation
 // it, so `help`, and anything else that shows text with emphasis, hands
 // Swish a standard type. Foundation alone has no colors (they're in AppKit,
 // UIKit and SwiftUI), so the shell's own are one attribute: a style by what
-// the text is, which the terminal turns into a color when it's shown.
+// the text is, which the terminal turns into a color when it's shown. (Nor
+// does Foundation on Linux parse Markdown, so documentation's is read here.)
 
 /// The style a run of text is in: `DisplayStyle`'s roles (a keyword, a type,
 /// a flag…), not a color, so what a color is, or whether there is one, is
@@ -17,9 +18,6 @@ public enum DisplayStyleAttribute: AttributedStringKey {
 extension AttributeScopes {
     public struct SwishAttributes: AttributeScope {
         public let displayStyle: DisplayStyleAttribute
-        /// What Foundation has (emphasis, code, links, structure), so text
-        /// parsed from Markdown keeps it.
-        public let foundation: FoundationAttributes
     }
 
     public var swish: SwishAttributes.Type { SwishAttributes.self }
@@ -49,24 +47,12 @@ extension AttributedString {
         String(characters)
     }
 
-    /// Text written in Markdown, as documentation is: its emphasis, code and
-    /// links kept as the attributes Foundation gives them, which show as styles
-    /// where there are colors. Text that isn't valid Markdown is just text.
+    /// Text written in Markdown, as documentation is: its code, strong text,
+    /// emphasis and links as styles, which show where there are colors, and
+    /// the plain words anywhere else. Only the inline syntax, which is what a
+    /// description is made of; see `InlineMarkdown`.
     public init(documentation text: String) {
-        let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-        self = (try? AttributedString(markdown: text, options: options)) ?? AttributedString(text)
-    }
-
-    /// The style of a run: the one it's given, or what its Markdown says
-    /// (code, strong, emphasis, a link).
-    private static func style(of run: AttributedString.Runs.Run) -> DisplayStyle? {
-        if let style = run.swish.displayStyle { return style }
-        if let intent = run.inlinePresentationIntent {
-            if intent.contains(.code) { return .variable }
-            if intent.contains(.stronglyEmphasized) { return .bold }
-            if intent.contains(.emphasized) { return .italic }
-        }
-        return run.link == nil ? nil : .underline
+        self = InlineMarkdown(Array(text)).parse(0..<text.count, style: nil)
     }
 
     /// With the terminal's escapes for each style.
@@ -74,7 +60,7 @@ extension AttributedString {
         var result = ""
         for run in runs {
             let text = String(self[run.range].characters)
-            if let style = AttributedString.style(of: run), !text.isEmpty {
+            if let style = run.swish.displayStyle, !text.isEmpty {
                 result += style.escape + text + DisplayStyle.reset
             } else {
                 result += text
