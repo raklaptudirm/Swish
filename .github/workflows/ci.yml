@@ -70,8 +70,12 @@ jobs:
     container: swift:6.2
     timeout-minutes: 60
     steps:
-      - name: Install expect
-        run: apt-get update && apt-get install -y expect
+      # expect drives the terminal tests; python3 is the program a few of them
+      # run (it reads the terminal the way vim or less do).
+      - name: Install expect and python3
+        run: |
+          apt-get update && apt-get install -y expect python3
+          python3 --version
 
       - uses: actions/checkout@v4
 
