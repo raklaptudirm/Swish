@@ -40,7 +40,8 @@ jobs:
             .build
             Packages/SwishKit/.build
             Examples/Tools/.build
-          key: macos-${{ runner.arch }}-swift-${{ hashFiles('**/Package.resolved', '**/Package.swift') }}
+          # The manifests, not `**`, which would walk into .build.
+          key: macos-${{ runner.arch }}-swift-${{ hashFiles('Package.swift', 'Package.resolved', 'Packages/*/Package.swift', 'Examples/*/Package.swift') }}
           restore-keys: macos-${{ runner.arch }}-swift-
 
       - name: Swift version
@@ -85,7 +86,7 @@ jobs:
             .build
             Packages/SwishKit/.build
             Examples/Tools/.build
-          key: linux-${{ runner.arch }}-swift-${{ hashFiles('**/Package.resolved', '**/Package.swift') }}
+          key: linux-${{ runner.arch }}-swift-${{ hashFiles('Package.swift', 'Package.resolved', 'Packages/*/Package.swift', 'Examples/*/Package.swift') }}
           restore-keys: linux-${{ runner.arch }}-swift-
 
       - name: Swift version
