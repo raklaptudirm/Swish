@@ -33,12 +33,28 @@ func bridge() {
     // it; the shell's own also declares types the extensions use.
     let extensions = ["Swift": ["_StringProcessing", "SwishStandardLibrary"], "Foundation": ["SwishStandardLibrary", "SwishKit"]]
     let declaresTypes = ["SwishStandardLibrary"]
+    // A module's types can be defined in a module it re-exports, which some
+    // platforms don't have: Foundation's Date is FoundationEssentials' on
+    // Linux. Their graphs are read with it, and what adds to them is too.
+    let reexports = ["Foundation": ["FoundationEssentials"]]
+    func exists(_ file: String) -> Bool { $(^test -f $file).status.succeeded }
     for module in ["Swift", "SystemPackage", "SwishKit", "Foundation", "SwishStandardLibrary"] {
         try! _graph(module, into: graphs)
         var extra: [String] = []
+        var hosts = [module]
+        for host in reexports[module] ?? [] {
+            let made = try? _graph(host, into: graphs)
+            if exists("\(graphs)/\(host).symbols.json") {
+                hosts.append(host)
+                extra.append("\(graphs)/\(host).symbols.json")
+            }
+        }
         for other in extensions[module] ?? [] {
             try! _graph(other, into: graphs)
-            extra.append("\(graphs)/\(other)@\(module).symbols.json")
+            for host in hosts {
+                let file = "\(graphs)/\(other)@\(host).symbols.json"
+                if exists(file) { extra.append(file) }
+            }
             if declaresTypes.contains(other) { extra.append("\(graphs)/\(other).symbols.json") }
         }
         let outputs = ["Swift": "StandardLibrary", "SwishStandardLibrary": "SwishLibrary"]
