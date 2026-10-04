@@ -29,7 +29,8 @@ struct PrettyPrinter {
     func node(for value: Value) -> Node {
         switch value {
         case .nothing: .segments([("nil", Style.constant)])
-        case .bool, .int, .double, .filesize: .segments([(value.description, Style.constant)])
+        case .bool, .int, .double: .segments([(value.description, Style.constant)])
+        case .object where value.fileSize != nil: .segments([(value.description, Style.constant)])
         case .date, .function: .segments([(value.description, nil)])
         case .string(let text): .string(text)
         case .list(let items):

@@ -24,7 +24,7 @@ private struct FileEntry: Encodable {
     // Field order follows the declaration; a nil optional is left out, as
     // synthesized Encodable does.
     #expect(record.keys == ["name", "size", "tags", "owner"])
-    #expect(record["size"] == .filesize(1200))
+    #expect(record["size"] == .fileSize(FileSize(bytes: 1200)))
     #expect(record["tags"] == .list([.string("x")]))
     guard case .record(let owner)? = record["owner"] else {
         Issue.record("owner isn't a record")
@@ -69,8 +69,28 @@ private final class Node {
 }
 
 @Test func formatsFileSizes() {
-    #expect(Value.filesize(532).description == "532 B")
-    #expect(Value.filesize(1234).description == "1.2 KB")
-    #expect(Value.filesize(123_456_789).description == "123 MB")
-    #expect(Value.filesize(-2000).description == "-2.0 KB")
+    #expect(FileSize(bytes: 532).description == "532 B")
+    #expect(FileSize(bytes: 1234).description == "1.2 KB")
+    #expect(FileSize(bytes: 123_456_789).description == "123 MB")
+    #expect(FileSize(bytes: -2000).description == "-2.0 KB")
+    // As a value it shows the same.
+    #expect(Value.fileSize(FileSize(bytes: 1234)).description == "1.2 KB")
+}
+
+@Test func fileSizesParseAndDoArithmetic() throws {
+    #expect(FileSize("1024")?.bytes == 1024)
+    #expect(FileSize("1.5mb")?.bytes == 1_500_000)
+    #expect(FileSize("1.5 MB")?.bytes == 1_500_000)
+    #expect(FileSize("2kib")?.bytes == 2048)
+    #expect(FileSize("lots") == nil)
+    #expect(FileSize(1.5, unit: "gb")?.bytes == 1_500_000_000)
+    #expect(FileSize(1, unit: "parsecs") == nil)
+    let kb = FileSize(bytes: 1000)
+    #expect(try (kb + kb).bytes == 2000)
+    #expect(try (kb * 3).bytes == 3000)
+    #expect(try (kb / 4).bytes == 250)
+    #expect(kb / FileSize(bytes: 500) == 2.0)
+    #expect(kb < FileSize(bytes: 1001))
+    #expect(throws: SwishError.self) { try kb / 0 }
+    #expect(throws: SwishError.self) { try FileSize(bytes: .max) * 2 }
 }

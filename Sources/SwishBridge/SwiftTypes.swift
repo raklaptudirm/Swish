@@ -47,6 +47,16 @@ struct Reader {
         return true
     }
 
+    /// An operator's name, `+` or `<=`.
+    mutating func operatorName() -> String? {
+        pos = skipSpacesCopy()
+        var end = pos
+        while end < chars.count, "/=-+!*%<>&|^~?.".contains(chars[end]) { end += 1 }
+        guard end > pos else { return nil }
+        defer { pos = end }
+        return String(chars[pos..<end])
+    }
+
     mutating func identifier() -> String? {
         pos = skipSpacesCopy()
         // `extension`: a keyword used as a name.

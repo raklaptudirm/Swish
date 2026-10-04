@@ -34,6 +34,8 @@ struct Declaration {
     let typedError: String?
     /// Its `where` clause, which the graph doesn't always give separately.
     var constraints: [Constraint] = []
+    /// `+`, `<`: written between its operands (or before the one).
+    var isOperator = false
 }
 
 /// `A: P & Q, B == C`, as the graph writes constraints.
@@ -89,7 +91,8 @@ func parseDeclaration(_ text: String) throws -> Declaration {
         switch word {
         case "static", "class": isStatic = true
         case "mutating": isMutating = true
-        case "nonmutating", "public", "final", "override", "convenience", "required", "optional", "dynamic", "lazy", "nonisolated": break
+        case "nonmutating", "public", "final", "override", "convenience", "required", "optional", "dynamic", "lazy", "nonisolated",
+             "prefix", "postfix": break
         default: reader.pos = save
         }
         if reader.pos == save { break }
@@ -177,14 +180,20 @@ func parseDeclaration(_ text: String) throws -> Declaration {
     }
 
     if reader.consume("func") {
-        guard let name = reader.identifier() else { throw Unsupported(reason: "operator") }
-        try genericParameters(&reader)
-        let parameters = try parameterList(&reader)
+        // An operator's operands have no labels, whatever they're called.
+        let start = reader.pos
+        let isOperator = reader.identifier() == nil
+        reader.pos = start
+        guard let name = reader.identifier() ?? reader.operatorName() else { throw Unsupported(reason: "operator") }
+        if !isOperator { try genericParameters(&reader) }
+        var parameters = try parameterList(&reader)
+        if isOperator { parameters = parameters.map { Parameter(label: nil, name: $0.name, type: $0.type, defaultText: $0.defaultText) } }
         let (throwing, rethrowing) = try effects(&reader)
         let returns = reader.consume("->") ? try reader.type() : nil
         var declaration = Declaration(kind: .method, name: name, isStatic: isStatic, isMutating: isMutating, isFailable: false,
                                       generics: generics, parameters: parameters, returns: returns,
                                       throwing: throwing, rethrowing: rethrowing, typedError: typedError)
+        declaration.isOperator = isOperator
         if reader.consume("where") { declaration.constraints = whereConstraints(String(reader.chars[reader.pos...])) }
         return declaration
     }

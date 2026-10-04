@@ -11,12 +11,27 @@ public final class SwiftValue: SwishObject, @unchecked Sendable {
     public let typeName: String
     private let hashable: AnyHashable?
     private let lessThan: ((Any) -> Bool)?
+    private let encode: (() throws -> String)?
 
     private init(_ value: Any, typeName: String, hashable: AnyHashable?, lessThan: ((Any) -> Bool)?) {
         self.value = value
         self.typeName = typeName
         self.hashable = hashable
         self.lessThan = lessThan
+        // As Swift encodes it, if it can: a FileSize is its byte count.
+        encode = (value as? any Encodable).map { encodable in
+            { String(decoding: try JSONEncoder().encode(AnyEncodable(value: encodable)), as: UTF8.self) }
+        }
+    }
+
+    private struct AnyEncodable: Encodable {
+        let value: any Encodable
+        func encode(to encoder: any Encoder) throws { try value.encode(to: encoder) }
+    }
+
+    /// Its JSON, if its Swift type is Encodable.
+    public func json() throws -> String? {
+        try encode?()
     }
 
     /// Hashes and sorts as the Swift value does whenever it can, found out

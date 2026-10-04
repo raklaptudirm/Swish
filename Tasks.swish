@@ -30,7 +30,7 @@ func bridge() {
     // it; the shell's own also declares types the extensions use.
     let extensions = ["Swift": ["_StringProcessing", "SwishStandardLibrary"]]
     let declaresTypes = ["SwishStandardLibrary"]
-    for module in ["Swift", "SystemPackage", "SwishStandardLibrary"] {
+    for module in ["Swift", "SystemPackage", "SwishKit", "SwishStandardLibrary"] {
         try! _graph(module, into: graphs)
         var extra: [String] = []
         for other in extensions[module] ?? [] {
@@ -38,7 +38,8 @@ func bridge() {
             extra.append("\(graphs)/\(other)@\(module).symbols.json")
             if declaresTypes.contains(other) { extra.append("\(graphs)/\(other).symbols.json") }
         }
-        let output = module == "Swift" ? "StandardLibrary" : module == "SwishStandardLibrary" ? "SwishLibrary" : module
+        let outputs = ["Swift": "StandardLibrary", "SwishStandardLibrary": "SwishLibrary"]
+        let output = outputs[module] ?? module
         try! swift run -c release swish-bridge "\(graphs)/\(module).symbols.json" "Sources/SwishCore/Bridge/Generated/\(output).swift" $extra
     }
 }

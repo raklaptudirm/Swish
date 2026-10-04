@@ -250,8 +250,6 @@ extension TypeChecker {
             members = ["keys": .list(key), "values": .list(value)]
         case .string:
             members = ["lines": .list(.string)]
-        case .filesize:
-            members = ["bytes": .int]
         default:
             members = [:]
         }

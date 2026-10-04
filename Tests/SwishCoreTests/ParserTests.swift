@@ -1,4 +1,5 @@
 @testable import SwishCore
+import SwishKit
 import Testing
 
 private func names(_ variables: Set<String>, functions: Set<String> = []) -> [String: NameKind] {
@@ -200,7 +201,7 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
     let program = try parse(#"let r = ["name": "x", "size": 1.5.kb]; r.size; [:]"#)
     #expect(program.statements[0] == .declare(name: "r", mutable: false, value: .record([
         RecordEntry(key: .literal(.string("name")), value: .literal(.string("x"))),
-        RecordEntry(key: .literal(.string("size")), value: .literal(.filesize(1500))),
+        RecordEntry(key: .literal(.string("size")), value: .literal(.fileSize(FileSize(bytes: 1500)))),
     ])))
     #expect(program.statements[1] == .chain(Chain(first: .expression(.member(.variable("r"), "size")))))
     #expect(program.statements[2] == .chain(Chain(first: .expression(.record([])))))

@@ -93,6 +93,8 @@ extension TypeChecker {
             }
         }
         let fail = TypeError("'\(op.rawValue)' can't be applied to \(left) and \(right)")
+        // An operator a bridged type declares, for operands of it.
+        if let result = bridgedOperatorType(op.rawValue, [left, right]) { return result }
         switch op {
         case .less, .lessEqual, .greater, .greaterEqual:
             guard left == right, conforms(left, to: "Comparable") else { throw fail }
@@ -102,28 +104,24 @@ extension TypeChecker {
             return .generic(op == .closedRange ? "ClosedRange" : "Range", [left])
         case .add:
             switch (left, right) {
-            case (.int, .int), (.double, .double), (.string, .string), (.filesize, .filesize): return left
+            case (.int, .int), (.double, .double), (.string, .string): return left
             case (.list(let a), .list(let b)) where fits(b, a): return left
             default: throw fail
             }
         case .subtract:
             switch (left, right) {
-            case (.int, .int), (.double, .double), (.filesize, .filesize): return left
+            case (.int, .int), (.double, .double): return left
             case (.date, .date): return .double
             default: throw fail
             }
         case .multiply:
             switch (left, right) {
             case (.int, .int), (.double, .double): return left
-            case (.filesize, .int), (.filesize, .double): return .filesize
-            case (.int, .filesize), (.double, .filesize): return .filesize
             default: throw fail
             }
         case .divide:
             switch (left, right) {
             case (.int, .int), (.double, .double): return left
-            case (.filesize, .int), (.filesize, .double): return .filesize
-            case (.filesize, .filesize): return .double
             default: throw fail
             }
         case .remainder:

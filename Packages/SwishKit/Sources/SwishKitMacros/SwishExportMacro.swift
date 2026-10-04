@@ -112,7 +112,7 @@ public struct SwishExportMacro: PeerMacro {
             summary: \(docs.summary.map(quoted) ?? "nil"),
             parameters: [\(parameters.joined(separator: ", "))],
             returnType: \(returnType),
-            abiVersion: 1,
+            abiVersion: swishPluginABIVersion,
             isThrowing: \(throwing),
             call: { \(capture)arguments in try Value(returning: \(call)) }
         )

@@ -30,9 +30,8 @@ extension Shell {
             return .int(result)
         case (.negate, .double(let d)):
             return .double(-d)
-        case (.negate, .filesize(let bytes)):
-            return .filesize(-bytes)
         default:
+            if let result = try bridgedOperator(op.rawValue, [value]) { return result }
             throw RuntimeError("'\(op.rawValue)' can't be applied to \(value.typeName)")
         }
     }
@@ -72,20 +71,6 @@ extension Shell {
             return try integerArithmetic(op, a, b)
         case (_, .int, .double), (_, .double, .int), (_, .double, .double):
             if let result = try floatingArithmetic(op, lhs.asDouble!, rhs.asDouble!) { return result }
-        case (_, .filesize(let a), .filesize(let b)):
-            switch op {
-            case .add: return try checkedFileSize(Double(a) + Double(b))
-            case .subtract: return try checkedFileSize(Double(a) - Double(b))
-            case .divide: return .double(Double(a) / Double(b))
-            default: if let result = compare(op, a, b) { return .bool(result) }
-            }
-        case (.multiply, .filesize(let bytes), _) where rhs.asDouble != nil:
-            return try checkedFileSize(Double(bytes) * rhs.asDouble!)
-        case (.multiply, _, .filesize(let bytes)) where lhs.asDouble != nil:
-            return try checkedFileSize(Double(bytes) * lhs.asDouble!)
-        case (.divide, .filesize(let bytes), _) where rhs.asDouble != nil:
-            guard rhs.asDouble != 0 else { throw RuntimeError("division by zero") }
-            return try checkedFileSize(Double(bytes) / rhs.asDouble!)
         case (_, .date(let a), .date(let b)):
             if op == .subtract { return .double(a.timeIntervalSince(b)) }
             if let result = compare(op, a, b) { return .bool(result) }
@@ -95,12 +80,8 @@ extension Shell {
         default:
             break
         }
+        if let result = try bridgedOperator(op.rawValue, [lhs, rhs]) { return result }
         throw RuntimeError("'\(op.rawValue)' can't be applied to \(lhs.typeName) and \(rhs.typeName)")
-    }
-
-    func checkedFileSize(_ bytes: Double) throws -> Value {
-        guard bytes.magnitude < Double(Int64.max) else { throw RuntimeError("arithmetic overflow") }
-        return .filesize(Int64(bytes))
     }
 
     func integerArithmetic(_ op: BinaryOperator, _ a: Int, _ b: Int) throws -> Value {

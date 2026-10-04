@@ -318,7 +318,6 @@ extension Shell {
         case (.dictionary(let dictionary), "values"): return .list(dictionary.values)
         case (.string(let text), "lines"):
             return .list(text.isEmpty ? [] : text.split(separator: "\n", omittingEmptySubsequences: false).map { .string(String($0)) })
-        case (.filesize(let bytes), "bytes"): return .int(Int(bytes))
         case (.record(let record), _):
             throw RuntimeError("\(record.typeName ?? "Record") has no field '\(name)'")
         default:

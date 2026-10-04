@@ -97,7 +97,7 @@ private func entry(named name: String, at path: String, into entries: inout [Fil
         : status.isFile ? (.file, "-") : (.other, "?")
     let target = status.isSymlink ? try? FileManager.default.destinationOfSymbolicLink(atPath: path) : nil
     entries.append(FileEntry(
-        name: name, type: type, size: FileSize(bytes: status.size), modified: status.modified,
+        name: name, type: type, size: FileSize(bytes: Int(status.size)), modified: status.modified,
         permissions: letter + status.permissions, owner: userName(status.owner),
         created: status.created ?? status.modified, accessed: status.accessed,
         path: FilePath(path), target: target.map { FilePath($0) }

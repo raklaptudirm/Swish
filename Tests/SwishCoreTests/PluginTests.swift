@@ -30,7 +30,7 @@ private let tools = "/" + #filePath.split(separator: "/").dropLast(3).joined(sep
     #expect(try output("Tools.volume(.low); Tools", in: shell) == "1\nmodule Tools\n")
 
     // Errors: thrown by the plugin, and arguments of the wrong type.
-    #expect(try output(#"do { fail("nope") } catch { error.message }"#, in: shell) == #""fail: nope""# + "\n")
+    #expect(try output(#"do { try fail("nope") } catch { error.message }"#, in: shell) == #""fail: nope""# + "\n")
     // A wrong argument is found before anything runs, like any type error.
     _ = try output("greet(5)", in: shell)
     #expect(shell.lastStatus == 2)

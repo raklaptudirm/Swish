@@ -65,7 +65,7 @@ private func runningProcesses() throws(Errno) -> [ProcessEntry] {
         let hasTask = proc_pidinfo(pid, PROC_PIDTASKINFO, 0, &task, Int32(MemoryLayout<proc_taskinfo>.size)) > 0
         return ProcessEntry(
             pid: Int(pid), ppid: Int(process.kp_eproc.e_ppid), name: name, user: userName(process.kp_eproc.e_ucred.cr_uid),
-            memory: hasTask ? FileSize(bytes: Int64(task.pti_resident_size)) : nil,
+            memory: hasTask ? FileSize(bytes: Int(task.pti_resident_size)) : nil,
             cpuTime: hasTask ? (Double(task.pti_total_user + task.pti_total_system) * secondsPerTick * 100).rounded() / 100 : nil,
             threads: hasTask ? Int(task.pti_threadnum) : nil
         )
@@ -102,7 +102,7 @@ private func runningProcesses() throws(Errno) -> [ProcessEntry] {
         let ticks = (field(14) ?? 0) + (field(15) ?? 0)
         return ProcessEntry(
             pid: Int(pid), ppid: Int(field(4) ?? 0), name: name, user: uid.map(userName) ?? "?",
-            memory: field(24).map { FileSize(bytes: $0 * pageSize) },
+            memory: field(24).map { FileSize(bytes: Int($0 * pageSize)) },
             cpuTime: (Double(ticks) / ticksPerSecond * 100).rounded() / 100,
             threads: field(20).map(Int.init)
         )

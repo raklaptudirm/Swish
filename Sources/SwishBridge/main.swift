@@ -52,15 +52,18 @@ let modules: [String: (list: String, types: [(String, [String])], functions: Str
     // FilePath.Root is left out: the standard library's FilePath (SE-0529)
     // calls it Anchor.
     "SystemPackage": ("system", [("FilePath", []), ("FilePath.Component", []), ("FilePath.ComponentView", [])], nil, []),
+    // SwishKit's own types, which Swish holds as Swift's: a file size.
+    "SwishKit": ("swishKit", [("FileSize", [])], nil, []),
     // The shell's own functions: every public free function. Their types are
     // Swift's (bridged from the other modules, so held here as they are).
-    "SwishStandardLibrary": ("", [], "standardFunctions", ["FilePath"]),
+    "SwishStandardLibrary": ("", [], "standardFunctions", ["FilePath", "FileSize"]),
 ]
 guard let module = modules[graph.module.name] else {
     FileHandle.standardError.write(Data("swish-bridge: nothing to bridge from \(graph.module.name)\n".utf8))
     exit(2)
 }
 let bridgedTypeNames = module.types
+externalTypes = Set(module.external)
 for name in module.external where leaves[name] == nil {
     leaves[name] = (".named(\(quoted(name)))", { "try SwiftValue.unbox(\(name).self, \($0))" }, { "SwiftValue.make(\($0), as: \(quoted(name)))" })
 }
@@ -223,7 +226,7 @@ for (name, _) in bridgedTypeNames {
     let owner = types[name]!
     var seen: Set<String> = []
     var members: [String] = []
-    let kinds = ["swift.method", "swift.property", "swift.init", "swift.type.method", "swift.type.property"]
+    let kinds = ["swift.method", "swift.property", "swift.init", "swift.type.method", "swift.type.property", "swift.func.op"]
     // Its own members, then those of the protocols it conforms to, whether
     // required or added by an extension (`Collection.contains`,
     // `Sequence.max`), which the graph lists under the protocol, not the
@@ -252,7 +255,11 @@ for (name, _) in bridgedTypeNames {
     for (index, (symbol, conditions)) in candidates.enumerated() {
         guard kinds.contains(symbol.kind.identifier), symbol.accessLevel == "public", available(symbol) else { continue }
         let title = symbol.pathComponents.last!
-        guard !title.hasPrefix("_"), title.first?.isLetter ?? false else { continue }
+        // Operators of a type from another module: the standard library's
+        // (Int, String…) are the shell's own, which doesn't ask Swift.
+        let isOperator = symbol.kind.identifier == "swift.func.op"
+        guard !title.hasPrefix("_"), title.first?.isLetter ?? false || isOperator && graph.module.name != "Swift" else { continue }
+        if isOperator && graph.module.name == "Swift" { continue }
         if swishOwn[name]?.contains(title) ?? false { continue }
         do {
             let (key, shape, codes) = try bridge(symbol, of: owner, given: conditions)

@@ -8,7 +8,6 @@ nonisolated(unsafe) var leaves: [String: (annotation: String, from: (String) -> 
     "Double": (".double", { "try Double(swishValue: \($0))" }, { "\($0).swishValue" }),
     "Bool": (".bool", { "try Bool(swishValue: \($0))" }, { "\($0).swishValue" }),
     "String": (".string", { "try String(swishValue: \($0))" }, { "\($0).swishValue" }),
-    "FileSize": (".filesize", { "try FileSize(swishValue: \($0))" }, { "\($0).swishValue" }),
     "Date": (".date", { "try Date(swishValue: \($0))" }, { "\($0).swishValue" }),
 ]
 

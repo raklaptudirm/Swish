@@ -47,7 +47,8 @@ func pathValue(_ path: String) -> Value {
 /// raw text and a path as an object, and Swish holds them as what they are.
 enum FieldKind {
     case enumeration(String)
-    case path
+    /// A Swift type held as it is, of this name: a `FilePath`, a `FileSize`.
+    case boxed(String)
 }
 
 /// A Swift struct as a record, its fields by name: how a struct of the
@@ -67,7 +68,7 @@ func bridgeRecord<T: Encodable>(_ shell: Shell, _ value: T, patches: [String: Fi
         }
         record[field] = switch (kind, held) {
         case (.enumeration(let type), let held?): shell.declaredCase(type, "\(held)")
-        case (.path, let path as FilePath): pathValue(path.string)
+        case (.boxed(let type), let held?): SwiftValue.make(held, as: type)
         default: .nothing
         }
     }

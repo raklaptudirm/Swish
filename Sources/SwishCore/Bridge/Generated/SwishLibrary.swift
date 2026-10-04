@@ -81,7 +81,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         let partial = SwishStandardLibrary.ls((args["paths"] == nil ? [] : try bridgeList(args["paths"]!).map { try SwiftValue.unbox(FilePath.self, $0) }), all: try Bool(swishValue: args["all"]!))
                 for error in partial.errors { shell.reportItemError("\("ls"): \(error)") }
                 let result: [FileEntry] = partial.value
-                return .list(result.map { bridgeRecord(shell, $0, patches: ["type": .enumeration("FileType"), "path": .path, "target": .path]) })
+                return .list(result.map { bridgeRecord(shell, $0, patches: ["type": .enumeration("FileType"), "size": .boxed("FileSize"), "path": .boxed("FilePath"), "target": .boxed("FilePath")]) })
                     },
                     parameterDocs: ["all": "include hidden files", "paths": "files or directories to list (default: the current directory)"]
                 )
@@ -122,7 +122,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let result: [ProcessEntry] = SwishStandardLibrary.ps()
-                return .list(result.map { bridgeRecord(shell, $0) })
+                return .list(result.map { bridgeRecord(shell, $0, patches: ["memory": .boxed("FileSize")]) })
                     }
                 )
 }

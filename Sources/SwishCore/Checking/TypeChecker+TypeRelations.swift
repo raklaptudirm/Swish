@@ -64,7 +64,7 @@ extension TypeChecker {
         // step 4 makes them so, and these rules go).
         switch type {
         case .unknown, .parameter, .record: return true
-        case .filesize, .date: return ["Equatable", "Hashable", "Encodable", "Comparable"].contains(proto)
+        case .date: return ["Equatable", "Hashable", "Encodable", "Comparable"].contains(proto)
         case .output: return proto == "Equatable" || proto == "Sequence"
         case .keyPath: return proto == "Equatable" || proto == "Hashable"
         // Tuples compare with `==`, but aren't Hashable or Encodable, as in Swift.
