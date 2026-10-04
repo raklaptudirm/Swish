@@ -57,7 +57,10 @@ import Testing
     let path = directory + "/state/swish/history"
     History(path: path).add("echo one")
     #expect(History(path: path).entries == ["echo one"])
-    #expect(try shell.capturing { shell.execute("stat -f %Lp \(directory)/state/swish") } == "700\n")
+    // Private to you: the permissions `ls` shows, which is the same on every platform (`stat`'s flags aren't).
+    #expect(try shell.capturing {
+        shell.execute("ls \(directory)/state | filter { $0.name == \"swish\" } | get permissions")
+    } == "drwx------\n")
 }
 
 // MARK: Layout

@@ -370,7 +370,11 @@ private func fixture() throws -> String {
 }
 
 @Test func psListsProcesses() throws {
-    #expect(try output("ps | filter { $0.pid == 1 } | get name") == "launchd\n")
+    // The test's own process is one of them, by whatever name its platform
+    // gives it (process 1 is launchd on macOS, and anything in a container).
+    let pid = currentProcessID()
+    #expect(try output("ps | filter { $0.pid == \(pid) } | count") == "1\n")
+    #expect(try output("ps | filter { $0.pid == \(pid) } | get name") != "\n")
 }
 
 @Test func sortingAndSlicing() throws {
