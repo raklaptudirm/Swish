@@ -10,7 +10,7 @@ import SystemPackage
 /// for the checker, and its glue, which calls Swift.
 enum Bridge {
     /// The bridged types, by the name Swish writes them with.
-    nonisolated(unsafe) static let types: [String: BridgedType] = Dictionary(uniqueKeysWithValues: (standardLibrary + system + swishKit).map { ($0.name, $0) })
+    nonisolated(unsafe) static let types: [String: BridgedType] = Dictionary(uniqueKeysWithValues: (standardLibrary + system + swishKit + foundation).map { ($0.name, $0) })
 
     /// Text as a value of the type named, if the type can be text and the
     /// text is one: through its failable initializer from text (`Int`), or

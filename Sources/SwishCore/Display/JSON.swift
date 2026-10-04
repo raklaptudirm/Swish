@@ -35,7 +35,6 @@ enum JSON {
                 record[label ?? String(index)] = item
             }
             return try text(.record(Record([value.name: .record(record)])), indent: indent)
-        case .date(let date): return quoted(date.formatted(.iso8601))
         case .list(let items):
             guard !items.isEmpty else { return "[]" }
             return "[\n" + (try items.map { inner + (try text($0, indent: inner)) }).joined(separator: ",\n") + "\n\(indent)]"

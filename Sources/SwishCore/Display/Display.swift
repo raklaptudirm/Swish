@@ -260,9 +260,9 @@ final class Formatter {
             "[\(items.count) item\(items.count == 1 ? "" : "s")]"
         case .record(let record):
             "{\(record.count) field\(record.count == 1 ? "" : "s")}"
-        case .date:
-            // To the minute: `2026-09-27 14:03`.
-            String(value.description.prefix(16))
+        // What a Swift value's type says a table shows: a date to the minute.
+        case .object(let box as SwiftValue):
+            box.cell
         default:
             value.description
         }

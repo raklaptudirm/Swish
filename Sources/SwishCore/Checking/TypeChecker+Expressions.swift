@@ -314,7 +314,6 @@ extension TypeChecker {
         case .int: .int
         case .double: .double
         case .string: .string
-        case .date: .date
         case .output: .output
         case .list(let items): .list(commonType(items.map(type(of:))) ?? .unknown)
         case .dictionary(let dictionary):

@@ -162,3 +162,13 @@ private func typeError(_ source: String) -> String? {
     // `contains(_: String)` beside Sequence's `contains(_: Character)`.
     #expect(try output(#""abc".contains("bc"); "abc".contains("b"); "hello" | contains "ell""#) == "true\ntrue\ntrue\n")
 }
+
+@Test func datesAreSwiftDates() throws {
+    // Foundation's own members and operators, and the text a date shows as.
+    #expect(try output("Date(timeIntervalSince1970: 0) < Date(); Date(timeIntervalSince1970: 0).timeIntervalSince1970") == "true\n0.0\n")
+    #expect(try output("let d = Date(timeIntervalSince1970: 100); (d + 60) - d; (d - 60) < d") == "60.0\ntrue\n")
+    // ISO 8601 text is a date, as a word or by `Date(…)`; JSON gives it back.
+    #expect(try output(#"Date("2026-09-27T14:03:00Z")! | to json"#) == "\"2026-09-27T14:03:00Z\"\n")
+    #expect(try output(#"Date("someday") == nil"#) == "true\n")
+    #expect(typeError("Date() * 2") == "'*' can't be applied to Date and Int")
+}

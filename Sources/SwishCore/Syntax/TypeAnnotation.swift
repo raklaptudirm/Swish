@@ -7,7 +7,7 @@ indirect enum TypeAnnotation: Hashable, Sendable, CustomStringConvertible {
     /// A record whose fields aren't known: a builtin's row, until the
     /// builtins declare their types.
     case record
-    case date, output
+    case output
     /// `()`: what a function without `->` returns.
     case void
     /// A struct or enum, declared in Swish or by the shell, like `FileType`.
@@ -49,7 +49,6 @@ indirect enum TypeAnnotation: Hashable, Sendable, CustomStringConvertible {
         case .double: "Double"
         case .string: "String"
         case .record: "Record"
-        case .date: "Date"
         case .output: "Output"
         case .void: "Void"
         case .list(let element): "[\(element)]"
@@ -79,7 +78,7 @@ extension TypeAnnotation {
         ("Int", { $0.isEmpty ? .int : nil }), ("Double", { $0.isEmpty ? .double : nil }),
         ("String", { $0.isEmpty ? .string : nil }), ("Bool", { $0.isEmpty ? .bool : nil }),
         ("Record", { $0.isEmpty ? .record : nil }),
-        ("Date", { $0.isEmpty ? .date : nil }), ("Output", { $0.isEmpty ? .output : nil }),
+        ("Output", { $0.isEmpty ? .output : nil }),
         ("Any", { $0.isEmpty ? .any : nil }), ("Value", { $0.isEmpty ? .any : nil }), ("Void", { $0.isEmpty ? .void : nil }),
         ("Array", { $0.count == 1 ? .list($0[0]) : nil }),
         ("Optional", { $0.count == 1 ? .optional($0[0]) : nil }),

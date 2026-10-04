@@ -254,7 +254,7 @@ extension TypeAnnotation {
         case .string: .string
         case .record: .record
         case .filesize: .named("FileSize")
-        case .date: .date
+        case .date: .named("Date")
         case .output: .output
         case .function: .function
         case .named(let name): .named(name)

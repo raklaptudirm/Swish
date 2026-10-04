@@ -71,9 +71,6 @@ extension Shell {
             return try integerArithmetic(op, a, b)
         case (_, .int, .double), (_, .double, .int), (_, .double, .double):
             if let result = try floatingArithmetic(op, lhs.asDouble!, rhs.asDouble!) { return result }
-        case (_, .date(let a), .date(let b)):
-            if op == .subtract { return .double(a.timeIntervalSince(b)) }
-            if let result = compare(op, a, b) { return .bool(result) }
         // A Comparable enum: in the order its cases are declared.
         case (_, .enumValue(let a), .enumValue(let b)) where a.type === b.type:
             if let result = compare(op, a.index, b.index) { return .bool(result) }

@@ -16,7 +16,6 @@ public enum Value: Sendable {
     case record(Record)
     /// `["a": 1]`: keys to values, as Swift's Dictionary, unordered.
     case dictionary(ValueDictionary)
-    case date(Date)
     /// What `$(…)` gives: a command's output and how it exited.
     case output(CommandOutput)
     /// A case of an enum: `.directory`, or `.failed(code: 2)`.
@@ -239,7 +238,6 @@ extension Value {
             return a.displayNumber! < b.displayNumber!
         case (.string(let x), .string(let y)): return x < y
         case (.bool(let x), .bool(let y)): return !x && y
-        case (.date(let x), .date(let y)): return x < y
         case (.enumValue(let x), .enumValue(let y)) where x.type === y.type && x.index != y.index: return x.index < y.index
         default:
             return a.debugDescription < b.debugDescription
@@ -267,7 +265,6 @@ extension Value: Hashable {
         case (.list(let a), .list(let b)): a == b
         case (.record(let a), .record(let b)): a == b
         case (.dictionary(let a), .dictionary(let b)): a == b
-        case (.date(let a), .date(let b)): a == b
         case (.output(let a), .output(let b)): a == b
         case (.enumValue(let a), .enumValue(let b)): a == b
         case (.object(let a), .object(let b)): a === b || a.identity == b.identity
@@ -286,7 +283,6 @@ extension Value: Hashable {
         case .list(let values): hasher.combine(values)
         case .record(let record): hasher.combine(record)
         case .dictionary(let dictionary): hasher.combine(dictionary)
-        case .date(let date): hasher.combine(date)
         case .output(let output): hasher.combine(output)
         case .enumValue(let value): hasher.combine(value)
         case .object(let object): hasher.combine(object.identity)
@@ -306,7 +302,6 @@ extension Value: CustomStringConvertible {
         case .list(let values): "[" + values.map(\.description).joined(separator: ", ") + "]"
         case .record(let record): record.description
         case .dictionary(let dictionary): dictionary.description
-        case .date(let date): Value.dateFormatter.string(from: date)
         case .output(let output): output.text
         case .enumValue(let value): value.description
         case .object(let object): object.description
@@ -357,10 +352,13 @@ extension Value: CustomDebugStringConvertible {
 }
 
 extension Value {
-    private static let dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        return formatter
-    }()
+    /// A date, held as the Swift value it is.
+    public static func date(_ date: Date) -> Value {
+        SwiftValue.make(date, as: "Date")
+    }
+
+    /// The date it holds, if it's one.
+    public var date: Date? {
+        if case .object(let box as SwiftValue) = self { box.value as? Date } else { nil }
+    }
 }

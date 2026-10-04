@@ -8,8 +8,11 @@ nonisolated(unsafe) var leaves: [String: (annotation: String, from: (String) -> 
     "Double": (".double", { "try Double(swishValue: \($0))" }, { "\($0).swishValue" }),
     "Bool": (".bool", { "try Bool(swishValue: \($0))" }, { "\($0).swishValue" }),
     "String": (".string", { "try String(swishValue: \($0))" }, { "\($0).swishValue" }),
-    "Date": (".date", { "try Date(swishValue: \($0))" }, { "\($0).swishValue" }),
 ]
+
+/// A module's own top-level typealiases (`TimeInterval` is `Double`), which
+/// a signature may use.
+nonisolated(unsafe) var topLevelAliases: [String: SType] = [:]
 
 /// Generic types Swish holds as they are, boxed (`SwiftValue`), with Swish's
 /// values for their generic parameters: a `Set<Int>` is a `Set<Value>`.
@@ -74,6 +77,7 @@ func resolve(_ type: SType, _ context: Context) -> SType? {
         return selfType(owner)
     case .named(let name, let arguments):
         if arguments.isEmpty, let element = context.sequences[name] { return resolve(element, context).map(SType.someSequence) }
+        if arguments.isEmpty, let target = topLevelAliases[name] { return resolve(target, context) }
         if context.generics.contains(name) || owner.genericParameters.contains(name) { return arguments.isEmpty ? type : nil }
         if arguments.isEmpty, let target = owner.associated[name] { return resolve(target, context) }
         if name == "Void" { return .tuple([]) }

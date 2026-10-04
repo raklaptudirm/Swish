@@ -20,13 +20,22 @@ public final class SwiftValue: SwishObject, @unchecked Sendable {
         self.lessThan = lessThan
         // As Swift encodes it, if it can: a FileSize is its byte count.
         encode = (value as? any Encodable).map { encodable in
-            { String(decoding: try JSONEncoder().encode(AnyEncodable(value: encodable)), as: UTF8.self) }
+            {
+                // A date as ISO 8601 text, not Swift's number of seconds.
+                let encoder = JSONEncoder()
+                encoder.dateEncodingStrategy = .iso8601
+                return String(decoding: try encoder.encode(AnyEncodable(value: encodable)), as: UTF8.self)
+            }
         }
     }
 
     private struct AnyEncodable: Encodable {
         let value: any Encodable
-        func encode(to encoder: any Encoder) throws { try value.encode(to: encoder) }
+        // Through a container, which is what applies the encoder's strategy for dates.
+        func encode(to encoder: any Encoder) throws {
+            var container = encoder.singleValueContainer()
+            try container.encode(value)
+        }
     }
 
     /// Its JSON, if its Swift type is Encodable.
@@ -71,6 +80,8 @@ public final class SwiftValue: SwishObject, @unchecked Sendable {
     public var memberNames: [String] { [] }
     public func member(_ name: String) -> Value? { nil }
     public var fields: Record? { nil }
-    public var description: String { String(describing: value) }
-    public var debugDescription: String { String(reflecting: value) }
+    public var description: String { (value as? any SwishDisplayed)?.swishDescription ?? String(describing: value) }
+    /// What a table shows of it: its description, unless the type says shorter.
+    public var cell: String { (value as? any SwishDisplayed)?.swishCell ?? description }
+    public var debugDescription: String { (value as? any SwishDisplayed)?.swishDescription ?? String(reflecting: value) }
 }

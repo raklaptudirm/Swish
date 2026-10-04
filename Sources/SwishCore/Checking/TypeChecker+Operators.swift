@@ -111,7 +111,6 @@ extension TypeChecker {
         case .subtract:
             switch (left, right) {
             case (.int, .int), (.double, .double): return left
-            case (.date, .date): return .double
             default: throw fail
             }
         case .multiply:

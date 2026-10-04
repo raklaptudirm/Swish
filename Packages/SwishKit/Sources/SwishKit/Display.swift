@@ -1,3 +1,5 @@
+import Foundation
+
 /// How a type says it's shown, so the shell has no table of its types' names:
 /// which columns a table starts with, and what stands out in them.
 
@@ -43,4 +45,28 @@ public protocol Tabular {
 /// An enum whose cases stand out, by being shown in a style.
 public protocol DisplayStyled {
     var displayStyle: DisplayStyle? { get }
+}
+
+/// A Swift type that shows in Swish other than as its `description`: a date
+/// in local time, to the second, and to the minute in a table.
+public protocol SwishDisplayed {
+    var swishDescription: String { get }
+    var swishCell: String { get }
+}
+
+extension SwishDisplayed {
+    public var swishCell: String { swishDescription }
+}
+
+extension Date: SwishDisplayed {
+    private static let formatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return formatter
+    }()
+
+    public var swishDescription: String { Date.formatter.string(from: self) }
+    /// `2026-09-27 14:03`.
+    public var swishCell: String { String(swishDescription.prefix(16)) }
 }

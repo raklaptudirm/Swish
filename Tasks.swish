@@ -28,9 +28,9 @@ func bridge() {
     try! swift build
     // Other modules that extend a module's types, whose graphs are read with
     // it; the shell's own also declares types the extensions use.
-    let extensions = ["Swift": ["_StringProcessing", "SwishStandardLibrary"]]
+    let extensions = ["Swift": ["_StringProcessing", "SwishStandardLibrary"], "Foundation": ["SwishStandardLibrary"]]
     let declaresTypes = ["SwishStandardLibrary"]
-    for module in ["Swift", "SystemPackage", "SwishKit", "SwishStandardLibrary"] {
+    for module in ["Swift", "SystemPackage", "SwishKit", "Foundation", "SwishStandardLibrary"] {
         try! _graph(module, into: graphs)
         var extra: [String] = []
         for other in extensions[module] ?? [] {

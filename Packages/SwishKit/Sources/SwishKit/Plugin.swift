@@ -212,7 +212,7 @@ extension Bool: SwishConvertible {
 extension Date: SwishConvertible {
     public static var swishType: SwishType { .date }
     public init(swishValue: Value) throws {
-        guard case .date(let value) = swishValue else { throw SwishError.expected("Date", swishValue) }
+        guard let value = swishValue.date else { throw SwishError.expected("Date", swishValue) }
         self = value
     }
     public var swishValue: Value { .date(self) }
@@ -281,7 +281,6 @@ extension Value {
         case .list: "List"
         case .record(let record): record.typeName ?? "Record"
         case .dictionary: "Dictionary"
-        case .date: "Date"
         case .output: "Output"
         case .enumValue(let value): value.type.name
         case .object(let object): object.typeName

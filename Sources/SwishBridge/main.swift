@@ -52,17 +52,25 @@ let modules: [String: (list: String, types: [(String, [String])], functions: Str
     // FilePath.Root is left out: the standard library's FilePath (SE-0529)
     // calls it Anchor.
     "SystemPackage": ("system", [("FilePath", []), ("FilePath.Component", []), ("FilePath.ComponentView", [])], nil, []),
+    // Foundation's types Swish holds as Swift's: a date.
+    "Foundation": ("foundation", [("Date", [])], nil, []),
     // SwishKit's own types, which Swish holds as Swift's: a file size.
     "SwishKit": ("swishKit", [("FileSize", [])], nil, []),
     // The shell's own functions: every public free function. Their types are
     // Swift's (bridged from the other modules, so held here as they are).
-    "SwishStandardLibrary": ("", [], "standardFunctions", ["FilePath", "FileSize"]),
+    "SwishStandardLibrary": ("", [], "standardFunctions", ["FilePath", "FileSize", "Date"]),
 ]
 guard let module = modules[graph.module.name] else {
     FileHandle.standardError.write(Data("swish-bridge: nothing to bridge from \(graph.module.name)\n".utf8))
     exit(2)
 }
 let bridgedTypeNames = module.types
+for symbol in graph.symbols where symbol.kind.identifier == "swift.typealias" && symbol.pathComponents.count == 1 {
+    let text = (symbol.declarationFragments ?? []).map(\.spelling).joined()
+    guard let equals = text.range(of: "=") else { continue }
+    var reader = Reader(String(text[equals.upperBound...]))
+    if let target = try? reader.type() { topLevelAliases[symbol.pathComponents[0]] = target }
+}
 externalTypes = Set(module.external)
 for name in module.external where leaves[name] == nil {
     leaves[name] = (".named(\(quoted(name)))", { "try SwiftValue.unbox(\(name).self, \($0))" }, { "SwiftValue.make(\($0), as: \(quoted(name)))" })

@@ -22,7 +22,6 @@ extension Value {
         case .list: "List"
         case .record(let record): record.typeName ?? "Tuple"
         case .dictionary: "Dictionary"
-        case .date: "Date"
         case .output: "Output"
         case .enumValue(let value): value.type.name
         case .object(let object): object.typeName
@@ -67,7 +66,7 @@ extension Value {
             return parameters.count == 1 ? self : nil
         case (.any, _), (.unknown, _), (.bool, .bool), (.int, .int), (.double, .double), (.string, .string),
              (.function, .function), (.functionType, .function), (.keyPath, .function), (.parameter, _),
-             (.record, .record), (.date, .date), (.void, .nothing):
+             (.record, .record), (.void, .nothing):
             return self
         case (.tuple(let elements), .record(let record)):
             guard record.count == elements.count else { return nil }
@@ -121,7 +120,6 @@ extension SwishKit.Value {
             return compare(a.typeName, b.typeName)
         case (.output(let a), _): return Value.string(a.text).order(comparedTo: other)
         case (_, .output(let b)): return order(comparedTo: .string(b.text))
-        case (.date(let a), .date(let b)): return compare(a, b)
         case (.list(let a), .list(let b)):
             for (x, y) in zip(a, b) {
                 let order = x.order(comparedTo: y)
@@ -137,7 +135,6 @@ extension SwishKit.Value {
         case .nothing: 0
         case .bool: 1
         case .int, .double: 2
-        case .date: 4
         case .string, .output: 5
         case .list: 6
         case .enumValue: 6
