@@ -17,12 +17,15 @@ func test() {
     }
 }
 
-/// Regenerates the bridges in Sources/SwishCore/Bridge/Generated: StandardLibrary.swift
-/// from the standard library's symbol graph, and SystemPackage.swift from
-/// swift-system's, for FilePath. Run it after changing swish-bridge, the
-/// Swift toolchain or swift-system. The checked-in files are made on macOS;
-/// Linux's modules have the same members.
+/// Regenerates the bridges in Sources/SwishCore/Bridge/Generated, from the
+/// symbol graphs of the standard library, Foundation, swift-system and the
+/// shell's own modules. Run it after changing swish-bridge, the Swift
+/// toolchain or swift-system. A graph is read on the platform it's made on,
+/// so each platform's members are kept in Bridges/<platform>, and what's
+/// bridged is what all the platforms there have: CI makes Linux's (see
+/// .github/workflows/ci.yml), and a member only one has can't break the other.
 func bridge() {
+    let platform = darwin ? "macos" : "linux"
     let graphs = $(mktemp -d).text
     defer { rm -rf $graphs }
     try! swift build
@@ -40,7 +43,13 @@ func bridge() {
         }
         let outputs = ["Swift": "StandardLibrary", "SwishStandardLibrary": "SwishLibrary"]
         let output = outputs[module] ?? module
-        try! swift run -c release swish-bridge "\(graphs)/\(module).symbols.json" "Sources/SwishCore/Bridge/Generated/\(output).swift" $extra
+        // This platform's members to write, and the others' to keep to.
+        var platforms = ["--manifest", "Bridges/\(platform)/\(module).json"]
+        for other in ["macos", "linux"] {
+            let manifest = "Bridges/\(other)/\(module).json"
+            if other != platform && $(^test -f $manifest).status.succeeded { platforms += ["--also", manifest] }
+        }
+        try! swift run -c release swish-bridge "\(graphs)/\(module).symbols.json" "Sources/SwishCore/Bridge/Generated/\(output).swift" $extra $platforms
     }
 }
 

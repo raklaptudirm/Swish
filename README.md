@@ -277,6 +277,7 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
 | `…/Plugins` | Building and loading plugins. |
 | `…/Platform` | The operating system: `posix_spawn` with process groups and terminal handoff, resource limits, and what differs between macOS and Linux. |
 | `Sources/Swish` | The executable. |
+| `Bridges` | Which members of each bridged type a platform has, one list a platform and module: what's bridged is what every platform has (`run bridge` keeps them current; CI checks). |
 | `Tests/Interactive` | `expect` scripts that drive the shell through a real terminal. |
 | `Examples/Tools` | An example plugin, which the tests import. |
 | `Sources/SwishStandardLibrary` | The shell's own functions and types in plain Swift (`pwd`, `readLine`, `history`, `ls` and `FileEntry`, `ps` and `ProcessEntry`), bridged like the standard library. |

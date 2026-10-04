@@ -3,6 +3,7 @@
 // and glue that converts Swish values, calls Swift and converts back.
 //
 //   swish-bridge <Module.symbols.json> <output.swift> [<Other@Module.symbols.json>...]
+//                [--manifest <platform.json>] [--also <other-platform.json>...]
 //
 // `run bridge` (Tasks.swish) runs it on the standard library, on swift-system
 // (for FilePath) and on the shell's own SwishStandardLibrary, which also
@@ -20,9 +21,31 @@ import Foundation
 
 let arguments = CommandLine.arguments
 guard arguments.count >= 3 else {
-    FileHandle.standardError.write(Data("usage: swish-bridge <Module.symbols.json> <output.swift> [<Other@Module.symbols.json>...]\n".utf8))
+    FileHandle.standardError.write(Data("usage: swish-bridge <Module.symbols.json> <output.swift> [<Other@Module.symbols.json>...] [--manifest <file>] [--also <file>...]\n".utf8))
     exit(2)
 }
+/// After the output: the graphs of other modules that add to this one's
+/// types; `--manifest <file>`, where to write what this platform has; and
+/// `--also <file>`, another platform's, so that only what both have is bridged.
+nonisolated(unsafe) var extraGraphs: [String] = []
+nonisolated(unsafe) var manifestPath: String?
+nonisolated(unsafe) var otherPlatformPaths: [String] = []
+do {
+    let rest = Array(arguments.dropFirst(3))
+    var i = 0
+    while i < rest.count {
+        switch rest[i] {
+        case "--manifest" where i + 1 < rest.count: manifestPath = rest[i + 1]; i += 2
+        case "--also" where i + 1 < rest.count: otherPlatformPaths.append(rest[i + 1]); i += 2
+        default: extraGraphs.append(rest[i]); i += 1
+        }
+    }
+}
+/// What the other platforms bridge, by module: a member is bridged only if
+/// every one of them has it.
+let otherPlatforms: [Set<String>] = try otherPlatformPaths.map { Set(try Manifest(contentsOf: $0).members) }
+/// What this platform could bridge, whatever the others have.
+nonisolated(unsafe) var thisPlatform: Set<String> = []
 func readGraph(_ path: String) throws -> Graph {
     try JSONDecoder().decode(Graph.self, from: Data(contentsOf: URL(fileURLWithPath: path)))
 }
@@ -32,7 +55,7 @@ nonisolated(unsafe) var addedByOthers: Set<String> = []
 nonisolated(unsafe) var extraModules: [String] = []
 let graph: Graph = try {
     var graph = try readGraph(arguments[1])
-    for path in arguments.dropFirst(3) {
+    for path in extraGraphs {
         let extra = try readGraph(path)
         if !extraModules.contains(extra.module.name) { extraModules.append(extra.module.name) }
         addedByOthers.formUnion(extra.symbols.map(\.identifier.precise))
@@ -293,6 +316,14 @@ for (name, _) in bridgedTypeNames {
             if index >= ownCount, bridgedShapes.contains(shape), !addedByOthers.contains(symbol.identifier.precise) { continue }
             guard seen.insert(key).inserted else { continue }
             if index < ownCount { bridgedShapes.insert(shape) }
+            // What this platform has, whatever the others do; and what's
+            // bridged is what all of them have.
+            let entry = "\(name)\t\(key)"
+            thisPlatform.insert(entry)
+            guard otherPlatforms.allSatisfy({ $0.contains(entry) }) else {
+                skipped["other-platform", default: 0] += 1
+                continue
+            }
             members.append(contentsOf: codes.map(declare))
             counts[name, default: 0] += 1
         } catch let unsupported as Unsupported {
@@ -373,5 +404,8 @@ if let list = module.functions {
 }
 output += declarations.joined(separator: "\n") + "}\n"
 try output.write(to: URL(fileURLWithPath: arguments[2]), atomically: true, encoding: .utf8)
+if let manifestPath {
+    try Manifest(platform: Manifest.current, module: graph.module.name, members: thisPlatform.sorted()).write(to: manifestPath)
+}
 let total = counts.values.reduce(0, +)
 FileHandle.standardError.write(Data("bridged \(total) members (\(bridgedTypeNames.map { "\($0.0) \(counts[$0.0] ?? 0)" }.joined(separator: ", "))); left out: \(skipped.sorted { $0.value > $1.value }.prefix(12).map { "\($0.key) \($0.value)" }.joined(separator: ", "))\n".utf8))
