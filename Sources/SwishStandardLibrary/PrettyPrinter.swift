@@ -1,16 +1,20 @@
 import Foundation
 import SwishKit
-import SystemPackage
 
 /// Shows a value as `debugDescription` spells it, but for a person: in the
 /// highlighter's colors, and, when it won't fit on one line, broken over
 /// lines with each element or field on its own, the way you'd format it as
 /// Swift. A string of several lines is a `"""` literal then.
-struct PrettyPrinter {
-    var width = 80
-    var styled = false
+public struct PrettyPrinter: Sendable {
+    public var width = 80
+    public var styled = false
 
-    typealias Segment = (text: String, style: DisplayStyle?)
+    public init(width: Int = 80, styled: Bool = false) {
+        self.width = width
+        self.styled = styled
+    }
+
+    typealias Segment = DisplaySegment
 
     /// A value's shape: text that can't be broken, a string, or brackets
     /// around (labeled) elements.
@@ -20,7 +24,7 @@ struct PrettyPrinter {
         case group(open: [Segment], items: [(label: [Segment], node: Node)], close: String)
     }
 
-    func format(_ value: Value) -> String {
+    public func format(_ value: Value) -> String {
         render(node(for: value), indent: 0, used: 0, trailing: 0)
     }
 
@@ -44,8 +48,8 @@ struct PrettyPrinter {
             value.displayShape.fields.map { node(for: $0) } ?? .segments([(value.description, value.displayShape.role)])
         case .enumValue(let value):
             node(for: value)
-        case .object(let job as Job):
-            .segments(job.segments)
+        case .object(let object) where object.displaySegments != nil:
+            .segments(object.displaySegments!)
         case .object(let type as EnumType):
             .segments([("enum", DisplayStyle.keyword), (" ", nil), (type.name, DisplayStyle.type)])
         case .object(let object):

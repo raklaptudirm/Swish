@@ -123,7 +123,7 @@ final class Job: SwishObject, @unchecked Sendable {
 
     /// `[1] running  make`, in pieces to color: the number dim, the state
     /// by how it's going.
-    var segments: [PrettyPrinter.Segment] {
+    var segments: [DisplaySegment] {
         let (label, style): (String, DisplayStyle?) = switch state {
         case .running: ("running", DisplayStyle.green)
         case .stopped: ("stopped", DisplayStyle.yellow)
@@ -134,6 +134,8 @@ final class Job: SwishObject, @unchecked Sendable {
         }
         return [("[\(id)]", DisplayStyle.dim), (" ", nil), (label, style), ("  " + source, nil)]
     }
+
+    var displaySegments: [DisplaySegment]? { segments }
 
     var description: String { line(styled: false) }
 

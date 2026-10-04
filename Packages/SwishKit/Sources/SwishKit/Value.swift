@@ -36,13 +36,21 @@ public protocol SwishObject: AnyObject, Sendable, CustomStringConvertible, Custo
     /// Its data as a record, which tables, `select` and `to json` use; nil
     /// for an object that isn't data, like an enum type.
     var fields: Record? { get }
+    /// How it prints in the debug form, in pieces to color, if it has a form
+    /// of its own (a job reads `[1] running  make`); nil to print as its fields.
+    var displaySegments: [DisplaySegment]? { get }
     /// What equality and hashing go by: the object itself, by default; a
     /// boxed Swift value's own value, when it's Hashable.
     var identity: AnyHashable { get }
 }
 
+/// A piece of text and the style it's shown in.
+public typealias DisplaySegment = (text: String, style: DisplayStyle?)
+
 extension SwishObject {
     public var identity: AnyHashable { AnyHashable(ObjectIdentifier(self)) }
+
+    public var displaySegments: [DisplaySegment]? { nil }
 
     /// Every member that isn't a method, in `memberNames` order.
     public var fields: Record? {

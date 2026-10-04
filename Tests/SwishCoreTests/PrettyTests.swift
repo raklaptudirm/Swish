@@ -1,5 +1,6 @@
 @testable import SwishCore
 import SwishKit
+import SwishStandardLibrary
 import Testing
 
 private let wide = PrettyPrinter(width: .max)
