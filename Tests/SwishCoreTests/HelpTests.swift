@@ -96,3 +96,15 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
     #expect(try output("help ls | grep -c Usage") == "1\n")
     #expect(try output(#"help ls | filter { $0.text.hasPrefix("Usage") } | count"#) == "1\n")
 }
+
+@Test func documentationIsMarkdown() throws {
+    // Code, strong and emphasis show as styles where there are colors…
+    let line = documentationLine("Returns `first` or **nothing**, _usually_.")
+    #expect(line.colored == "Returns \u{1B}[36mfirst\u{1B}[0m or \u{1B}[1mnothing\u{1B}[0m, \u{1B}[3musually\u{1B}[0m.")
+    // …and are just the words anywhere else, as in a man page.
+    #expect(line.plain == "Returns first or nothing, usually.")
+    // What Markdown doesn't take for its own stays: angle brackets, brackets.
+    #expect(documentationLine("to <dir>, or [Element] back").plain == "to <dir>, or [Element] back")
+    // A doc comment of your own is read the same way.
+    #expect(try output("/// Doubles the `x`, **fast**.\nfunc d(_ x: Int) -> Int { x * 2 }\nhelp d | prefix 1") == "Doubles the x, fast.\n")
+}

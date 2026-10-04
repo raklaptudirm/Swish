@@ -8,6 +8,8 @@ import Foundation
 /// raw value is the terminal's code for it.
 public enum DisplayStyle: String, Sendable {
     case bold = "1"
+    case italic = "3"
+    case underline = "4"
     case dim = "90"
     case red = "31"
     case green = "32"

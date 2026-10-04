@@ -49,12 +49,32 @@ extension AttributedString {
         String(characters)
     }
 
+    /// Text written in Markdown, as documentation is: its emphasis, code and
+    /// links kept as the attributes Foundation gives them, which show as styles
+    /// where there are colors. Text that isn't valid Markdown is just text.
+    public init(documentation text: String) {
+        let options = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        self = (try? AttributedString(markdown: text, options: options)) ?? AttributedString(text)
+    }
+
+    /// The style of a run: the one it's given, or what its Markdown says
+    /// (code, strong, emphasis, a link).
+    private static func style(of run: AttributedString.Runs.Run) -> DisplayStyle? {
+        if let style = run.swish.displayStyle { return style }
+        if let intent = run.inlinePresentationIntent {
+            if intent.contains(.code) { return .variable }
+            if intent.contains(.stronglyEmphasized) { return .bold }
+            if intent.contains(.emphasized) { return .italic }
+        }
+        return run.link == nil ? nil : .underline
+    }
+
     /// With the terminal's escapes for each style.
     public var colored: String {
         var result = ""
         for run in runs {
             let text = String(self[run.range].characters)
-            if let style = run.swish.displayStyle, !text.isEmpty {
+            if let style = AttributedString.style(of: run), !text.isEmpty {
                 result += style.escape + text + DisplayStyle.reset
             } else {
                 result += text

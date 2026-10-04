@@ -141,7 +141,7 @@ extension Shell {
                 // A blank line between them, so a signature and its description read as one.
                 if index > 0 { lines.append(AttributedString("")) }
                 lines.append(AttributedString(joining: [AttributedString("  "), member.signature]))
-                if !member.summary.isEmpty { lines.append(AttributedString("    " + member.summary)) }
+                if !member.summary.isEmpty { lines.append(AttributedString("    ") + AttributedString(documentation: member.summary)) }
             }
         }
         return lines

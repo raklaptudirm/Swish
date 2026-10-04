@@ -41,7 +41,7 @@ extension Shell {
         typealias Row = (key: [AttributedString], detail: [AttributedString])
         var lines: [AttributedString] = []
         if let summary = set.candidates.compactMap({ $0.documentation?.summary }).first(where: { !$0.isEmpty }) {
-            lines += [AttributedString(summary), AttributedString("")]
+            lines += [AttributedString(documentation: summary), AttributedString("")]
         }
         lines.append(HelpStyle.heading("Usage:"))
         lines += set.candidates.map { AttributedString(joining: [.init("  ")] + usage(of: $0, named: set.name)) }
@@ -52,7 +52,7 @@ extension Shell {
         for function in set.candidates {
             for parameter in function.parameters {
                 var details: [[AttributedString]] = []
-                if let help = function.documentation?.parameters[parameter.name] { details.append([.init(help)]) }
+                if let help = function.documentation?.parameters[parameter.name] { details.append([AttributedString(documentation: help)]) }
                 if parameter.isInput {
                     details.append([.init(parameter.type.isList ? "(or the whole pipeline input)" : "(or each pipeline input item)", DisplayStyle.comment)])
                 }
@@ -230,7 +230,7 @@ extension Shell {
             return helpLines(for: set)
         } else if let builtin = Shell.shellBuiltins[name], builtin.works {
             return [
-                AttributedString(builtin.summary), AttributedString(""), HelpStyle.heading("Usage:"),
+                AttributedString(documentation: builtin.summary), AttributedString(""), HelpStyle.heading("Usage:"),
                 AttributedString(joining: [.init("  ")] + HelpStyle.usage(builtin.usage)),
             ]
         } else if let type = typeDescription(named: name) {

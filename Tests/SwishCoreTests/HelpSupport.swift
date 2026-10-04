@@ -19,3 +19,9 @@ func sampleStyledLine() -> (plain: String, colored: String) {
     let line = AttributedString(joining: [AttributedString("ls", .command), AttributedString(" [--all]")])
     return (line.plain, line.colored)
 }
+
+/// Text written in Markdown, as a doc comment is, plain and colored.
+func documentationLine(_ text: String) -> (plain: String, colored: String) {
+    let line = AttributedString(documentation: text)
+    return (line.plain, line.colored)
+}
