@@ -1,5 +1,6 @@
 import Foundation
 import SwishKit
+import SwishStandardLibrary
 
 /// A pipeline of processes: one running in the foreground, or a job in the
 /// background, from `async` or ^Z. Jobs in the background are values:
@@ -60,6 +61,26 @@ final class Job: SwishObject, @unchecked Sendable {
         }
     }
 
+    /// `job.lines()`: its output a line at a time, as the lines arrive: a `Flow` to read
+    /// while the job runs (`async $(tail -f log)`), which waits for the next
+    /// line, or ends when the output does. Reading goes on from the last line
+    /// read, and once the job is done, from what its output has left.
+    var lines: Value {
+        guard let collector = capture else {
+            return SwiftValue.make(Flow<Value>((output?.lines ?? []).map(Value.string)), as: "Flow")
+        }
+        return SwiftValue.make(Flow<Value> { [unowned self] in
+            while true {
+                switch collector.nextLine(timeout: 0.05) {
+                case .line(let line): return .string(line)
+                case .end: return nil
+                // Waiting for a line is where Ctrl-C has to be noticed.
+                case .pending: try shell.checkInterrupt()
+                }
+            }
+        }, as: "Flow")
+    }
+
     // MARK: SwishObject
 
     var typeName: String { "Job" }
@@ -76,6 +97,8 @@ final class Job: SwishObject, @unchecked Sendable {
         }),
         ("pids", .list(.int), { .list($0.running.map { .int(Int($0)) }) }),
         ("output", .optional(.output), { $0.output.map(Value.output) ?? .nothing }),
+        // A method, as it's not data: a table or `to json` of jobs can't read it.
+        ("lines", .functionType([], .generic("Flow", [.string])), { job in method("lines") { [unowned job] in job.lines } }),
         ("resume", .functionType([], .void), { job in method("resume") { [unowned job] in job.shell.resume(job) } }),
         ("cancel", .functionType([], .void), { job in method("cancel") { [unowned job] in job.shell.cancel(job) } }),
     ]
@@ -86,11 +109,15 @@ final class Job: SwishObject, @unchecked Sendable {
     }
 
     private static func method(_ name: String, _ body: @escaping () -> Void) -> Value {
+        method(name) { () -> Value in
+            body()
+            return .nothing
+        }
+    }
+
+    private static func method(_ name: String, _ body: @escaping () -> Value) -> Value {
         .function(OverloadSet(name: name, candidates: [
-            Function(name: name, parameters: [], returnType: nil, body: .native { _, _ in
-                body()
-                return .nothing
-            }),
+            Function(name: name, parameters: [], returnType: nil, body: .native { _, _ in body() }),
         ]))
     }
 

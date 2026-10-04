@@ -1,5 +1,6 @@
 import Foundation
 import SwishKit
+import SwishStandardLibrary
 import SystemPackage
 
 /// A Swish key path (`\.status.code`, or `--by size`) as a Swift one over
@@ -164,6 +165,12 @@ func makeRange(_ op: BinaryOperator, _ lower: Value, _ upper: Value) throws -> V
 }
 
 extension Shell {
+    /// The items a value gives as they come, which can throw: a `Flow`'s,
+    /// one at a time; nil for anything else.
+    static func flow(of value: Value) -> Flow<Value>? {
+        if case .object(let box as SwiftValue) = value { box.value as? Flow<Value> } else { nil }
+    }
+
     /// The items of a list, an Output's lines, or a Swift sequence Swish
     /// holds (a Set, a range of Ints, a dictionary's keys), one at a time,
     /// so a range of a billion never becomes a list; nil for anything else.

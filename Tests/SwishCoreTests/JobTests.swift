@@ -68,7 +68,7 @@ private func status(_ source: String) -> Int32 {
 @Test func jobMembers() throws {
     #expect(try output("let j = async sleep 0.1; j.command; j.pids.count; j.output == nil; await j; j.output!.status.code") == "\"sleep 0.1\"\n1\ntrue\n0\n")
     let names = try output("let j = async sleep 0.1; j | members | get name; await j")
-    #expect(names == "id\ncommand\nstate\npids\noutput\nresume\ncancel\n")
+    #expect(names == "id\ncommand\nstate\npids\noutput\nlines\nresume\ncancel\n")
 }
 
 @Test func whatAsyncAndAwaitRefuse() {
@@ -80,4 +80,15 @@ private func status(_ source: String) -> Int32 {
 @Test func fgAndBgNameTheirReplacements() {
     #expect(status("fg") == 2)
     #expect(status("bg") == 2)
+}
+
+@Test func aJobsLinesComeAsTheyArrive() throws {
+    // The job doesn't end for half a minute, so reading a line can't wait for that.
+    let endless = #"let j = async $(sh -c 'echo first; echo second; exec sleep 30'); "#
+    #expect(try output(endless + "j.lines() | prefix 1; j.cancel()") == "first\n")
+    // Reading goes on from the last line read, in a loop as in a pipeline.
+    #expect(try output(endless + #"j.lines() | prefix 1; for line in j.lines() { echo "got \(line)"; break }; j.cancel()"#) == "first\ngot second\n")
+    #expect(try output(#"let k = async $(sh -c 'echo a; sleep 0.2; printf b'); for line in k.lines() { echo "line \(line)" }"#) == "line a\nline b\n")
+    // Done, what it has left is its output's lines, and the Output is whole.
+    #expect(try output(#"let k = async $(sh -c 'echo a; echo b'); await k; k.lines() | map { $0 + "!" }"#).hasSuffix("a!\nb!\n"))
 }

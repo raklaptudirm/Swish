@@ -278,6 +278,12 @@ extension Shell {
             return
         }
         let value = try evaluate(sequence)
+        if let flow = Shell.flow(of: value) {
+            while let element = try flow.read() {
+                guard try body(element) else { return }
+            }
+            return
+        }
         let elements: AnyIterator<Value>
         if case .string(let text) = value {
             elements = AnyIterator(text.lazy.map { .string(String($0)) }.makeIterator())

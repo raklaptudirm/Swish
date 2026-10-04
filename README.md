@@ -154,6 +154,7 @@ let build = async swift build
 let page = async $(curl -s example.com)
 echo "meanwhile…"
 let html = await page             // its Output
+for line in page.lines() { … }    // or its lines as they arrive, before it ends
 try await build                   // throws if the build failed
 
 jobs                              // background jobs, including ones you ^Z'd
