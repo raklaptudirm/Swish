@@ -16,11 +16,33 @@ final class StructType: SwishObject, @unchecked Sendable {
     let memberwise: Function
     /// The protocols it declares: `struct Point: Equatable`.
     let conformances: [String]
+    /// `static let` and `static var`: declared, with their types once checked;
+    /// the stored ones' values are in `statics`.
+    let staticProperties: [PropertyDecl]
+    let staticComputed: [String: Function]
+    let staticMethods: [String: OverloadSet]
+    var statics: [String: StaticValue] = [:]
+
+    /// A stored static property's value, kept on the type.
+    final class StaticValue {
+        var value: Value
+        let mutable: Bool
+
+        init(_ value: Value, mutable: Bool) {
+            self.value = value
+            self.mutable = mutable
+        }
+    }
 
     init(name: String, stored: [PropertyDecl], computed: [String: Function], methods: [String: OverloadSet],
-         initializers: OverloadSet?, memberwise: Function, conformances: [String] = []) {
+         initializers: OverloadSet?, memberwise: Function, conformances: [String] = [],
+         staticProperties: [PropertyDecl] = [], staticComputed: [String: Function] = [:],
+         staticMethods: [String: OverloadSet] = [:]) {
         self.name = name
         self.conformances = conformances
+        self.staticProperties = staticProperties
+        self.staticComputed = staticComputed
+        self.staticMethods = staticMethods
         self.stored = stored
         self.computed = computed
         self.methods = methods
@@ -30,6 +52,10 @@ final class StructType: SwishObject, @unchecked Sendable {
 
     func property(_ name: String) -> PropertyDecl? {
         stored.first { $0.name == name }
+    }
+
+    func staticProperty(_ name: String) -> PropertyDecl? {
+        staticProperties.first { $0.name == name }
     }
 
     var typeName: String { "struct" }
@@ -56,7 +82,7 @@ final class Receiver {
 extension Shell {
     // MARK: Declaring
 
-    func declare(_ decl: StructDecl) {
+    func declare(_ decl: StructDecl) throws {
         var computed: [String: Function] = [:]
         for property in decl.properties {
             guard let getter = property.getter else { continue }
@@ -91,13 +117,43 @@ extension Shell {
             },
             returnType: nil, body: .native { _, _ in .nothing }
         )
+        var staticComputed: [String: Function] = [:]
+        for property in decl.staticProperties {
+            guard let getter = property.getter else { continue }
+            staticComputed[property.name] = Function(
+                name: property.name, parameters: [], returnType: property.type, body: .swish(getter),
+                captured: captureScopes(property.getterNames)
+            )
+        }
+        var staticMethods: [String: [Function]] = [:]
+        for method in decl.staticMethods {
+            staticMethods[method.name, default: []].append(Function(
+                name: method.name, parameters: method.parameters, returnType: method.returnType,
+                body: .swish(method.body), captured: captureScopes(method.names), documentation: method.documentation,
+                isThrowing: method.isThrowing
+            ))
+        }
         let type = StructType(
             name: decl.name, stored: stored, computed: computed,
             methods: methods.mapValues { OverloadSet(name: $0[0].name!, candidates: $0) },
             initializers: initializers.isEmpty ? nil : OverloadSet(name: "\(decl.name).init", candidates: initializers),
-            memberwise: memberwise, conformances: decl.conformances
+            memberwise: memberwise, conformances: decl.conformances,
+            staticProperties: decl.staticProperties, staticComputed: staticComputed,
+            staticMethods: staticMethods.mapValues { OverloadSet(name: $0[0].name!, candidates: $0) }
         )
         scopes[scopes.count - 1].bindings[decl.name] = Binding(value: .object(type), mutable: false)
+        // Bound first, so a static value can be made of the type itself.
+        for property in decl.staticProperties where property.getter == nil {
+            guard let expr = property.defaultValue else { continue }
+            var value = try evaluate(expr, expecting: property.type)
+            if let expected = property.type {
+                guard let conforming = conform(value, to: expected) else {
+                    throw RuntimeError("\(decl.name).\(property.name) must be \(expected), not \(value.typeName)")
+                }
+                value = conforming
+            }
+            type.statics[property.name] = StructType.StaticValue(value, mutable: property.mutable)
+        }
     }
 
     func structType(named name: String) -> StructType? {
@@ -190,6 +246,24 @@ extension Shell {
         return .function(OverloadSet(name: name, candidates: bound))
     }
 
+    /// `Point.origin`, `Point.count`, or a static method as a function value;
+    /// nil if the type has no static member by that name.
+    func staticMember(_ name: String, of type: StructType) throws -> Value? {
+        if let getter = type.staticComputed[name] { return try invoke(getter, with: [:]) }
+        if let slot = type.statics[name] { return slot.value }
+        return type.staticMethods[name].map(Value.function)
+    }
+
+    /// `Point.make(1)`.
+    func callStatic(_ methods: OverloadSet, _ arguments: [Argument]) throws -> Value {
+        let values = try arguments.map { argument -> Argument in
+            if case .caseLiteral = argument.value { return argument }
+            return Argument(label: argument.label, value: .literal(try evaluate(argument.value)))
+        }
+        let (method, bindings) = try resolve(methods) { try self.bind(values, to: $0) }
+        return try invoke(method, with: bindings)
+    }
+
     /// `p.move(by: 1)`. A mutating method changes `p` itself, so `p` must
     /// be a `var` (or a part of one).
     func callMethod(_ methods: OverloadSet, of base: Value, at baseExpr: Expr, _ arguments: [Argument]) throws -> Value {
@@ -239,7 +313,8 @@ extension Shell {
 
     /// `x = v`, `p.x += 1`, `xs[0] = v`, `r["k"] = v`.
     func assign(_ assignment: Assignment) throws {
-        try checkAssignable(assignment.root, what: "assign to")
+        // `Point.count += 1`: a static var, set through its type.
+        if structType(named: assignment.root) == nil { try checkAssignable(assignment.root, what: "assign to") }
         try update(assignment.root, assignment.path) { current, type in
             let value = try evaluate(assignment.value, expecting: type)
             guard let op = assignment.op else { return value }
@@ -320,6 +395,18 @@ extension Shell {
             }
             record[name] = try updated(record[name] ?? .nothing, rest, type: nil, change)
             return .record(record)
+        case (.member(let name), .object(let type as StructType)):
+            guard let slot = type.statics[name] else {
+                let what = type.staticComputed[name] != nil ? "it's a computed property" : "\(type.name) has no static property '\(name)'"
+                throw RuntimeError("cannot assign to '\(name)': \(what)")
+            }
+            guard slot.mutable else { throw RuntimeError("cannot assign to '\(type.name).\(name)': it's a 'let' constant") }
+            let value = try updated(slot.value, rest, type: type.staticProperty(name)?.type, change)
+            if let expected = type.staticProperty(name)?.type, rest.isEmpty, conform(value, to: expected) == nil {
+                throw RuntimeError("\(type.name).\(name) must be \(expected), not \(value.typeName)")
+            }
+            slot.value = value
+            return base
         case (.member(let name), .object(let box as SwiftValue)):
             // A Swift property with a setter: get it, change it, set it on a copy.
             guard let setter = Bridge.types[box.typeName]?.members.first(where: { $0.kind == .setter && $0.name == name }),

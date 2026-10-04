@@ -254,6 +254,13 @@ p.x *= 2
   stored property in order, except a `let` that already has a value; one
   with a default can be left out). Declaring an `init` replaces it, and an
   `init` must set every stored property.
+- **`static` members belong to the type**: `static let` and `static var`
+  (stored, or computed with `{ … }`) and `static func`, read and called on
+  its name, `Point.origin`, `Point.make(1)`, and assigned for a `var`,
+  `Point.count += 1`. A static value is made when the struct is declared, so
+  it can be made of the struct itself (`static let origin = Point(x: 0, y: 0)`),
+  and a static member's body sees the other static names bare. An instance
+  method reaches them through the type, as in Swift.
 - **Types are checked** when a value is made and when a property is set:
   `p.x = "a"` fails with `Point.x must be Int, not String`.
 - **A struct can be a parameter or return type.** Passing a plain record

@@ -88,3 +88,35 @@ struct Point {
     #expect(try output("struct V { let major = 1; var minor: Int }; V(minor: 2)") == "V(major: 1, minor: 2)\n")
     #expect(try output("struct S { var a: Int }; S") == "struct S\n")
 }
+
+private let counted = """
+struct Counter: Equatable {
+    var n: Int
+    static let zero = Counter(n: 0)
+    static let step = 2
+    static var made = 0
+    static var next: Int { step + made }
+    static func make(_ n: Int) -> Counter { made += 1; return Counter(n: n * step) }
+    func bumped() -> Counter { Counter(n: n + Counter.step) }
+}
+
+"""
+
+@Test func staticMembersBelongToTheType() throws {
+    // Values, computed values and methods are read and called on the type; a
+    // static value may be made of the type itself, and the others by bare name.
+    #expect(try output(counted + "Counter.zero; Counter.step; Counter.make(3); Counter.next") == "Counter(n: 0)\n2\nCounter(n: 6)\n3\n")
+    #expect(try output(counted + "Counter.zero.bumped(); let f = Counter.make; f(1)") == "Counter(n: 2)\nCounter(n: 2)\n")
+    // A static var is assigned through its type, a let isn't.
+    #expect(try output(counted + "Counter.made += 5; Counter.made = Counter.made * 2; Counter.made") == "10\n")
+    #expect(status(counted + "Counter.step = 3") != 0)
+    #expect(status(counted + #"Counter.made = "x""#) != 0)
+    #expect(status(counted + "Counter.nope") != 0)
+    #expect(status(counted + "Counter.next = 1") != 0)
+}
+
+@Test func staticNamesAreNotInScopeInInstanceMethods() throws {
+    // As in Swift, an instance method reaches a static member through the type.
+    #expect(status("struct S { static let k = 1; func f() -> Int { k } }; S().f()") != 0)
+    #expect(try output("struct S { static let k = 1; func f() -> Int { S.k } }; S().f()") == "1\n")
+}

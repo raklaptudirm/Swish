@@ -52,8 +52,12 @@ final class TypeChecker {
         var initializers: [Signature]
         var memberwise: Signature
         var conformances: [String] = []
+        /// `static let` and `static var`, stored and computed: read on the type.
+        var staticProperties: [PropertyDecl] = []
+        var staticMethods: [String: [Signature]] = [:]
 
         func property(_ name: String) -> PropertyDecl? { stored.first { $0.name == name } }
+        func staticProperty(_ name: String) -> PropertyDecl? { staticProperties.first { $0.name == name } }
     }
 
     struct EnumInfo {

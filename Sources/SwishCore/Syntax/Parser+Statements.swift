@@ -95,12 +95,19 @@ extension Parser {
             return assignment
         }
 
-        if let name = identifier(), kind(of: name) == .variable || kind(of: name) == .member,
-           let assignment = try parseAssignment(name) {
+        // A type's name starts an assignment too, to a static var: `Point.count += 1`.
+        if let name = identifier(), canStartAssignment(kind(of: name)), let assignment = try parseAssignment(name) {
             return .assign(assignment)
         }
 
         return .chain(try parseChain())
+    }
+
+    private func canStartAssignment(_ kind: NameKind?) -> Bool {
+        switch kind {
+        case .variable?, .member?, .type?, .staticMember?: true
+        case .function?, nil: false
+        }
     }
 
     /// `name = v`, `name.a[i] += v`, …, or nil (having looked ahead) if the
@@ -113,6 +120,9 @@ extension Parser {
         var assignment = Assignment(root: name, value: .literal(.nothing))
         if kind(of: name) == .member {
             assignment.root = "self"
+            assignment.path = [.member(name)]
+        } else if case .staticMember(let type)? = kind(of: name) {
+            assignment.root = type
             assignment.path = [.member(name)]
         }
         use(assignment.root)

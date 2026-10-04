@@ -122,6 +122,9 @@ extension Parser {
         scopes[scopes.count - 1][name] = .type
         var members: [String: NameKind] = ["self": .variable]
         for member in memberNames() { members[member] = .member }
+        // What static members' bodies see: the static names, by the type's name.
+        var staticMembers: [String: NameKind] = [:]
+        for member in memberNames(static: true) { staticMembers[member] = .staticMember(of: name) }
         scopes.append(members)
         defer { scopes.removeLast() }
 
@@ -143,15 +146,29 @@ extension Parser {
                 var method = try parseFunction(method: true)
                 method.isMutating = true
                 decl.methods.append(method)
+            case "static":
+                keyword("static")
+                skipSpaces()
+                scopes.append(staticMembers)
+                defer { scopes.removeLast() }
+                switch identifier() {
+                case "var", "let": decl.staticProperties.append(try parseProperty())
+                case "func": decl.staticMethods.append(try parseFunction(method: true))
+                default: throw expected("'var', 'let' or 'func' after 'static'")
+                }
             case "init":
                 decl.initializers.append(try parseInitializer())
             default:
-                throw SyntaxError("a struct holds properties (var, let), methods (func) and initializers (init)")
+                throw SyntaxError("a struct holds properties (var, let), methods (func), initializers (init) and static members")
             }
         }
         var seen: Set<String> = []
         for member in decl.properties.map(\.name) + Set(decl.methods.map(\.name)) where !seen.insert(member).inserted {
             throw SyntaxError("\(name) declares '\(member)' twice")
+        }
+        var seenStatic: Set<String> = []
+        for member in decl.staticProperties.map(\.name) + Set(decl.staticMethods.map(\.name)) where !seenStatic.insert(member).inserted {
+            throw SyntaxError("\(name) declares static '\(member)' twice")
         }
         return decl
     }
@@ -201,19 +218,23 @@ extension Parser {
 
     /// The names a struct's body declares, found before parsing it so a
     /// member can use one declared further down.
-    func memberNames() -> [String] {
-        declaredNames(["var", "let", "func"], statementsOnly: false).map(\.name)
+    func memberNames(static wantStatic: Bool = false) -> [String] {
+        declaredNames(["var", "let", "func"], statementsOnly: false, statics: wantStatic).map(\.name)
     }
 
     /// The names declared ahead, at this level of nesting, up to the end of
     /// the block: each with the keyword that declares it. With
     /// `statementsOnly`, only where a statement starts, so `echo func x`
     /// declares nothing.
-    func declaredNames(_ keywords: Set<String>, statementsOnly: Bool) -> [(keyword: String, name: String)] {
+    func declaredNames(_ keywords: Set<String>, statementsOnly: Bool, statics wantStatic: Bool = false) -> [(keyword: String, name: String)] {
         var names: [(keyword: String, name: String)] = []
         var depth = 0
         var index = pos
         var nameFollows: String?
+        // A `static` member isn't in scope by its bare name in a method: it's
+        // reached through the type.
+        var afterStatic = false
+        var skipName = false
         while index < chars.count {
             let c = chars[index]
             if c == "\"" || c == "'" {
@@ -234,10 +255,15 @@ extension Parser {
                 while end < chars.count && Parser.isIdentifierPart(chars[end]) { end += 1 }
                 let word = String(chars[index..<end])
                 if let keyword = nameFollows {
-                    names.append((keyword, word))
+                    if !skipName { names.append((keyword, word)) }
                     nameFollows = nil
+                    skipName = false
+                } else if word == "static" && !statementsOnly {
+                    afterStatic = true
                 } else if keywords.contains(word) && (!statementsOnly || startsStatement(index)) {
                     nameFollows = word
+                    skipName = afterStatic != wantStatic
+                    afterStatic = false
                 }
                 index = end
                 continue

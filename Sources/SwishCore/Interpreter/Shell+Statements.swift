@@ -111,7 +111,7 @@ extension Shell {
             try assign(assignment)
             return 0
         case .structDecl(let decl):
-            declare(decl)
+            try declare(decl)
             return 0
         case .function(let decl):
             // Captures the scope it's bound in, so it can call itself.

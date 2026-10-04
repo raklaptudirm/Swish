@@ -342,6 +342,10 @@ extension Parser {
             use("self")
             return .member(.variable("self"), name)
         }
+        if case .staticMember(let type)? = kind(of: name) {
+            use(type)
+            return .member(.variable(type), name)
+        }
         use(name)
         return .variable(name)
     }

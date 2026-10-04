@@ -7,8 +7,10 @@ import SwishKit
 enum NameKind: Equatable, Sendable {
     /// `type`: an enum's or struct's name, as in `FileType.directory`.
     /// `member`: a property or method of the struct whose body this is,
-    /// read through `self`.
+    /// read through `self`. `staticMember`: a static one, read in a static
+    /// member's body through the type's name.
     case variable, function, type, member
+    case staticMember(of: String)
 }
 
 public struct SyntaxError: Error, Equatable, CustomStringConvertible {

@@ -72,7 +72,15 @@ extension TypeChecker {
                           isMutating: true, isThrowing: initializer.isThrowing, index: index)
             } ?? [],
             memberwise: Signature(name: type.name, parameters: type.memberwise.parameters, returns: .named(type.name)),
-            conformances: type.conformances
+            conformances: type.conformances,
+            staticProperties: type.staticProperties,
+            staticMethods: type.staticMethods.mapValues { set in
+                set.candidates.enumerated().map { index, method in
+                    var signature = signature(method)
+                    signature.index = index
+                    return signature
+                }
+            }
         )
     }
 

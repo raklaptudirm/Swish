@@ -6,17 +6,32 @@ extension TypeChecker {
 
     func checkAssignment(_ assignment: inout Assignment) throws {
         guard let symbol = lookup(assignment.root) else { throw TypeError("no variable named '\(assignment.root)'") }
-        guard case .variable(let rootType, let mutable) = symbol else {
-            throw TypeError("cannot assign to '\(assignment.root)': it isn't a variable")
-        }
-        guard mutable else {
-            if assignment.root == "self" {
-                throw TypeError("cannot assign to self here: it's only changed by a mutating method")
+        var type: TypeAnnotation
+        // `Point.count += 1`: a static var is assigned through its type.
+        var start = 0
+        if case .structType(let info) = symbol {
+            guard case .member(let name)? = assignment.path.first, let property = info.staticProperty(name) else {
+                throw TypeError("cannot assign to '\(assignment.root)': it isn't a variable")
             }
-            throw TypeError("cannot assign to '\(assignment.root)': it's a 'let' constant")
+            guard property.mutable, property.getter == nil else {
+                let why = property.getter != nil ? "it's a computed property" : "it's a 'let' constant"
+                throw TypeError("cannot assign to '\(info.name).\(name)': \(why)")
+            }
+            type = property.type ?? .unknown
+            start = 1
+        } else {
+            guard case .variable(let rootType, let mutable) = symbol else {
+                throw TypeError("cannot assign to '\(assignment.root)': it isn't a variable")
+            }
+            guard mutable else {
+                if assignment.root == "self" {
+                    throw TypeError("cannot assign to self here: it's only changed by a mutating method")
+                }
+                throw TypeError("cannot assign to '\(assignment.root)': it's a 'let' constant")
+            }
+            type = rootType
         }
-        var type = rootType
-        for index in assignment.path.indices {
+        for index in assignment.path.indices.dropFirst(start) {
             let last = index == assignment.path.count - 1
             switch assignment.path[index] {
             case .member(let name):

@@ -177,6 +177,10 @@ extension TypeChecker {
                 }
                 var none: [Argument]?
                 return try caseType(name, &none, expected: .named(info.name))
+            case .structType(let info):
+                if let property = info.staticProperty(name) { return property.type ?? .unknown }
+                if let methods = info.staticMethods[name] { return methods.count == 1 ? functionType(methods[0]) : .function }
+                throw TypeError("\(info.name) has no static member '\(name)'")
             case .environment:
                 return .optional(.string)
             case .module:

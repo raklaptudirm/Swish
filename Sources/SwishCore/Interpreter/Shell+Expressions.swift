@@ -109,6 +109,10 @@ extension Shell {
                 if case .object(let type as EnumType) = base {
                     return try makeCase(type, name, arguments)
                 }
+                // `Point.make(1)`: a static method.
+                if case .object(let type as StructType) = base, let methods = type.staticMethods[name] {
+                    return try callStatic(narrowed(methods, overload), arguments)
+                }
                 // `p.move(by: 1)`: a struct's method, with `p` as `self`.
                 if case .record(let record) = base, record[name] == nil, let type = structType(of: record),
                    let methods = type.methods[name] {
@@ -275,6 +279,7 @@ extension Shell {
         if case .object(let type as EnumType) = value, type.case(named: name) != nil, type.member(name) == nil {
             return try makeCase(type, name, nil) // Says what values it needs.
         }
+        if case .object(let type as StructType) = value, let found = try staticMember(name, of: type) { return found }
         if case .object(let object) = value, name != "description" && name != "debugDescription" {
             if object is SwiftValue, let property = try bridgedProperty(name, of: value) { return property }
             guard let member = object.member(name) else {

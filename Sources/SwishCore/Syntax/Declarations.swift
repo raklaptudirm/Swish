@@ -41,6 +41,10 @@ struct StructDecl: Equatable, Sendable {
     var initializers: [FunctionDecl]
     /// `struct Point: Equatable, Hashable`.
     var conformances: [String] = []
+    /// `static let origin = Point(x: 0, y: 0)`: values of the type itself,
+    /// and `static func`s, which are called on it: `Point.origin`.
+    var staticProperties: [PropertyDecl] = []
+    var staticMethods: [FunctionDecl] = []
 }
 
 struct PropertyDecl: Equatable, Sendable {

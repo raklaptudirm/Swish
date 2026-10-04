@@ -144,8 +144,18 @@ extension TypeChecker {
             Signature(name: "\(decl.name).init", parameters: initializer.parameters, returns: .named(decl.name),
                       isMutating: true, isThrowing: initializer.isThrowing, index: index)
         }
+        // An untyped static takes its value's type once the struct is known
+        // (`checkStruct`), since the value may use the struct itself.
+        var staticMethods: [String: [Signature]] = [:]
+        for method in decl.staticMethods {
+            var signature = Signature(name: method.name, parameters: method.parameters, returns: method.returnType ?? .void,
+                                      isThrowing: method.isThrowing)
+            signature.index = staticMethods[method.name]?.count ?? 0
+            staticMethods[method.name, default: []].append(signature)
+        }
         return StructInfo(name: decl.name, stored: stored, computed: computed, methods: methods,
-                          initializers: initializers, memberwise: memberwise, conformances: decl.conformances)
+                          initializers: initializers, memberwise: memberwise, conformances: decl.conformances,
+                          staticProperties: decl.staticProperties, staticMethods: staticMethods)
     }
 
     func checkStruct(_ decl: inout StructDecl) throws {
@@ -175,6 +185,30 @@ extension TypeChecker {
         }
         for index in decl.methods.indices {
             try checkFunction(&decl.methods[index], self: selfType, mutating: decl.methods[index].isMutating)
+        }
+        for index in decl.staticProperties.indices {
+            let property = decl.staticProperties[index]
+            if let getter = property.getter {
+                var function = FunctionDecl(name: property.name, parameters: [], returnType: property.type, body: getter)
+                try checkFunction(&function)
+                decl.staticProperties[index].getter = function.body
+            } else if var value = property.defaultValue {
+                if let type = property.type {
+                    try expect(&value, type, "\(decl.name).\(property.name)'s value")
+                } else {
+                    // Its type is its value's, which the struct's other
+                    // checks can now use.
+                    decl.staticProperties[index].type = try typeOf(&value)
+                    if case .structType(var info)? = scopes[scopes.count - 1][decl.name] {
+                        info.staticProperties[index].type = decl.staticProperties[index].type
+                        scopes[scopes.count - 1][decl.name] = .structType(info)
+                    }
+                }
+                decl.staticProperties[index].defaultValue = value
+            }
+        }
+        for index in decl.staticMethods.indices {
+            try checkFunction(&decl.staticMethods[index])
         }
         for index in decl.initializers.indices {
             var function = decl.initializers[index]

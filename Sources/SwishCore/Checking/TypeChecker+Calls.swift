@@ -37,6 +37,14 @@ extension TypeChecker {
             callee = bridgedExpr
             return type
         }
+        // `Point.make(1)`: a static method.
+        if case .member(.variable(let typeName), let name) = callee, case .structType(let info)? = lookup(typeName),
+           let methods = info.staticMethods[name] {
+            guard let chosen = try resolve(methods, &arguments, name: name) else { return commonReturn(methods) }
+            if methods.count > 1 { callee = .chosen(callee, overload: chosen.index) }
+            if chosen.isThrowing { try throwingSite("'\(name)'") }
+            return chosen.returns
+        }
         // `x?.f()`: the method's result, or nil.
         if case .optionalMember(var baseExpr, let name) = callee {
             let wrapped = try optionalBase(&baseExpr)
