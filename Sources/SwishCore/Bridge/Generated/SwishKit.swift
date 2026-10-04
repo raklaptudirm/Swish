@@ -25,6 +25,15 @@ extension Bridge {
                 member23, member24, member25, member26, member27, member28, member29, member30, member31, member32, member33, member34, member35, member36, member37, member38, member39, member40, member41, member42, member43, member44, member45, member46, member47, member48, member49, member50, member51, member52, member53, member54, member55, member56, member57, member58, member59, member60, member61, member62, member63, member64, member65, member66, member67, member68, member69, member70
             ]
         ),
+        BridgedType(
+            name: "StyledText", genericParameters: [],
+            conformances: ["CustomStringConvertible": [:], "Equatable": [:], "Hashable": [:], "StandsForText": [:]],
+            associatedTypes: [:],
+            parse: nil, literal: nil, arrayLiteral: nil,
+            members: [
+                member71, member72, member73, member74, member75
+            ]
+        ),
     ]
     nonisolated(unsafe) private static let member0: BridgedMember =                 BridgedMember(
                     kind: .method, name: "...", isStatic: true,
@@ -993,6 +1002,74 @@ extension Bridge {
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
                 let result = receiver.debugDescription
+                return result.swishValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member71: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "!=", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "lhs", type: .named("StyledText")), Parameter(label: nil, name: "rhs", type: .named("StyledText"))],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a Boolean value indicating whether two values are not equal.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = (try SwiftValue.unbox(StyledText.self, args["lhs"]!)) != (try SwiftValue.unbox(StyledText.self, args["rhs"]!))
+                return result.swishValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member72: BridgedMember =                 BridgedMember(
+                    kind: .initializer, name: "init", isStatic: true,
+                    parameters: [Parameter(label: "plain", name: "text", type: .string)],
+                    returns: .named("StyledText"), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Without styles.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = StyledText(plain: try String(swishValue: args["text"]!))
+                return SwiftValue.make(result, as: "StyledText")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member73: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "text", isStatic: false,
+                    parameters: [],
+                    returns: .string, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: StyledText = try SwiftValue.unbox(StyledText.self, args["self"]!)
+                let result = receiver.text
+                return result.swishValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member74: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "colored", isStatic: false,
+                    parameters: [],
+                    returns: .string, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "With the terminal's escapes for each style.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: StyledText = try SwiftValue.unbox(StyledText.self, args["self"]!)
+                let result = receiver.colored
+                return result.swishValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member75: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "description", isStatic: false,
+                    parameters: [],
+                    returns: .string, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "A textual representation of this instance.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: StyledText = try SwiftValue.unbox(StyledText.self, args["self"]!)
+                let result = receiver.description
                 return result.swishValue
                     }
                 )

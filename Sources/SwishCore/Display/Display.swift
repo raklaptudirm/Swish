@@ -149,6 +149,10 @@ final class Formatter {
             return true
         default:
             guard flush() else { return false }
+            // A Swift value with colors to show (help), on a terminal.
+            if styled, case .object(let box as SwiftValue) = item, let colored = (box.value as? any SwishDisplayed)?.swishColored {
+                return emit(colored)
+            }
             return emit(item.description)
         }
     }
@@ -219,12 +223,14 @@ final class Formatter {
         }.joined(separator: "  "))
     }
 
-    /// What stands out in a table: a column the type says is styled by a
-    /// field, whose value is an enum that says how its cases are shown (a
-    /// file's name by its type, a job's state by itself). Else it's plain.
+    /// What stands out in a table: a column the type gives a style, or says
+    /// is styled by a field whose value is an enum that says how its cases
+    /// are shown (a file's name by its type, a job's state by itself). Else
+    /// it's plain.
     static func style(of value: Value, key: String, in record: Record) -> Style? {
-        guard let typeName = record.typeName,
-              let source = displayColumns[typeName]?.first(where: { $0.name == key })?.styledBy,
+        guard let typeName = record.typeName, let column = displayColumns[typeName]?.first(where: { $0.name == key }) else { return nil }
+        if let fixed = column.style { return Style(rawValue: fixed.rawValue) }
+        guard let source = column.styledBy,
               case .enumValue(let found)? = record[source],
               let style = Bridge.standardEnumStyles[found.type.name]?(found.name) else { return nil }
         return Style(rawValue: style.rawValue)

@@ -16,18 +16,23 @@ public enum DisplayStyle: String, Sendable {
     case cyan = "36"
     case boldRed = "1;31"
     case boldBlue = "1;34"
+    case brightMagenta = "95"
+    case brightYellow = "93"
 }
 
 /// A column a table shows, and what styles it: the value of another field
-/// (or of itself), if that is a `DisplayStyled` enum. A file's name is
-/// styled by its type: `DisplayColumn("name", styledBy: "type")`.
+/// (or of itself), if that is a `DisplayStyled` enum, as a file's name is
+/// styled by its type: `DisplayColumn("name", styledBy: "type")`; or one
+/// style for all of it: `DisplayColumn("name", style: .green)`.
 public struct DisplayColumn: Sendable, ExpressibleByStringLiteral {
     public let name: String
     public let styledBy: String?
+    public let style: DisplayStyle?
 
-    public init(_ name: String, styledBy: String? = nil) {
+    public init(_ name: String, styledBy: String? = nil, style: DisplayStyle? = nil) {
         self.name = name
         self.styledBy = styledBy
+        self.style = style
     }
 
     public init(stringLiteral name: String) {
@@ -53,11 +58,15 @@ public protocol SwishDisplayed {
     var swishDescription: String { get }
     var swishCell: String { get }
     var swishDebugDescription: String { get }
+    /// It with terminal color escapes, if it has colors to show: what's
+    /// written to a terminal, where `swishDescription` is for a pipe or file.
+    var swishColored: String? { get }
 }
 
 extension SwishDisplayed {
     public var swishCell: String { swishDescription }
     public var swishDebugDescription: String { swishDescription }
+    public var swishColored: String? { nil }
 }
 
 extension Date: SwishDisplayed {

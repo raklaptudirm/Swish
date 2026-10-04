@@ -1,4 +1,5 @@
 @testable import SwishCore
+import SwishKit
 import Testing
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
@@ -56,11 +57,42 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
     let shell = Shell()
     _ = try output("struct P { var x: Int; func twice() -> Int { x * 2 } }; enum K { case a, b(n: Int) }", in: shell)
     #expect(try output("help P", in: shell) == "struct P\n\nInitializers:\n  init(x: Int)\n\nProperties:\n  var x: Int\n\nMethods:\n  twice() -> Int\n")
-    #expect(try output("help K", in: shell) == "enum K\n\nCases:\n  case a\n  case b(n: Int)\n")
+    #expect(try output("help K", in: shell) == "enum K\n\nCases:\n  case a\n\n  case b(n: Int)\n")
 }
 
 @Test func membersDescribesEachItemsType() throws {
     // Its own fields, then what its type has, as `help` shows it.
     #expect(try output("struct P { var x: Int; func twice() -> Int { x * 2 } }; [P(x: 1)] | members | get name") == "x\ntwice\n")
     #expect(try output(#""a" | members | filter { $0.name == "uppercased" } | get kind"#) == "method\n")
+}
+
+@Test func signaturesAreColoredByWhatEachPartIs() {
+    func style(_ word: String, in signature: String) -> DisplayStyle?? {
+        HelpStyle.signature(signature).first { $0.text == word }.map(\.style)
+    }
+    let init_ = "init(_ description: String)"
+    #expect(style("init", in: init_) == .magenta)
+    #expect(style("description", in: init_) == .cyan)
+    #expect(style("String", in: init_) == .brightYellow)
+    // A property: its keyword, its name, its type.
+    #expect(style("let", in: "let cpuTime: Double?") == .magenta)
+    #expect(style("cpuTime", in: "let cpuTime: Double?") == .green)
+    #expect(style("Double", in: "let cpuTime: Double?") == .brightYellow)
+    // A method: its name, labels, and the types of what it takes and gives.
+    let method = "contains(where predicate: (Element) throws -> Bool) -> Bool"
+    #expect(style("contains", in: method) == .green)
+    #expect(style("where", in: method) == .cyan)
+    #expect(style("throws", in: method) == .magenta)
+    #expect(style("Bool", in: method) == .brightYellow)
+    // Nothing is lost: the pieces are the text.
+    #expect(HelpStyle.signature(method).map(\.text).joined() == method)
+}
+
+@Test func styledTextIsColoredOnlyWhereItsAskedFor() throws {
+    let line = StyledText([.init("ls", .green), .init(" [--all]")])
+    #expect(line.text == "ls [--all]")
+    #expect(line.colored == "\u{1B}[32mls\u{1B}[0m [--all]")
+    // Piped or captured, help is its plain text, and it's text where a String is.
+    #expect(try output("help ls | grep -c Usage") == "1\n")
+    #expect(try output(#"help ls | filter { $0.text.hasPrefix("Usage") } | count"#) == "1\n")
 }

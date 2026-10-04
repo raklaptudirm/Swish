@@ -122,21 +122,23 @@ extension Shell {
         return TypeDescription(name: type.name, kind: "enum", members: members)
     }
 
-    /// What `help Type` shows: its members, grouped by kind, each with
-    /// its signature and documentation.
-    func helpText(for type: TypeDescription) -> String {
-        var text = "\(type.kind) \(type.name)\n"
+    /// What `help Type` shows: its members, grouped by kind, each with its
+    /// signature (highlighted as Swift) and, on the line below, what its
+    /// documentation says.
+    func helpLines(for type: TypeDescription) -> [StyledText] {
+        var lines = [StyledText([.init(type.kind, HelpStyle.keyword), .init(" "), .init(type.name, HelpStyle.type)])]
         let groups = Dictionary(grouping: type.members, by: \.kind)
-        let width = min(48, type.members.map(\.signature.count).max() ?? 0)
         for kind in TypeDescription.Kind.allCases {
             guard let members = groups[kind], !members.isEmpty else { continue }
-            text += "\n\(kind.heading):\n"
-            for member in members.sorted(by: { $0.name < $1.name }) {
-                let padded = member.signature.padding(toLength: max(width, member.signature.count), withPad: " ", startingAt: 0)
-                text += "  " + (member.summary.isEmpty ? member.signature : padded + "  " + member.summary) + "\n"
+            lines += [StyledText(plain: ""), HelpStyle.heading("\(kind.heading):")]
+            for (index, member) in members.sorted(by: { $0.name < $1.name }).enumerated() {
+                // A blank line between them, so a signature and its description read as one.
+                if index > 0 { lines.append(StyledText(plain: "")) }
+                lines.append(StyledText([.init("  ")] + HelpStyle.signature(member.signature)))
+                if !member.summary.isEmpty { lines.append(StyledText(plain: "    " + member.summary)) }
             }
         }
-        return text
+        return lines
     }
 }
 
