@@ -10,7 +10,14 @@ func strideFix(_ constraint: Constraint) -> Bool {
 /// Whether a concrete type conforms to `proto`, for constraints on them.
 func conforms(_ type: SType, _ proto: String) -> Bool {
     guard case .named(let name, []) = type else { return false }
-    return types[name]?.allConformances.contains(proto) ?? false
+    // Swish's own Int, Double, String and Bool, which a run that isn't
+    // bridging the standard library knows nothing else about.
+    let comparable: Set = ["Equatable", "Hashable", "Comparable", "Encodable", "CustomStringConvertible"]
+    switch name {
+    case "Int", "Double", "String": return types[name]?.allConformances.contains(proto) ?? comparable.contains(proto)
+    case "Bool": return types[name]?.allConformances.contains(proto) ?? comparable.subtracting(["Comparable"]).contains(proto)
+    default: return types[name]?.allConformances.contains(proto) ?? false
+    }
 }
 
 func available(_ symbol: Symbol) -> Bool {

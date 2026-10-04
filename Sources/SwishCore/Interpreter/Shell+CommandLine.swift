@@ -242,7 +242,7 @@ extension Shell {
             // `sorted --by size`: a field's name is its key path.
             case .keyPath: .function(KeyPathValue(path: text.split(separator: ".").map(String.init)))
             case .optional(let wrapped): try converted(text, to: wrapped, for: what, of: function)
-            case .output: .output(CommandOutput(text: text, code: 0))
+            case .output: .output(Output(text: text, code: 0))
             default: nil
             }
         }

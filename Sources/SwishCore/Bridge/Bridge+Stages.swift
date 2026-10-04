@@ -36,6 +36,12 @@ extension Bridge {
     static let stageNames: Set<String> = Set(types.values.flatMap { type in
         type.members.filter { !$0.isStatic && !$0.isMutating && ($0.kind == .method || $0.kind == .property) }.map(\.name)
     })
+
+    /// Those that are methods: a bare one, with nothing piped in, has
+    /// nothing to work on (a property's name could be a program's).
+    static let methodNames: Set<String> = Set(types.values.flatMap { type in
+        type.members.filter { !$0.isStatic && !$0.isMutating && $0.kind == .method }.map(\.name)
+    })
 }
 
 extension Shell {
@@ -53,7 +59,7 @@ extension Shell {
     /// Whether `name` is a method some type has that a stage could call,
     /// and that makes no sense without something piped in.
     func isStageMethod(_ name: String) -> Bool {
-        sequenceMethods[name] != nil || Bridge.stageNames.contains(name)
+        sequenceMethods[name] != nil || Bridge.methodNames.contains(name)
     }
 
     /// Every bridged type's stage members named `name`, as one set of

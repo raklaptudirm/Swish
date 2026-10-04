@@ -40,7 +40,6 @@ extension TypeChecker {
         if case .generic = type { return bridgedElement(type) }
         return switch type {
         case .list(let element): element
-        case .output: .string
         case TypeChecker.json: TypeChecker.json // An array's elements, or the value itself.
         case .unknown: .unknown
         default: nil
@@ -242,9 +241,6 @@ extension TypeChecker {
         // and in the interpreter's `member(_:of:)`.
         let members: [String: TypeAnnotation]
         switch base {
-        case .output:
-            members = ["text": .string, "lines": .list(.string), "count": .int, "isEmpty": .bool,
-                       "first": .optional(.string), "last": .optional(.string), "status": .named("Status")]
         case .dictionary(let key, let value):
             // Arrays in the dictionary's order, not Swift's unordered views.
             members = ["keys": .list(key), "values": .list(value)]

@@ -19,7 +19,7 @@ nonisolated(unsafe) var topLevelAliases: [String: SType] = [:]
 let boxes: Set = ["Set", "ArraySlice", "Range", "ClosedRange"]
 
 /// The protocols a type conforms to, as far as the checker needs to know.
-let knownProtocols: Set = ["Equatable", "Hashable", "Comparable", "CustomStringConvertible", "Encodable", "Sequence",
+let knownProtocols: Set = ["Equatable", "Hashable", "Comparable", "CustomStringConvertible", "Encodable", "Sequence", "StandsForText",
                            "ExpressibleByStringLiteral"]
 /// What Swish's values (the stand-in for every generic parameter) can be.
 let valueProtocols: Set = ["Equatable", "Hashable", "Comparable"]

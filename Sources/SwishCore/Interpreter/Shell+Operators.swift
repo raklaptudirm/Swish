@@ -37,16 +37,17 @@ extension Shell {
     }
 
     func apply(_ op: BinaryOperator, _ lhs: Value, _ rhs: Value) throws -> Value {
-        // Output compares as its text; other String operations go through `.text`.
+        // What stands for text (a command's output) compares as its text;
+        // other String operations go through `.text`.
         let comparisons: [BinaryOperator] = [.equal, .notEqual, .less, .lessEqual, .greater, .greaterEqual]
-        if case .output(let output) = lhs, comparisons.contains(op) {
-            return try apply(op, .string(output.text), rhs)
+        if case .object = lhs, let text = lhs.text, comparisons.contains(op) {
+            return try apply(op, .string(text), rhs)
         }
-        if case .output(let output) = rhs, comparisons.contains(op) {
-            return try apply(op, lhs, .string(output.text))
+        if case .object = rhs, let text = rhs.text, comparisons.contains(op) {
+            return try apply(op, lhs, .string(text))
         }
-        if case .output = lhs, op == .add {
-            throw RuntimeError("'+' needs the text of a command's output: use .text")
+        if case .object = lhs, lhs.text != nil, op == .add {
+            throw RuntimeError("'+' needs the text of a \(lhs.typeName): use .text")
         }
         if op == .equal || op == .notEqual {
             if case .enumValue(let value) = lhs, case .string(let text) = rhs {

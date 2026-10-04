@@ -51,24 +51,24 @@ enum FieldKind {
     case boxed(String)
 }
 
-/// A Swift struct as a record, its fields by name: how a struct of the
-/// standard library module reaches Swish (declared there from its fields).
-/// A field of `patches` is read from the Swift value itself and made what
-/// it is declared as, nil included (the encoder leaves a nil out; the
-/// declaration says it's there).
+/// A Swift struct as a record, its fields by name, in the order it declares
+/// them and all there: the encoder leaves out a nil, and the declaration says
+/// it's a field. A field of `patches` is read from the Swift value itself and
+/// made what it is declared as.
 func bridgeRecord<T: Encodable>(_ shell: Shell, _ value: T, patches: [String: FieldKind] = [:]) -> Value {
-    guard case .record(var record)? = try? ValueEncoder().encode(value) else { return .nothing }
-    let fields = Dictionary(Mirror(reflecting: value).children.compactMap { child in child.label.map { ($0, child.value) } },
-                            uniquingKeysWith: { first, _ in first })
-    for (field, kind) in patches {
-        var held = fields[field]
+    guard case .record(let encoded)? = try? ValueEncoder().encode(value) else { return .nothing }
+    var record = Record(typeName: encoded.typeName)
+    for child in Mirror(reflecting: value).children {
+        guard let field = child.label else { continue }
+        var held: Any? = child.value
         // An optional holds its value, or nothing.
         if let optional = held.map(Mirror.init(reflecting:)), optional.displayStyle == .optional {
             held = optional.children.first?.value
         }
-        record[field] = switch (kind, held) {
-        case (.enumeration(let type), let held?): shell.declaredCase(type, "\(held)")
-        case (.boxed(let type), let held?): SwiftValue.make(held, as: type)
+        record[field] = switch (patches[field], held) {
+        case (.enumeration(let type)?, let held?): shell.declaredCase(type, "\(held)")
+        case (.boxed(let type)?, let held?): SwiftValue.make(held, as: type)
+        case (_, .some): encoded[field] ?? .nothing
         default: .nothing
         }
     }
@@ -86,8 +86,9 @@ extension Shell {
 func bridgeList(_ value: Value) throws -> [Value] {
     switch value {
     case .list(let items): return items
-    case .output(let output): return output.lines.map(Value.string)
-    default: throw SwishError("expected a list, not \(value.typeName)")
+    default:
+        guard let output = value.commandOutput else { throw SwishError("expected a list, not \(value.typeName)") }
+        return output.lines.map(Value.string)
     }
 }
 
@@ -170,9 +171,10 @@ extension Shell {
         switch value {
         case .list(let items):
             return AnyIterator(items.makeIterator())
-        case .output(let output):
-            return AnyIterator(output.lines.lazy.map(Value.string).makeIterator())
         case .object(let box as SwiftValue):
+            if let output = box.value as? Output {
+                return AnyIterator(output.lines.lazy.map(Value.string).makeIterator())
+            }
             if let range = box.value as? ClosedRange<Value> {
                 guard case .int(let lower) = range.lowerBound, case .int(let upper) = range.upperBound else { return nil }
                 return AnyIterator((lower...upper).lazy.map(Value.int).makeIterator())

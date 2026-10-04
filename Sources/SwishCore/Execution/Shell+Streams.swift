@@ -27,7 +27,7 @@ final class ValueStream {
         switch value {
         case .nothing:
             return .empty
-        case .list, .output:
+        case .list:
             items = Shell.items(of: value)!
         case .object(let box as SwiftValue) where Bridge.types[box.typeName].map({
             !$0.genericParameters.isEmpty || $0.conformances["Sequence"] != nil

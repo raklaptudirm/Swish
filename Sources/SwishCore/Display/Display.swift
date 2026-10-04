@@ -20,7 +20,7 @@ extension Shell {
             return
         case .record(let record) where record.count == 0 && record.typeName == nil:
             return // `()`: what a Void call gives as a value.
-        case .output(let output) where output.text.isEmpty && !debug:
+        case .object where value.commandOutput?.text.isEmpty == true && !debug:
             return
         case .record(let record) where !debug:
             for line in keyValueLines(record, styled: Style.enabled(for: stdoutFD)) { writeAll(stdoutFD, line + "\n") }
@@ -61,13 +61,12 @@ extension Value {
     var sequenceItems: [Value]? {
         switch self {
         case .list(let items): items
-        case .output(let output): output.lines.map(Value.string)
-        default: nil
+        default: commandOutput?.lines.map(Value.string)
         }
     }
 
     var isEmptyOutput: Bool {
-        if case .output(let output) = self { output.text.isEmpty } else { false }
+        commandOutput?.text.isEmpty ?? false
     }
 
     /// A record, or an object's fields: what a table row is made from.
@@ -254,8 +253,6 @@ final class Formatter {
         switch value {
         case .string(let text):
             text.replacingOccurrences(of: "\n", with: "↵")
-        case .output(let output):
-            output.text.replacingOccurrences(of: "\n", with: "↵")
         case .list(let items):
             "[\(items.count) item\(items.count == 1 ? "" : "s")]"
         case .record(let record):

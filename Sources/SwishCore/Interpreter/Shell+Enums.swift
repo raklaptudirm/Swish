@@ -198,7 +198,7 @@ extension Shell {
             if case .enumValue = value, case .string = expected {
                 throw RuntimeError("can't compare \(value.typeName) with a String; match a case like .\(expected)")
             }
-            if case .output(let output) = value { return Value.string(output.text).isEqual(to: expected) }
+            if case .object = value, let text = value.text { return Value.string(text).isEqual(to: expected) }
             return value.isEqual(to: expected)
         }
     }

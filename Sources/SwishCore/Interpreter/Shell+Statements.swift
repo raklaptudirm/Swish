@@ -198,7 +198,7 @@ extension Shell {
             if case .some(let kind) = node.throwing, status != 0 {
                 let (code, signal) = exitCode(status)
                 let error = RuntimeError("\(node.source) failed with status \(status)", status: status,
-                                         output: CommandOutput(text: "", code: code, signal: signal))
+                                         output: Output(text: "", code: code, signal: signal))
                 throw kind == .forced ? FatalError(error: error) : error
             }
             return status
@@ -219,7 +219,7 @@ extension Shell {
             }
             if case .bool(let truth) = value { return truth ? 0 : 1 }
             // `await build && echo ok`: an Output's status is its command's.
-            if case .output(let output) = value, !output.succeeded {
+            if let output = value.commandOutput, !output.succeeded {
                 return output.code.map(Int32.init) ?? 128 + Int32(output.signal ?? 0)
             }
             // A `try?` that caught an error is a failure, so `try? $(…) != nil

@@ -25,11 +25,11 @@ private final class Stub: Callable {
 }
 
 @Test func commandOutputIsLines() {
-    let output = CommandOutput(text: "a\nb", code: 0)
+    let output = Output(text: "a\nb", code: 0)
     #expect(output.lines == ["a", "b"])
-    #expect(CommandOutput(text: "", code: 0).lines.isEmpty)
+    #expect(Output(text: "", code: 0).lines.isEmpty)
     #expect(Value.output(output).description == "a\nb")
-    #expect(!CommandOutput(text: "", code: nil, signal: 15).succeeded)
+    #expect(!Output(text: "", code: nil, signal: 15).succeeded)
 }
 
 private final class Thing: SwishObject {

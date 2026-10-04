@@ -23,7 +23,6 @@ enum JSON {
             guard double.isFinite else { throw RuntimeError("to json: \(double) isn't valid JSON") }
             return String(double)
         case .string(let string): return quoted(string)
-        case .output(let output): return quoted(output.text)
         case .enumValue(let value):
             // A raw value, or the case's name; with associated values, a
             // record of them under the case's name.
@@ -58,6 +57,7 @@ enum JSON {
             // What a text literal can be (a FilePath, a Character) is its text;
             // else a Swift value is as Swift encodes it (a file size is its bytes).
             if let box = object as? SwiftValue {
+                if let text = (box.value as? any StandsForText)?.text { return quoted(text) }
                 if Bridge.types[box.typeName]?.literal != nil { return quoted(box.description) }
                 if let json = try box.json() { return json }
             }

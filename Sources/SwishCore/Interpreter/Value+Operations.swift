@@ -22,7 +22,6 @@ extension Value {
         case .list: "List"
         case .record(let record): record.typeName ?? "Tuple"
         case .dictionary: "Dictionary"
-        case .output: "Output"
         case .enumValue(let value): value.type.name
         case .object(let object): object.typeName
         case .function: "Function"
@@ -55,12 +54,12 @@ extension Value {
     /// Double, as an integer literal would in Swift.
     func conforming(to type: TypeAnnotation) -> Value? {
         switch (type, self) {
-        case (.output, .output):
-            return self
-        case (.string, .output(let output)):
-            return .string(output.text)
-        case (.list(.string), .output(let output)):
-            return .list(output.lines.map(Value.string))
+        // What stands for text is the text where a String is wanted, and a
+        // command's output is its lines where a list of them is.
+        case (.string, .object) where text != nil:
+            return .string(text!)
+        case (.list(.string), .object) where commandOutput != nil:
+            return .list(commandOutput!.lines.map(Value.string))
         // A key path is a function of one value, as in Swift, and no other kind.
         case (.functionType(let parameters, _, _), .function(is KeyPathValue)):
             return parameters.count == 1 ? self : nil
@@ -110,6 +109,9 @@ extension SwishKit.Value {
         func compare<T: Comparable>(_ a: T, _ b: T) -> ComparisonResult {
             a < b ? .orderedAscending : a > b ? .orderedDescending : .orderedSame
         }
+        // What stands for text sorts as its text.
+        if case .object = self, let a = text { return Value.string(a).order(comparedTo: other) }
+        if case .object = other, let b = other.text { return order(comparedTo: .string(b)) }
         switch (self, other) {
         case (.bool(let a), .bool(let b)): return compare(a ? 1 : 0, b ? 1 : 0)
         case (.int, .int), (.int, .double), (.double, .int), (.double, .double): return compare(asDouble!, other.asDouble!)
@@ -118,8 +120,6 @@ extension SwishKit.Value {
         case (.object(let a as SwiftValue), .object(let b as SwiftValue)):
             if let less = a.isLess(than: b) { return less ? .orderedAscending : b.isLess(than: a) == true ? .orderedDescending : .orderedSame }
             return compare(a.typeName, b.typeName)
-        case (.output(let a), _): return Value.string(a.text).order(comparedTo: other)
-        case (_, .output(let b)): return order(comparedTo: .string(b.text))
         case (.list(let a), .list(let b)):
             for (x, y) in zip(a, b) {
                 let order = x.order(comparedTo: y)
@@ -135,7 +135,7 @@ extension SwishKit.Value {
         case .nothing: 0
         case .bool: 1
         case .int, .double: 2
-        case .string, .output: 5
+        case .string: 5
         case .list: 6
         case .enumValue: 6
         case .record, .dictionary: 7

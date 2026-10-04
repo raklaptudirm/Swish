@@ -40,10 +40,10 @@ struct PrettyPrinter {
             dictionary.count == 0 ? .segments([("[:]", nil)]) : .group(open: [("[", nil)], items: dictionary.sortedForDisplay.map { key, value in
                 ([keySegment(key), (": ", nil)], node(for: value))
             }, close: "]")
-        case .output(let output):
+        case .object(let box as SwiftValue) where box.value is Output:
             .group(open: [("Output", Style.type), ("(", nil)], items: [
-                (label("text"), .string(output.text)),
-                (label("status"), node(for: output.status)),
+                (label("text"), .string((box.value as! Output).text)),
+                (label("status"), node(for: (box.value as! Output).statusRecord)),
             ], close: ")")
         case .enumValue(let value):
             node(for: value)

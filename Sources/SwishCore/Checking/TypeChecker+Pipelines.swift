@@ -59,7 +59,6 @@ extension TypeChecker {
     func streamElement(_ type: TypeAnnotation) -> TypeAnnotation {
         switch type {
         case .list(let element): element
-        case .output: .string
         case .generic: bridgedElement(type) ?? type
         // A bridged sequence, like a FilePath's components: its elements.
         case .named(let name) where Bridge.types[name]?.conformances["Sequence"] != nil:

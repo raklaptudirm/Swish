@@ -43,22 +43,24 @@ let graph: Graph = try {
 
 /// What's bridged from each module: its types, with their generic
 /// parameters, and the name of the list the output declares.
-let modules: [String: (list: String, types: [(String, [String])], functions: String?, external: [String])] = [
+let modules: [String: (list: String, types: [(String, [String])], functions: String?, external: [String], records: [String])] = [
     "Swift": ("standardLibrary", [
         ("String", []), ("Substring", []), ("Character", []), ("Int", []), ("Double", []), ("Bool", []),
         ("Array", ["Element"]), ("ArraySlice", ["Element"]), ("Set", ["Element"]), ("Dictionary", ["Key", "Value"]),
         ("Optional", ["Wrapped"]), ("Range", ["Bound"]), ("ClosedRange", ["Bound"]),
-    ], nil, []),
+    ], nil, [], []),
     // FilePath.Root is left out: the standard library's FilePath (SE-0529)
     // calls it Anchor.
-    "SystemPackage": ("system", [("FilePath", []), ("FilePath.Component", []), ("FilePath.ComponentView", [])], nil, []),
+    "SystemPackage": ("system", [("FilePath", []), ("FilePath.Component", []), ("FilePath.ComponentView", [])], nil, [], []),
     // Foundation's types Swish holds as Swift's: a date.
-    "Foundation": ("foundation", [("Date", [])], nil, []),
-    // SwishKit's own types, which Swish holds as Swift's: a file size.
-    "SwishKit": ("swishKit", [("FileSize", [])], nil, []),
+    "Foundation": ("foundation", [("Date", [])], nil, [], []),
+    // SwishKit's own types, which Swish holds as Swift's: a file size, a
+    // command's output. `Status` is a struct Swish declares itself (the
+    // prelude), made from the Swift value as a record.
+    "SwishKit": ("swishKit", [("FileSize", []), ("Output", [])], nil, [], ["Status"]),
     // The shell's own functions: every public free function. Their types are
     // Swift's (bridged from the other modules, so held here as they are).
-    "SwishStandardLibrary": ("", [], "standardFunctions", ["FilePath", "FileSize", "Date"]),
+    "SwishStandardLibrary": ("", [], "standardFunctions", ["FilePath", "FileSize", "Date"], []),
 ]
 guard let module = modules[graph.module.name] else {
     FileHandle.standardError.write(Data("swish-bridge: nothing to bridge from \(graph.module.name)\n".utf8))
@@ -87,6 +89,11 @@ var typeSources: [String] = []
 /// by type name, calling the Swift that says so.
 var columnSources: [String] = []
 var styleSources: [String] = []
+// A struct Swish declares itself, whose Swift value is made a record.
+for name in module.records {
+    resultOnly.insert(name)
+    leaves[name] = (".named(\(quoted(name)))", { _ in fatalError("a record is a result, not an argument") }, { "bridgeRecord(shell, \($0))" })
+}
 do {
     // The module's own types, and when it's read as another module's
     // addition, the same: what it adds is known as it is declared.
@@ -267,6 +274,8 @@ for (name, _) in bridgedTypeNames {
         // (Int, String…) are the shell's own, which doesn't ask Swift.
         let isOperator = symbol.kind.identifier == "swift.func.op"
         guard !title.hasPrefix("_"), title.first?.isLetter ?? false || isOperator && graph.module.name != "Swift" else { continue }
+        // The shell's own hooks a type adopts (`swishCell`), not for Swish code.
+        if title.hasPrefix("swish") { continue }
         if isOperator && graph.module.name == "Swift" { continue }
         if swishOwn[name]?.contains(title) ?? false { continue }
         do {

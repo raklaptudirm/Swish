@@ -89,8 +89,6 @@ extension Shell {
                         for name in object.memberNames {
                             add(object.typeName, name, object.member(name).map { $0.typeName } ?? "")
                         }
-                    // Until it's a Swift type, an output's members are known only here.
-                    case .output: for member in ["text", "lines", "status"] { add(item.typeName, member, "member") }
                     default: break
                     }
                     // Then what its type has, as `help Type` shows it.

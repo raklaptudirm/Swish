@@ -6,9 +6,9 @@ struct RuntimeError: Error, CustomStringConvertible {
     /// The status the failure gives: a failed command's own, for `$(…)`.
     var status: Int32 = 1
     /// For a failed command, its output, so `catch` can look at it.
-    var output: CommandOutput?
+    var output: Output?
 
-    init(_ description: String, status: Int32 = 1, output: CommandOutput? = nil) {
+    init(_ description: String, status: Int32 = 1, output: Output? = nil) {
         self.description = description
         self.status = status
         self.output = output

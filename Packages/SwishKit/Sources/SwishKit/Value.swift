@@ -16,8 +16,6 @@ public enum Value: Sendable {
     case record(Record)
     /// `["a": 1]`: keys to values, as Swift's Dictionary, unordered.
     case dictionary(ValueDictionary)
-    /// What `$(…)` gives: a command's output and how it exited.
-    case output(CommandOutput)
     /// A case of an enum: `.directory`, or `.failed(code: 2)`.
     case enumValue(EnumValue)
     /// A live value with members of its own: a background job, an enum type,
@@ -61,46 +59,6 @@ extension SwishObject {
     /// description, for an object that isn't data.
     public var debugDescription: String {
         fields?.debugDescription ?? description
-    }
-}
-
-/// A command's standard output (trailing newlines trimmed) and exit status.
-/// It's a collection of lines: iterating, counting and indexing go by line,
-/// and where a String is wanted it's the whole text.
-public struct CommandOutput: Sendable, Hashable {
-    public var text: String
-    /// The exit code, or nil if a signal ended the command.
-    public var code: Int?
-    /// The signal that ended the command, if one did.
-    public var signal: Int?
-
-    public init(text: String, code: Int?, signal: Int? = nil) {
-        self.text = text
-        self.code = code
-        self.signal = signal
-    }
-
-    public var lines: [String] {
-        text.isEmpty ? [] : text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-    }
-
-    public var succeeded: Bool {
-        code == 0
-    }
-
-    /// `output.status`: how the command exited.
-    public var status: Record {
-        Record([
-            "code": code.map(Value.int) ?? .nothing,
-            "signal": signal.map(Value.int) ?? .nothing,
-            "succeeded": .bool(succeeded),
-        ], typeName: "Status")
-    }
-}
-
-extension CommandOutput: CustomDebugStringConvertible {
-    public var debugDescription: String {
-        "Output(text: \(Value.quoted(text)), status: \(status.debugDescription))"
     }
 }
 
@@ -265,7 +223,6 @@ extension Value: Hashable {
         case (.list(let a), .list(let b)): a == b
         case (.record(let a), .record(let b)): a == b
         case (.dictionary(let a), .dictionary(let b)): a == b
-        case (.output(let a), .output(let b)): a == b
         case (.enumValue(let a), .enumValue(let b)): a == b
         case (.object(let a), .object(let b)): a === b || a.identity == b.identity
         case (.function(let a), .function(let b)): a === b
@@ -283,7 +240,6 @@ extension Value: Hashable {
         case .list(let values): hasher.combine(values)
         case .record(let record): hasher.combine(record)
         case .dictionary(let dictionary): hasher.combine(dictionary)
-        case .output(let output): hasher.combine(output)
         case .enumValue(let value): hasher.combine(value)
         case .object(let object): hasher.combine(object.identity)
         case .function(let function): hasher.combine(ObjectIdentifier(function))
@@ -302,7 +258,6 @@ extension Value: CustomStringConvertible {
         case .list(let values): "[" + values.map(\.description).joined(separator: ", ") + "]"
         case .record(let record): record.description
         case .dictionary(let dictionary): dictionary.description
-        case .output(let output): output.text
         case .enumValue(let value): value.description
         case .object(let object): object.description
         case .function(let function): function.description
@@ -343,7 +298,6 @@ extension Value: CustomDebugStringConvertible {
         case .list(let values): "[" + values.map(\.debugDescription).joined(separator: ", ") + "]"
         case .record(let record): record.debugDescription
         case .dictionary(let dictionary): dictionary.debugDescription
-        case .output(let output): output.debugDescription
         case .enumValue(let value): value.debugDescription
         case .object(let object): object.debugDescription
         default: description

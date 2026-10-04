@@ -193,8 +193,10 @@ extension String: SwishConvertible {
     public init(swishValue: Value) throws {
         switch swishValue {
         case .string(let value): self = value
-        case .output(let output): self = output.text
-        default: throw SwishError.expected("String", swishValue)
+        default:
+            // What stands for text (a command's output) is its text.
+            guard let text = swishValue.text else { throw SwishError.expected("String", swishValue) }
+            self = text
         }
     }
     public var swishValue: Value { .string(self) }
@@ -232,10 +234,10 @@ extension FileSize: SwishConvertible {
     public var swishValue: Value { .fileSize(self) }
 }
 
-extension CommandOutput: SwishConvertible {
+extension Output: SwishConvertible {
     public static var swishType: SwishType { .output }
     public init(swishValue: Value) throws {
-        guard case .output(let value) = swishValue else { throw SwishError.expected("Output", swishValue) }
+        guard let value = swishValue.commandOutput else { throw SwishError.expected("Output", swishValue) }
         self = value
     }
     public var swishValue: Value { .output(self) }
@@ -247,7 +249,8 @@ extension Array: SwishConvertible where Element: SwishConvertible {
     public init(swishValue: Value) throws {
         switch swishValue {
         case .list(let items): self = try items.map(Element.init(swishValue:))
-        case .output(let output): self = try output.lines.map { try Element(swishValue: .string($0)) }
+        case _ where swishValue.commandOutput != nil:
+            self = try swishValue.commandOutput!.lines.map { try Element(swishValue: .string($0)) }
         default: throw SwishError.expected("[\(Element.swishType)]", swishValue)
         }
     }
@@ -281,7 +284,6 @@ extension Value {
         case .list: "List"
         case .record(let record): record.typeName ?? "Record"
         case .dictionary: "Dictionary"
-        case .output: "Output"
         case .enumValue(let value): value.type.name
         case .object(let object): object.typeName
         case .function: "Function"

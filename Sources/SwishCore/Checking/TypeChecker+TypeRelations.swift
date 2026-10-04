@@ -34,15 +34,22 @@ extension TypeChecker {
         // A struct's value is a record, as builtins that take any record see it.
         case (.named(let name), .record): return structInfo(named: name) != nil
         case (.tuple, .record): return true
-        // An Output is its text where a String is wanted, and its lines
-        // where a [String] is.
-        case (.output, .string), (.output, .list(.string)): return true
+        // What stands for text (an Output) is its text where a String is
+        // wanted, and its lines where a [String] is.
+        case (_, .string) where standsForText(actual), (_, .list(.string)) where standsForText(actual): return true
         default: return false
         }
     }
 }
 
 extension TypeChecker {
+    /// Whether a type stands for text where a String is wanted: a Swift type
+    /// that says so (`StandsForText`), as an Output does.
+    func standsForText(_ type: TypeAnnotation) -> Bool {
+        guard let (name, _) = type.swiftType else { return false }
+        return Bridge.types[name]?.conformances["StandsForText"] != nil
+    }
+
     // MARK: Protocols
 
     /// Whether `type` conforms to `proto`: as in Swift for the builtin types;
@@ -55,8 +62,8 @@ extension TypeChecker {
         // JSON stands in for whatever it parsed as (see `conform`).
         if type == TypeChecker.json { return true }
         // A Swift type conforms as it declares: Int, [T] where T does,
-        // ClosedRange<Int>. (An output reads as its lines, but isn't them.)
-        if type != .output, let (bridgedType, bindings) = bridged(type) {
+        // ClosedRange<Int>.
+        if let (bridgedType, bindings) = bridged(type) {
             return bridgedConforms(bridgedType, bindings, to: proto)
         }
         if proto == "CustomStringConvertible" { return true }
@@ -64,7 +71,6 @@ extension TypeChecker {
         // step 4 makes them so, and these rules go).
         switch type {
         case .unknown, .parameter, .record: return true
-        case .output: return proto == "Equatable" || proto == "Sequence"
         case .keyPath: return proto == "Equatable" || proto == "Hashable"
         // Tuples compare with `==`, but aren't Hashable or Encodable, as in Swift.
         case .tuple(let elements): return proto == "Equatable" && elements.allSatisfy { conforms($0.type, to: proto) }
@@ -150,7 +156,7 @@ extension TypeChecker {
         }
         switch type {
         case .list(let element): return element
-        case .output, .string: return .string
+        case .string: return .string
         case .dictionary(let key, let value):
             return .tuple([.init(label: "key", type: key), .init(label: "value", type: value)])
         case .unknown, .any: return .unknown

@@ -6,10 +6,10 @@ private let wide = PrettyPrinter(width: .max)
 private let fileType = EnumType(name: "FileType", cases: ["file", "directory"].map { .init(name: $0) })
 
 @Test func onOneLineItIsTheDebugDescription() {
-    let status = CommandOutput(text: "hi", code: 0)
+    let status = Output(text: "hi", code: 0)
     let values: [Value] = [
         .nothing, .int(3), .string("tab\there"), .list([.int(1), .string("x"), .nothing]),
-        .record(Record(["k": .string("v")])), .record(Record()), .output(status), .record(status.status),
+        .record(Record(["k": .string("v")])), .record(Record()), .output(status), .record(status.statusRecord),
         .enumValue(EnumValue(type: fileType, name: "directory")),
     ]
     for value in values {
@@ -39,7 +39,7 @@ private let fileType = EnumType(name: "FileType", cases: ["file", "directory"].m
 }
 
 @Test func multiLineStringsInsideAreBlocks() {
-    let output = Value.output(CommandOutput(text: "one\ntwo \"\"\" \\ \u{1B}[1m", code: 0))
+    let output = Value.output(Output(text: "one\ntwo \"\"\" \\ \u{1B}[1m", code: 0))
     #expect(wide.format(output) == #"""
     Output(
       text: """

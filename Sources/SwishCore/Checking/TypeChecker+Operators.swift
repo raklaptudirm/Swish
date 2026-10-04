@@ -20,14 +20,14 @@ extension TypeChecker {
             let right = try typeOf(&rhs, expecting: wrapped == .unknown ? expected : wrapped)
             if wrapped == .unknown { return right }
             // An Output or some text: the Output's text.
-            if wrapped == .output, right == .string, Interpreter.isStringExpression(rhs) { return .string }
+            if standsForText(wrapped), right == .string, Interpreter.isStringExpression(rhs) { return .string }
             if fits(right, wrapped) { return wrapped }
             if fits(right, left) { return left }
             throw TypeError("'??' needs a \(wrapped) on its right, not \(right)")
         case .equal, .notEqual:
             // A `.case` on one side takes the other side's type.
             let (left, right) = try operandTypes(&lhs, &rhs)
-            guard fits(left, right) || fits(right, left) || left == .output && right == .string || left == .string && right == .output else {
+            guard fits(left, right) || fits(right, left) || standsForText(left) && right == .string || left == .string && standsForText(right) else {
                 throw TypeError("can't compare \(left) with \(right)")
             }
             // Anything optional compares with a `nil` literal, as in Swift.

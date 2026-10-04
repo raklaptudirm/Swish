@@ -52,10 +52,12 @@ public protocol DisplayStyled {
 public protocol SwishDisplayed {
     var swishDescription: String { get }
     var swishCell: String { get }
+    var swishDebugDescription: String { get }
 }
 
 extension SwishDisplayed {
     public var swishCell: String { swishDescription }
+    public var swishDebugDescription: String { swishDescription }
 }
 
 extension Date: SwishDisplayed {

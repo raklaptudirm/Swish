@@ -24,9 +24,6 @@ enum Bridge {
     /// The bridged type Swish's type annotation is, and its generic
     /// parameters' bindings: `[Int]` is `Array` with Element Int.
     static func type(of annotation: TypeAnnotation) -> (BridgedType, [String: TypeAnnotation])? {
-        // A command's output has its lines' members, `$(ls).sorted()`: it's
-        // a collection of lines, though its own type isn't Swift's yet.
-        if annotation == .output { return type(of: .list(.string)) }
         guard let (name, arguments) = annotation.swiftType, let type = types[name],
               type.genericParameters.count == arguments.count else { return nil }
         return (type, Dictionary(uniqueKeysWithValues: zip(type.genericParameters, arguments)))

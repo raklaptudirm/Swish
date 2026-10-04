@@ -83,5 +83,5 @@ public final class SwiftValue: SwishObject, @unchecked Sendable {
     public var description: String { (value as? any SwishDisplayed)?.swishDescription ?? String(describing: value) }
     /// What a table shows of it: its description, unless the type says shorter.
     public var cell: String { (value as? any SwishDisplayed)?.swishCell ?? description }
-    public var debugDescription: String { (value as? any SwishDisplayed)?.swishDescription ?? String(reflecting: value) }
+    public var debugDescription: String { (value as? any SwishDisplayed)?.swishDebugDescription ?? String(reflecting: value) }
 }

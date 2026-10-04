@@ -7,7 +7,6 @@ indirect enum TypeAnnotation: Hashable, Sendable, CustomStringConvertible {
     /// A record whose fields aren't known: a builtin's row, until the
     /// builtins declare their types.
     case record
-    case output
     /// `()`: what a function without `->` returns.
     case void
     /// A struct or enum, declared in Swish or by the shell, like `FileType`.
@@ -49,7 +48,6 @@ indirect enum TypeAnnotation: Hashable, Sendable, CustomStringConvertible {
         case .double: "Double"
         case .string: "String"
         case .record: "Record"
-        case .output: "Output"
         case .void: "Void"
         case .list(let element): "[\(element)]"
         case .dictionary(let key, let value): "[\(key): \(value)]"
@@ -74,6 +72,10 @@ extension TypeAnnotation {
     /// name: one table for the parser (`Int` is `.int`) and for finding the
     /// Swift type an annotation is (`.int` is `Int`). The generic ones are
     /// sugar: `[T]`, `T?`, `[K: V]`.
+    /// What `$(…)` gives: a command's output, which is a Swift type like any
+    /// other, held as it is.
+    static let output = TypeAnnotation.named("Output")
+
     private static let spelled: [(name: String, make: @Sendable ([TypeAnnotation]) -> TypeAnnotation?)] = [
         ("Int", { $0.isEmpty ? .int : nil }), ("Double", { $0.isEmpty ? .double : nil }),
         ("String", { $0.isEmpty ? .string : nil }), ("Bool", { $0.isEmpty ? .bool : nil }),

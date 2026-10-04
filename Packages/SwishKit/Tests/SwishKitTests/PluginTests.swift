@@ -14,7 +14,7 @@ private struct Entry: Encodable {
     #expect(try [Int](swishValue: .list([.int(1), .int(2)])) == [1, 2])
     #expect(try Int?(swishValue: .nothing) == nil)
     #expect(try Double(swishValue: .int(3)) == 3)
-    #expect(try String(swishValue: .output(CommandOutput(text: "hi", code: 0))) == "hi")
+    #expect(try String(swishValue: .output(Output(text: "hi", code: 0))) == "hi")
     #expect([String].swishType == .list(.string))
     #expect(throws: SwishError.self) { try Int(swishValue: .string("x")) }
 }

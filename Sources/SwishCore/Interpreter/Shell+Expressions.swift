@@ -28,7 +28,7 @@ extension Shell {
             var text = try capturing { status = try runBlock(program) }
             while text.last == "\n" { text.removeLast() }
             let (code, signal) = exitCode(status)
-            let output = CommandOutput(text: text, code: code, signal: signal)
+            let output = Output(text: text, code: code, signal: signal)
             // Without `try`, failing is just what `.status` says.
             if throwing && status != 0 {
                 throw RuntimeError("$(…) failed with status \(status)", status: status, output: output)
@@ -236,7 +236,7 @@ extension Shell {
             if value == .nothing { return try evaluate(rhs) }
             // `(try? $(git config x)) ?? "vi"` is a String: the checker types
             // it so, so the Output gives its text.
-            if case .output(let output) = value, Interpreter.isStringExpression(rhs) { return .string(output.text) }
+            if case .object = value, let text = value.text, Interpreter.isStringExpression(rhs) { return .string(text) }
             return value
         case .binary(let op, let lhs, let rhs) where [.less, .lessEqual, .greater, .greaterEqual].contains(op)
             && (Shell.isCaseLiteral(lhs) || Shell.isCaseLiteral(rhs)):
@@ -299,16 +299,8 @@ extension Shell {
             return found
         }
         // Swish's own kinds, and its views of Swift's, as the checker's
-        // `memberType(of:_:)` types them, until foundations step 4 makes
-        // them Swift types.
+        // `memberType(of:_:)` types them.
         switch (value, name) {
-        case (.output(let output), "text"): return .string(output.text)
-        case (.output(let output), "lines"): return .list(output.lines.map(Value.string))
-        case (.output(let output), "count"): return .int(output.lines.count)
-        case (.output(let output), "isEmpty"): return .bool(output.text.isEmpty)
-        case (.output(let output), "first"): return output.lines.first.map(Value.string) ?? .nothing
-        case (.output(let output), "last"): return output.lines.last.map(Value.string) ?? .nothing
-        case (.output(let output), "status"): return .record(output.status)
         case (.record(let record), _) where record[name] != nil: return record[name]!
         case (.record(let record), "count"): return .int(record.count)
         case (.record(let record), "isEmpty"): return .bool(record.count == 0)
@@ -334,7 +326,8 @@ extension Shell {
         if case .record(let record) = base, case .string(let key) = index {
             return record[key] ?? .nothing
         }
-        if case .output(let output) = base {
+        // A command's output is indexed by line (subscripts aren't bridged yet).
+        if let output = base.commandOutput {
             return try element(of: .list(output.lines.map(Value.string)), at: index)
         }
         guard case .list(let elements) = base else {

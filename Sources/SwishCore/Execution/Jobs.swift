@@ -34,7 +34,7 @@ final class Job: SwishObject, @unchecked Sendable {
     /// For `async $(…)`: its output, read as it comes.
     var capture: OutputCollector?
     /// Once it's done: its output and how it exited.
-    private(set) var output: CommandOutput?
+    private(set) var output: Output?
     unowned let shell: Shell
 
     init(source: String, shell: Shell) {
@@ -46,7 +46,7 @@ final class Job: SwishObject, @unchecked Sendable {
         guard state != .done else { return }
         var text = capture?.finish() ?? ""
         while text.last == "\n" { text.removeLast() }
-        output = CommandOutput(text: text, code: signal == nil ? Int(status) : nil, signal: signal.map(Int.init))
+        output = Output(text: text, code: signal == nil ? Int(status) : nil, signal: signal.map(Int.init))
         state = .done
         capture = nil
     }
@@ -204,7 +204,7 @@ extension Shell {
 
     /// Brings a job to the foreground and waits for it (`await`). If it's
     /// stopped again with ^Z, it goes back to `jobs` and the line is left.
-    func awaitJob(_ job: Job) throws -> CommandOutput {
+    func awaitJob(_ job: Job) throws -> Output {
         if job.state != .done {
             if interactive && job.pgid > 0, var modes = job.modes {
                 tcsetattr(terminal, TCSANOW, &modes)
