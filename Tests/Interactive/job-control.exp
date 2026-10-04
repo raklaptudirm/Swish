@@ -26,7 +26,12 @@ expect -re $ok
 send "sleep 0.3\r"
 # Input is highlighted, so match around the escapes between words.
 step "a foreground command runs, no spurious stop" "0\\.3.*\\n.*$ok"
-send "cat\r"
+# What's typed before cat is running would reach the shell's line editor,
+# where a return isn't a newline yet; so cat says when it's running, and the
+# line waits for that. The word is built by printf, so the echo of what's typed
+# doesn't match it.
+send "sh -c 'printf \"rea%s\\n\" dy; cat'\r"
+step "cat is running" "ready"
 send "typed-into-cat\r"
 step "cat owns the terminal (no SIGTTIN)" "typed-into-cat\r\n.*typed-into-cat"
 send "\x04"

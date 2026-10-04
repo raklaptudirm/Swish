@@ -57,9 +57,12 @@ jobs:
 
       - name: Terminal tests
         run: |
+          # Every script runs, so one failure doesn't hide the others.
+          status=0
           for script in job-control line-editor background-jobs config signals; do
-            expect "Tests/Interactive/$script.exp"
+            expect "Tests/Interactive/$script.exp" || status=1
           done
+          exit $status
 
   linux:
     name: Linux
@@ -95,6 +98,9 @@ jobs:
 
       - name: Terminal tests
         run: |
+          # Every script runs, so one failure doesn't hide the others.
+          status=0
           for script in job-control line-editor background-jobs config signals; do
-            expect "Tests/Interactive/$script.exp"
+            expect "Tests/Interactive/$script.exp" || status=1
           done
+          exit $status
