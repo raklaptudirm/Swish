@@ -25,7 +25,7 @@ struct ResourceLimit {
         ResourceLimit(flag: "n", name: "open files", resource: resource(RLIMIT_NOFILE), unit: 1),
         ResourceLimit(flag: "s", name: "stack size (KiB)", resource: resource(RLIMIT_STACK), unit: 1024),
         ResourceLimit(flag: "t", name: "cpu time (seconds)", resource: resource(RLIMIT_CPU), unit: 1),
-        ResourceLimit(flag: "u", name: "processes", resource: resource(RLIMIT_NPROC), unit: 1),
+        ResourceLimit(flag: "u", name: "processes", resource: resource(processLimit), unit: 1),
         ResourceLimit(flag: "v", name: "virtual memory (KiB)", resource: resource(RLIMIT_AS), unit: 1024),
     ]
 
@@ -56,10 +56,14 @@ struct ResourceLimit {
     #endif
 
     // Linux's resources are an enum, and its functions take its raw value.
+    // glibc names the processes limit with underscores and aliases it with a
+    // macro, which Swift can't import for an enumerator.
     #if canImport(Glibc)
+    private static let processLimit = __RLIMIT_NPROC
     private static func resource(_ value: __rlimit_resource) -> Int32 { Int32(value.rawValue) }
     private static func id(_ value: Int32) -> __rlimit_resource_t { __rlimit_resource_t(value) }
     #else
+    private static let processLimit = RLIMIT_NPROC
     private static func resource(_ value: Int32) -> Int32 { value }
     private static func id(_ value: Int32) -> Int32 { value }
     #endif
