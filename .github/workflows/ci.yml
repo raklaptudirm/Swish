@@ -141,8 +141,10 @@ jobs:
       # toolchain or a manifest changed and the bridges weren't remade.
       - name: Bridges are current
         run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           .build/debug/swish -c 'run bridge'
-          if [ -n "$(git status --porcelain -- Sources Bridges)" ]; then
+          changes=$(git status --porcelain -- Sources Bridges)
+          if [ -n "$changes" ]; then
             git status --short -- Sources Bridges
             git diff --stat -- Sources Bridges
             echo "::error::The bridges are out of date: run 'swift run swish -c \"run bridge\"' and commit the result."
@@ -202,7 +204,9 @@ jobs:
 
       - name: Manifests are current
         run: |
-          if [ -n "$(git status --porcelain -- Bridges/linux)" ]; then
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          changes=$(git status --porcelain -- Bridges/linux)
+          if [ -n "$changes" ]; then
             git status --short -- Bridges/linux
             git diff --stat -- Bridges/linux
             echo "::error::Linux's bridge manifests changed: download the bridges-linux artifact into Bridges/linux, run the bridge task on macOS, and commit."

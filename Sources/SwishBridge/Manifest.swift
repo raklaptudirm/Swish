@@ -1,15 +1,17 @@
 import Foundation
 
-/// The members a module's types have on one platform, as the generator could
-/// bridge them. A symbol graph is read on the platform it's made on, and a
-/// member can exist on one and not another (Foundation's `inflected()` is
-/// macOS's), so each platform's list is kept, and only what every platform
-/// has is bridged: a member that exists on one platform can't be committed
-/// to break the build on another.
+/// The members a module's types declare on one platform. A symbol graph is
+/// read on the platform it's made on, and a member can exist on one and not
+/// another (Foundation's `inflected()` is macOS's), so each platform's list is
+/// kept, and only what every platform declares is bridged: a member that
+/// exists on one platform can't be committed to break the build on another.
+/// What's listed is what's declared, not what the generator can bridge,
+/// which depends on how a platform's graph is shaped.
 struct Manifest: Codable {
     let platform: String
     let module: String
-    /// A type's name and one of its members, as `bridge` keys it.
+    /// A type's name, the kind of one of its members, and its name with its
+    /// labels: `Range<TAB>swift.method<TAB>index(_:offsetBy:)`.
     let members: [String]
 
     /// The platform this runs on.

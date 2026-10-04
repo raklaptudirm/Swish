@@ -41,10 +41,11 @@ do {
         }
     }
 }
-/// What the other platforms bridge, by module: a member is bridged only if
+/// What the other platforms declare, by module: a member is bridged only if
 /// every one of them has it.
 let otherPlatforms: [Set<String>] = try otherPlatformPaths.map { Set(try Manifest(contentsOf: $0).members) }
-/// What this platform could bridge, whatever the others have.
+/// What this platform declares, whatever the others have and whatever the
+/// generator can make of it.
 nonisolated(unsafe) var thisPlatform: Set<String> = []
 func readGraph(_ path: String) throws -> Graph {
     try JSONDecoder().decode(Graph.self, from: Data(contentsOf: URL(fileURLWithPath: path)))
@@ -310,20 +311,22 @@ for (name, _) in bridgedTypeNames {
         if title.hasPrefix("swish") { continue }
         if isOperator && graph.module.name == "Swift" { continue }
         if swishOwn[name]?.contains(title) ?? false { continue }
+        // What this platform declares, whether or not the generator can bridge
+        // it (a graph's shape differs by platform, and so does what can be made
+        // of it, but a name and its labels are the same); and what's bridged
+        // is what all of them declare.
+        let declared = "\(name)\t\(symbol.kind.identifier)\t\(title)"
+        thisPlatform.insert(declared)
+        guard otherPlatforms.allSatisfy({ $0.contains(declared) }) else {
+            skipped["other-platform", default: 0] += 1
+            continue
+        }
         do {
             let (key, shape, codes) = try bridge(symbol, of: owner, given: conditions)
             // What another module adds is an overload, not a default.
             if index >= ownCount, bridgedShapes.contains(shape), !addedByOthers.contains(symbol.identifier.precise) { continue }
             guard seen.insert(key).inserted else { continue }
             if index < ownCount { bridgedShapes.insert(shape) }
-            // What this platform has, whatever the others do; and what's
-            // bridged is what all of them have.
-            let entry = "\(name)\t\(key)"
-            thisPlatform.insert(entry)
-            guard otherPlatforms.allSatisfy({ $0.contains(entry) }) else {
-                skipped["other-platform", default: 0] += 1
-                continue
-            }
             members.append(contentsOf: codes.map(declare))
             counts[name, default: 0] += 1
         } catch let unsupported as Unsupported {
