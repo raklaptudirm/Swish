@@ -6,7 +6,8 @@ import SwishStandardLibrary
 /// the rest are still there for `filter`, `select` and `get`, and `table`
 /// shows everything. Each type says so itself (`Tabular`): the standard
 /// library module's structs, and the shell's own, beside where they're made.
-let displayRegistry = DisplayRegistry(
+/// How the standard library's and the shell's own types show in a table.
+let standardDisplayRegistry = DisplayRegistry(
     columns: Bridge.standardColumns.merging([
         "Job": Job.columns,
         "Help": Shell.helpColumns,
@@ -16,16 +17,35 @@ let displayRegistry = DisplayRegistry(
 extension DisplayFormatter {
     /// Writes to `fd`, fitting the terminal and styling the header when it
     /// is one. A file gets every character: nothing is cut to fit.
-    convenience init(fd: Int32) {
+    convenience init(fd: Int32, registry: DisplayRegistry) {
         let isTerminal = isatty(fd) != 0
         self.init(maxWidth: terminalWidth(fd) ?? .max, styled: DisplayStyle.enabled(for: fd),
-                  columnCap: isTerminal ? 40 : .max, registry: displayRegistry) { writeAll(fd, $0) }
+                  columnCap: isTerminal ? 40 : .max, registry: registry) { writeAll(fd, $0) }
     }
 
     /// Rows for another program to read, as in `ls | grep x`: the view's
     /// columns, no header, nothing cut short.
-    static func forProgram(fd: Int32) -> DisplayFormatter {
-        DisplayFormatter(header: false, columnCap: .max, registry: displayRegistry) { writeAll(fd, $0) }
+    static func forProgram(fd: Int32, registry: DisplayRegistry) -> DisplayFormatter {
+        DisplayFormatter(header: false, columnCap: .max, registry: registry) { writeAll(fd, $0) }
+    }
+}
+
+extension Shell {
+    /// How types show in a table: the standard library's and the shell's own,
+    /// and the columns of the structs declared in Swish that say so
+    /// (`Tabular`).
+    var displayRegistry: DisplayRegistry {
+        var registry = standardDisplayRegistry
+        for scope in scopes {
+            for case .object(let type as StructType) in scope.bindings.values.map(\.value)
+            where type.conformances.contains("Tabular") && registry.columns[type.name] == nil {
+                guard case .list(let items)? = type.statics["columns"]?.value else { continue }
+                registry.columns[type.name] = items.compactMap { item in
+                    if case .object(let box as SwiftValue) = item { box.value as? DisplayColumn } else { nil }
+                }
+            }
+        }
+        return registry
     }
 }
 
@@ -48,7 +68,7 @@ extension Shell {
         // A command's list reads as a pipeline's output would: records as a
         // table, anything else an item per line. A bare list is a value.
         case .list(let items) where !debug || items.contains(where: { $0.asRecord != nil }):
-            let formatter = DisplayFormatter(fd: stdoutFD)
+            let formatter = DisplayFormatter(fd: stdoutFD, registry: displayRegistry)
             for item in items { formatter.add(item) }
             formatter.finish()
         case _ where debug:

@@ -167,6 +167,14 @@ extension TypeChecker {
             // Iterating needs a `makeIterator` of its own, which nothing declared in Swish has yet.
             if proto == "Sequence" { throw TypeError("\(decl.name) can't be a Sequence yet") }
             guard proto != "CustomStringConvertible" else { continue }
+            // Tabular isn't made from the fields: it asks for a static member.
+            if proto == "Tabular" {
+                guard let columns = decl.staticProperties.first(where: { $0.name == "columns" }),
+                      columns.type == .list(.named("DisplayColumn")) else {
+                    throw TypeError("\(decl.name) can't be Tabular without a static 'columns' of [DisplayColumn]: static let columns: [DisplayColumn] = [\"name\"]")
+                }
+                continue
+            }
             for property in decl.properties where property.getter == nil {
                 if let type = property.type, !conforms(type, to: proto) {
                     throw TypeError("\(decl.name) can't be \(proto): its '\(property.name)' is \(type), which isn't")
@@ -226,6 +234,7 @@ extension TypeChecker {
 
     func checkEnum(_ decl: inout EnumDecl) throws {
         for proto in decl.conformances where proto != "CustomStringConvertible" {
+            if proto == "Tabular" { throw TypeError("\(decl.name) can't be Tabular: only a struct can, as a table is made of records") }
             // Iterating needs a `makeIterator` of its own, which nothing declared in Swish has yet.
             if proto == "Sequence" { throw TypeError("\(decl.name) can't be a Sequence yet") }
             for enumCase in decl.cases {

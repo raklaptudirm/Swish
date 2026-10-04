@@ -117,7 +117,7 @@ extension Shell {
         do {
             if toExternal {
                 // Records as the rows they'd display as, so `ls | grep x` works.
-                let formatter = DisplayFormatter.forProgram(fd: output)
+                let formatter = DisplayFormatter.forProgram(fd: output, registry: displayRegistry)
                 while let item = try stream.next() {
                     if case .function = item { throw RuntimeError("can't send a function to an external command") }
                     guard formatter.add(item) else { throw BrokenPipe() }
@@ -125,7 +125,7 @@ extension Shell {
                 guard formatter.finish() else { throw BrokenPipe() }
             } else {
                 // The end of the pipeline: format for a person.
-                let formatter = DisplayFormatter(fd: output)
+                let formatter = DisplayFormatter(fd: output, registry: displayRegistry)
                 while let item = try stream.next() {
                     guard formatter.add(item) else { throw BrokenPipe() }
                 }

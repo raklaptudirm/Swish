@@ -261,6 +261,12 @@ p.x *= 2
   it can be made of the struct itself (`static let origin = Point(x: 0, y: 0)`),
   and a static member's body sees the other static names bare. An instance
   method reaches them through the type, as in Swift.
+- **A struct can say which columns a table starts with** by adopting
+  `Tabular`, which asks for a static `columns`: `struct File: Tabular { …;
+  static let columns: [DisplayColumn] = ["name", "size"] }`. A table of
+  its values shows those, in that order; `table` still shows every field,
+  and `filter`, `select` and `get` see them all. Only the order is Swish's to
+  say so far: a column's style needs `DisplayStyle` as a Swish type.
 - **Types are checked** when a value is made and when a property is set:
   `p.x = "a"` fails with `Point.x must be Int, not String`.
 - **A struct can be a parameter or return type.** Passing a plain record

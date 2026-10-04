@@ -232,7 +232,7 @@ extension Parser {
     }
 
     /// The protocols a type can conform to, for now all builtin.
-    static let protocols: Set = ["Equatable", "Hashable", "Comparable", "CustomStringConvertible", "Encodable", "Sequence"]
+    static let protocols: Set = ["Equatable", "Hashable", "Comparable", "CustomStringConvertible", "Encodable", "Sequence", "Tabular"]
 
     /// The names a pattern binds.
     static func names(boundBy pattern: Pattern) -> [String] {

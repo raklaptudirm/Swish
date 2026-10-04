@@ -120,3 +120,25 @@ struct Counter: Equatable {
     #expect(status("struct S { static let k = 1; func f() -> Int { k } }; S().f()") != 0)
     #expect(try output("struct S { static let k = 1; func f() -> Int { S.k } }; S().f()") == "1\n")
 }
+
+private let entry = """
+struct Entry: Tabular {
+    var name: String
+    var size: Int
+    var path: String
+    static let columns: [DisplayColumn] = ["size", "name"]
+}
+let es = [Entry(name: "a", size: 1, path: "/x"), Entry(name: "b", size: 22, path: "/y")]
+
+"""
+
+@Test func aStructSaysWhichColumnsATableStartsWith() throws {
+    // The columns it lists, in its order; `table` shows every field, and the rest are still there.
+    #expect(try output(entry + "es") == "size  name\n   1  a\n  22  b\n")
+    #expect(try output(entry + "es | table") == "name  size  path\na        1  /x\nb       22  /y\n")
+    #expect(try output(entry + "es | filter { $0.size > 1 } | select name path") == "name  path\nb     /y\n")
+    // Tabular is asked of a struct, and needs the static member that says it.
+    #expect(status("struct P: Tabular { var x: Int }") != 0)
+    #expect(status("struct P: Tabular { var x: Int; static let columns = 1 }") != 0)
+    #expect(status("enum E: Tabular { case a }") != 0)
+}

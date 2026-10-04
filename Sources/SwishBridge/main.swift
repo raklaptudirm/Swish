@@ -83,7 +83,8 @@ let modules: [String: (list: String, types: [(String, [String])], functions: Str
     // SwishKit's own types, which Swish holds as Swift's: a file size, a
     // command's output. `Status` is a struct Swish declares itself (the
     // prelude), made from the Swift value as a record.
-    "SwishKit": ("swishKit", [("FileSize", []), ("Output", [])], nil, [], ["Status"]),
+    // A column of a table, which a struct of Swish's lists for `Tabular`.
+    "SwishKit": ("swishKit", [("FileSize", []), ("Output", []), ("DisplayColumn", [])], nil, [], ["Status"]),
     // The shell's own functions: every public free function. Their types are
     // Swift's (bridged from the other modules, so held here as they are).
     "SwishStandardLibrary": ("", [], "standardFunctions", ["FilePath", "FileSize", "Date"], []),
