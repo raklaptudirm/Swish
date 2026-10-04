@@ -72,6 +72,8 @@ let modules: [String: (list: String, types: [(String, [String])], functions: Str
         ("String", []), ("Substring", []), ("Character", []), ("Int", []), ("Double", []), ("Bool", []),
         ("Array", ["Element"]), ("ArraySlice", ["Element"]), ("Set", ["Element"]), ("Dictionary", ["Key", "Value"]),
         ("Optional", ["Wrapped"]), ("Range", ["Bound"]), ("ClosedRange", ["Bound"]),
+        // The shell's own, which a pipeline reads lazily (SwishStandardLibrary).
+        ("Flow", ["Element"]),
     ], nil, [], []),
     // FilePath.Root is left out: the standard library's FilePath (SE-0529)
     // calls it Anchor.

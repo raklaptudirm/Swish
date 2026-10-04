@@ -271,7 +271,7 @@ extension Shell {
     private func which(_ args: [String]) -> Int32 {
         var status: Int32 = 0
         for name in args {
-            if let methods = sequenceMethods[name] {
+            if let methods = sequenceMethods[name] ?? bridgedStage("Flow", name, receiver: .flow) {
                 for method in methods.candidates {
                     writeAll(stdoutFD, "\(name): sequence method \(method.signature)\n")
                 }

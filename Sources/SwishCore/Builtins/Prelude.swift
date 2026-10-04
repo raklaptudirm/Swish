@@ -71,21 +71,6 @@ extension Shell {
     func with<T>(env: [String: String], _ body: () throws -> T) rethrows -> T
 
     extension Sequence {
-        /// The items for which the predicate returns true.
-        /// - Parameter isIncluded: a closure like { $0.size > 1.mb }
-        func filter(_ isIncluded: (Element) throws -> Bool) rethrows -> [Element]
-
-        /// Each item transformed, nil results included, as Swift's map.
-        /// - Parameter transform: a closure like { $0.name }, or a key path like \.name
-        func map<T>(_ transform: (Element) throws -> T) rethrows -> [T]
-
-        /// Each item transformed, nil results dropped.
-        /// - Parameter transform: a closure like { $0.name }, or a key path like \.name
-        func compactMap<T>(_ transform: (Element) throws -> T?) rethrows -> [T]
-
-        /// The first items; stops reading after them.
-        func prefix(_ maxLength: Int = 1) -> [Element]
-
         /// Keeps only the named fields of each record.
         func select(_ fields: String...) -> [Any]
     }

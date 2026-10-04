@@ -16,7 +16,7 @@ nonisolated(unsafe) var topLevelAliases: [String: SType] = [:]
 
 /// Generic types Swish holds as they are, boxed (`SwiftValue`), with Swish's
 /// values for their generic parameters: a `Set<Int>` is a `Set<Value>`.
-let boxes: Set = ["Set", "ArraySlice", "Range", "ClosedRange"]
+let boxes: Set = ["Set", "ArraySlice", "Range", "ClosedRange", "Flow"]
 
 /// The protocols a type conforms to, as far as the checker needs to know.
 let knownProtocols: Set = ["Equatable", "Hashable", "Comparable", "CustomStringConvertible", "Encodable", "Sequence", "StandsForText",

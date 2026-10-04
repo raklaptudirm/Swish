@@ -226,7 +226,7 @@ extension Shell {
 
     /// What `name --help` shows, or what a shell builtin or program is.
     func helpOutput(for name: String) throws -> [AttributedString] {
-        if let set = commandFunctions(named: name) ?? sequenceMethods[name] ?? functionSet(named: name) {
+        if let set = commandFunctions(named: name) ?? stageMethods(named: name) ?? functionSet(named: name) {
             return helpLines(for: set)
         } else if let builtin = Shell.shellBuiltins[name], builtin.works {
             return [

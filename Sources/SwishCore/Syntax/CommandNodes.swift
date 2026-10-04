@@ -54,6 +54,9 @@ enum StageReceiver: Equatable, Sendable {
     case collected
     /// Each item, its results flowing on: `names | uppercased`.
     case each
+    /// The items as they come, a `Flow`, for what can work on them one at a
+    /// time: `yes | map { … } | prefix 3` ends.
+    case flow
     /// The one value a pipeline starts from, when it isn't a sequence:
     /// `"a b" | split(separator: " ")`. A list it gives flows as its items.
     case value

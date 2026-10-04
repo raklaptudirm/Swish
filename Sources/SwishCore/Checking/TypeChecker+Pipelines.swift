@@ -59,6 +59,8 @@ extension TypeChecker {
     func streamElement(_ type: TypeAnnotation) -> TypeAnnotation {
         switch type {
         case .list(let element): element
+        // What a `Flow` passes on, one at a time.
+        case .generic("Flow", let arguments) where arguments.count == 1: arguments[0]
         case .generic: bridgedElement(type) ?? type
         // A bridged sequence, like a FilePath's components: its elements.
         case .named(let name) where Bridge.types[name]?.conformances["Sequence"] != nil:
@@ -76,6 +78,22 @@ extension TypeChecker {
         }
         let element = input ?? .unknown
         let known = input != nil && element != .unknown && element != .any
+        // A method of the items as they come, where there is one: it reads
+        // no more than the stage after it asks for.
+        if input != nil {
+            let attempt = command
+            do {
+                if let result = try checkBridgedStage(name, &command, element: element, receiver: .flow) { return result }
+            } catch let flowError as TypeError {
+                // Where its arguments don't fit, the items collected may have
+                // a member that does (`prefix(while:)`); if not, it's the
+                // first one's error that says what's wrong.
+                command = attempt
+                if let result = try? checkBridgedStage(name, &command, element: element, receiver: .collected) { return result }
+                command = attempt
+                throw flowError
+            }
+        }
         // A stage is a method call: of the items collected, then of each
         // item, then a function, then a program (see foundations.md).
         if input != nil, let methods = shell.sequenceMethods[name] {
@@ -142,9 +160,14 @@ extension TypeChecker {
     func checkBridgedStage(
         _ name: String, _ command: inout CommandNode, element: TypeAnnotation, receiver: StageReceiver
     ) throws -> TypeAnnotation? {
-        guard !command.external, let (bridgedType, bindings) = bridged(receiver == .collected ? .list(element) : element),
+        let receiverType: TypeAnnotation = switch receiver {
+        case .collected: .list(element)
+        case .flow: .generic("Flow", [element])
+        case .each, .value: element
+        }
+        guard !command.external, let (bridgedType, bindings) = bridged(receiverType),
               let runtime = shell.bridgedStage(bridgedType.name, name, receiver: receiver, bindings: bindings) else { return nil }
-        let signatures = Bridge.stageMembers(bridgedType.name, name).enumerated().map { position, entry in
+        let signatures = (receiver == .flow ? Bridge.flowMembers(name) : Bridge.stageMembers(bridgedType.name, name)).enumerated().map { position, entry in
             Signature(name: name, parameters: [Bridge.receiverParameter(receiver, element: element)] + entry.member.parameters,
                       returns: entry.member.returns, isThrowing: entry.member.isThrowing,
                       isRethrowing: entry.member.isRethrowing, index: position, generics: entry.member.generics)

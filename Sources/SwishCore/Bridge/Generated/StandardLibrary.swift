@@ -125,6 +125,15 @@ extension Bridge {
                 member649, member650, member651, member652, member653, member654, member655, member656, member657, member658, member659, member660, member661, member662, member663, member664, member665, member666, member667, member668, member669, member670, member671, member672, member673, member674, member675, member676, member677, member678, member679, member680, member681, member682, member683, member684, member685, member686, member687, member688, member689, member690, member691, member692, member693, member694, member695, member696, member697, member698
             ]
         ),
+        BridgedType(
+            name: "Flow", genericParameters: ["Element"],
+            conformances: [:],
+            associatedTypes: [:],
+            parse: nil, literal: nil, arrayLiteral: nil,
+            members: [
+                member699, member700, member701, member702, member703, member704
+            ]
+        ),
     ]
     nonisolated(unsafe) private static let member0: BridgedMember =                 BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
@@ -9844,6 +9853,88 @@ let receiver: Set<Value> = try SwiftValue.unbox(Set<Value>.self, args["self"]!)
                         let receiver: ClosedRange<Int> = try bridgeClosedRange(args["self"]!) { try Int(swishValue: $0) }
                 let result: [Int] = receiver.uniqued()
                 return .list(result.map { $0.swishValue })
+                    }
+                )
+
+    nonisolated(unsafe) private static let member699: BridgedMember =                 BridgedMember(
+                    kind: .initializer, name: "init", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "read", type: .functionType([], .optional(.parameter("Element")), throws: true))],
+                    returns: .generic("Flow", [.parameter("Element")]), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = Flow<Value>({ () throws -> Value? in (try bridgeClosure(shell, args["read"]!)([]) == .nothing ? nil : try bridgeClosure(shell, args["read"]!)([])) })
+                return SwiftValue.make(result, as: "Flow")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member700: BridgedMember =                 BridgedMember(
+                    kind: .initializer, name: "init", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "items", type: .someSequence(.parameter("Element")))],
+                    returns: .generic("Flow", [.parameter("Element")]), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "The items of any sequence.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = Flow<Value>(try bridgeSequence(args["items"]!))
+                return SwiftValue.make(result, as: "Flow")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member701: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "filter", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "isIncluded", type: .functionType([.parameter("Element")], .bool, throws: true))],
+                    returns: .generic("Flow", [.parameter("Element")]), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "The items for which the predicate returns true.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Flow<Value> = try SwiftValue.unbox(Flow<Value>.self, args["self"]!)
+                let result = receiver.filter({ (a0: Value) throws -> Bool in try Bool(swishValue: try bridgeClosure(shell, args["isIncluded"]!)([a0])) })
+                return SwiftValue.make(result, as: "Flow")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member702: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "map", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "transform", type: .functionType([.parameter("Element")], .parameter("T"), throws: true))],
+                    returns: .generic("Flow", [.parameter("T")]), generics: ["Element": [], "T": []],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Each item transformed, nil results included, as Swift's map.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Flow<Value> = try SwiftValue.unbox(Flow<Value>.self, args["self"]!)
+                let result = receiver.map({ (a0: Value) throws -> Value in try bridgeClosure(shell, args["transform"]!)([a0]) })
+                return SwiftValue.make(result, as: "Flow")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member703: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "compactMap", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "transform", type: .functionType([.parameter("Element")], .optional(.parameter("T")), throws: true))],
+                    returns: .generic("Flow", [.parameter("T")]), generics: ["Element": [], "T": []],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Each item transformed, nil results dropped.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Flow<Value> = try SwiftValue.unbox(Flow<Value>.self, args["self"]!)
+                let result = receiver.compactMap({ (a0: Value) throws -> Value? in (try bridgeClosure(shell, args["transform"]!)([a0]) == .nothing ? nil : try bridgeClosure(shell, args["transform"]!)([a0])) })
+                return SwiftValue.make(result, as: "Flow")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member704: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "prefix", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "maxLength", type: .int, defaultValue: .literal(.int(1)))],
+                    returns: .generic("Flow", [.parameter("Element")]), generics: ["Element": []],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "The first items; stops reading after them.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Flow<Value> = try SwiftValue.unbox(Flow<Value>.self, args["self"]!)
+                let result = receiver.prefix(try Int(swishValue: args["maxLength"]!))
+                return SwiftValue.make(result, as: "Flow")
                     }
                 )
 }

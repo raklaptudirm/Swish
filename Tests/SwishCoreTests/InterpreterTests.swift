@@ -313,7 +313,7 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
 
 @Test func which() throws {
     let text = try output("func greet(_ name: String) {}; which greet cd prefix cat")
-    #expect(text.hasPrefix("greet: function greet(_ name: String)\ncd: shell builtin\nprefix: sequence method prefix(@input _ items: [Element], _ maxLength: Int) -> [Element]\n/"))
+    #expect(text.hasPrefix("greet: function greet(_ name: String)\ncd: shell builtin\nprefix: sequence method prefix(@input _ items: [Any], _ maxLength: Int)\n/"))
     #expect(text.hasSuffix("/cat\n"))
     #expect(status("which surely-not-a-command") == 1)
 }

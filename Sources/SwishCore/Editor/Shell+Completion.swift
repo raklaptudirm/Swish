@@ -29,8 +29,8 @@ extension Shell {
             candidates = commandCandidates(prefix: word, externalOnly: false)
                 .filter { !["variable", "keyword"].contains($0.description) }
         } else if word.hasPrefix("-") && context.quote == nil,
-                  let functions = sequenceMethods[context.words[0]] ?? commandFunctions(named: context.words[0])
-                    ?? stageFunctions(named: context.words[0]) {
+                  let functions = sequenceMethods[context.words[0]] ?? bridgedStage("Flow", context.words[0], receiver: .flow)
+                    ?? commandFunctions(named: context.words[0]) ?? stageFunctions(named: context.words[0]) {
             candidates = flagCandidates(for: functions, prefix: word)
         } else {
             candidates = pathCandidates(for: word, quote: context.quote, executablesOnly: false)
@@ -62,8 +62,9 @@ extension Shell {
                 }
             }
             for builtin in Shell.shellBuiltins.values where builtin.works { described[builtin.name] = "shell builtin" }
-            for (name, set) in sequenceMethods {
-                described[name] = set.candidates.first?.documentation.map { String($0.summary.prefix { $0 != "\n" }) } ?? "sequence method"
+            for name in Set(sequenceMethods.keys).union(Bridge.flowNames) {
+                let set = sequenceMethods[name] ?? bridgedStage("Flow", name, receiver: .flow)
+                described[name] = set?.candidates.first?.documentation.map { String($0.summary.prefix { $0 != "\n" }) } ?? "sequence method"
             }
             for keyword in Parser.lineStarts {
                 described[keyword] = "keyword"
