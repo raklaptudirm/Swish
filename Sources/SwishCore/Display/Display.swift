@@ -20,7 +20,7 @@ extension Shell {
             return
         case .record(let record) where record.count == 0 && record.typeName == nil:
             return // `()`: what a Void call gives as a value.
-        case .object where value.commandOutput?.text.isEmpty == true && !debug:
+        case .object where value.displayShape.isEmpty && !debug:
             return
         case .record(let record) where !debug:
             for line in keyValueLines(record, styled: DisplayStyle.enabled(for: stdoutFD)) { writeAll(stdoutFD, line + "\n") }
@@ -65,8 +65,9 @@ extension Value {
         }
     }
 
-    var isEmptyOutput: Bool {
-        commandOutput?.text.isEmpty ?? false
+    /// It has nothing to show, as a command that printed nothing.
+    var showsNothing: Bool {
+        displayShape.isEmpty
     }
 
     /// A record, or an object's fields: what a table row is made from.
@@ -209,7 +210,7 @@ final class Formatter {
             let numeric = !values.isEmpty && values.allSatisfy {
                 switch $0 {
                 case .int, .double: true
-                default: $0.fileSize != nil
+                default: $0.displayShape.isNumeric
                 }
             }
             return Column(key: keys[index], width: widths[index], rightAligned: numeric)

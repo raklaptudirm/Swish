@@ -55,6 +55,10 @@ public struct Status: Sendable, Hashable, Encodable {
 extension Output: CustomStringConvertible, CustomDebugStringConvertible, SwishDisplayed {
     public var description: String { text }
     public var swishDescription: String { text }
+    /// Shown as its text and status, and nothing at all if it's empty.
+    public var swishShape: DisplayShape {
+        DisplayShape(isEmpty: text.isEmpty, fields: Record(["text": .string(text), "status": .record(statusRecord)], typeName: "Output"))
+    }
     /// One line in a table: its newlines shown as ↵.
     public var swishCell: String { text.replacingOccurrences(of: "\n", with: "↵") }
     /// The record `output.status` is, with every field there.

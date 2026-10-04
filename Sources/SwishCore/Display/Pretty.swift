@@ -30,7 +30,6 @@ struct PrettyPrinter {
         switch value {
         case .nothing: .segments([("nil", DisplayStyle.constant)])
         case .bool, .int, .double: .segments([(value.description, DisplayStyle.constant)])
-        case .object where value.fileSize != nil: .segments([(value.description, DisplayStyle.constant)])
         case .function: .segments([(value.description, nil)])
         case .string(let text): .string(text)
         case .list(let items):
@@ -40,17 +39,13 @@ struct PrettyPrinter {
             dictionary.count == 0 ? .segments([("[:]", nil)]) : .group(open: [("[", nil)], items: dictionary.sortedForDisplay.map { key, value in
                 ([keySegment(key), (": ", nil)], node(for: value))
             }, close: "]")
-        case .object(let box as SwiftValue) where box.value is Output:
-            .group(open: [("Output", DisplayStyle.type), ("(", nil)], items: [
-                (label("text"), .string((box.value as! Output).text)),
-                (label("status"), node(for: (box.value as! Output).statusRecord)),
-            ], close: ")")
+        // A Swift value as its type says it looks: as fields, or in a style.
+        case .object where value.displayShape.fields != nil || value.displayShape.role != nil:
+            value.displayShape.fields.map { node(for: $0) } ?? .segments([(value.description, value.displayShape.role)])
         case .enumValue(let value):
             node(for: value)
         case .object(let job as Job):
             .segments(job.segments)
-        case .object(let box as SwiftValue) where box.value is FilePath || box.value is FilePath.Component:
-            .segments([(box.description, DisplayStyle.path)])
         case .object(let type as EnumType):
             .segments([("enum", DisplayStyle.keyword), (" ", nil), (type.name, DisplayStyle.type)])
         case .object(let object):

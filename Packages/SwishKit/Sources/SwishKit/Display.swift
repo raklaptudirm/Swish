@@ -81,9 +81,43 @@ public protocol SwishDisplayed {
     /// It with terminal color escapes, if it has colors to show: what's
     /// written to a terminal, where `swishDescription` is for a pipe or file.
     var swishColored: String? { get }
+    /// What else the printers need to know of how it looks.
+    var swishShape: DisplayShape { get }
+}
+
+/// The facts about how a value looks that the printers need beyond its text,
+/// said by its type: each is optional, and a type says only what's true of it.
+public struct DisplayShape: Sendable {
+    /// The style of its text in a debug form, when it's one thing: a number,
+    /// a path.
+    public var role: DisplayStyle?
+    /// It's a number, so a column of them lines up on the right.
+    public var isNumeric: Bool
+    /// It has nothing to show: a command that printed nothing.
+    public var isEmpty: Bool
+    /// It's shown as a struct's fields in a debug form, `Output(text: …)`.
+    public var fields: Record?
+
+    public init(role: DisplayStyle? = nil, isNumeric: Bool = false, isEmpty: Bool = false, fields: Record? = nil) {
+        self.role = role
+        self.isNumeric = isNumeric
+        self.isEmpty = isEmpty
+        self.fields = fields
+    }
+}
+
+extension Value {
+    /// How it looks, beyond its text: plain for anything that doesn't say.
+    public var displayShape: DisplayShape {
+        if case .object(let box as SwiftValue) = self, let displayed = box.value as? any SwishDisplayed {
+            return displayed.swishShape
+        }
+        return DisplayShape()
+    }
 }
 
 extension SwishDisplayed {
+    public var swishShape: DisplayShape { DisplayShape() }
     public var swishCell: String { swishDescription }
     public var swishDebugDescription: String { swishDescription }
     public var swishColored: String? { nil }

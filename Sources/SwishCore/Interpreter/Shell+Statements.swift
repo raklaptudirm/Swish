@@ -209,7 +209,7 @@ extension Shell {
             let isBoolLiteral = if case .literal(.bool) = expr { true } else { false }
             // `await build`: the job wrote to the terminal; its Output has
             // nothing more to show.
-            let awaitedToTerminal = expr.isAwait && value.isEmptyOutput
+            let awaitedToTerminal = expr.isAwait && value.showsNothing
             // `xs.removeLast()` alone: Swift's @discardableResult.
             let discarded = if case .bridged(let type, let member, _, _) = expr {
                 Bridge.types[type]?.members[member].discardableResult == true

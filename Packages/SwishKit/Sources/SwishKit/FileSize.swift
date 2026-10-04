@@ -92,3 +92,9 @@ public struct FileSize: Codable, Hashable, Comparable, Sendable, LosslessStringC
     /// How many of one fit in the other.
     public static func / (lhs: FileSize, rhs: FileSize) -> Double { Double(lhs.bytes) / Double(rhs.bytes) }
 }
+
+extension FileSize: SwishDisplayed {
+    public var swishDescription: String { description }
+    /// A number: in the constant color, and a column of them lines up on the right.
+    public var swishShape: DisplayShape { DisplayShape(role: .constant, isNumeric: true) }
+}
