@@ -3,8 +3,9 @@ import Foundation
 /// How a type says it's shown, so the shell has no table of its types' names:
 /// which columns a table starts with, and what stands out in them.
 
-/// A style for text in a table: bold, dim, or a color. Its raw value is the
-/// terminal's code for it.
+/// A style for text: bold, dim, or a color, and the roles the shell gives
+/// them, so a string or a type looks the same typed, shown and in help. Its
+/// raw value is the terminal's code for it.
 public enum DisplayStyle: String, Sendable {
     case bold = "1"
     case dim = "90"
@@ -18,6 +19,23 @@ public enum DisplayStyle: String, Sendable {
     case boldBlue = "1;34"
     case brightMagenta = "95"
     case brightYellow = "93"
+
+    // What each kind of thing is shown in.
+    public static let keyword = DisplayStyle.magenta
+    public static let string = DisplayStyle.yellow
+    public static let constant = DisplayStyle.brightMagenta // numbers, true, nil
+    public static let type = DisplayStyle.brightYellow
+    public static let variable = DisplayStyle.cyan // a variable, a parameter's name
+    public static let path = DisplayStyle.green // a FilePath, unquoted, unlike a String
+    public static let command = DisplayStyle.green // a name that runs
+    public static let flag = DisplayStyle.blue
+    public static let comment = DisplayStyle.dim // secondary text: job numbers, `nil`s, cut-off markers
+    public static let label = DisplayStyle.bold // table headers, record keys, help sections
+    public static let error = DisplayStyle.boldRed
+
+    /// The terminal's escape for it, and what ends it.
+    public var escape: String { "\u{1B}[\(rawValue)m" }
+    public static let reset = "\u{1B}[0m"
 }
 
 /// A column a table shows, and what styles it: the value of another field

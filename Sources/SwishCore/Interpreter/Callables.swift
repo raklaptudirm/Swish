@@ -17,15 +17,44 @@ final class OverloadSet: Callable, @unchecked Sendable {
     }
 }
 
-extension Function {
-    /// Like a Swift declaration: `greet(_ name: String, times: Int) -> String`.
-    var signature: String {
-        // A Swift member's receiver, as a stage's input, isn't written.
-        let parameters = parameters.filter { !($0.isInput && $0.name == "self") }.map { p in
-            let names = p.label == p.name ? p.name : "\(p.label ?? "_") \(p.name)"
-            return "\(p.isInput ? "@input " : "")\(names): \(p.type)\(p.variadic ? "..." : "")"
+extension Parameter {
+    /// As a declaration writes it: `_ name: String`, `by key: Int`,
+    /// `@input items: [Int]`, `paths: FilePath...`.
+    var declaration: [StyledText.Segment] {
+        var pieces: [StyledText.Segment] = []
+        if isInput { pieces += [.init("@input", .keyword), .init(" ")] }
+        if label == name {
+            pieces.append(.init(name, .variable))
+        } else {
+            pieces += [.init(label ?? "_", label == nil ? nil : .variable), .init(" "), .init(name, .variable)]
         }
-        return "\(name ?? "closure")(\(parameters.joined(separator: ", ")))" + (returnType.map { " -> \($0)" } ?? "")
+        return pieces + [.init(": ")] + type.styled + (variadic ? [.init("...")] : [])
+    }
+}
+
+extension Function {
+    /// Like a Swift declaration: `greet(_ name: String, times: Int) -> String`,
+    /// without the parameters `hiding` says, in pieces by what each is.
+    func declaration(
+        as name: String? = nil, nameStyle: DisplayStyle = .command, hiding hidden: (Parameter) -> Bool
+    ) -> [StyledText.Segment] {
+        var pieces: [StyledText.Segment] = [.init(name ?? self.name ?? "closure", nameStyle), .init("(")]
+        for (index, parameter) in parameters.filter({ !hidden($0) }).enumerated() {
+            pieces += (index > 0 ? [.init(", ")] : []) + parameter.declaration
+        }
+        pieces.append(.init(")"))
+        if let returnType, returnType != .void { pieces += [.init(" -> ")] + returnType.styled }
+        return pieces
+    }
+
+    /// Like a Swift declaration: `greet(_ name: String, times: Int) -> String`.
+    /// A Swift member's receiver, as a stage's input, isn't written.
+    var signature: String {
+        StyledText(declaration { $0.isInput && $0.name == "self" }).text
+    }
+
+    func declaration(hiding hidden: (Parameter) -> Bool) -> [StyledText.Segment] {
+        declaration(as: nil, nameStyle: .command, hiding: hidden)
     }
 }
 

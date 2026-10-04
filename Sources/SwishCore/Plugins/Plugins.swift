@@ -43,7 +43,7 @@ extension Shell {
         let built = package + "/.build/release/" + dynamicLibraryName(name)
         if isUpToDate(built, package: package) { return built }
         let showProgress = interactive && isatty(STDERR_FILENO) != 0
-        if showProgress { writeAll(STDERR_FILENO, "Building \(name)…".styled(Style.dim)) }
+        if showProgress { writeAll(STDERR_FILENO, "Building \(name)…".styled(DisplayStyle.dim)) }
         defer { if showProgress { writeAll(STDERR_FILENO, "\r\u{1B}[K") } }
 
         let arguments = ["build", "-c", "release", "--package-path", package, "--product", name]

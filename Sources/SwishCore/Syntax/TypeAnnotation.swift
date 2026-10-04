@@ -40,29 +40,46 @@ indirect enum TypeAnnotation: Hashable, Sendable, CustomStringConvertible {
         var type: TypeAnnotation
     }
 
-    var description: String {
+    var description: String { StyledText(styled).text }
+
+    /// As Swift writes it, in pieces by what each is (the name of a type, a
+    /// label, a keyword, or punctuation), so help can color it and no one has
+    /// to read the text back to find out.
+    var styled: [StyledText.Segment] {
+        func name(_ text: String) -> StyledText.Segment { .init(text, .type) }
+        func punctuation(_ text: String) -> StyledText.Segment { .init(text) }
+        func list(_ items: [[StyledText.Segment]]) -> [StyledText.Segment] {
+            items.enumerated().flatMap { index, item in (index > 0 ? [punctuation(", ")] : []) + item }
+        }
         switch self {
-        case .any: "Any"
-        case .bool: "Bool"
-        case .int: "Int"
-        case .double: "Double"
-        case .string: "String"
-        case .record: "Record"
-        case .void: "Void"
-        case .list(let element): "[\(element)]"
-        case .dictionary(let key, let value): "[\(key): \(value)]"
+        case .any: return [name("Any")]
+        case .bool: return [name("Bool")]
+        case .int: return [name("Int")]
+        case .double: return [name("Double")]
+        case .string: return [name("String")]
+        case .record: return [name("Record")]
+        case .void: return [name("Void")]
+        case .list(let element): return [punctuation("[")] + element.styled + [punctuation("]")]
+        case .dictionary(let key, let value):
+            return [punctuation("[")] + key.styled + [punctuation(": ")] + value.styled + [punctuation("]")]
         case .tuple(let elements):
-            "(" + elements.map { ($0.label.map { "\($0): " } ?? "") + $0.type.description }.joined(separator: ", ") + ")"
-        case .function: "function"
+            return [punctuation("(")] + list(elements.map { element in
+                (element.label.map { [StyledText.Segment($0, .variable), punctuation(": ")] } ?? []) + element.type.styled
+            }) + [punctuation(")")]
+        case .function: return [name("function")]
         case .functionType(let parameters, let result, let throwing):
-            "(" + parameters.map(\.description).joined(separator: ", ") + ")" + (throwing ? " throws" : "") + " -> \(result)"
-        case .named(let name), .parameter(let name): name
-        case .generic(let name, let arguments): "\(name)<\(arguments.map(\.description).joined(separator: ", "))>"
-        case .someSequence(let element): "some Sequence<\(element)>"
-        case .keyPath(let root, let value): "KeyPath<\(root), \(value)>"
+            return [punctuation("(")] + list(parameters.map(\.styled)) + [punctuation(")")]
+                + (throwing ? [punctuation(" "), .init("throws", .keyword)] : []) + [punctuation(" -> ")] + result.styled
+        case .named(let text), .parameter(let text): return [name(text)]
+        case .generic(let text, let arguments): return [name(text), punctuation("<")] + list(arguments.map(\.styled)) + [punctuation(">")]
+        case .someSequence(let element):
+            return [.init("some", .keyword), punctuation(" "), name("Sequence"), punctuation("<")] + element.styled + [punctuation(">")]
+        case .keyPath(let root, let value):
+            return [name("KeyPath"), punctuation("<")] + root.styled + [punctuation(", ")] + value.styled + [punctuation(">")]
         case .optional(let wrapped):
-            if case .functionType = wrapped { "(\(wrapped))?" } else { "\(wrapped)?" }
-        case .unknown: "_"
+            if case .functionType = wrapped { return [punctuation("(")] + wrapped.styled + [punctuation(")?")] }
+            return wrapped.styled + [punctuation("?")]
+        case .unknown: return [punctuation("_")]
         }
     }
 }

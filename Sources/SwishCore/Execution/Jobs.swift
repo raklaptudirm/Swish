@@ -97,15 +97,15 @@ final class Job: SwishObject, @unchecked Sendable {
     /// `[1] running  make`, in pieces to color: the number dim, the state
     /// by how it's going.
     var segments: [PrettyPrinter.Segment] {
-        let (label, style): (String, Style?) = switch state {
-        case .running: ("running", Style.green)
-        case .stopped: ("stopped", Style.yellow)
-        case .done where cancelled: ("cancelled", Style.dim)
-        case .done where signal != nil: ("failed (\(String(cString: strsignal(signal!)).lowercased()))", Style.red)
-        case .done where status != 0: ("failed (\(status))", Style.red)
+        let (label, style): (String, DisplayStyle?) = switch state {
+        case .running: ("running", DisplayStyle.green)
+        case .stopped: ("stopped", DisplayStyle.yellow)
+        case .done where cancelled: ("cancelled", DisplayStyle.dim)
+        case .done where signal != nil: ("failed (\(String(cString: strsignal(signal!)).lowercased()))", DisplayStyle.red)
+        case .done where status != 0: ("failed (\(status))", DisplayStyle.red)
         case .done: ("done", nil)
         }
-        return [("[\(id)]", Style.dim), (" ", nil), (label, style), ("  " + source, nil)]
+        return [("[\(id)]", DisplayStyle.dim), (" ", nil), (label, style), ("  " + source, nil)]
     }
 
     var description: String { line(styled: false) }
@@ -250,7 +250,7 @@ extension Shell {
         for job in jobs where job.state != .running && !job.reported {
             job.reported = true
             notices.append(job.state == .stopped
-                ? job.line(styled: styled) + "  (waiting for the terminal: await it)".styled(Style.dim, styled)
+                ? job.line(styled: styled) + "  (waiting for the terminal: await it)".styled(DisplayStyle.dim, styled)
                 : job.line(styled: styled))
         }
         jobs.removeAll { $0.state == .done }

@@ -14,14 +14,14 @@ extension Shell {
         for span in Parser.highlight(text, bound: globalNames()).sorted(by: { $0.range.count > $1.range.count }) {
             let range = span.range.clamped(to: 0..<characters.count)
             let style: String? = switch span.kind {
-            case .keyword, .punctuation: Style.keyword.escape
+            case .keyword, .punctuation: DisplayStyle.keyword.escape
             case .command: commandStyle(String(characters[range]), piped: Shell.isPiped(characters, before: range.lowerBound))
-            case .flag: Style.flag.escape
-            case .string: Style.string.escape
-            case .number, .constant: Style.constant.escape
-            case .variable: Style.variable.escape
-            case .comment: Style.comment.escape
-            case .type: Style.type.escape
+            case .flag: DisplayStyle.flag.escape
+            case .string: DisplayStyle.string.escape
+            case .number, .constant: DisplayStyle.constant.escape
+            case .variable: DisplayStyle.variable.escape
+            case .comment: DisplayStyle.comment.escape
+            case .type: DisplayStyle.type.escape
             }
             for index in range { styles[index] = style }
         }
@@ -54,7 +54,7 @@ extension Shell {
         } else {
             known = executableNames().contains(name)
         }
-        return (known ? Style.green : Style.red).escape
+        return (known ? DisplayStyle.green : DisplayStyle.red).escape
     }
 
     /// Names of programs on PATH, cached for a few seconds, since the

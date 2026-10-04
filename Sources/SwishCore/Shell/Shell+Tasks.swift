@@ -35,11 +35,11 @@ extension Shell {
             return
         }
         let width = tasks.map(\.name.count).max()!
-        let styled = Style.enabled(for: stdoutFD)
+        let styled = DisplayStyle.enabled(for: stdoutFD)
         var text = "Usage: run <task> [<argument>...]\n\nTasks:\n"
         for task in tasks {
             let name = task.name.padding(toLength: width, withPad: " ", startingAt: 0)
-            text += "  " + (styled ? name.styled(Style.bold) : name) + (task.summary.isEmpty ? "" : "  " + task.summary) + "\n"
+            text += "  " + (styled ? name.styled(DisplayStyle.bold) : name) + (task.summary.isEmpty ? "" : "  " + task.summary) + "\n"
         }
         writeAll(stdoutFD, text)
         lastStatus = 0

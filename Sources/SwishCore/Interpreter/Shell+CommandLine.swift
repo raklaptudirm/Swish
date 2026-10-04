@@ -9,7 +9,7 @@ extension Shell {
     /// asked. The status is 1 for a false result and 0 otherwise.
     func callCommand(_ set: OverloadSet, _ args: [CommandArgument], display shouldDisplay: Bool) throws -> Int32 {
         if helpRequested(args, for: set) {
-            writeAll(stdoutFD, helpText(for: set, styled: Style.enabled(for: stdoutFD)))
+            writeAll(stdoutFD, helpText(for: set, styled: DisplayStyle.enabled(for: stdoutFD)))
             return 0
         }
         let (function, bindings) = try resolve(set) { try self.bind(commandLine: args, to: $0, excludingInput: false) }

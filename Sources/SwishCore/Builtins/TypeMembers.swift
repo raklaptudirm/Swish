@@ -23,7 +23,7 @@ struct TypeDescription {
         let name: String
         let kind: Kind
         /// As Swift writes it: `count: Int`, `uppercased() -> String`.
-        let signature: String
+        let signature: StyledText
         let summary: String
     }
 
@@ -87,18 +87,18 @@ extension Shell {
         }
         for property in type.stored {
             members.append(.init(name: property.name, kind: .property,
-                                 signature: "\(property.mutable ? "var" : "let") \(property.name): \(property.type.map { "\($0)" } ?? "Any")",
+                                 signature: StyledText(TypeDescription.property(property.name, property.type ?? .any, mutable: property.mutable)),
                                  summary: ""))
         }
         for (name, getter) in type.computed.sorted(by: { $0.key < $1.key }) {
             members.append(.init(name: name, kind: .property,
-                                 signature: "var \(name): \(getter.returnType.map { "\($0)" } ?? "Any") { get }",
+                                 signature: StyledText(TypeDescription.property(name, getter.returnType ?? .any, mutable: nil)),
                                  summary: getter.documentation?.summary.firstLine ?? ""))
         }
         for (name, methods) in type.methods.sorted(by: { $0.key < $1.key }) {
             for method in methods.candidates {
                 members.append(.init(name: name, kind: .method,
-                                     signature: (method.isMutating ? "mutating " : "") + TypeDescription.signature(method),
+                                     signature: TypeDescription.signature(method),
                                      summary: method.documentation?.summary.firstLine ?? ""))
             }
         }
@@ -108,16 +108,22 @@ extension Shell {
     private func describe(_ type: EnumType) -> TypeDescription {
         let payloads = enumPayloadTypes[ObjectIdentifier(type)] ?? [:]
         let members = type.cases.map { enumCase -> TypeDescription.Member in
-            var signature = "case \(enumCase.name)"
+            var signature: [StyledText.Segment] = [.init("case", .keyword), .init(" "), .init(enumCase.name, .command)]
             if !enumCase.labels.isEmpty {
                 let types = payloads[enumCase.name] ?? []
-                let values = enumCase.labels.enumerated().map { index, label in
-                    (label.map { "\($0): " } ?? "") + (index < types.count ? "\(types[index])" : "Any")
+                signature.append(.init("("))
+                for (index, label) in enumCase.labels.enumerated() {
+                    if index > 0 { signature.append(.init(", ")) }
+                    if let label { signature += [.init(label, .variable), .init(": ")] }
+                    signature += (index < types.count ? types[index] : .any).styled
                 }
-                signature += "(\(values.joined(separator: ", ")))"
+                signature.append(.init(")"))
             }
-            if let raw = enumCase.rawValue { signature += " = \(raw.debugDescription)" }
-            return .init(name: enumCase.name, kind: .case, signature: signature, summary: "")
+            if let raw = enumCase.rawValue {
+                let isText = if case .string = raw { true } else { false }
+                signature += [.init(" = "), .init(raw.debugDescription, isText ? .string : .constant)]
+            }
+            return .init(name: enumCase.name, kind: .case, signature: StyledText(signature), summary: "")
         }
         return TypeDescription(name: type.name, kind: "enum", members: members)
     }
@@ -126,7 +132,7 @@ extension Shell {
     /// signature (highlighted as Swift) and, on the line below, what its
     /// documentation says.
     func helpLines(for type: TypeDescription) -> [StyledText] {
-        var lines = [StyledText([.init(type.kind, HelpStyle.keyword), .init(" "), .init(type.name, HelpStyle.type)])]
+        var lines = [StyledText([.init(type.kind, DisplayStyle.keyword), .init(" "), .init(type.name, DisplayStyle.type)])]
         let groups = Dictionary(grouping: type.members, by: \.kind)
         for kind in TypeDescription.Kind.allCases {
             guard let members = groups[kind], !members.isEmpty else { continue }
@@ -134,7 +140,7 @@ extension Shell {
             for (index, member) in members.sorted(by: { $0.name < $1.name }).enumerated() {
                 // A blank line between them, so a signature and its description read as one.
                 if index > 0 { lines.append(StyledText(plain: "")) }
-                lines.append(StyledText([.init("  ")] + HelpStyle.signature(member.signature)))
+                lines.append(StyledText([.init("  ")] + member.signature.segments))
                 if !member.summary.isEmpty { lines.append(StyledText(plain: "    " + member.summary)) }
             }
         }
@@ -143,29 +149,38 @@ extension Shell {
 }
 
 extension TypeDescription {
-    /// A bridged member as Swift declares it.
-    static func signature(_ member: BridgedMember, settable: Bool) -> String {
+    /// A bridged member as Swift declares it, in pieces by what each is.
+    static func signature(_ member: BridgedMember, settable: Bool) -> StyledText {
+        var pieces: [StyledText.Segment] = []
         switch member.kind {
-        case .initializer: return "init(\(parameters(member.parameters)))"
-        case .property: return "\(member.name): \(member.returns)" + (settable ? " { get set }" : "")
+        case .initializer:
+            pieces += [.init("init", .keyword), .init("(")] + parameters(member.parameters) + [.init(")")]
+        case .property:
+            pieces += [.init(member.name, .command), .init(": ")] + member.returns.styled
+            if settable { pieces += [.init(" { "), .init("get", .keyword), .init(" "), .init("set", .keyword), .init(" }")] }
         case .method, .setter:
-            return "\(member.name)(\(parameters(member.parameters)))" + (member.returns == .void ? "" : " -> \(member.returns)")
+            pieces += [.init(member.name, .command), .init("(")] + parameters(member.parameters) + [.init(")")]
+            if member.returns != .void { pieces += [.init(" -> ")] + member.returns.styled }
         }
+        return StyledText(pieces)
     }
 
     /// A Swish function as a member, under `name` if given: its input is
     /// what it's called on, so it isn't shown.
-    static func signature(_ function: Function, as name: String? = nil) -> String {
-        let shown = function.parameters.filter { !$0.isInput }
-        let result = function.returnType.flatMap { $0 == .void ? nil : " -> \($0)" } ?? ""
-        return "\(name ?? function.name ?? "closure")(\(parameters(shown)))" + result
+    static func signature(_ function: Function, as name: String? = nil) -> StyledText {
+        StyledText((function.isMutating ? [StyledText.Segment("mutating", .keyword), .init(" ")] : [])
+                   + function.declaration(as: name, nameStyle: name == "init" ? .keyword : .command) { $0.isInput })
     }
 
-    private static func parameters(_ parameters: [Parameter]) -> String {
-        parameters.map { parameter in
-            let names = parameter.label == parameter.name ? parameter.name : "\(parameter.label ?? "_") \(parameter.name)"
-            return "\(names): \(parameter.type)\(parameter.variadic ? "..." : "")"
-        }.joined(separator: ", ")
+    /// `let x: Int`, `var x: Int`, or with no `mutable`, a computed
+    /// `var x: Int { get }`.
+    static func property(_ name: String, _ type: TypeAnnotation, mutable: Bool?) -> [StyledText.Segment] {
+        [.init(mutable == false ? "let" : "var", .keyword), .init(" "), .init(name, .command), .init(": ")] + type.styled
+            + (mutable == nil ? [.init(" { "), .init("get", .keyword), .init(" }")] : [])
+    }
+
+    private static func parameters(_ parameters: [Parameter]) -> [StyledText.Segment] {
+        parameters.enumerated().flatMap { index, parameter in (index > 0 ? [StyledText.Segment(", ")] : []) + parameter.declaration }
     }
 }
 

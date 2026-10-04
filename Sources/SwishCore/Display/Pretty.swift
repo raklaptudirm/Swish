@@ -10,7 +10,7 @@ struct PrettyPrinter {
     var width = 80
     var styled = false
 
-    typealias Segment = (text: String, style: Style?)
+    typealias Segment = (text: String, style: DisplayStyle?)
 
     /// A value's shape: text that can't be broken, a string, or brackets
     /// around (labeled) elements.
@@ -28,9 +28,9 @@ struct PrettyPrinter {
 
     func node(for value: Value) -> Node {
         switch value {
-        case .nothing: .segments([("nil", Style.constant)])
-        case .bool, .int, .double: .segments([(value.description, Style.constant)])
-        case .object where value.fileSize != nil: .segments([(value.description, Style.constant)])
+        case .nothing: .segments([("nil", DisplayStyle.constant)])
+        case .bool, .int, .double: .segments([(value.description, DisplayStyle.constant)])
+        case .object where value.fileSize != nil: .segments([(value.description, DisplayStyle.constant)])
         case .function: .segments([(value.description, nil)])
         case .string(let text): .string(text)
         case .list(let items):
@@ -41,7 +41,7 @@ struct PrettyPrinter {
                 ([keySegment(key), (": ", nil)], node(for: value))
             }, close: "]")
         case .object(let box as SwiftValue) where box.value is Output:
-            .group(open: [("Output", Style.type), ("(", nil)], items: [
+            .group(open: [("Output", DisplayStyle.type), ("(", nil)], items: [
                 (label("text"), .string((box.value as! Output).text)),
                 (label("status"), node(for: (box.value as! Output).statusRecord)),
             ], close: ")")
@@ -50,9 +50,9 @@ struct PrettyPrinter {
         case .object(let job as Job):
             .segments(job.segments)
         case .object(let box as SwiftValue) where box.value is FilePath || box.value is FilePath.Component:
-            .segments([(box.description, Style.path)])
+            .segments([(box.description, DisplayStyle.path)])
         case .object(let type as EnumType):
-            .segments([("enum", Style.keyword), (" ", nil), (type.name, Style.type)])
+            .segments([("enum", DisplayStyle.keyword), (" ", nil), (type.name, DisplayStyle.type)])
         case .object(let object):
             object.fields.map { node(for: $0) } ?? .segments([(object.debugDescription, nil)])
         @unknown default:
@@ -62,19 +62,19 @@ struct PrettyPrinter {
 
     /// A struct's value, `Point(x: 1)`, or a tuple, `(name: "x", 2)`.
     private func node(for record: Record) -> Node {
-        let open: [Segment] = record.typeName.map { [($0, Style.type), ("(", nil)] } ?? [("(", nil)]
+        let open: [Segment] = record.typeName.map { [($0, DisplayStyle.type), ("(", nil)] } ?? [("(", nil)]
         return .group(open: open, items: record.map { field in
             (Record.isPosition(field.key) ? [] : label(field.key), node(for: field.value))
         }, close: ")")
     }
 
     private func keySegment(_ key: Value) -> Segment {
-        if case .string(let text) = key { return (Value.quoted(text), Style.string) }
-        return (key.debugDescription, Style.constant)
+        if case .string(let text) = key { return (Value.quoted(text), DisplayStyle.string) }
+        return (key.debugDescription, DisplayStyle.constant)
     }
 
     private func node(for value: EnumValue) -> Node {
-        let head: [Segment] = [(value.type.name, Style.type), ("." + value.name, nil)]
+        let head: [Segment] = [(value.type.name, DisplayStyle.type), ("." + value.name, nil)]
         guard !value.values.isEmpty else { return .segments(head) }
         let labels = value.definition?.labels ?? []
         let items = value.values.enumerated().map { index, item in
@@ -101,9 +101,9 @@ struct PrettyPrinter {
             guard text.contains("\n") else { return line.styled }
             let inner = String(repeating: " ", count: indent + 2)
             let body = text.split(separator: "\n", omittingEmptySubsequences: false).map { row in
-                row.isEmpty ? "" : inner + PrettyPrinter.escapedForBlock(String(row)).styled(Style.string, styled)
+                row.isEmpty ? "" : inner + PrettyPrinter.escapedForBlock(String(row)).styled(DisplayStyle.string, styled)
             }
-            let quotes = "\"\"\"".styled(Style.string, styled)
+            let quotes = "\"\"\"".styled(DisplayStyle.string, styled)
             return quotes + "\n" + body.joined(separator: "\n") + "\n" + inner + quotes
         case .group(let open, let items, let close):
             guard !items.isEmpty else { return line.styled }
@@ -137,7 +137,7 @@ struct PrettyPrinter {
             return paint(segments)
         case .string(let text):
             let quoted = Value.quoted(text)
-            return (quoted, quoted.styled(Style.string, styled))
+            return (quoted, quoted.styled(DisplayStyle.string, styled))
         case .group(let open, let items, let close):
             var plain = paint(open).plain
             var colored = paint(open).styled

@@ -33,7 +33,7 @@ public struct StyledText: Sendable, Hashable, StandsForText {
     public var colored: String {
         segments.map { segment in
             guard let style = segment.style, !segment.text.isEmpty else { return segment.text }
-            return "\u{1B}[\(style.rawValue)m\(segment.text)\u{1B}[0m"
+            return style.escape + segment.text + DisplayStyle.reset
         }.joined()
     }
 }

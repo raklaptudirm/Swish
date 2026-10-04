@@ -151,11 +151,11 @@ extension Shell {
 
     /// Reports an error, to wherever standard error is redirected.
     func report(_ message: String) {
-        let styled = Style.enabled(for: stderrFD)
+        let styled = DisplayStyle.enabled(for: stderrFD)
         if message.hasPrefix("error: ") {
-            writeAll(stderrFD, "swish: error:".styled(Style.error, styled) + message.dropFirst(6) + "\n")
+            writeAll(stderrFD, "swish: error:".styled(DisplayStyle.error, styled) + message.dropFirst(6) + "\n")
         } else {
-            writeAll(stderrFD, "swish:".styled(Style.error, styled) + " \(message)\n")
+            writeAll(stderrFD, "swish:".styled(DisplayStyle.error, styled) + " \(message)\n")
         }
     }
 

@@ -44,7 +44,7 @@ extension Shell {
             lines += [StyledText(plain: summary), StyledText(plain: "")]
         }
         lines.append(HelpStyle.heading("Usage:"))
-        lines += set.candidates.map { StyledText([.init("  ")] + HelpStyle.usage(usage(of: $0, named: set.name))) }
+        lines += set.candidates.map { StyledText([.init("  ")] + usage(of: $0, named: set.name)) }
 
         var arguments: [Row] = []
         var options: [Row] = []
@@ -54,7 +54,7 @@ extension Shell {
                 var details: [[StyledText.Segment]] = []
                 if let help = function.documentation?.parameters[parameter.name] { details.append([.init(help)]) }
                 if parameter.isInput {
-                    details.append([.init(parameter.type.isList ? "(or the whole pipeline input)" : "(or each pipeline input item)", HelpStyle.secondary)])
+                    details.append([.init(parameter.type.isList ? "(or the whole pipeline input)" : "(or each pipeline input item)", DisplayStyle.comment)])
                 }
                 if let defaultValue = parameter.defaultValue, defaultValue != .literal(.nothing) {
                     details.append(defaultDetail(describe(defaultValue)))
@@ -65,13 +65,13 @@ extension Shell {
                 if let label = parameter.label {
                     let negatable = parameter.type == .bool && parameter.defaultValue == .literal(.bool(true))
                     let long = "--" + (negatable ? "[no-]" : "") + kebabCase(label)
-                    var key: [StyledText.Segment] = parameter.shortFlag.map { [.init("-\($0)", HelpStyle.flag), .init(", ")] } ?? [.init("    ")]
-                    key.append(.init(long, HelpStyle.flag))
+                    var key: [StyledText.Segment] = parameter.shortFlag.map { [.init("-\($0)", DisplayStyle.flag), .init(", ")] } ?? [.init("    ")]
+                    key.append(.init(long, DisplayStyle.flag))
                     key += valuePlaceholder(for: parameter)
-                    if parameter.type.isList { details.append([.init("(repeatable)", HelpStyle.secondary)]) }
+                    if parameter.type.isList { details.append([.init("(repeatable)", DisplayStyle.comment)]) }
                     if seen.insert(StyledText(key).text).inserted { options.append((key, joined(details))) }
                 } else {
-                    let key: [StyledText.Segment] = [.init("<\(parameter.name)>", HelpStyle.parameter)]
+                    let key: [StyledText.Segment] = [.init("<\(parameter.name)>", DisplayStyle.variable)]
                         + (takesRemainingWords(parameter) ? [.init("...")] : [])
                     if seen.insert(StyledText(key).text).inserted {
                         arguments.append((key, joined(details + [typeDetail(parameter.type.description)])))
@@ -79,7 +79,7 @@ extension Shell {
                 }
             }
         }
-        options.append(([.init("-h, --help", HelpStyle.flag)], [.init("Show this help")]))
+        options.append(([.init("-h, --help", DisplayStyle.flag)], [.init("Show this help")]))
 
         let width = (arguments + options).map { StyledText($0.key).width }.max()! + 2
         func rows(_ title: String, _ entries: [Row]) {
@@ -98,38 +98,41 @@ extension Shell {
 
     /// `(default: 1)`, the value as a constant.
     private func defaultDetail(_ value: String) -> [StyledText.Segment] {
-        [.init("(default: ", HelpStyle.secondary), .init(value, HelpStyle.constant), .init(")", HelpStyle.secondary)]
+        [.init("(default: ", DisplayStyle.comment), .init(value, DisplayStyle.constant), .init(")", DisplayStyle.comment)]
     }
 
     /// `(Int)`, the type as a type.
     private func typeDetail(_ type: String) -> [StyledText.Segment] {
-        [.init("("), .init(type, HelpStyle.type), .init(")")]
+        [.init("("), .init(type, DisplayStyle.type), .init(")")]
     }
 
     private func joined(_ pieces: [[StyledText.Segment]]) -> [StyledText.Segment] {
         pieces.enumerated().flatMap { index, piece in (index > 0 ? [StyledText.Segment(" ")] : []) + piece }
     }
 
-    private func usage(of function: Function, named name: String) -> String {
-        var parts = [name]
+    /// `ls [--all] [<paths>...]`, in pieces by what each is.
+    private func usage(of function: Function, named name: String) -> [StyledText.Segment] {
+        var parts: [StyledText.Segment] = [.init(name, .command)]
         for parameter in function.parameters where parameter.label != nil {
-            var flag = commandLineName(of: parameter) + StyledText(valuePlaceholder(for: parameter)).text
+            var flag = commandLineName(of: parameter)
             if parameter.type == .bool && parameter.defaultValue == .literal(.bool(true)) {
                 flag = "--no-" + flag.dropFirst(2)
             }
             let optional = parameter.hasDefault || parameter.type == .bool || parameter.type.isList
-            parts.append(optional ? "[\(flag)]" : flag)
+            parts += [.init(" ")] + (optional ? [.init("[")] : []) + [.init(flag, .flag)]
+                + valuePlaceholder(for: parameter) + (optional ? [.init("]")] : [])
         }
         for parameter in function.parameters where parameter.label == nil {
-            var argument = "<\(parameter.name)>"
+            let argument = StyledText.Segment("<\(parameter.name)>", .variable)
             if takesRemainingWords(parameter) || (parameter.isInput && parameter.type.isList) {
-                argument = "[\(argument)...]"
+                parts += [.init(" "), .init("["), argument, .init("...]")]
             } else if parameter.hasDefault || parameter.isInput {
-                argument = "[\(argument)]"
+                parts += [.init(" "), .init("["), argument, .init("]")]
+            } else {
+                parts += [.init(" "), argument]
             }
-            parts.append(argument)
         }
-        return parts.joined(separator: " ")
+        return parts
     }
 
     /// ` <Int>` after a flag that takes a value; a list flag takes one
@@ -141,7 +144,7 @@ extension Shell {
         case .list(let element): type = element
         default: type = parameter.type
         }
-        return [.init(" <"), .init(placeholder(type), HelpStyle.type), .init(">")]
+        return [.init(" <"), .init(placeholder(type), DisplayStyle.type), .init(">")]
     }
 
     /// A type as `--help` shows it: an enum as its choices.
@@ -234,7 +237,7 @@ extension Shell {
             // `help String`: what the type has.
             return helpLines(for: type)
         } else if let path = findExecutable(name) {
-            return [StyledText([.init(name, HelpStyle.name), .init(" is a program, "), .init(path, HelpStyle.name), .init(": try `")]
+            return [StyledText([.init(name, DisplayStyle.command), .init(" is a program, "), .init(path, DisplayStyle.command), .init(": try `")]
                 + HelpStyle.usage("\(name) --help") + [.init("` or `")] + HelpStyle.usage("man \(name)") + [.init("`.")])]
         }
         throw RuntimeError("help: no function, shell builtin, type or program named '\(name)'; `help` lists them all")
@@ -259,6 +262,6 @@ extension String {
 extension HelpStyle {
     /// A section's title.
     static func heading(_ title: String) -> StyledText {
-        StyledText([.init(title, heading)])
+        StyledText([.init(title, .label)])
     }
 }

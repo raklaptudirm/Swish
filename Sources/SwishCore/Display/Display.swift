@@ -23,7 +23,7 @@ extension Shell {
         case .object where value.commandOutput?.text.isEmpty == true && !debug:
             return
         case .record(let record) where !debug:
-            for line in keyValueLines(record, styled: Style.enabled(for: stdoutFD)) { writeAll(stdoutFD, line + "\n") }
+            for line in keyValueLines(record, styled: DisplayStyle.enabled(for: stdoutFD)) { writeAll(stdoutFD, line + "\n") }
         // A command's list reads as a pipeline's output would: records as a
         // table, anything else an item per line. A bare list is a value.
         case .list(let items) where !debug || items.contains(where: { $0.asRecord != nil }):
@@ -31,7 +31,7 @@ extension Shell {
             for item in items { formatter.add(item) }
             formatter.finish()
         case _ where debug:
-            let printer = PrettyPrinter(width: terminalWidth(stdoutFD) ?? 80, styled: Style.enabled(for: stdoutFD))
+            let printer = PrettyPrinter(width: terminalWidth(stdoutFD) ?? 80, styled: DisplayStyle.enabled(for: stdoutFD))
             writeAll(stdoutFD, printer.format(value) + "\n")
         default:
             writeAll(stdoutFD, value.description + "\n")
@@ -42,7 +42,7 @@ extension Shell {
     func keyValueLines(_ record: Record, styled: Bool = false) -> [String] {
         let width = record.keys.map(\.count).max() ?? 0
         return record.map { key, value in
-            key.styled(Style.label, styled) + String(repeating: " ", count: width - key.count + 2)
+            key.styled(DisplayStyle.label, styled) + String(repeating: " ", count: width - key.count + 2)
                 + Formatter.cell(value).styled(Formatter.style(of: value, key: key, in: record), styled)
         }
     }
@@ -106,7 +106,7 @@ final class Formatter {
     /// is one. A file gets every character: nothing is cut to fit.
     convenience init(fd: Int32) {
         let isTerminal = isatty(fd) != 0
-        self.init(maxWidth: terminalWidth(fd) ?? .max, styled: Style.enabled(for: fd),
+        self.init(maxWidth: terminalWidth(fd) ?? .max, styled: DisplayStyle.enabled(for: fd),
                   columnCap: isTerminal ? 40 : .max) { writeAll(fd, $0) }
     }
 
@@ -166,8 +166,8 @@ final class Formatter {
         guard !pending.isEmpty else { return true }
         columns = layout(for: pending)
         if header {
-            var line = trimmingTrailingSpaces(columns!.map { pad($0.key, $0, Style.label) }.joined(separator: "  "))
-            if droppedColumns { line += "  " + "…".styled(Style.dim, styled) }
+            var line = trimmingTrailingSpaces(columns!.map { pad($0.key, $0, DisplayStyle.label) }.joined(separator: "  "))
+            if droppedColumns { line += "  " + "…".styled(DisplayStyle.dim, styled) }
             guard emit(line) else { return false }
         }
         let rows = pending
@@ -227,13 +227,13 @@ final class Formatter {
     /// is styled by a field whose value is an enum that says how its cases
     /// are shown (a file's name by its type, a job's state by itself). Else
     /// it's plain.
-    static func style(of value: Value, key: String, in record: Record) -> Style? {
+    static func style(of value: Value, key: String, in record: Record) -> DisplayStyle? {
         guard let typeName = record.typeName, let column = displayColumns[typeName]?.first(where: { $0.name == key }) else { return nil }
-        if let fixed = column.style { return Style(rawValue: fixed.rawValue) }
+        if let fixed = column.style { return fixed }
         guard let source = column.styledBy,
               case .enumValue(let found)? = record[source],
               let style = Bridge.standardEnumStyles[found.type.name]?(found.name) else { return nil }
-        return Style(rawValue: style.rawValue)
+        return style
     }
 
     /// Leading spaces are a right-aligned column's padding, so only the end
@@ -243,7 +243,7 @@ final class Formatter {
     }
 
     /// Styles only the text, so trailing padding can still be trimmed.
-    private func pad(_ text: String, _ column: Column, _ style: Style? = nil) -> String {
+    private func pad(_ text: String, _ column: Column, _ style: DisplayStyle? = nil) -> String {
         let fitted = text.count > column.width ? text.prefix(column.width - 1) + "…" : text
         let padding = String(repeating: " ", count: column.width - fitted.count)
         let shown = String(fitted).styled(style, styled)

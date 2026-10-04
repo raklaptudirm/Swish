@@ -66,26 +66,31 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
     #expect(try output(#""a" | members | filter { $0.name == "uppercased" } | get kind"#) == "method\n")
 }
 
-@Test func signaturesAreColoredByWhatEachPartIs() {
-    func style(_ word: String, in signature: String) -> DisplayStyle?? {
-        HelpStyle.signature(signature).first { $0.text == word }.map(\.style)
+@Test func signaturesAreColoredByWhatEachPartIs() throws {
+    let shell = Shell()
+    /// The pieces of a member's signature, found by its type and its text.
+    func pieces(_ type: String, _ signature: String) throws -> [StyledText.Segment] {
+        let members = try #require(shell.typeDescription(named: type)).members
+        return try #require(members.first { $0.signature.text == signature }).signature.segments
     }
-    let init_ = "init(_ description: String)"
-    #expect(style("init", in: init_) == .magenta)
-    #expect(style("description", in: init_) == .cyan)
-    #expect(style("String", in: init_) == .brightYellow)
+    func style(_ word: String, in pieces: [StyledText.Segment]) -> DisplayStyle?? {
+        pieces.first { $0.text == word }.map(\.style)
+    }
+    let initializer = try pieces("Int", "init(_ description: String)")
+    #expect(style("init", in: initializer) == .keyword)
+    #expect(style("description", in: initializer) == .variable)
+    #expect(style("String", in: initializer) == .type)
     // A property: its keyword, its name, its type.
-    #expect(style("let", in: "let cpuTime: Double?") == .magenta)
-    #expect(style("cpuTime", in: "let cpuTime: Double?") == .green)
-    #expect(style("Double", in: "let cpuTime: Double?") == .brightYellow)
+    let property = try pieces("ProcessEntry", "let cpuTime: Double?")
+    #expect(style("let", in: property) == .keyword)
+    #expect(style("cpuTime", in: property) == .command)
+    #expect(style("Double", in: property) == .type)
     // A method: its name, labels, and the types of what it takes and gives.
-    let method = "contains(where predicate: (Element) throws -> Bool) -> Bool"
-    #expect(style("contains", in: method) == .green)
-    #expect(style("where", in: method) == .cyan)
-    #expect(style("throws", in: method) == .magenta)
-    #expect(style("Bool", in: method) == .brightYellow)
-    // Nothing is lost: the pieces are the text.
-    #expect(HelpStyle.signature(method).map(\.text).joined() == method)
+    let method = try pieces("Array", "contains(where predicate: (Element) throws -> Bool) -> Bool")
+    #expect(style("contains", in: method) == .command)
+    #expect(style("where", in: method) == .variable)
+    #expect(style("throws", in: method) == .keyword)
+    #expect(style("Bool", in: method) == .type)
 }
 
 @Test func styledTextIsColoredOnlyWhereItsAskedFor() throws {

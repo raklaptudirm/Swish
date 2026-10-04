@@ -9,7 +9,7 @@ extension Shell {
             return runScript { Swift.readLine() }
         }
         editor.history = History(path: History.defaultPath)
-        editor.continuationPrompt = "…".styled(Style.dim) + " "
+        editor.continuationPrompt = "…".styled(DisplayStyle.dim) + " "
         editor.isComplete = { [unowned self] text in
             if case .failure(let error) = parse(text), error.incomplete { return false }
             return true
@@ -22,9 +22,9 @@ extension Shell {
         while true {
             // Finished and stopped background jobs, before the prompt.
             if pending.isEmpty {
-                for notice in announceJobs(styled: Style.enabled(for: STDERR_FILENO)) { writeAll(STDERR_FILENO, notice + "\n") }
+                for notice in announceJobs(styled: DisplayStyle.enabled(for: STDERR_FILENO)) { writeAll(STDERR_FILENO, notice + "\n") }
             }
-            switch editor.readLine(prompt: pending.isEmpty ? prompt() : "…".styled(Style.dim) + " ") {
+            switch editor.readLine(prompt: pending.isEmpty ? prompt() : "…".styled(DisplayStyle.dim) + " ") {
             case .eof:
                 if !pending.isEmpty { execute(pending) }
                 return lastStatus
@@ -106,7 +106,7 @@ extension Shell {
             directory = "~" + directory.dropFirst(home.count)
         }
         let failed = lastStatus != 0
-        let status = failed ? "[\(lastStatus)]".styled(Style.red) + " " : ""
-        return directory.styled(Style.cyan) + " " + status + "❯".styled(failed ? Style.red : Style.green) + " "
+        let status = failed ? "[\(lastStatus)]".styled(DisplayStyle.red) + " " : ""
+        return directory.styled(DisplayStyle.cyan) + " " + status + "❯".styled(failed ? DisplayStyle.red : DisplayStyle.green) + " "
     }
 }
