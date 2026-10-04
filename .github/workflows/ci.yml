@@ -175,23 +175,6 @@ jobs:
 
       # Why the generator bridges fewer members from Linux's graphs: each
       # type's members left out, by reason. (Temporary.)
-      - name: Why Linux bridges less
-        continue-on-error: true
-        run: |
-          B=$(swift build --show-bin-path)
-          swift build --product swish-bridge
-          G=/tmp/diag; mkdir -p $G
-          for m in Swift _StringProcessing; do
-            swift-symbolgraph-extract -module-name $m -target "$(uname -m)-unknown-linux-gnu" -output-dir $G
-          done
-          ls $G
-          for type in Range Substring Set; do
-            echo "== $type"
-            SWISH_BRIDGE_DEBUG=$type $B/swish-bridge $G/Swift.symbols.json /tmp/diag.swift $G/_StringProcessing@Swift.symbols.json 2>&1 \
-              | grep -vE "^bridged" | sed -E 's/^[^:]*: //' | sort | uniq -c | sort -rn | head -14
-          done
-
-      # Linux's graphs can only be read on Linux, so this makes its manifests.
       - name: Make Linux's manifests
         run: .build/debug/swish -c 'run bridge'
 

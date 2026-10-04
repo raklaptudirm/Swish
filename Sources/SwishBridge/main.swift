@@ -86,11 +86,6 @@ let modules: [String: (list: String, types: [(String, [String])], functions: Str
     // Swift's (bridged from the other modules, so held here as they are).
     "SwishStandardLibrary": ("", [], "standardFunctions", ["FilePath", "FileSize", "Date"], []),
 ]
-/// Types Swish holds and shows, whose own members it doesn't bridge: an
-/// AttributedString is built and shown by the shell (help), and its own API
-/// (runs, ranges, attribute scopes, macOS's inflection) isn't Swish code. What
-/// SwishKit adds to it (`text`, `plain`) is.
-let heldOnly: Set = ["AttributedString"]
 guard let module = modules[graph.module.name] else {
     FileHandle.standardError.write(Data("swish-bridge: nothing to bridge from \(graph.module.name)\n".utf8))
     exit(2)
@@ -294,10 +289,6 @@ for (name, _) in bridgedTypeNames {
         $0.pathComponents.count == 2 && protocolNames.contains($0.pathComponents[0]) && $0.kind.identifier != "swift.init"
             && owner.allConformances.contains($0.pathComponents[0])
     }.map { ($0, conditions) }
-    // A type that's held and shown but not worked with has only what other
-    // modules add to it: the surface its own graph lists isn't one Swish
-    // could use, and part of it exists only on the platform it was read on.
-    if heldOnly.contains(name) { candidates = candidates.filter { addedByOthers.contains($0.0.identifier.precise) } }
     var bridgedShapes: Set<String> = []
     let ownCount = ownSymbols.count
     for (index, (symbol, conditions)) in candidates.enumerated() {
