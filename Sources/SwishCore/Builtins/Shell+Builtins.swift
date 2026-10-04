@@ -74,7 +74,7 @@ extension Shell {
     /// (`filter`), or all of them (`sorted`).
     func builtinBodies() -> [String: (body: FunctionBody, input: Parameter?)] {
         var bodies: [String: (body: FunctionBody, input: Parameter?)] = [:]
-        for function in [to(), table(), list(), members(), help()] {
+        for function in [members(), help()] {
             bodies[function.name!] = (function.body, nil)
         }
         for method in [select()] {

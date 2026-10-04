@@ -8,6 +8,10 @@ nonisolated(unsafe) var leaves: [String: (annotation: String, from: (String) -> 
     "Double": (".double", { "try Double(swishValue: \($0))" }, { "\($0).swishValue" }),
     "Bool": (".bool", { "try Bool(swishValue: \($0))" }, { "\($0).swishValue" }),
     "String": (".string", { "try String(swishValue: \($0))" }, { "\($0).swishValue" }),
+    // Swish's own value, passed as it is: what a function that lays values
+    // out takes. Spelled `SwishValue`, which a generic parameter called
+    // `Value` (Dictionary's) can't be mistaken for.
+    "SwishValue": (".any", { $0 }, { $0 }),
 ]
 
 /// A module's own top-level typealiases (`TimeInterval` is `Double`), which

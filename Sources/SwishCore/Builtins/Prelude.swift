@@ -42,16 +42,6 @@ extension Shell {
     /// .double, .bool, .array, .object and .isNull.
     struct JSON {}
 
-    /// Converts the input to text: json, or text for how it would be displayed.
-    /// - Parameter format: json or text
-    func to(_ format: String, @input _ items: [Any]) -> String
-
-    /// Lays records out as a table with every field.
-    func table(@input _ items: [Any]) -> [String]
-
-    /// Shows each record as a list of fields.
-    func list(@input _ items: [Any]) -> [String]
-
     /// Describes the input: each type's fields and members.
     func members(@input _ items: [Any]) -> [Member]
 

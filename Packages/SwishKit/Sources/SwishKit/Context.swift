@@ -7,9 +7,13 @@ public struct ShellContext: Sendable {
     /// Whether output to the terminal may be colored.
     public let colorOutput: Bool
 
-    public init(history: [String], colorOutput: Bool) {
+    /// How types show in a table.
+    public let display: DisplayRegistry
+
+    public init(history: [String], colorOutput: Bool, display: DisplayRegistry = DisplayRegistry()) {
         self.history = history
         self.colorOutput = colorOutput
+        self.display = display
     }
 }
 

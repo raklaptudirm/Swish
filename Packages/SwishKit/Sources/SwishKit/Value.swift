@@ -62,6 +62,22 @@ extension SwishObject {
     }
 }
 
+/// A Swish value as a Swift function takes or gives one whole, whatever it
+/// is. The name tells a bridged function's parameter from a generic parameter
+/// called `Value`.
+public typealias SwishValue = Value
+
+extension Value {
+    /// A record, or an object's fields: what a table row is made from.
+    public var asRecord: Record? {
+        switch self {
+        case .record(let record): record
+        case .object(let object): object.fields
+        default: nil
+        }
+    }
+}
+
 /// A type that holds a Swish value as it is, whose type says how it's read:
 /// `JSON`, which is whatever it parsed as. A function that gives one gives
 /// the value it holds.

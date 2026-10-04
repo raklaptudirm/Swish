@@ -1,5 +1,6 @@
 import Foundation
 import SwishKit
+import SwishStandardLibrary
 
 /// A pull-based stream of values between in-process pipeline stages. A
 /// stage only runs when downstream asks for its next item, so
@@ -116,7 +117,7 @@ extension Shell {
         do {
             if toExternal {
                 // Records as the rows they'd display as, so `ls | grep x` works.
-                let formatter = Formatter.forProgram(fd: output)
+                let formatter = DisplayFormatter.forProgram(fd: output)
                 while let item = try stream.next() {
                     if case .function = item { throw RuntimeError("can't send a function to an external command") }
                     guard formatter.add(item) else { throw BrokenPipe() }
@@ -124,7 +125,7 @@ extension Shell {
                 guard formatter.finish() else { throw BrokenPipe() }
             } else {
                 // The end of the pipeline: format for a person.
-                let formatter = Formatter(fd: output)
+                let formatter = DisplayFormatter(fd: output)
                 while let item = try stream.next() {
                     guard formatter.add(item) else { throw BrokenPipe() }
                 }

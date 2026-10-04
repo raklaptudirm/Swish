@@ -40,6 +40,23 @@ public enum DisplayStyle: String, Sendable {
     public static let reset = "\u{1B}[0m"
 }
 
+extension DisplayStyle {
+    /// Whether to style what's written to `fd`: only for a terminal, and
+    /// not with `NO_COLOR` set or `TERM=dumb`.
+    public static func enabled(for fd: Int32) -> Bool {
+        func variable(_ name: String) -> String? { getenv(name).map { String(cString: $0) } }
+        return isatty(fd) != 0 && variable("NO_COLOR").map(\.isEmpty) != false && variable("TERM") != "dumb"
+    }
+}
+
+extension String {
+    /// `self` in `style`, if styling is on.
+    public func styled(_ style: DisplayStyle?, _ enabled: Bool = true) -> String {
+        guard enabled, let style, !isEmpty else { return self }
+        return style.escape + self + DisplayStyle.reset
+    }
+}
+
 /// A column a table shows, and what styles it: the value of another field
 /// (or of itself), if that is a `DisplayStyled` enum, as a file's name is
 /// styled by its type: `DisplayColumn("name", styledBy: "type")`; or one
@@ -57,6 +74,20 @@ public struct DisplayColumn: Sendable, ExpressibleByStringLiteral {
 
     public init(stringLiteral name: String) {
         self.init(name)
+    }
+}
+
+/// How the shell's types show in a table, by the name of the type: the
+/// columns of the structs that say so (`Tabular`), and how an enum's cases
+/// are styled (`DisplayStyled`). A function that lays values out is lent it
+/// in the `ShellContext`.
+public struct DisplayRegistry: Sendable {
+    public var columns: [String: [DisplayColumn]]
+    public var enumStyles: [String: @Sendable (String) -> DisplayStyle?]
+
+    public init(columns: [String: [DisplayColumn]] = [:], enumStyles: [String: @Sendable (String) -> DisplayStyle?] = [:]) {
+        self.columns = columns
+        self.enumStyles = enumStyles
     }
 }
 

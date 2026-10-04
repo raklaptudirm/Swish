@@ -1,5 +1,6 @@
 @testable import SwishCore
 import SwishKit
+import SwishStandardLibrary
 import Testing
 
 /// Runs `source` in `shell`, returning what it wrote to standard output.
@@ -424,7 +425,7 @@ private func fixture() throws -> String {
 
 @Test func formatterFitsTheWidth() {
     var lines: [String] = []
-    let formatter = Formatter(maxWidth: 20) { lines.append($0); return true }
+    let formatter = DisplayFormatter(maxWidth: 20) { lines.append($0); return true }
     formatter.add(.record(Record(["name": .string("a-rather-long-file-name"), "size": .fileSize(FileSize(bytes: 1))])))
     formatter.finish()
     // The name column shrinks from 23 to 14 so the table fits in 20.
@@ -433,7 +434,7 @@ private func fixture() throws -> String {
 
 @Test func formatterDropsColumnsThatCantFit() {
     var lines: [String] = []
-    let formatter = Formatter(maxWidth: 20) { lines.append($0); return true }
+    let formatter = DisplayFormatter(maxWidth: 20) { lines.append($0); return true }
     formatter.add(.record(Record(["alpha": .string("aaaaaaaa"), "bravo": .string("bbbbbbbb"), "charlie": .string("cccccccc")])))
     formatter.finish()
     // Even at 6 wide, three columns need 22; the last is left off.
