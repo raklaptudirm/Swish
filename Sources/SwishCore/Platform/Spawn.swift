@@ -53,10 +53,15 @@ func takeInterrupt() -> Bool {
 }
 
 /// The caught signal that arrived since the last call, if any, clearing it.
+/// It clears only a signal it saw: clearing after reading nothing would wipe
+/// one that arrived in between, and a script spinning in a loop (which asks
+/// constantly) would sometimes survive its SIGTERM.
 @inline(never)
 func takeInterruptSignal() -> Int32? {
-    defer { interrupted = 0 }
-    return interrupted != 0 ? Int32(interrupted) : nil
+    let signal = interrupted
+    guard signal != 0 else { return nil }
+    interrupted = 0
+    return Int32(signal)
 }
 
 // MARK: Spawning
