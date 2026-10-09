@@ -251,3 +251,11 @@ extension Interpreter {
         return status
     }
 }
+
+extension Interpreter {
+    /// A case of an enum the prelude or the standard library module
+    /// declares: `FileType.directory`.
+    package func declaredCase(_ type: String, _ name: String) -> Value {
+        .enumValue(EnumValue(type: enumType(named: type)!, name: name))
+    }
+}

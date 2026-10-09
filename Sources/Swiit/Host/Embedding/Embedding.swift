@@ -83,9 +83,7 @@ extension Interpreter {
                   shellLayer: nil,
                   outputCounter: counter)
         self.limits = limits
-        installBuiltinFunctions(providing: ["help": .native { _, _ in
-            throw RuntimeError("help isn't available in this interpreter")
-        }])
+        installBuiltinFunctions()
     }
 
     /// `print("a", 1)`: its arguments, as interpolation shows them, separated

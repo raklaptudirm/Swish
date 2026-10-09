@@ -21,15 +21,6 @@ extension Interpreter {
         let text: String
     }
 
-    /// A function `help` lists.
-    struct Help: Equatable, Hashable, Encodable {
-        let name: String
-        let source: String
-        let summary: String
-        let usage: String
-        let description: String
-    }
-
     /// A member `members` describes.
     struct Member: Equatable, Hashable, Encodable {
         let type: String
@@ -37,40 +28,23 @@ extension Interpreter {
         let kind: String
     }
 
-    /// Parsed JSON: read by field (json.name, json["name"]) or element
-    /// (json[0]), each giving JSON?, and as a type with .string, .int,
-    /// .double, .bool, .array, .object and .isNull.
-    struct JSON {}
-
     /// Describes the input: each type's fields and members.
     func members(@input _ items: [Any]) -> [Member]
 
-    /// Lists every function you can call.
-    func help() -> [Help]
-
-    /// Shows a function, shell builtin or program in full, or a type's
-    /// members: `help String`, `help FilePath`, or a struct of yours.
-    /// - Parameter name: a function, shell builtin, type or program
-    func help(_ name: String) -> [AttributedString]
-
-    extension Sequence {
-        /// Keeps only the named fields of each record.
-        func select(_ fields: String...) -> [Any]
-    }
     """#
 
     /// Reads the prelude, binding its types, functions and sequence
     /// methods in the outermost scope with their Swift bodies.
-    package func installPrelude(providing provided: [String: FunctionBody]) {
+    package func installPrelude() {
         // The Swift types the declarations may name.
         let bridgedTypeNames = Dictionary(uniqueKeysWithValues: Bridge.types.keys.map { ($0, NameKind.type) })
         let program: Program
         do {
-            program = try Parser.parsePrelude(([Interpreter.prelude] + libraries.map(\.types)).joined(separator: "\n"), bound: bridgedTypeNames)
+            program = try Parser.parsePrelude(([Interpreter.prelude] + libraries.flatMap { [$0.types, $0.declarations] }).joined(separator: "\n"), bound: bridgedTypeNames)
         } catch {
             preconditionFailure("the prelude doesn't parse: \(error)")
         }
-        let natives = builtinBodies(providing: provided)
+        let natives = builtinBodies()
         for statement in program.statements {
             switch statement {
             case .structDecl(let decl):

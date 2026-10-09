@@ -63,7 +63,7 @@ public final class Shell {
         interpreter.displayRegistryProvider = { [unowned interpreter] in interpreter.tableRegistry() }
         interpreter.bind("env", to: EnvironmentObject(access: .process))
         interpreter.objectMembers["Job"] = Dictionary(uniqueKeysWithValues: Job.members.map { ($0.name, $0.type) })
-        interpreter.installBuiltinFunctions(providing: ["help": help().body], libraries: [.shell])
+        interpreter.installBuiltinFunctions(libraries: [.shell(for: self)])
     }
 }
 

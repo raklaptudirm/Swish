@@ -106,3 +106,35 @@ extension TypeAnnotation {
         }
     }
 }
+
+// MARK: Declaring builtins
+
+extension Function {
+    /// A builtin written in Swift, with its documentation.
+    package static func builtin(
+        _ name: String, _ summary: String, _ parameters: [Parameter],
+        docs: [String: String] = [:], _ body: FunctionBody
+    ) -> Function {
+        Function(
+            name: name, parameters: parameters, returnType: nil, body: body,
+            documentation: Documentation(summary: summary, parameters: docs)
+        )
+    }
+}
+
+extension Parameter {
+    /// An argument by position.
+    package static func positional(_ name: String, _ type: TypeAnnotation, default value: Value? = nil, variadic: Bool = false) -> Parameter {
+        Parameter(label: nil, name: name, type: type, variadic: variadic, defaultValue: value.map(Expr.literal))
+    }
+
+    /// A labeled argument: a flag on the command line.
+    package static func option(_ label: String, _ type: TypeAnnotation, default value: Value? = nil, short: Character? = nil) -> Parameter {
+        Parameter(label: label, name: label, type: type, defaultValue: value.map(Expr.literal), shortFlag: short)
+    }
+
+    /// What's piped in.
+    package static func input(_ name: String, _ type: TypeAnnotation) -> Parameter {
+        Parameter(label: nil, name: name, type: type, isInput: true)
+    }
+}

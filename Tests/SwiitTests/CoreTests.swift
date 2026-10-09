@@ -57,7 +57,18 @@ private func runOnTheCore(_ source: String) -> (output: String, problem: String?
     let (output, problem) = runOnTheCore(#"[1, 2].map { $0 * 2 }; [1, 1, 2].uniqued()"#)
     #expect(problem == nil)
     #expect(output == "[2, 4]\n[1, 2]\n")
-    for name in ["ls", "ps", "pwd", "history", "readLine", "from", "to", "table", "list"] {
+    for name in ["ls", "ps", "pwd", "history", "readLine", "from", "to", "table", "list", "help"] {
         #expect(runOnTheCore("\(name)()").problem?.contains("no function named '\(name)'") == true, "\(name)")
     }
+}
+
+@Test func theCorePreludeIsTheLanguagesOwn() {
+    // `members` and the `Error` a `catch` binds are the language's; `select`,
+    // `help` and `JSON` are declared by the shell.
+    let (output, problem) = runOnTheCore("struct P { var x: Int }; [P(x: 1)] | members | get name")
+    #expect(problem != nil) // a pipe is shell syntax: members is called as a function
+    _ = output
+    #expect(runOnTheCore("struct P { var x: Int }; members([P(x: 1)]).count").problem == nil)
+    #expect(runOnTheCore("[[\"a\": 1]].select(\"a\")").problem != nil)
+    #expect(runOnTheCore("let j: JSON = 1").problem != nil)
 }
