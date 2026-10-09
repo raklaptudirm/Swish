@@ -10,6 +10,7 @@ let darwin = $(uname).text == "Darwin"
 /// expect first).
 func test() {
     try! _swiftTest(".")
+    try! _swiftTest("Packages/Swiit")
     try! _swiftTest("Packages/SwishKit")
     try! swift build
     for script in ["job-control", "line-editor", "background-jobs", "config", "signals"] {
@@ -17,8 +18,8 @@ func test() {
     }
 }
 
-/// Regenerates the bridges in Sources/Swiit/Bridge/Generated (and the
-/// shell's own in Sources/SwishShell/Bridge/Generated), from the symbol
+/// Regenerates the bridges in Packages/Swiit/Sources/Swiit/Bridge/Generated
+/// (and the shell's own in Sources/SwishShell/Bridge/Generated), from the symbol
 /// graphs of the standard library, Foundation, swift-system and the shell's
 /// own modules. Run it after changing swiit-bridge, the Swift
 /// toolchain or swift-system. A graph is read on the platform it's made on,
@@ -61,14 +62,16 @@ func bridge() {
         let outputs = ["Swift": "StandardLibrary", "SwishStandardLibrary": "SwishLibrary", "SwishShellLibrary": "ShellLibrary"]
         let output = outputs[module] ?? module
         // The core's bridges are in the core; the shell's library is the shell's.
-        let target = module == "SwishShellLibrary" ? "SwishShell" : "Swiit"
-        // This platform's members to write, and the others' to keep to.
-        var platforms = ["--manifest", "Bridges/\(platform)/\(module).json"]
+        let generated = module == "SwishShellLibrary" ? "Sources/SwishShell" : "Packages/Swiit/Sources/Swiit"
+        // This platform's members to write, and the others' to keep to. The
+        // interpreter's are kept with it, the shell's with the shell.
+        let bridges = module == "SwishShellLibrary" ? "Bridges" : "Packages/Swiit/Bridges"
+        var platforms = ["--manifest", "\(bridges)/\(platform)/\(module).json"]
         for other in ["macos", "linux"] {
-            let manifest = "Bridges/\(other)/\(module).json"
+            let manifest = "\(bridges)/\(other)/\(module).json"
             if other != platform && $(^test -f $manifest).status.succeeded { platforms += ["--also", manifest] }
         }
-        try! swift run -c release swiit-bridge "\(graphs)/\(module).symbols.json" "Sources/\(target)/Bridge/Generated/\(output).swift" $extra $platforms
+        try! swift run --package-path Packages/Swiit -c release swiit-bridge "\(graphs)/\(module).symbols.json" "\(generated)/Bridge/Generated/\(output).swift" $extra $platforms
     }
 }
 

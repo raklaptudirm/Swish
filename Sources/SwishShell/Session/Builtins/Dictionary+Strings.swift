@@ -1,4 +1,4 @@
-import Swiit
+@_spi(Shell) import Swiit
 import SwishKit
 
 extension Dictionary where Key == String, Value == SwishKit.Value {

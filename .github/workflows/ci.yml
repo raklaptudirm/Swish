@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The bridges in Sources/*/Bridge/Generated are read from this
+      # The bridges in Packages/Swiit/Sources/Swiit/Bridge/Generated (and the shell's own in Sources/SwishShell/Bridge/Generated) are read from this
       # Swift's symbol graphs, so the newest Xcode is the one they match.
       - uses: maxim-lobanov/setup-xcode@v1
         with:
@@ -52,6 +52,9 @@ jobs:
 
       - name: Unit tests
         run: swift test
+
+      - name: Swiit unit tests
+        run: swift test --package-path Packages/Swiit
 
       - name: SwishKit unit tests
         run: swift test --package-path Packages/SwishKit
@@ -98,6 +101,9 @@ jobs:
       - name: Unit tests
         run: swift test
 
+      - name: Swiit unit tests
+        run: swift test --package-path Packages/Swiit
+
       - name: SwishKit unit tests
         run: swift test --package-path Packages/SwishKit
 
@@ -110,9 +116,9 @@ jobs:
           done
           exit $status
 
-  # The bridges (Sources/*/Bridge/Generated) are made from symbol
+  # The bridges (Packages/Swiit/Sources/Swiit/Bridge/Generated, and the shell's own) are made from symbol
   # graphs, and a graph is read on the platform it's made on. Each platform's
-  # members are kept in Bridges/<platform>, and only what all of them have is
+  # members are kept in Bridges/<platform> (the interpreter's in Packages/Swiit/Bridges), and only what all of them have is
   # bridged, so a member one platform lacks can't break the build on another.
 
   bridges-macos:
@@ -143,10 +149,10 @@ jobs:
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           .build/debug/swish -c 'run bridge'
-          changes=$(git status --porcelain -- Sources Bridges)
+          changes=$(git status --porcelain -- Sources Bridges Packages/Swiit/Sources Packages/Swiit/Bridges)
           if [ -n "$changes" ]; then
-            git status --short -- Sources Bridges
-            git diff --stat -- Sources Bridges
+            git status --short -- Sources Bridges Packages/Swiit/Sources Packages/Swiit/Bridges
+            git diff --stat -- Sources Bridges Packages/Swiit/Sources Packages/Swiit/Bridges
             echo "::error::The bridges are out of date: run 'swift run swish -c \"run bridge\"' and commit the result."
             exit 1
           fi
@@ -183,15 +189,17 @@ jobs:
         if: always()
         with:
           name: bridges-linux
-          path: Bridges/linux
+          path: |
+            Bridges/linux
+            Packages/Swiit/Bridges/linux
 
       - name: Manifests are current
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          changes=$(git status --porcelain -- Bridges/linux)
+          changes=$(git status --porcelain -- Bridges/linux Packages/Swiit/Bridges/linux)
           if [ -n "$changes" ]; then
-            git status --short -- Bridges/linux
-            git diff --stat -- Bridges/linux
-            echo "::error::Linux's bridge manifests changed: download the bridges-linux artifact into Bridges/linux, run the bridge task on macOS, and commit."
+            git status --short -- Bridges/linux Packages/Swiit/Bridges/linux
+            git diff --stat -- Bridges/linux Packages/Swiit/Bridges/linux
+            echo "::error::Linux's bridge manifests changed: download the bridges-linux artifact into the repository root, run the bridge task on macOS, and commit."
             exit 1
           fi

@@ -212,7 +212,7 @@ over lines when they're wide.
 ## Getting started
 
 Swish needs Swift 6 on macOS or Linux. It's all Swift: what differs between the two (starting
-programs, plugin libraries) is in `Sources/Swiit/Platform`.
+programs, plugin libraries) is in `Sources/SwishShell/Runtime/Platform`.
 
 ```sh
 swift build -c release
@@ -250,7 +250,7 @@ is reported, and the default prompt drawn instead. History lives in the XDG stat
 ```sh
 swift build
 .build/debug/swish
-swift run swish -c 'run test'     # unit tests, plus pty-driven job-control, editor and background-job tests
+swift run swish -c 'run test'     # unit tests of the shell, Swiit and SwishKit, plus pty-driven job-control, editor and background-job tests
 swift run swish -c 'run bridge'   # regenerate the standard library bridge (after a toolchain update)
 ```
 
@@ -265,7 +265,7 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
 | Path | What |
 |---|---|
 | `Packages/SwishKit` | `Value` and the plugin API, with the `@SwishExport` and `@SwishObject` macros. A separate package so it links as a **dynamic library** shared by the shell and every plugin. |
-| `Sources/Swiit` | The interpreter (Swiit). It builds on its own and knows nothing of the shell: |
+| `Packages/Swiit` | The interpreter (Swiit), a package of its own that knows nothing of the shell; the shell is a client of it. Its `Sources/Swiit`: |
 | `…/Language` | The language: `Syntax` (the tree and the parser, with a plug-in for syntax a host adds), `Checking` (the type checker, which runs before anything else), `Interpreter` (statements, expressions, calls, structs and enums), `Prelude` (the builtins' declarations) and `Reflection` (a type's members, for `help` and `members`). |
 | `…/Bridge` | Swift's types and members, generated into `Bridge/Generated` from symbol graphs. |
 | `…/Host` | What a host plugs in: `SwishHost`, dynamic objects, library registration, and `Embedding` (`Interpreter(host:limits:)`, `eval`, `register`, `set`, `Diagnostic`). |
@@ -276,10 +276,10 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
 | `…/Session` | The prompt: the `Shell` itself (loop, scripts, tasks, config), `Editor` (history, completion, highlighting) and the shell builtins and `help`. `Presentation` shows values: tables, key/value lists, and the prompt's echo of each value (the interpreter only tells it what a statement gave). |
 | `…/Bridge`, `…/Library` | The shell's generated bridge, and `SwishShellLibrary` (`pwd`, `readLine`, `history`, `ls`, `ps`, `from`, `to`, `table`, `list`, `JSON`). |
 | `Sources/Swish` | The executable. |
-| `Bridges` | Which members of each bridged type a platform has, one list a platform and module: what's bridged is what every platform has (`run bridge` keeps them current; CI checks). |
+| `Bridges`, `Packages/Swiit/Bridges` | Which members of each bridged type a platform has, one list a platform and module: what's bridged is what every platform has (`run bridge` keeps them current; CI checks). |
 | `Tests/Interactive` | `expect` scripts that drive the shell through a real terminal. |
 | `Examples/Tools` | An example plugin, which the tests import. |
-| `Sources/SwiitBridge` | Reads Swift's symbol graphs and generates the glue that bridges the standard library, swift-system and `SwishStandardLibrary` and `SwishShellLibrary` (`run bridge`): the graph, declaration parsing, what Swish can hold and how values cross, and one member's glue each have a file. |
+| `Packages/Swiit/Sources/SwiitBridge` | Reads Swift's symbol graphs and generates the glue that bridges the standard library, swift-system and `SwishStandardLibrary` and `SwishShellLibrary` (`run bridge`): the graph, declaration parsing, what Swish can hold and how values cross, and one member's glue each have a file. |
 
 </details>
 

@@ -2,7 +2,7 @@
 // Don't edit: `run bridge` remakes it.
 import Foundation
 import SwishKit
-import Swiit
+@_spi(Shell) import Swiit
 import SwishShellLibrary
 import SystemPackage
 

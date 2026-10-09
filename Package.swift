@@ -1,72 +1,48 @@
 // swift-tools-version: 6.0
 import PackageDescription
 
+// The shell. It is a client of the interpreter (Packages/Swiit).
 let package = Package(
     name: "Swish",
     platforms: [.macOS(.v14)],
     products: [
-        // The commands keep their lowercase names, as Unix programs do.
+        // The command keeps its lowercase name, as Unix programs do.
         .executable(name: "swish", targets: ["Swish"]),
-        .executable(name: "swiit-bridge", targets: ["SwiitBridge"]),
     ],
     dependencies: [
+        .package(path: "Packages/Swiit"),
         // A separate package so the host links SwishKit as a dylib (products of
         // the same package would be linked statically into the executable).
         .package(path: "Packages/SwishKit"),
-        // FilePath, until the standard library's (SE-0529) ships; swift-system's
-        // then becomes a typealias for it, keeping the members added here.
         .package(url: "https://github.com/apple/swift-system.git", from: "1.4.0"),
     ],
     targets: [
         .executableTarget(name: "Swish", dependencies: ["SwishShell"]),
-        // Reads Swift's symbol graphs and writes the glue that bridges them
-        // (`run bridge`); not part of the shell.
-        .executableTarget(name: "SwiitBridge"),
-        // The shell's own functions, written in Swift: `swiit-bridge` reads
-        // their declarations (`run bridge`) and Swiit calls them.
-        .target(
-            name: "SwishStandardLibrary",
-            dependencies: [
-                .product(name: "SwishKit", package: "SwishKit"),
-                .product(name: "SystemPackage", package: "swift-system"),
-            ],
-            path: "Sources/Swiit/Library"
-        ),
         // The shell's functions that reach the process, the files and the
         // session: `ls`, `ps`, `pwd`, `with(env:)`, `readLine`, `history`.
         .target(
             name: "SwishShellLibrary",
             dependencies: [
-                "SwishStandardLibrary",
+                .product(name: "SwishStandardLibrary", package: "Swiit"),
                 .product(name: "SwishKit", package: "SwishKit"),
                 .product(name: "SystemPackage", package: "swift-system"),
             ],
             path: "Sources/SwishShell/Library"
         ),
-        .target(
-            name: "Swiit",
-            dependencies: [
-                "SwishStandardLibrary",
-                .product(name: "SwishKit", package: "SwishKit"),
-                .product(name: "SystemPackage", package: "swift-system"),
-            ],
-            // Its standard library is a module of its own, so the generator can read it.
-            exclude: ["Library"]
-        ),
         // The shell: commands, pipelines, jobs, the line editor and the process
-        // it runs in, built on the core's interpreter.
+        // it runs in, built on the interpreter.
         .target(
             name: "SwishShell",
             dependencies: [
-                "Swiit",
+                .product(name: "Swiit", package: "Swiit"),
                 "SwishShellLibrary",
                 .product(name: "SwishKit", package: "SwishKit"),
                 .product(name: "SystemPackage", package: "swift-system"),
             ],
             exclude: ["Library"]
         ),
-        // boundaries.txt is data the boundary test reads from the source tree.
-        .testTarget(name: "SwiitTests", dependencies: ["Swiit"], exclude: ["boundaries.txt"]),
-        .testTarget(name: "SwishShellTests", dependencies: ["SwishShell", "Swiit"]),
+        .testTarget(name: "SwishShellTests", dependencies: [
+            "SwishShell", .product(name: "Swiit", package: "Swiit"),
+        ]),
     ]
 )

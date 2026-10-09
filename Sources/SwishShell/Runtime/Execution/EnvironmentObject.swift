@@ -1,5 +1,5 @@
 import Foundation
-import Swiit
+@_spi(Shell) import Swiit
 import SwishKit
 
 /// The process's variables, for `env`.

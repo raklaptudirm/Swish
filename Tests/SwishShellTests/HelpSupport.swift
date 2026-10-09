@@ -1,5 +1,5 @@
-@testable import Swiit
-@testable import SwishShell
+@_spi(Shell) import Swiit
+@_spi(Shell) @testable import SwishShell
 import Foundation
 import SwishKit
 

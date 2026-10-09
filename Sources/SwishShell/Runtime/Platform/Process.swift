@@ -1,4 +1,4 @@
-import Swiit
+@_spi(Shell) import Swiit
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
