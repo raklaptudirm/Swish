@@ -39,6 +39,7 @@ let package = Package(
                 .product(name: "SystemPackage", package: "swift-system"),
             ]
         ),
-        .testTarget(name: "SwishCoreTests", dependencies: ["SwishCore"]),
+        // boundaries.txt is data the boundary test reads from the source tree.
+        .testTarget(name: "SwishCoreTests", dependencies: ["SwishCore"], exclude: ["boundaries.txt"]),
     ]
 )

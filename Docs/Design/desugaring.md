@@ -193,7 +193,13 @@ the net: the behavior doesn't change.
 7. **Jobs and `async`/`await`,** together with the async plan
    ([async.md](async.md)); its step 3, effects in the checker, is this
    document's "Effects".
-8. **Delete the interpreter's shell nodes** once nothing produces them.
+8. **Flatten statements.** Today every expression statement is a `Chain` of
+   `Unit`s joined by `&&`/`||` with an exit status, because a statement was a
+   command first. With command chains now library calls, `Unit`'s cases hoist
+   into `Statement`, `Chain` is deleted, statements stop returning an `Int32`,
+   and the shell records the status of command statements per task
+   ([boundaries.md](boundaries.md), the `chain` and `status` groups).
+9. **Delete the interpreter's shell nodes** once nothing produces them.
 
 Golden tests print each construct's desugaring; differential tests later
 compile the printed Swift with `swiftc` and compare it with the interpreter.
