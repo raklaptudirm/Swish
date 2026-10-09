@@ -153,22 +153,6 @@ package final class TypeChecker {
     /// written into a lookup that runs.
     package var lastMemberBase: TypeAnnotation?
 
-    /// Parsed JSON: any of its values, read by field (`json.name`,
-    /// `json["name"]`) or position (`json[0]`), each giving `JSON?`.
-    package static let json = TypeAnnotation.named("JSON")
-
-    /// What a JSON value is, when it's that: `json.port?.int`.
-    package static let jsonAccessors: [String: TypeAnnotation] = [
-        "string": .optional(.string), "int": .optional(.int), "double": .optional(.double), "bool": .optional(.bool),
-        "array": .optional(.list(json)), "object": .optional(.dictionary(.string, json)), "isNull": .bool,
-    ]
-
-    /// `json.name` as it runs: a lookup that gives nil for a missing field,
-    /// or the value as one of the accessors' types.
-    package static func jsonAccess(_ base: Expr, _ name: String) -> Expr {
-        let function = jsonAccessors[name] != nil ? "$jsonAs" : "$json"
-        return .call(.variable(function), [Argument(label: nil, value: base), Argument(label: nil, value: .literal(.string(name)))])
-    }
     /// What the program declares, innermost last, on top of the shell's names.
     package var scopes: [[String: Symbol]] = [[:]]
     package var returns: [ReturnContext] = []

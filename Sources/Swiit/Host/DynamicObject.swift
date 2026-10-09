@@ -19,14 +19,45 @@ package protocol DynamicObject: SwishObject {
     func write(_ name: String, _ value: Value) throws
 }
 
-/// What the checker knows of a dynamic object's type, by its `typeName`.
+/// What the checker knows of a dynamic type, by its name: an object's members
+/// (`env`), or the members of plain values that a host types as one of its
+/// own (parsed JSON).
 package struct DynamicType {
     package var read: TypeAnnotation
     package var write: TypeAnnotation
+    /// Set for values that aren't objects but plain values, read by name.
+    package var plain: PlainDynamic?
 
-    package init(read: TypeAnnotation, write: TypeAnnotation) {
+    package init(read: TypeAnnotation, write: TypeAnnotation, plain: PlainDynamic? = nil) {
         self.read = read
         self.write = write
+        self.plain = plain
+    }
+}
+
+/// A type whose values are whatever they were parsed as, and whose members are
+/// looked up when it runs (nil if missing): the checker writes each access
+/// into a call of the host's functions, so the values stay ordinary lists,
+/// records and scalars. Parsed JSON is one: `json.name`, `json[0]`,
+/// `json.port?.int`.
+package struct PlainDynamic {
+    /// A function in scope, `field(value, key)`: the member or element, or nil.
+    package var field: String
+    /// A function in scope, `view(value, "int")`: the value as that type, or nil.
+    package var view: String
+    /// The types of the views by name: `int` gives `Int?`.
+    package var views: [String: TypeAnnotation]
+    /// What a sequence's items are, when it is read as one.
+    package var element: TypeAnnotation
+    /// It fits wherever a type is wanted, being whatever it parsed as.
+    package var standsForAnything: Bool
+
+    package init(field: String, view: String, views: [String: TypeAnnotation], element: TypeAnnotation, standsForAnything: Bool = true) {
+        self.field = field
+        self.view = view
+        self.views = views
+        self.element = element
+        self.standsForAnything = standsForAnything
     }
 }
 
@@ -42,8 +73,28 @@ extension Interpreter {
 extension TypeChecker {
     /// The members' types if `type` is a dynamic object's.
     package func dynamicType(of type: TypeAnnotation) -> DynamicType? {
-        guard case .named(let name) = type else { return nil }
-        return interpreter.dynamicTypes[name]
+        guard case .named(let name) = type, let dynamic = interpreter.dynamicTypes[name], dynamic.plain == nil else { return nil }
+        return dynamic
+    }
+
+    /// How a plain dynamic type (parsed JSON) is read, if `type` is one.
+    package func plainType(of type: TypeAnnotation?) -> (type: DynamicType, plain: PlainDynamic)? {
+        guard case .named(let name)? = type, let dynamic = interpreter.dynamicTypes[name], let plain = dynamic.plain else { return nil }
+        return (dynamic, plain)
+    }
+
+    /// `value.name` on a plain dynamic type as it runs: a call that gives nil
+    /// for a missing member, or the value as one of the views' types.
+    package func plainAccess(_ type: TypeAnnotation?, _ base: Expr, _ name: String) -> Expr? {
+        guard let (_, plain) = plainType(of: type) else { return nil }
+        let function = plain.views[name] != nil ? plain.view : plain.field
+        return .call(.variable(function), [Argument(label: nil, value: base), Argument(label: nil, value: .literal(.string(name)))])
+    }
+
+    /// `value[key]` on a plain dynamic type as it runs.
+    package func plainIndex(_ type: TypeAnnotation?, _ base: Expr, _ index: Expr) -> Expr? {
+        guard let (_, plain) = plainType(of: type) else { return nil }
+        return .call(.variable(plain.field), [Argument(label: nil, value: base), Argument(label: nil, value: index)])
     }
 }
 

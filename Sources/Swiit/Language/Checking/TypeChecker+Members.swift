@@ -40,7 +40,7 @@ extension TypeChecker {
         if case .generic = type { return bridgedElement(type) }
         return switch type {
         case .list(let element): element
-        case TypeChecker.json: TypeChecker.json // An array's elements, or the value itself.
+        case .named where plainType(of: type) != nil: plainType(of: type)!.plain.element // An array's elements, or the value itself.
         case .unknown: .unknown
         default: nil
         }
@@ -193,8 +193,8 @@ extension TypeChecker {
     package func memberType(of base: TypeAnnotation, _ name: String) throws -> TypeAnnotation {
         if let dynamic = dynamicType(of: base) { return dynamic.read }
         lastMemberBase = base
-        if base == TypeChecker.json {
-            return TypeChecker.jsonAccessors[name] ?? .optional(TypeChecker.json)
+        if let (dynamic, plain) = plainType(of: base) {
+            return plain.views[name] ?? dynamic.read
         }
         // Every value has its textual form, as interpolation shows it; a
         // struct's own property of that name comes first.
@@ -307,12 +307,12 @@ extension TypeChecker {
             try expect(&index, .string, "\(base)'s member name")
             return dynamic.read
         }
-        if base == TypeChecker.json {
+        if let (dynamic, _) = plainType(of: base) {
             let key = try typeOf(&index)
             guard key == .string || key == .int || key == .unknown else {
-                throw TypeError("JSON is indexed by a String (a field) or an Int (an element), not \(key)")
+                throw TypeError("\(base) is indexed by a String (a field) or an Int (an element), not \(key)")
             }
-            return .optional(TypeChecker.json)
+            return dynamic.read
         }
         switch base {
         case .list(let element):

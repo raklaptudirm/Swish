@@ -59,8 +59,8 @@ extension TypeChecker {
         // `=String`: a bridged member for one element type only
         // (`joined(separator:)` where Element == String).
         if proto.hasPrefix("=") { return type == .unknown || type.description == String(proto.dropFirst()) }
-        // JSON stands in for whatever it parsed as (see `conform`).
-        if type == TypeChecker.json { return true }
+        // A plain dynamic type (JSON) stands in for whatever it parsed as (see `conform`).
+        if plainType(of: type)?.plain.standsForAnything == true { return true }
         // A Swift type conforms as it declares: Int, [T] where T does,
         // ClosedRange<Int>.
         if let (bridgedType, bindings) = bridged(type) {

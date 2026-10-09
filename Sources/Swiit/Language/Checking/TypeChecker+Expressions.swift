@@ -142,13 +142,13 @@ extension TypeChecker {
                 }
                 lastMemberBase = nil
                 let type = try memberType(of: baseType, name)
-                expr = lastMemberBase == TypeChecker.json ? TypeChecker.jsonAccess(base, name) : .member(base, name)
+                expr = plainAccess(lastMemberBase, base, name) ?? .member(base, name)
                 return type
             }
             lastMemberBase = nil
             let type = try memberType(&base, name)
-            // JSON's fields are looked up when it runs, nil if missing.
-            expr = lastMemberBase == TypeChecker.json ? TypeChecker.jsonAccess(base, name) : .member(base, name)
+            // A plain dynamic type's (JSON's) fields are looked up when it runs, nil if missing.
+            expr = plainAccess(lastMemberBase, base, name) ?? .member(base, name)
             return type
         case .caseLiteral(let name, var arguments):
             let type = try caseType(name, &arguments, expected: expected)
@@ -177,11 +177,7 @@ extension TypeChecker {
         case .index(var base, var index):
             lastMemberBase = nil
             let type = try indexType(&base, &index)
-            if lastMemberBase == TypeChecker.json {
-                expr = .call(.variable("$json"), [Argument(label: nil, value: base), Argument(label: nil, value: index)])
-            } else {
-                expr = .index(base, index)
-            }
+            expr = plainIndex(lastMemberBase, base, index) ?? .index(base, index)
             return type
         case .annotated(var inner, let type):
             try expect(&inner, type, "the value")
@@ -201,16 +197,16 @@ extension TypeChecker {
                 if case .optional = type { return type }
                 return .optional(type)
             }
-            expr = wrapped == TypeChecker.json ? TypeChecker.jsonAccess(base, name) : .optionalMember(base, name)
+            expr = plainAccess(wrapped, base, name) ?? .optionalMember(base, name)
             let member = try memberType(of: wrapped, name)
             if case .optional = member { return member }
             return member == .unknown ? .unknown : .optional(member)
         case .optionalIndex(var base, var index):
             let wrapped = try optionalBase(&base)
-            if wrapped == TypeChecker.json {
+            if let (dynamic, _) = plainType(of: wrapped) {
                 _ = try typeOf(&index)
-                expr = .call(.variable("$json"), [Argument(label: nil, value: base), Argument(label: nil, value: index)])
-                return .optional(TypeChecker.json)
+                expr = plainIndex(wrapped, base, index)!
+                return dynamic.read
             }
             // Typed as `base![index]` would be, then made optional.
             let element = try indexType(of: wrapped, &index)

@@ -12,7 +12,6 @@ extension Interpreter {
         scopes[0].bindings["jobs"] = Binding(value: .nothing, mutable: false, special: .jobs)
         scopes[0].bindings["args"] = Binding(value: .list([]), mutable: false)
         installPrelude()
-        installJSONAccess()
         installPrint()
         installStandardFunctions()
         // Swift's types by name, for their initializers and static members.

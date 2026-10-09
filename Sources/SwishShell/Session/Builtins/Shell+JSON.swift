@@ -1,10 +1,27 @@
+import Swiit
 import SwishKit
 
 extension Interpreter {
-    /// What the checker writes JSON access into: `json.name` is
-    /// `$json(json, "name")`, `json.port?.int` is `$jsonAs(…, "int")`. Both
-    /// give nil for nil, a missing field, or a value of another kind.
-    package func installJSONAccess() {
+    /// Registers parsed JSON as a type whose values are whatever they parsed
+    /// as (lists, records, scalars), read by field (`json.name`,
+    /// `json["name"]`) or position (`json[0]`), each giving `JSON?`: the
+    /// checker writes each access into `$json(json, "name")`, and a view like
+    /// `json.port?.int` into `$jsonAs(…, "int")`. Both give nil for nil, a
+    /// missing field, or a value of another kind.
+    func installJSON() {
+        let json = TypeAnnotation.named("JSON")
+        dynamicTypes["JSON"] = DynamicType(read: .optional(json), write: .optional(json), plain: PlainDynamic(
+            field: "$json", view: "$jsonAs",
+            views: [
+                "string": .optional(.string), "int": .optional(.int), "double": .optional(.double), "bool": .optional(.bool),
+                "array": .optional(.list(json)), "object": .optional(.dictionary(.string, json)), "isNull": .bool,
+            ],
+            element: json
+        ))
+        installJSONAccess()
+    }
+
+    private func installJSONAccess() {
         let field = Function(name: "$json", parameters: [
             Parameter(label: nil, name: "value", type: .any), Parameter(label: nil, name: "key", type: .any),
         ], returnType: nil, body: .native { _, args in
