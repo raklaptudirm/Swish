@@ -1,3 +1,4 @@
+import Foundation
 @testable import Swiit
 import SwishKit
 import Testing
@@ -170,15 +171,21 @@ private func interpreter(limits: Limits = Limits(), log: Log = Log()) -> Interpr
     }
 }
 
-@Test func cancellingFromAnotherThreadStopsARun() async throws {
+@Test func cancellingFromAnotherThreadStopsARun() {
     let swish = interpreter()
+    // The run is on another thread; this one waits for it and cancels it.
     nonisolated(unsafe) let running = swish
-    let result = Task.detached { () -> Diagnostic? in
-        do { _ = try running.eval("while true {}"); return nil } catch { return error as? Diagnostic }
+    nonisolated(unsafe) var result: Diagnostic?
+    let done = DispatchSemaphore(value: 0)
+    let thread = Thread {
+        do { _ = try running.eval("while true {}") } catch { result = error as? Diagnostic }
+        done.signal()
     }
-    try await Task.sleep(for: .milliseconds(100))
+    thread.start()
+    Thread.sleep(forTimeInterval: 0.1)
     swish.cancel()
-    #expect(await result.value?.kind == .cancelled)
+    done.wait()
+    #expect(result?.kind == .cancelled)
 }
 
 @Test func twoInterpretersDontSeeEachOther() throws {
