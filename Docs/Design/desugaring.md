@@ -173,6 +173,16 @@ These stay as named departures:
 - **`select`'s type,** until Swift can express it with parameter packs.
 - **`JSON` as a stand-in type,** until the bridge can call dynamic members.
 
+## The hooks the rewrite replaces
+
+A Racket language replaces the edges of its grammar (`#%app`, `#%top`,
+`#%datum`). The same edges are what this rewrite targets: a name that isn't
+bound at the head of a line is looked up as a command (`#%top`), the words
+after it are call arguments (`#%app`), and `$name`, `$(…)` and `async` are
+the shell's own forms. Naming them as the rewrite's input, rather than
+rediscovering them in each construct, keeps the table above complete
+(frontend.md, "The grammar's hooks, named").
+
 ## Order of work
 
 Each step removes a path from the interpreter, and the 267 existing tests are
