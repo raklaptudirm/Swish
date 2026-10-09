@@ -63,12 +63,12 @@ private func runOnTheCore(_ source: String) -> (output: String, problem: String?
 }
 
 @Test func theCorePreludeIsTheLanguagesOwn() {
-    // `members` and the `Error` a `catch` binds are the language's; `select`,
-    // `help` and `JSON` are declared by the shell.
-    let (output, problem) = runOnTheCore("struct P { var x: Int }; [P(x: 1)] | members | get name")
-    #expect(problem != nil) // a pipe is shell syntax: members is called as a function
-    _ = output
-    #expect(runOnTheCore("struct P { var x: Int }; members([P(x: 1)]).count").problem == nil)
+    // What a `catch` binds is the language's; `members`, `select`, `help` and
+    // `JSON` are declared by the shell.
+    let (output, problem) = runOnTheCore(#"do { 1 / 0 } catch { print(error.message) }"#)
+    #expect(problem == nil)
+    #expect(output == "division by zero\n")
+    #expect(runOnTheCore("members([1])").problem != nil)
     #expect(runOnTheCore("[[\"a\": 1]].select(\"a\")").problem != nil)
     #expect(runOnTheCore("let j: JSON = 1").problem != nil)
 }

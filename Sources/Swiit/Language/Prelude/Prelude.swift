@@ -21,16 +21,6 @@ extension Interpreter {
         let text: String
     }
 
-    /// A member `members` describes.
-    struct Member: Equatable, Hashable, Encodable {
-        let type: String
-        let name: String
-        let kind: String
-    }
-
-    /// Describes the input: each type's fields and members.
-    func members(@input _ items: [Any]) -> [Member]
-
     """#
 
     /// Reads the prelude, binding its types, functions and sequence

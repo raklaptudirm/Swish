@@ -4,8 +4,8 @@ import SwishKit
 extension Library {
     /// The shell's own: `ls`, `ps`, `pwd`, `with(env:)`, `readLine`, `history`,
     /// `from`, `to`, `table`, `list` and the types they use (SwishShellLibrary),
-    /// with the prelude declarations that are the shell's: `help`, `select`
-    /// and `JSON`.
+    /// with the prelude declarations that are the shell's: `help`, `members`,
+    /// `select` and `JSON`.
     static func shell(for shell: Shell) -> Library {
         Library(
             types: Bridge.shellTypes, columns: Bridge.shellColumns,
@@ -13,6 +13,7 @@ extension Library {
             declarations: shellDeclarations,
             bodies: [
                 "help": (shell.help().body, nil),
+                "members": (shell.interpreter.members().body, nil),
                 "Sequence.select": selectBody,
             ]
         )
@@ -21,6 +22,16 @@ extension Library {
     /// Swish source read after the core's prelude. The checker works from the
     /// signatures; the bodies are in Swift, found by name (`bodies`).
     private static let shellDeclarations = #"""
+    /// A member `members` describes.
+    struct Member: Equatable, Hashable, Encodable {
+        let type: String
+        let name: String
+        let kind: String
+    }
+
+    /// Describes the input: each type's fields and members.
+    func members(@input _ items: [Any]) -> [Member]
+
     /// A function `help` lists.
     struct Help: Equatable, Hashable, Encodable {
         let name: String

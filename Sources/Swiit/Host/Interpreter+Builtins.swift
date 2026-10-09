@@ -41,9 +41,6 @@ extension Interpreter {
     /// (`sorted`).
     package func builtinBodies() -> [String: (body: FunctionBody, input: Parameter?)] {
         var bodies: [String: (body: FunctionBody, input: Parameter?)] = [:]
-        for function in [members()] {
-            bodies[function.name!] = (function.body, nil)
-        }
         for library in libraries { bodies.merge(library.bodies) { _, new in new } }
         return bodies
     }

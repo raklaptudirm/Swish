@@ -1,11 +1,11 @@
 import Foundation
+import Swiit
 import SwishKit
-import SwishStandardLibrary
 
 extension Interpreter {
     // MARK: Conversions
 
-    package func members() -> Function {
+    func members() -> Function {
         .builtin(
             "members", "Describes the input: each type's fields and members.", [.input("items", .list(.any))],
             .native { shell, args in
