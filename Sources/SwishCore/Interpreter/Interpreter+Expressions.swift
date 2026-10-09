@@ -18,21 +18,8 @@ extension Interpreter {
                 return .list(try commandAccess().jobs())
             case .initializing?, nil: return binding.value
             }
-        case .dollar(let name):
-            if let binding = lookup(name) { return binding.value }
-            if let value = shellLayer?.environment.get(name) { return .string(value) }
-            throw RuntimeError("no variable or environment variable named '\(name)'")
-        case .substitution(let program, let throwing):
-            var status: Int32 = 0
-            var text = try commandAccess().capture { status = try runBlock(program) }
-            while text.last == "\n" { text.removeLast() }
-            let (code, signal) = exitCode(status)
-            let output = Output(text: text, code: code, signal: signal)
-            // Without `try`, failing is just what `.status` says.
-            if throwing && status != 0 {
-                throw RuntimeError("$(…) failed with status \(status)", status: status, output: output)
-            }
-            return .output(output)
+        case .extended(let box):
+            return try box.node.evaluate(in: self)
         case .list(let elements):
             return .list(try elements.map(evaluate))
         case .record(let entries):
@@ -209,13 +196,6 @@ extension Interpreter {
                 return try evaluate(operand)
             } catch let error as RuntimeError {
                 throw FatalError(error: error)
-            }
-        case .async(let target):
-            switch target {
-            case .command(let node):
-                return try commandAccess().start(node, false)
-            case .capture(let node):
-                return try commandAccess().start(node, true)
             }
         case .await(let target, let throwing):
             return try commandAccess().await(try target.map { try evaluate($0) }, throwing)

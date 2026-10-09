@@ -64,13 +64,13 @@ enum StageReceiver: Equatable, Sendable {
 
 struct EnvironmentAssignment: Equatable, Sendable {
     var name: String
-    var value: [StringPart]
+    var value: [WordPart]
 }
 
 /// `> file`, `e>> file`, `< file`, `e>o` and the like.
 struct Redirect: Equatable, Sendable {
     enum Target: Equatable, Sendable {
-        case file([StringPart], Mode)
+        case file([WordPart], Mode)
         /// Another of the command's descriptors, as in `e>o`.
         case descriptor(Int32)
     }
@@ -84,12 +84,14 @@ struct Redirect: Equatable, Sendable {
 }
 
 enum Word: Equatable, Sendable {
-    case text([StringPart])
+    case text([WordPart])
     /// `where { $0.size > 1.mb }`: a closure passed as an argument.
     case closure(ClosureLiteral)
 }
 
-enum StringPart: Equatable, Sendable {
+/// A piece of a command word: a string's parts, and the two a word has that a
+/// string doesn't.
+enum WordPart: Equatable, Sendable {
     case literal(String)
     case expression(Expr)
     /// An unquoted `$xs` or `\(xs)` in a command word. A list there, alone
@@ -98,4 +100,11 @@ enum StringPart: Equatable, Sendable {
     /// Unquoted text with a wildcard, like `*.swift`; only unquoted
     /// wildcards expand to file names.
     case glob(String)
+
+    init(_ part: StringPart) {
+        switch part {
+        case .literal(let text): self = .literal(text)
+        case .expression(let expr): self = .expression(expr)
+        }
+    }
 }

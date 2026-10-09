@@ -5,6 +5,16 @@ extension TypeChecker {
     // MARK: Expressions
 
     /// `expr`'s type, which must fit `expected`.
+    /// The expressions interpolated into a string.
+    func checkParts(_ parts: inout [StringPart]) throws {
+        for index in parts.indices {
+            if case .expression(var expr) = parts[index] {
+                _ = try typeOf(&expr)
+                parts[index] = .expression(expr)
+            }
+        }
+    }
+
     func expect(_ expr: inout Expr, _ expected: TypeAnnotation, _ what: String) throws {
         let type = try typeOf(&expr, expecting: expected)
         guard fits(type, expected) else {
@@ -53,14 +63,10 @@ extension TypeChecker {
             case .structType, .enumType, .module, .swiftType:
                 return .unknown
             }
-        case .dollar(let name):
-            if case .variable(let type, _)? = lookup(name) { return type }
-            return .string
-        case .substitution(var program, let throwing):
-            if throwing { try throwingSite("the command") }
-            try checkBlock(&program, newScope: true)
-            expr = .substitution(program, throwing: throwing)
-            return .output
+        case .extended(var box):
+            let type = try box.node.check(in: self, expecting: expected)
+            expr = .extended(box)
+            return type
         case .attempt(var inner, let kind):
             let sitesBefore = throwingSites
             tryDepth += 1
@@ -85,17 +91,6 @@ extension TypeChecker {
                 }
                 return .optional(type)
             }
-        case .async(var target):
-            switch target {
-            case .command(var pipeline):
-                try checkPipeline(&pipeline)
-                target = .command(pipeline)
-            case .capture(var pipeline):
-                try checkPipeline(&pipeline)
-                target = .capture(pipeline)
-            }
-            expr = .async(target)
-            return .named("Job")
         case .await(var job, let throwing):
             if throwing { try throwingSite("awaiting a job") }
             if job != nil { try expect(&job!, .named("Job"), "what 'await' waits for") }

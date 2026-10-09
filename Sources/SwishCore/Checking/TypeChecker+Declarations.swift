@@ -103,10 +103,8 @@ extension TypeChecker {
             case .switchStatement(let node):
                 // A switch always matches (or fails), so every case returning is enough.
                 return !node.cases.isEmpty && node.cases.allSatisfy { leaves($0.body) }
-            case .pipeline(let pipeline) where orExits:
-                // `exit 1` ends the interpreter.
-                guard pipeline.commands.count == 1, case .text(let parts)? = pipeline.commands[0].words.first else { return false }
-                return parts == [.literal("exit")]
+            case .extended(let box) where orExits:
+                return box.node.leavesProgram
             default:
                 return false
             }

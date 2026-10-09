@@ -19,8 +19,6 @@ enum Statement: Equatable, Sendable {
     /// `x = v`, `p.x += 1`, `xs[0] = v`.
     case assign(Assignment)
     case function(FunctionDecl)
-    /// `env.NAME = value` or `env["NAME"] = value`; nil unsets it.
-    case setEnvironment(name: Expr, value: Expr)
     /// `do { … } catch { … }`: a runtime error in the body runs the
     /// handler with `error` (or the name given) bound to it.
     case doCatch(body: Program, errorName: String, handler: Program?)
@@ -29,9 +27,9 @@ enum Statement: Equatable, Sendable {
     /// `extension Sequence { func filter(…) … }`: the prelude's methods of
     /// every sequence.
     case extensionDecl(name: String, methods: [FunctionDecl])
-    /// `import Tools from "./Tools"`: builds a Swift package and loads the
-    /// functions it exports.
-    case importPlugin(name: String, path: Expr)
+    /// Syntax a layer over the core adds: the shell's `env.NAME = value` and
+    /// `import Tools from "./Tools"` (Syntax/SyntaxExtension.swift).
+    case extended(StatementExtensionBox)
     /// `defer { … }`: runs when the block it's in ends, however it ends,
     /// last deferred first. At a script's top level, when the script ends.
     case deferBlock(Program)
@@ -73,7 +71,8 @@ enum ChainOperator: Equatable, Sendable {
 }
 
 indirect enum Unit: Equatable, Sendable {
-    case pipeline(PipelineNode)
+    /// A command or pipeline of them, from a layer over the core.
+    case extended(UnitExtensionBox)
     case expression(Expr)
     case ifStatement(IfStatement)
     case switchStatement(SwitchStatement)

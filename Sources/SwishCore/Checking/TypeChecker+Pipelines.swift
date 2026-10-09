@@ -372,7 +372,7 @@ extension TypeChecker {
         for index in (command.call ?? []).indices { _ = try typeOf(&command.call![index].value, expecting: .unknown) }
     }
 
-    func checkParts(_ parts: inout [StringPart]) throws {
+    func checkParts(_ parts: inout [WordPart]) throws {
         for index in parts.indices {
             switch parts[index] {
             case .expression(var expr):

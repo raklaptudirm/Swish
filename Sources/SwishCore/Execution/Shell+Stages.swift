@@ -30,7 +30,7 @@ extension Shell {
                 }
             }
             let redirects = try command.redirects.map(interpreter.resolve)
-            let environment = try command.environment.map { ($0.name, try interpreter.expand($0.value)) }
+            let environment = try command.environment.map { ($0.name, try interpreter.join($0.value)) }
             let rest = Array(arguments.dropFirst())
             // Methods of the input first (the sequence's, then its items'),
             // then functions, then programs; `foreign` skips to programs.

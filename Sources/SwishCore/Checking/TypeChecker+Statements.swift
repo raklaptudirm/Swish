@@ -39,10 +39,9 @@ extension TypeChecker {
         case .function(var decl):
             try checkFunction(&decl)
             statement = .function(decl)
-        case .setEnvironment(var name, var value):
-            try expect(&name, .string, "an environment variable's name")
-            _ = try typeOf(&value)
-            statement = .setEnvironment(name: name, value: value)
+        case .extended(var box):
+            try box.node.check(in: self)
+            statement = .extended(box)
         case .doCatch(var body, let errorName, var handler):
             // A `do` with a `catch` handles what its body throws.
             errorContexts.append(ErrorContext(handled: handler != nil || errorContexts.last!.handled,
@@ -60,11 +59,6 @@ extension TypeChecker {
         case .structDecl(var decl):
             try checkStruct(&decl)
             statement = .structDecl(decl)
-        case .importPlugin(let name, var path):
-            try expect(&path, .string, "an import's path")
-            scopes[scopes.count - 1][name] = .module
-            afterImport = true
-            statement = .importPlugin(name: name, path: path)
         case .guardStatement(let condition, var otherwise):
             var node = IfStatement(condition: condition, then: Program(statements: []))
             let bound = try checkCondition(&node)
@@ -113,9 +107,9 @@ extension TypeChecker {
     /// `&&`: an expression there must be a Bool, an Output, or optional.
     func checkUnit(_ unit: inout Unit, condition: Bool) throws {
         switch unit {
-        case .pipeline(var pipeline):
-            try checkPipeline(&pipeline)
-            unit = .pipeline(pipeline)
+        case .extended(var box):
+            try box.node.check(in: self)
+            unit = .extended(box)
         case .expression(var expr):
             let type = try typeOf(&expr)
             if condition {

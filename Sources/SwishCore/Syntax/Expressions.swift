@@ -6,6 +6,12 @@ struct RecordEntry: Equatable, Sendable {
     var value: Expr
 }
 
+/// A piece of a string: text, or an interpolated expression.
+enum StringPart: Equatable, Sendable {
+    case literal(String)
+    case expression(Expr)
+}
+
 struct Argument: Equatable, Sendable {
     var label: String?
     var value: Expr
@@ -24,15 +30,11 @@ indirect enum Expr: Equatable, Sendable {
     case literal(Value)
     case string([StringPart])
     case variable(String)
-    /// `$name`: a Swish variable, falling back to the environment.
-    case dollar(String)
-    /// `$(…)`: the command's Output, whatever its status. Under `try`
-    /// (`throwing`), a non-zero status throws instead.
-    case substitution(Program, throwing: Bool = false)
+    /// Syntax a layer over the core adds: the shell's `$name`, `$(…)` and
+    /// `async …` (Syntax/SyntaxExtension.swift).
+    case extended(ExprExtensionBox)
     /// `try expr`, `try? expr` or `try! expr`.
     case attempt(Expr, TryKind)
-    /// `async swift build` or `async $(curl …)`: starts it in the background.
-    case async(AsyncTarget)
     /// `await job`, or a bare `await` for the most recent job. Under `try`
     /// (`throwing`), a job that failed throws.
     case await(Expr?, throwing: Bool)
@@ -78,12 +80,6 @@ indirect enum Expr: Equatable, Sendable {
     /// A call returning Void, as a value: `()` once it's run, so `try?`
     /// can tell success (`()`) from failure (nil). Only the checker makes these.
     case voidValue(Expr)
-}
-
-indirect enum AsyncTarget: Equatable, Sendable {
-    case command(PipelineNode)
-    /// `async $(…)`: its output is kept, for `await` to give.
-    case capture(PipelineNode)
 }
 
 enum TryKind: Equatable, Sendable {

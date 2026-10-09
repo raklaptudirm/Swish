@@ -122,17 +122,8 @@ extension Interpreter {
             )
             scopes[scopes.count - 1].declare(function, named: decl.name)
             return 0
-        case .setEnvironment(let nameExpr, let valueExpr):
-            guard lookup("env")?.special == .environment else {
-                throw RuntimeError("env is a variable here, not the environment")
-            }
-            let name = try evaluate(nameExpr)
-            guard case .string(let key) = name, !key.isEmpty, !key.contains("=") else {
-                throw RuntimeError("an environment variable's name must be a String without '=', not \(name)")
-            }
-            let value = try evaluate(valueExpr)
-            try environmentAccess().set(key, value == .nothing ? nil : value.description)
-            return 0
+        case .extended(let box):
+            return try box.node.run(in: self)
         case .doCatch(let body, let errorName, let handler):
             do {
                 return try runBlock(body)
@@ -143,13 +134,6 @@ extension Interpreter {
                 guard let handler else { throw reported }
                 return try runBlock(handler, declaring: [errorName: Binding(value: reported.error.value, mutable: false)])
             }
-        case .importPlugin(let name, let pathExpr):
-            let path = try evaluate(pathExpr)
-            guard case .string(let text) = path else {
-                throw RuntimeError("import \(name): the path must be a String, not \(path.typeName)")
-            }
-            try importPlugin(name, from: text)
-            return 0
         case .enumDecl(let decl):
             try declare(decl)
             return 0
@@ -187,16 +171,8 @@ extension Interpreter {
 
     func run(_ unit: Unit, context: UnitContext) throws -> Int32 {
         switch unit {
-        case .pipeline(let node):
-            let status = try commandAccess().run(node, context == .statement)
-            // `try make`: failing throws, with the status in the error.
-            if case .some(let kind) = node.throwing, status != 0 {
-                let (code, signal) = exitCode(status)
-                let error = RuntimeError("\(node.source) failed with status \(status)", status: status,
-                                         output: Output(text: "", code: code, signal: signal))
-                throw kind == .forced ? FatalError(error: error) : error
-            }
-            return status
+        case .extended(let box):
+            return try box.node.run(in: self, context: context)
 
         case .expression(let expr):
             let value = try evaluate(expr)
