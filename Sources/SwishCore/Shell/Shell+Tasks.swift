@@ -13,7 +13,7 @@ extension Shell {
                 return
             }
             guard let function = topLevelFunction(task) else {
-                report("run: no task named '\(task)' in \(path); `run` lists them")
+                interpreter.report("run: no task named '\(task)' in \(path); `run` lists them")
                 lastStatus = 127
                 return
             }

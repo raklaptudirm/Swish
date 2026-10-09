@@ -65,7 +65,7 @@ extension Shell {
     /// call: a Swift type's, a struct's in scope, or a job's.
     func isMemberName(_ name: String) -> Bool {
         if Bridge.stageNames.contains(name) || Job.members.contains { $0.name == name } { return true }
-        return scopes.contains { scope in
+        return interpreter.scopes.contains { scope in
             scope.bindings.values.contains { binding in
                 if case .object(let type as StructType) = binding.value { type.methods[name] != nil } else { false }
             }
@@ -75,14 +75,14 @@ extension Shell {
     /// Whether `name` is a method some type has that a stage could call,
     /// and that makes no sense without something piped in.
     func isStageMethod(_ name: String) -> Bool {
-        sequenceMethods[name] != nil || Bridge.methodNames.contains(name)
+        interpreter.sequenceMethods[name] != nil || Bridge.methodNames.contains(name)
     }
 
     /// What `name` is after a `|`: what the prelude adds to every sequence, or
     /// a method of the items as they come (a `Flow`'s), or one of any bridged
     /// type's. In the order the stage looks.
     func stageMethods(named name: String) -> OverloadSet? {
-        sequenceMethods[name] ?? bridgedStage("Flow", name, receiver: .flow) ?? stageFunctions(named: name)
+        interpreter.sequenceMethods[name] ?? bridgedStage("Flow", name, receiver: .flow) ?? stageFunctions(named: name)
     }
 
     /// Every bridged type's stage members named `name`, as one set of

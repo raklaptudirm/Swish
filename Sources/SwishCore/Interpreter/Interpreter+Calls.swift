@@ -1,7 +1,7 @@
 import Foundation
 import SwishKit
 
-extension Shell {
+extension Interpreter {
     // MARK: Calls
 
     /// Runs `function` with its parameters bound to `arguments`.
@@ -177,7 +177,7 @@ func narrowed(_ set: OverloadSet, _ overload: Int?) -> OverloadSet {
     return OverloadSet(name: set.name, candidates: [set.candidates[overload]])
 }
 
-extension Shell {
+extension Interpreter {
     // MARK: Overloads
 
     /// Picks the overload that `bind` accepts with the lowest penalty, the
@@ -207,5 +207,60 @@ extension Shell {
                 + bestMatches.map { "  " + $0.function.signature }.joined(separator: "\n"))
         }
         return (bestMatches[0].function, bestMatches[0].bindings)
+    }
+}
+
+extension Interpreter {
+    /// A plugin's function as the shell's own: the same binding, help and
+    /// streaming as a Swish `func`. `plugin` names the module it came from.
+    func hostFunction(_ export: ExportedFunction, plugin: String? = nil) -> Function {
+        let parameters = export.parameters.map { parameter in
+            Parameter(
+                label: parameter.label, name: parameter.name, type: TypeAnnotation(parameter.type),
+                variadic: parameter.variadic, defaultValue: parameter.defaultValue.map(Expr.literal),
+                isInput: parameter.isInput, shortFlag: parameter.shortFlag, externalDefault: parameter.defaultSource
+            )
+        }
+        var docs: [String: String] = [:]
+        for parameter in export.parameters {
+            if let doc = parameter.documentation { docs[parameter.name] = doc }
+        }
+        let name = export.name
+        let call = export.call
+        return Function(
+            name: name, parameters: parameters, returnType: export.returnType.map(TypeAnnotation.init),
+            body: .native { _, arguments in
+                do {
+                    return try call(arguments)
+                } catch let error as RuntimeError {
+                    throw error
+                } catch {
+                    throw RuntimeError("\(name): \(error)")
+                }
+            },
+            documentation: Documentation(summary: export.summary ?? "", parameters: docs),
+            plugin: plugin, isThrowing: export.isThrowing
+        )
+    }
+}
+
+extension TypeAnnotation {
+    init(_ type: SwishType) {
+        self = switch type {
+        case .any: .any
+        case .bool: .bool
+        case .int: .int
+        case .double: .double
+        case .string: .string
+        case .record: .record
+        case .filesize: .named("FileSize")
+        case .date: .named("Date")
+        case .output: .output
+        case .function: .function
+        case .named(let name): .named(name)
+        case .list(let element): .list(TypeAnnotation(element))
+        case .optional(let wrapped): .optional(TypeAnnotation(wrapped))
+        @unknown default: .any
+        }
     }
 }

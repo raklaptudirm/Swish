@@ -4,10 +4,10 @@ import SwishKit
 enum FunctionBody {
     case swish(Program)
     /// A builtin written in Swift, called with the bound arguments.
-    case native((Shell, [String: Value]) throws -> Value)
+    case native((Interpreter, [String: Value]) throws -> Value)
     /// A builtin that transforms its `@input` stream lazily, so `first 5`
     /// can stop pulling after five items.
-    case stream((Shell, ValueStream, [String: Value]) throws -> ValueStream)
+    case stream((Interpreter, ValueStream, [String: Value]) throws -> ValueStream)
 }
 
 /// A Swish function or closure, or a builtin written in Swift. Both get the

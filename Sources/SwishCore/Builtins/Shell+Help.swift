@@ -149,7 +149,7 @@ extension Shell {
 
     /// A type as `--help` shows it: an enum as its choices.
     private func placeholder(_ type: TypeAnnotation) -> String {
-        if case .named(let name) = type, let enumType = enumType(named: name) {
+        if case .named(let name) = type, let enumType = interpreter.enumType(named: name) {
             return enumType.cases.filter(\.labels.isEmpty).map(\.name).joined(separator: "|")
         }
         return type.description
@@ -176,9 +176,9 @@ extension Shell {
             name: "help",
             parameters: [Parameter(label: nil, name: "name", type: .optional(.string), defaultValue: .literal(.nothing))],
             returnType: nil,
-            body: .native { shell, args in
-                guard case .string(let name)? = args["name"] else { return .list(shell.helpIndex()) }
-                return .list(try shell.helpOutput(for: name).map(Value.attributed))
+            body: .native { [unowned self] _, args in
+                guard case .string(let name)? = args["name"] else { return .list(self.helpIndex()) }
+                return .list(try self.helpOutput(for: name).map(Value.attributed))
             },
             documentation: Documentation(
                 summary: "Lists every function you can call, or shows one in full, or what a type has.",
@@ -192,7 +192,7 @@ extension Shell {
     func helpIndex() -> [Value] {
         var rows: [(String, Record)] = []
         var seen: Set<String> = []
-        for scope in scopes.reversed() {
+        for scope in interpreter.scopes.reversed() {
             for (name, binding) in scope.bindings where seen.insert(name).inserted {
                 // A name you can't write, like `$json`, is the shell's own.
                 guard Parser.isIdentifier(name), case .function(let set as OverloadSet) = binding.value,
@@ -226,16 +226,16 @@ extension Shell {
 
     /// What `name --help` shows, or what a shell builtin or program is.
     func helpOutput(for name: String) throws -> [AttributedString] {
-        if let set = commandFunctions(named: name) ?? stageMethods(named: name) ?? functionSet(named: name) {
+        if let set = interpreter.commandFunctions(named: name) ?? stageMethods(named: name) ?? functionSet(named: name) {
             return helpLines(for: set)
         } else if let builtin = Shell.shellBuiltins[name], builtin.works {
             return [
                 AttributedString(documentation: builtin.summary), AttributedString(""), HelpStyle.heading("Usage:"),
                 AttributedString(joining: [.init("  ")] + HelpStyle.usage(builtin.usage)),
             ]
-        } else if let type = typeDescription(named: name) {
+        } else if let type = interpreter.typeDescription(named: name) {
             // `help String`: what the type has.
-            return helpLines(for: type)
+            return interpreter.helpLines(for: type)
         } else if let path = findExecutable(name) {
             return [AttributedString(joining: [.init(name, DisplayStyle.command), .init(" is a program, "), .init(path, DisplayStyle.command), .init(": try `")]
                 + HelpStyle.usage("\(name) --help") + [.init("` or `")] + HelpStyle.usage("man \(name)") + [.init("`.")])]
@@ -245,7 +245,7 @@ extension Shell {
 
     /// A function that isn't a command, like `with`.
     private func functionSet(named name: String) -> OverloadSet? {
-        guard case .function(let set as OverloadSet)? = lookup(name)?.value else { return nil }
+        guard case .function(let set as OverloadSet)? = interpreter.lookup(name)?.value else { return nil }
         return set
     }
 }

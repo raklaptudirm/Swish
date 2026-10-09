@@ -69,7 +69,7 @@ final class KeyPathValue: Callable, @unchecked Sendable {
 
     var description: String { "\\." + path.joined(separator: ".") }
 
-    func read(from value: Value, in shell: Shell) throws -> Value {
+    func read(from value: Value, in shell: Interpreter) throws -> Value {
         try path.reduce(value) { try shell.member($1, of: $0) }
     }
 }

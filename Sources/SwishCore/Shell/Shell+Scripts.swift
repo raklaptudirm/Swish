@@ -35,11 +35,11 @@ extension Shell {
     /// `try!` stopped it. A top-level `defer` runs when it's all over.
     func runFile(at path: String, arguments: [String], then finish: (Program) -> Void) -> Int32 {
         guard let data = FileManager.default.contents(atPath: path) else {
-            report("\(path): \(errorMessage(errno).lowercased())")
+            interpreter.report("\(path): \(errorMessage(errno).lowercased())")
             return 127
         }
-        scopes[0].bindings["args"] = Binding(value: .list(arguments.map(Value.string)), mutable: false)
-        scriptPath = URL(fileURLWithPath: path).standardizedFileURL.path
+        interpreter.scopes[0].bindings["args"] = Binding(value: .list(arguments.map(Value.string)), mutable: false)
+        interpreter.file = URL(fileURLWithPath: path).standardizedFileURL.path
         scriptDirectory = URL(fileURLWithPath: path).standardizedFileURL.deletingLastPathComponent().path
         // Parsed whole, so doc comments reach their functions and a syntax
         // error anywhere stops the script before any of it runs; then run a
@@ -49,9 +49,9 @@ extension Shell {
         // `#!/usr/bin/env swish`, so it runs as a program; the line stays,
         // blank, so line numbers do too.
         if source.hasPrefix("#!") { source = String(source.drop { $0 != "\n" }) }
-        switch parse(source) {
+        switch interpreter.parse(source) {
         case .failure(let error):
-            report("\(path): syntax error: \(error)")
+            interpreter.report("\(path): syntax error: \(error)")
             return 2
         case .success(let parsed):
             program = parsed
@@ -59,7 +59,7 @@ extension Shell {
         // Checked whole too: a type error anywhere runs none of it.
         guard let program = typeCheck(program, file: path) else { return lastStatus }
         var deferred: [Program] = []
-        defer { runDeferred(deferred) }
+        defer { interpreter.runDeferred(deferred) }
         // Functions and types first, so any line can use them.
         runReportingErrors(Program(statements: program.statements.filter {
             if case .function = $0 { return true }
@@ -80,7 +80,7 @@ extension Shell {
 
     /// A function the file declared at its top level.
     func topLevelFunction(_ name: String) -> OverloadSet? {
-        guard let binding = scopes[1].bindings[name], binding.isFunction,
+        guard let binding = interpreter.scopes[1].bindings[name], binding.isFunction,
               case .function(let set as OverloadSet) = binding.value else { return nil }
         return set
     }
@@ -98,15 +98,15 @@ extension Shell {
             lastStatus = 128 + interrupt.signal
             endingSignal = interrupt.signal
         } catch let fatal as FatalError {
-            report("error: \(fatal.error)")
+            interpreter.report("error: \(fatal.error)")
             lastStatus = fatal.error.status
         } catch let error as RuntimeError {
-            report("error: \(error)")
+            interpreter.report("error: \(error)")
             lastStatus = error.status
         } catch is AlreadyReported {
             lastStatus = 1
         } catch {
-            report("error: \(error)")
+            interpreter.report("error: \(error)")
             lastStatus = 1
         }
     }

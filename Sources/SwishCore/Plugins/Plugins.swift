@@ -144,10 +144,10 @@ extension Shell {
     /// function gets another overload, unless the signature is the same;
     /// nothing is bound if anything clashes. `Name` holds them all too.
     private func register(_ name: String, _ exported: [ExportedFunction]) throws {
-        let global = scopes[1]
+        let global = interpreter.scopes[1]
         var sets: [String: [Function]] = [:]
         for export in exported {
-            let function = hostFunction(export, plugin: name)
+            let function = interpreter.hostFunction(export, plugin: name)
             var candidates = sets[export.name] ?? existingCandidates(export.name, importing: name)
             if let clash = candidates.first(where: { $0.hasSameSignature(as: function) }) {
                 throw RuntimeError("import \(name): \(clash.signature) is already defined")
@@ -158,7 +158,7 @@ extension Shell {
         var enums: [String: EnumType] = [:]
         for parameter in exported.flatMap(\.parameters) {
             for type in parameter.enums {
-                if let bound = lookup(type.name)?.value {
+                if let bound = interpreter.lookup(type.name)?.value {
                     guard case .object(let existing as EnumType) = bound, existing === type else {
                         throw RuntimeError("import \(name): its enum \(type.name) clashes with an existing \(type.name)")
                     }
@@ -166,7 +166,7 @@ extension Shell {
                 enums[type.name] = type
             }
         }
-        if lookup(name) != nil {
+        if interpreter.lookup(name) != nil {
             throw RuntimeError("import \(name): '\(name)' is already defined")
         }
 
@@ -186,43 +186,11 @@ extension Shell {
     /// The overloads `name` already has, which an import adds to; a
     /// variable of that name can't be.
     private func existingCandidates(_ name: String, importing module: String) -> [Function] {
-        guard let binding = lookup(name) else { return [] }
+        guard let binding = interpreter.lookup(name) else { return [] }
         if binding.isFunction, case .function(let set as OverloadSet) = binding.value {
             return set.candidates
         }
         return []
-    }
-
-    /// A plugin's function as the shell's own: the same binding, help and
-    /// streaming as a Swish `func`. `plugin` names the module it came from.
-    func hostFunction(_ export: ExportedFunction, plugin: String? = nil) -> Function {
-        let parameters = export.parameters.map { parameter in
-            Parameter(
-                label: parameter.label, name: parameter.name, type: TypeAnnotation(parameter.type),
-                variadic: parameter.variadic, defaultValue: parameter.defaultValue.map(Expr.literal),
-                isInput: parameter.isInput, shortFlag: parameter.shortFlag, externalDefault: parameter.defaultSource
-            )
-        }
-        var docs: [String: String] = [:]
-        for parameter in export.parameters {
-            if let doc = parameter.documentation { docs[parameter.name] = doc }
-        }
-        let name = export.name
-        let call = export.call
-        return Function(
-            name: name, parameters: parameters, returnType: export.returnType.map(TypeAnnotation.init),
-            body: .native { _, arguments in
-                do {
-                    return try call(arguments)
-                } catch let error as RuntimeError {
-                    throw error
-                } catch {
-                    throw RuntimeError("\(name): \(error)")
-                }
-            },
-            documentation: Documentation(summary: export.summary ?? "", parameters: docs),
-            plugin: plugin, isThrowing: export.isThrowing
-        )
     }
 }
 
@@ -242,25 +210,4 @@ final class Module: SwishObject, @unchecked Sendable {
     func member(_ name: String) -> Value? { members[name] }
     var fields: Record? { nil }
     var description: String { "module \(name)" }
-}
-
-extension TypeAnnotation {
-    init(_ type: SwishType) {
-        self = switch type {
-        case .any: .any
-        case .bool: .bool
-        case .int: .int
-        case .double: .double
-        case .string: .string
-        case .record: .record
-        case .filesize: .named("FileSize")
-        case .date: .named("Date")
-        case .output: .output
-        case .function: .function
-        case .named(let name): .named(name)
-        case .list(let element): .list(TypeAnnotation(element))
-        case .optional(let wrapped): .optional(TypeAnnotation(wrapped))
-        @unknown default: .any
-        }
-    }
 }

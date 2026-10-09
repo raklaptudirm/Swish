@@ -8,7 +8,7 @@ extension TypeChecker {
         for scope in scopes.reversed() {
             if let symbol = scope[name] { return symbol }
         }
-        guard let binding = shell.lookup(name) else { return nil }
+        guard let binding = interpreter.lookup(name) else { return nil }
         switch binding.special {
         case .environment?: return .environment
         case .jobs?: return .variable(.list(.named("Job")), mutable: false)
@@ -30,7 +30,7 @@ extension TypeChecker {
                 return signature
             })
         default:
-            return .variable(shell.staticTypes[name] ?? type(of: binding.value), mutable: binding.mutable)
+            return .variable(interpreter.staticTypes[name] ?? type(of: binding.value), mutable: binding.mutable)
         }
     }
 
@@ -85,7 +85,7 @@ extension TypeChecker {
     }
 
     func enumInfo(_ type: EnumType) -> EnumInfo {
-        let payloads = shell.enumPayloadTypes[ObjectIdentifier(type)] ?? [:]
+        let payloads = interpreter.enumPayloadTypes[ObjectIdentifier(type)] ?? [:]
         let cases = type.cases.map { enumCase in
             (enumCase.name, zip(enumCase.labels, payloads[enumCase.name] ?? enumCase.labels.map { _ in .unknown })
                 .map { AssociatedValue(label: $0, type: $1) })
@@ -97,6 +97,6 @@ extension TypeChecker {
         default: nil
         }
         return EnumInfo(name: type.name, cases: cases, rawType: rawType,
-                        conformances: shell.enumConformances[ObjectIdentifier(type)] ?? [])
+                        conformances: interpreter.enumConformances[ObjectIdentifier(type)] ?? [])
     }
 }

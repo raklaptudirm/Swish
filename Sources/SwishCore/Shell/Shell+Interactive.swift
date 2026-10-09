@@ -11,7 +11,7 @@ extension Shell {
         editor.history = History(path: History.defaultPath)
         editor.continuationPrompt = "…".styled(DisplayStyle.dim) + " "
         editor.isComplete = { [unowned self] text in
-            if case .failure(let error) = parse(text), error.incomplete { return false }
+            if case .failure(let error) = interpreter.parse(text), error.incomplete { return false }
             return true
         }
         editor.highlight = { [unowned self] in highlightStyles($0) }
@@ -32,11 +32,11 @@ extension Shell {
                 pending = ""
             case .line(let line):
                 pending = pending.isEmpty ? line : pending + "\n" + line
-                switch parse(pending) {
+                switch interpreter.parse(pending) {
                 case .failure(let error) where error.incomplete:
                     continue
                 case .failure(let error):
-                    report("syntax error: \(error)")
+                    interpreter.report("syntax error: \(error)")
                     lastStatus = 2
                 case .success(let program):
                     // Checked first, as everywhere else: a type error runs nothing.
@@ -54,11 +54,11 @@ extension Shell {
         var pending = ""
         while let line = nextLine() {
             pending = pending.isEmpty ? line : pending + "\n" + line
-            switch parse(pending) {
+            switch interpreter.parse(pending) {
             case .failure(let error) where error.incomplete:
                 continue
             case .failure(let error):
-                report("syntax error: \(error)")
+                interpreter.report("syntax error: \(error)")
                 lastStatus = 2
             case .success(let program):
                 if let program = typeCheck(program) { runReportingErrors(program) }
@@ -95,7 +95,7 @@ extension Shell {
         do {
             if let custom = try customPrompt() { return custom }
         } catch {
-            report("prompt: \(error)")
+            interpreter.report("prompt: \(error)")
         }
         return defaultPrompt()
     }

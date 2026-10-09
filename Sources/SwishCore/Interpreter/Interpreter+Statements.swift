@@ -13,7 +13,7 @@ enum UnitContext {
 
 let maxCallDepth = 10_000
 
-extension Shell {
+extension Interpreter {
     // MARK: Statements
 
     func run(_ program: Program) throws -> Int32 {
@@ -273,7 +273,7 @@ extension Shell {
             return
         }
         let value = try evaluate(sequence)
-        if let flow = Shell.flow(of: value) {
+        if let flow = Interpreter.flow(of: value) {
             while let element = try flow.read() {
                 guard try body(element) else { return }
             }
@@ -282,7 +282,7 @@ extension Shell {
         let elements: AnyIterator<Value>
         if case .string(let text) = value {
             elements = AnyIterator(text.lazy.map { .string(String($0)) }.makeIterator())
-        } else if let items = Shell.items(of: value) {
+        } else if let items = Interpreter.items(of: value) {
             elements = items
         } else {
             throw RuntimeError("can't iterate over \(value.typeName)")

@@ -6,7 +6,7 @@ extension Shell {
     func stages(for node: PipelineNode) throws -> [Stage] {
         var stages: [Stage] = []
         if let input = node.input {
-            stages.append(.value(try evaluate(input)))
+            stages.append(.value(try interpreter.evaluate(input)))
         }
         for (index, command) in node.commands.enumerated() {
             // After a `|`, a name can be a method of what's piped in.
@@ -14,8 +14,8 @@ extension Shell {
             var arguments: [CommandArgument] = []
             for word in command.words {
                 switch word {
-                case .text(let parts): arguments += try expandWord(parts).map(CommandArgument.text)
-                case .closure(let literal): arguments.append(.value(try evaluate(.closure(literal))))
+                case .text(let parts): arguments += try interpreter.expandWord(parts).map(CommandArgument.text)
+                case .closure(let literal): arguments.append(.value(try interpreter.evaluate(.closure(literal))))
                 }
             }
             guard case .text(let name) = arguments[0] else {
@@ -26,11 +26,11 @@ extension Shell {
                 // `.case` arguments wait for their parameter's type.
                 arguments += try call.map { argument in
                     if case .caseLiteral = argument.value { return .call(argument) }
-                    return .call(Argument(label: argument.label, value: .literal(try evaluate(argument.value))))
+                    return .call(Argument(label: argument.label, value: .literal(try interpreter.evaluate(argument.value))))
                 }
             }
-            let redirects = try command.redirects.map(resolve)
-            let environment = try command.environment.map { ($0.name, try expand($0.value)) }
+            let redirects = try command.redirects.map(interpreter.resolve)
+            let environment = try command.environment.map { ($0.name, try interpreter.expand($0.value)) }
             let rest = Array(arguments.dropFirst())
             // Methods of the input first (the sequence's, then its items'),
             // then functions, then programs; `foreign` skips to programs.
@@ -41,11 +41,11 @@ extension Shell {
                let members = bridgedStage(type, name, receiver: receiver, bindings: bindings) {
                 // `xs | max`: a Swift member, as the checker found it.
                 stages.append(.function(narrowed(members, command.overload), rest, redirects: redirects, environment: environment))
-            } else if !command.external, piped, resolution == .sequenceMethod, let methods = sequenceMethods[name] {
+            } else if !command.external, piped, resolution == .sequenceMethod, let methods = interpreter.sequenceMethods[name] {
                 stages.append(.function(narrowed(methods, command.overload), rest, redirects: redirects, environment: environment))
             } else if !command.external, piped, resolution == .itemMethod {
                 stages.append(.method(name, rest, redirects: redirects, environment: environment))
-            } else if !command.external, let functions = commandFunctions(named: name) {
+            } else if !command.external, let functions = interpreter.commandFunctions(named: name) {
                 stages.append(.function(narrowed(functions, command.overload), rest, redirects: redirects, environment: environment))
             } else if !command.external, !piped, isStageMethod(name), findExecutable(name) == nil {
                 throw RuntimeError("\(name) is a method: pipe something into it, as in `ls | \(name)`, or call it on a value, as in `xs.\(name)(…)`")

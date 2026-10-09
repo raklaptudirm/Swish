@@ -49,7 +49,7 @@ private let tools = "/" + #filePath.split(separator: "/").dropLast(3).joined(sep
     let other = Shell()
     let clash = #"func greet(_ name: String, times: Int = 1, loud: Bool = false) {}; do { import Tools from "\#(tools)" } catch { error.message }"#
     #expect(try output(clash, in: other) == #""import Tools: greet(_ name: String, times: Int, loud: Bool) is already defined""# + "\n")
-    #expect(other.lookup("volume") == nil && other.lookup("Tools") == nil)
+    #expect(other.interpreter.lookup("volume") == nil && other.interpreter.lookup("Tools") == nil)
 
     #expect(try output(#"do { import Nope from "/nonexistent" } catch { error.message }"#, in: other)
         == #""import Nope: no Swift package at /nonexistent (no Package.swift)""# + "\n")

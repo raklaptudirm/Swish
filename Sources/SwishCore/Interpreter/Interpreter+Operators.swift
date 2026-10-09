@@ -1,7 +1,7 @@
 import Foundation
 import SwishKit
 
-extension Shell {
+extension Interpreter {
     func intRange(_ op: BinaryOperator, _ lower: Value, _ upper: Value) throws -> Range<Int> {
         guard case .int(let low) = lower, case .int(let high) = upper else {
             throw RuntimeError("a range needs Int bounds, not \(lower.typeName) and \(upper.typeName)")

@@ -33,7 +33,7 @@ struct TypeDescription {
     let members: [Member]
 }
 
-extension Shell {
+extension Interpreter {
     /// The type named `name`, if Swish knows one by that name.
     func typeDescription(named name: String) -> TypeDescription? {
         if let bridged = Bridge.types[name] { return describe(bridged) }
@@ -47,7 +47,7 @@ extension Shell {
     /// The name `typeDescription` knows a value's type by.
     func describedTypeName(of value: Value) -> String? {
         if case .record(let record) = value { return record.typeName }
-        return TypeChecker(shell: self).type(of: value).swiftType?.name
+        return TypeChecker(interpreter: self).type(of: value).swiftType?.name
     }
 
     private func describe(_ type: BridgedType) -> TypeDescription {

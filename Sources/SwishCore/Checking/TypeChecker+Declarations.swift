@@ -10,7 +10,7 @@ extension TypeChecker {
         var overloads: [Signature] = []
         if case .functions(let existing)? = scopes[scopes.count - 1][decl.name] {
             overloads = existing
-        } else if scopes.count == 1, let binding = shell.scopes.last?.bindings[decl.name], binding.isFunction,
+        } else if scopes.count == 1, let binding = interpreter.scopes.last?.bindings[decl.name], binding.isFunction,
                   case .function(let set as OverloadSet) = binding.value {
             // At the top, it joins what earlier entries declared.
             overloads = set.candidates.map(signature)
@@ -104,7 +104,7 @@ extension TypeChecker {
                 // A switch always matches (or fails), so every case returning is enough.
                 return !node.cases.isEmpty && node.cases.allSatisfy { leaves($0.body) }
             case .pipeline(let pipeline) where orExits:
-                // `exit 1` ends the shell.
+                // `exit 1` ends the interpreter.
                 guard pipeline.commands.count == 1, case .text(let parts)? = pipeline.commands[0].words.first else { return false }
                 return parts == [.literal("exit")]
             default:

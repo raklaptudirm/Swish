@@ -9,7 +9,7 @@ import SwishKit
 /// text) of a member of `type`; nil if there's no such member or run, and the
 /// run's own style (itself possibly nil) otherwise.
 func runStyle(of word: String, inSignature signature: String, ofType type: String, shell: Shell) -> DisplayStyle?? {
-    guard let members = shell.typeDescription(named: type)?.members,
+    guard let members = shell.interpreter.typeDescription(named: type)?.members,
           let text = members.first(where: { $0.signature.plain == signature })?.signature else { return nil }
     return text.runs.first { String(text[$0.range].characters) == word }.map { $0.swish.displayStyle }
 }

@@ -1,7 +1,7 @@
 import Foundation
 import SwishKit
 
-extension Shell {
+extension Interpreter {
     func lookup(_ name: String) -> Binding? {
         scopeHolding(name)?.bindings[name]
     }

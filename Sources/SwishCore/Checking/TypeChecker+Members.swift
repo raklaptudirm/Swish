@@ -9,7 +9,7 @@ extension TypeChecker {
     func sequenceMethodType(
         _ name: String, on base: TypeAnnotation, _ callee: inout Expr, _ arguments: inout [Argument]
     ) throws -> TypeAnnotation? {
-        guard let methods = shell.sequenceMethods[name], let element = sequenceElement(base) else { return nil }
+        guard let methods = interpreter.sequenceMethods[name], let element = sequenceElement(base) else { return nil }
         // `select`'s result is a tuple of the fields it names, which Swift could
         // only type with parameter packs over key paths; until then its rule is
         // here (Docs/Design/foundations.md, open questions).

@@ -94,7 +94,7 @@ extension TypeChecker {
         }
         // A stage is a method call: of the items collected, then of each
         // item, then a function, then a program (see foundations.md).
-        if input != nil, let methods = shell.sequenceMethods[name] {
+        if input != nil, let methods = shell!.interpreter.sequenceMethods[name] {
             // The prelude's additions, and its streaming versions of Swift's
             // methods; where none fits, Swift's own.
             let attempt = command
@@ -128,11 +128,11 @@ extension TypeChecker {
         if input != nil { command.resolution = .other }
         // A method with nothing piped in, and no function or program by
         // that name, has nothing to work on.
-        if input == nil, shell.isStageMethod(name), lookup(name) == nil, shell.shellLayer?.commands.hasProgram(name) != true {
+        if input == nil, shell!.isStageMethod(name), lookup(name) == nil, shell!.interpreter.shellLayer?.commands.hasProgram(name) != true {
             throw TypeError("\(name) is a method: pipe something into it, as in `ls | \(name)`, or call it on a value, as in `xs.\(name)(…)`")
         }
         if case .functions(let overloads)? = lookup(name) {
-            let runtime = shell.commandFunctions(named: name)
+            let runtime = shell!.interpreter.commandFunctions(named: name)
             return try checkFunctionStage(name, overloads, runtime, &command, piped: input != nil)
         }
         // Only a program is left, and a program only takes words.
@@ -164,7 +164,7 @@ extension TypeChecker {
         case .each, .value: element
         }
         guard !command.external, let (bridgedType, bindings) = bridged(receiverType),
-              let runtime = shell.bridgedStage(bridgedType.name, name, receiver: receiver, bindings: bindings) else { return nil }
+              let runtime = shell!.bridgedStage(bridgedType.name, name, receiver: receiver, bindings: bindings) else { return nil }
         let signatures = (receiver == .flow ? Bridge.flowMembers(name) : Bridge.stageMembers(bridgedType.name, name)).enumerated().map { position, entry in
             Signature(name: name, parameters: [Bridge.receiverParameter(receiver, element: element)] + entry.member.parameters,
                       returns: entry.member.returns, isThrowing: entry.member.isThrowing,
@@ -232,7 +232,7 @@ extension TypeChecker {
             if methods.count == 1 && methods[0].isMutating {
                 throw TypeError("\(typeName).\(name) is mutating, and a piped value can't change: call it on a variable")
             }
-            if case .object(let type as StructType)? = shell.lookup(typeName)?.value, let set = type.methods[name] {
+            if case .object(let type as StructType)? = shell!.interpreter.lookup(typeName)?.value, let set = type.methods[name] {
                 return try checkCommandLine(name, set, methods, &command, bindings: [:], excludingInput: false)
             }
             try checkClosures(&command, expecting: [:])
@@ -319,11 +319,11 @@ extension TypeChecker {
             }
         }
         // `--help` shows help instead of running.
-        if shell.helpRequested(arguments, for: set) { return .string }
+        if shell!.helpRequested(arguments, for: set) { return .string }
         let function: Function
         let bound: [String: Value]
         do {
-            (function, bound) = try shell.resolve(set) { try self.shell.bind(commandLine: arguments, to: $0, excludingInput: excludingInput) }
+            (function, bound) = try shell!.interpreter.resolve(set) { try self.shell!.bind(commandLine: arguments, to: $0, excludingInput: excludingInput) }
         } catch let error as RuntimeError {
             throw TypeError(error.description)
         }

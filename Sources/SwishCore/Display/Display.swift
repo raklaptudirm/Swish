@@ -7,12 +7,7 @@ import SwishStandardLibrary
 /// The rest are still there for `filter`, `select` and `get`, and `table`
 /// shows everything. Each type says so itself (`Tabular`), beside where it's
 /// made.
-let standardDisplayRegistry = DisplayRegistry(
-    columns: Bridge.standardColumns.merging([
-        "Job": Job.columns,
-        "Help": Shell.helpColumns,
-    ]) { first, _ in first },
-    enumStyles: Bridge.standardEnumStyles)
+let standardDisplayRegistry = DisplayRegistry(columns: Bridge.standardColumns, enumStyles: Bridge.standardEnumStyles)
 
 extension DisplayFormatter {
     /// Writes with `write`, fitting what the stream is: a terminal's width
@@ -23,12 +18,13 @@ extension DisplayFormatter {
     }
 }
 
-extension Shell {
+extension Interpreter {
     /// How types show in a table: the standard library's and the shell's own,
     /// and the columns of the structs declared in Swish that say so
     /// (`Tabular`).
     var displayRegistry: DisplayRegistry {
         var registry = standardDisplayRegistry
+        registry.columns.merge(shellLayer?.columns ?? [:]) { first, _ in first }
         for scope in scopes {
             for case .object(let type as StructType) in scope.bindings.values.map(\.value)
             where type.conformances.contains("Tabular") && registry.columns[type.name] == nil {
@@ -42,7 +38,7 @@ extension Shell {
     }
 }
 
-extension Shell {
+extension Interpreter {
     /// Shows a value to a person: a table for a list of records, a
     /// key/value list for one record, and otherwise its text, or its
     /// `debugDescription` for a bare value (`let r = $(echo hi); r`).

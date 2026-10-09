@@ -1,10 +1,10 @@
 import Foundation
 import SwishKit
 
-enum Interpreter {
+extension Expr {
     /// A string literal, interpolated or not.
-    static func isStringExpression(_ expr: Expr) -> Bool {
-        switch expr {
+    var isStringExpression: Bool {
+        switch self {
         case .literal(.string), .string: true
         default: false
         }

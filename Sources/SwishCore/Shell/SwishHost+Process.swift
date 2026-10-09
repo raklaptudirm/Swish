@@ -38,7 +38,30 @@ extension ShellLayer {
                 jobs: { [unowned shell] in
                     shell.updateJobs() // So their states are current.
                     return shell.jobs.map { .object($0) }
-                })
+                },
+                await: { [unowned shell] value, throwing in
+                    let job: Job
+                    if let value {
+                        guard case .object(let object as Job) = value else {
+                            throw RuntimeError("await needs a Job, not \(value.typeName)")
+                        }
+                        job = object
+                    } else {
+                        guard let latest = shell.jobs.last else { throw RuntimeError("there are no jobs to await") }
+                        job = latest
+                    }
+                    let output = try shell.awaitJob(job)
+                    if throwing && !output.succeeded {
+                        throw RuntimeError("\(job.source) failed with status \(job.status)", status: job.status, output: output)
+                    }
+                    return .output(output)
+                },
+                callSequenceMethod: { [unowned shell] methods, items, arguments in
+                    try shell.callSequenceMethod(methods, on: items, arguments)
+                }),
+            importPlugin: { [unowned shell] name, path in try shell.importPlugin(name, from: path) },
+            history: { [unowned shell] in shell.historyEntries },
+            columns: ["Job": Job.columns, "Help": Shell.helpColumns]
         )
     }
 }
@@ -46,20 +69,6 @@ extension ShellLayer {
 extension Interrupted {
     /// The signal that asked the shell to stop: the shell's reason is one.
     var signal: Int32 { reason.code }
-}
-
-extension Shell {
-    /// The environment, or a refusal where there is no shell layer.
-    func environmentAccess() throws -> EnvironmentAccess {
-        guard let layer = shellLayer else { throw RuntimeError("the environment isn't available here") }
-        return layer.environment
-    }
-
-    /// Commands, jobs and `$(…)`, or a refusal where there is no shell layer.
-    func commandAccess() throws -> CommandAccess {
-        guard let layer = shellLayer else { throw RuntimeError("commands aren't available here") }
-        return layer.commands
-    }
 }
 
 extension StreamTraits {

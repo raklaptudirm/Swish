@@ -115,7 +115,11 @@ final class TypeChecker {
         }
     }
 
-    unowned let shell: Shell
+    unowned let interpreter: Interpreter
+    /// The shell, when checking its commands: pipeline stages are typed with
+    /// the shell's help on what a name is. Temporary, with the pipeline
+    /// checker itself (Docs/Design/boundaries.md).
+    unowned let shell: Shell?
     /// The type whose member was last looked up, so a JSON field can be
     /// written into a lookup that runs.
     var lastMemberBase: TypeAnnotation?
@@ -149,7 +153,8 @@ final class TypeChecker {
     var afterImport = false
     var line: Int?
 
-    init(shell: Shell) {
+    init(interpreter: Interpreter, shell: Shell? = nil) {
+        self.interpreter = interpreter
         self.shell = shell
     }
 

@@ -4,12 +4,14 @@ import SwishKit
 /// Builtins written in Swift. They're ordinary functions to the rest of
 /// the shell: the same flags, help, overloads and streaming as Swish ones.
 
-extension Shell {
-    func installBuiltinFunctions() {
+extension Interpreter {
+    /// `provided` are bodies for prelude functions the host owns (the shell's
+    /// `help`, which describes its builtins and programs).
+    func installBuiltinFunctions(providing provided: [String: FunctionBody] = [:]) {
         scopes[0].bindings["env"] = Binding(value: .nothing, mutable: false, special: .environment)
         scopes[0].bindings["jobs"] = Binding(value: .nothing, mutable: false, special: .jobs)
         scopes[0].bindings["args"] = Binding(value: .list([]), mutable: false)
-        installPrelude()
+        installPrelude(providing: provided)
         installJSONAccess()
         installStandardFunctions()
         // Swift's types by name, for their initializers and static members.
@@ -72,11 +74,12 @@ extension Shell {
     /// Each builtin's body, by name, for the prelude's declarations; a
     /// sequence method's also says how it reads the sequence: each item
     /// (`filter`), or all of them (`sorted`).
-    func builtinBodies() -> [String: (body: FunctionBody, input: Parameter?)] {
+    func builtinBodies(providing provided: [String: FunctionBody]) -> [String: (body: FunctionBody, input: Parameter?)] {
         var bodies: [String: (body: FunctionBody, input: Parameter?)] = [:]
-        for function in [members(), help()] {
+        for function in [members()] {
             bodies[function.name!] = (function.body, nil)
         }
+        for (name, body) in provided { bodies[name] = (body, nil) }
         for method in [select()] {
             let input = method.parameters.first(where: \.isInput)!
             // Each item is an Element; all of them, a list of Elements.

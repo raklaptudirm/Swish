@@ -11,8 +11,10 @@ enum Boundaries {
     static let groups: [(name: String, pattern: String)] = [
         ("grammar", #"\b(PipelineNode|CommandNode|StageResolution|StageReceiver|Redirect|ResolvedRedirect)\b|\.pipeline\b"#),
         ("chain", #"\b(Chain|Unit)\b"#),
-        ("env", #"\b(shellLayer|environmentAccess|isEnvironment|environmentRecord)\b|\.environment\b"#),
-        ("jobs", #"\b(Job|jobs|commandAccess)\b"#),
+        ("env", #"\b(environmentAccess|isEnvironment|environmentRecord)\b|\.environment\b"#),
+        ("jobs", #"\b(Job|jobs)\b"#),
+        ("layer", #"\b(shellLayer|commandAccess)\b"#),
+        ("shell", #"\bShell\b"#),
         ("status", #"\b(lastStatus|lastSignalStatus)\b"#),
         ("file", #"\b(scriptPath|scriptDirectory)\b"#),
         ("history", #"\bhistoryEntries\b"#),

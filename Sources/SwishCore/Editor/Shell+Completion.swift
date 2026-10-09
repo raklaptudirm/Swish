@@ -29,8 +29,8 @@ extension Shell {
             candidates = commandCandidates(prefix: word, externalOnly: false)
                 .filter { !["variable", "keyword"].contains($0.description) }
         } else if word.hasPrefix("-") && context.quote == nil,
-                  let functions = sequenceMethods[context.words[0]] ?? bridgedStage("Flow", context.words[0], receiver: .flow)
-                    ?? commandFunctions(named: context.words[0]) ?? stageFunctions(named: context.words[0]) {
+                  let functions = interpreter.sequenceMethods[context.words[0]] ?? bridgedStage("Flow", context.words[0], receiver: .flow)
+                    ?? interpreter.commandFunctions(named: context.words[0]) ?? stageFunctions(named: context.words[0]) {
             candidates = flagCandidates(for: functions, prefix: word)
         } else {
             candidates = pathCandidates(for: word, quote: context.quote, executablesOnly: false)
@@ -40,7 +40,7 @@ extension Shell {
 
     private func variableCandidates(prefix: String) -> [LineEditor.Candidate] {
         var names = Set(ProcessInfo.processInfo.environment.keys)
-        for scope in scopes {
+        for scope in interpreter.scopes {
             for (name, binding) in scope.bindings where !binding.isFunction { names.insert(name) }
         }
         return names.filter { $0.hasPrefix(prefix) }.sorted().map {
@@ -51,7 +51,7 @@ extension Shell {
     private func commandCandidates(prefix: String, externalOnly: Bool) -> [LineEditor.Candidate] {
         var described: [String: String] = [:]
         if !externalOnly {
-            for scope in scopes {
+            for scope in interpreter.scopes {
                 for (name, binding) in scope.bindings {
                     guard binding.isFunction, case .function(let set as OverloadSet) = binding.value else {
                         described[name] = "variable"
@@ -62,8 +62,8 @@ extension Shell {
                 }
             }
             for builtin in Shell.shellBuiltins.values where builtin.works { described[builtin.name] = "shell builtin" }
-            for name in Set(sequenceMethods.keys).union(Bridge.flowNames) {
-                let set = sequenceMethods[name] ?? bridgedStage("Flow", name, receiver: .flow)
+            for name in Set(interpreter.sequenceMethods.keys).union(Bridge.flowNames) {
+                let set = interpreter.sequenceMethods[name] ?? bridgedStage("Flow", name, receiver: .flow)
                 described[name] = set?.candidates.first?.documentation.map { String($0.summary.prefix { $0 != "\n" }) } ?? "sequence method"
             }
             for keyword in Parser.lineStarts {

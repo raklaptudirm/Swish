@@ -11,7 +11,7 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 @Test func closuresKeepOnlyWhatTheyUse() throws {
     let shell = Shell()
     #expect(try output("func f(_ i: Int) -> () -> Int { let g = { i + 1 }; let unused = [1, 2]; return g }; let h = f(1); h()", in: shell) == "2\n")
-    guard case .function(let closure as Function)? = shell.lookup("h")?.value else {
+    guard case .function(let closure as Function)? = shell.interpreter.lookup("h")?.value else {
         Issue.record("h isn't a closure")
         return
     }

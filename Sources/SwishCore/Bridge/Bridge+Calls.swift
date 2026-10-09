@@ -2,7 +2,7 @@ import Foundation
 import SwishKit
 import SystemPackage
 
-extension Shell {
+extension Interpreter {
     /// Runs a bridged member: binds its arguments as a call binds them, and
     /// its glue does the rest.
     func runBridged(_ typeName: String, _ index: Int, receiver: Expr?, _ arguments: [Argument]) throws -> Value {
@@ -25,7 +25,7 @@ extension Shell {
     }
 }
 
-extension Shell {
+extension Interpreter {
     /// A Swift property of a value, looked up when it runs, as a key path
     /// does; nil if its type has none of that name.
     func bridgedProperty(_ name: String, of value: Value) throws -> Value? {

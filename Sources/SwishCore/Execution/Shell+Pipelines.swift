@@ -46,12 +46,12 @@ extension Shell {
             switch stages[0] {
             // A function reading a file (`double < numbers`) streams it, below.
             case .function(let set, let args, let redirects, let environment) where !redirects.contains(where: { $0.fd == 0 }):
-                return try withEnvironment(environment) {
+                return try interpreter.withEnvironment(environment) {
                     try withRedirects(redirects) { _, _ in try callCommand(set, args, display: display) }
                 }
             case .external(let argv, let skipBuiltins, let redirects, let environment)
                 where !skipBuiltins && Shell.shellBuiltins[argv[0]] != nil:
-                return try withEnvironment(environment) {
+                return try interpreter.withEnvironment(environment) {
                     try withRedirects(redirects) { _, _ in runBuiltin(argv)! }
                 }
             default:
@@ -121,7 +121,7 @@ extension Shell {
                 job.running.append(pid)
                 if isLast { job.lastPid = pid }
             case .failure(let failure):
-                report(failure.message)
+                interpreter.report(failure.message)
                 if isLast { job.status = failure.status }
             }
         }
@@ -131,7 +131,7 @@ extension Shell {
         if let segment {
             do {
                 let pipeOutput = segmentOutput >= 0 ? segmentOutput : stdoutFD
-                try withEnvironment(stages[segment].flatMap(\.environment)) {
+                try interpreter.withEnvironment(stages[segment].flatMap(\.environment)) {
                 try withRedirects(segmentRedirects, input: segmentInput, output: pipeOutput) { input, output in
                     // Text for the next program, or, if it went to a file or
                     // the terminal, formatted as it would be displayed.
@@ -168,7 +168,7 @@ extension Shell {
             try descriptors.apply(redirects)
             defer { descriptors.closeFiles() }
             // Children inherit the environment as it is when they start.
-            return withEnvironment(environment) {
+            return interpreter.withEnvironment(environment) {
                 spawn(argv, pgid: pgid, descriptors: descriptors, foreground: foreground)
             }
         } catch {
@@ -226,11 +226,11 @@ extension Shell {
         }
         if status.signaled {
             let signal = status.signal
-            lastSignalStatus = 128 + signal
+            interpreter.lastSignalStatus = 128 + signal
             switch signal {
             case SIGINT: if interactive { writeAll(STDERR_FILENO, "\n") }
             case SIGPIPE: break
-            default: if !quiet { report(String(cString: strsignal(signal))) }
+            default: if !quiet { interpreter.report(String(cString: strsignal(signal))) }
             }
             return 128 + signal
         }

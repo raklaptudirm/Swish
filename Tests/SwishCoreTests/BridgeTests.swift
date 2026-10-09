@@ -14,11 +14,11 @@ private func status(_ source: String) -> Int32 {
 
 private func typeError(_ source: String) -> String? {
     let shell = Shell()
-    guard case .success(let program) = Result(catching: { try Parser.parse(source, bound: shell.globalNames()) }) else {
+    guard case .success(let program) = Result(catching: { try Parser.parse(source, bound: shell.interpreter.globalNames()) }) else {
         return "syntax error"
     }
     do {
-        _ = try TypeChecker(shell: shell).check(program)
+        _ = try TypeChecker(interpreter: shell.interpreter, shell: shell).check(program)
         return nil
     } catch {
         return error.message

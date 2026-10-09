@@ -5,7 +5,7 @@ import SwishKit
 /// shell starts. The checker works from these; the bodies are in Swift
 /// (StructuredBuiltins.swift), found by name. Doc comments are what `help`
 /// and `--help` show.
-extension Shell {
+extension Interpreter {
     static let prelude = #"""
     /// How a command exited: `output.status`.
     struct Status: Equatable, Hashable, Encodable {
@@ -61,16 +61,16 @@ extension Shell {
 
     /// Reads the prelude, binding its types, functions and sequence
     /// methods in the outermost scope with their Swift bodies.
-    func installPrelude() {
+    func installPrelude(providing provided: [String: FunctionBody]) {
         // The Swift types the declarations may name.
         let bridgedTypeNames = Dictionary(uniqueKeysWithValues: Bridge.types.keys.map { ($0, NameKind.type) })
         let program: Program
         do {
-            program = try Parser.parsePrelude(Shell.prelude + "\n" + Bridge.standardTypes, bound: bridgedTypeNames)
+            program = try Parser.parsePrelude(Interpreter.prelude + "\n" + Bridge.standardTypes, bound: bridgedTypeNames)
         } catch {
             preconditionFailure("the prelude doesn't parse: \(error)")
         }
-        let natives = builtinBodies()
+        let natives = builtinBodies(providing: provided)
         for statement in program.statements {
             switch statement {
             case .structDecl(let decl):

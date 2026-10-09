@@ -28,7 +28,7 @@ extension Shell {
     /// `prompt() -> String`, or `prompt(status: Int) -> String` to be told
     /// how the last command exited.
     func customPrompt() throws -> String? {
-        guard let binding = scopes[1].bindings["prompt"], binding.isFunction,
+        guard let binding = interpreter.scopes[1].bindings["prompt"], binding.isFunction,
               case .function(let set as OverloadSet) = binding.value else { return nil }
         let withStatus = set.candidates.first { $0.parameters.map(\.label) == ["status"] && $0.parameters[0].type == .int }
         guard let function = withStatus ?? set.candidates.first(where: { $0.parameters.isEmpty }),
@@ -37,7 +37,7 @@ extension Shell {
         }
         let status = lastStatus
         defer { lastStatus = status } // Drawing the prompt isn't a command.
-        let value = try invoke(function, with: withStatus != nil ? ["status": .int(Int(status))] : [:])
+        let value = try interpreter.invoke(function, with: withStatus != nil ? ["status": .int(Int(status))] : [:])
         guard case .string(let text) = value else { throw RuntimeError("it gave \(value.typeName), not a String") }
         return text
     }

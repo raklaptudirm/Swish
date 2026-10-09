@@ -2,7 +2,7 @@ import Foundation
 import SwishKit
 import SwishStandardLibrary
 
-extension Shell {
+extension Interpreter {
     func isEnvironment(_ expr: Expr) -> Bool {
         guard case .variable(let name) = expr else { return false }
         return lookup(name)?.special == .environment

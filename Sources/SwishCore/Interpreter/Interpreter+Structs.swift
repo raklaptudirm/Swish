@@ -79,7 +79,7 @@ final class Receiver {
     }
 }
 
-extension Shell {
+extension Interpreter {
     // MARK: Declaring
 
     func declare(_ decl: StructDecl) throws {

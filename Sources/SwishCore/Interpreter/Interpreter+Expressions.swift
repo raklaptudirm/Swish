@@ -1,7 +1,7 @@
 import Foundation
 import SwishKit
 
-extension Shell {
+extension Interpreter {
     // MARK: Expressions
 
     func evaluate(_ expr: Expr) throws -> Value {
@@ -68,13 +68,13 @@ extension Shell {
         case .caseLiteral(let name, _):
             throw RuntimeError(".\(name) needs a type here; write the enum's name too, as in Kind.\(name)")
         case .binary(let op, let lhs, let rhs) where (op == .equal || op == .notEqual)
-            && (Shell.isCaseLiteral(lhs) || Shell.isCaseLiteral(rhs)):
+            && (Interpreter.isCaseLiteral(lhs) || Interpreter.isCaseLiteral(rhs)):
             // `$0.type == .directory`: the case comes from the other side's enum.
-            let known = try evaluate(Shell.isCaseLiteral(lhs) ? rhs : lhs)
+            let known = try evaluate(Interpreter.isCaseLiteral(lhs) ? rhs : lhs)
             guard case .enumValue(let enumValue) = known else {
                 throw RuntimeError("\(op.rawValue) with a .case needs an enum on the other side, not \(known.typeName)")
             }
-            let literal = Shell.isCaseLiteral(lhs) ? lhs : rhs
+            let literal = Interpreter.isCaseLiteral(lhs) ? lhs : rhs
             guard case .caseLiteral(let name, let arguments) = literal else { preconditionFailure() }
             let equal = try makeCase(enumValue.type, name, arguments) == known
             return .bool(op == .equal ? equal : !equal)
@@ -119,7 +119,7 @@ extension Shell {
                 }
                 // `xs.sorted(by: "size")`: a sequence's method.
                 if let methods = sequenceMethods[name], let items = base.sequenceItems {
-                    return try callSequenceMethod(narrowed(methods, overload), on: items, arguments)
+                    return try commandAccess().callSequenceMethod(narrowed(methods, overload), items, arguments)
                 }
                 value = try member(name, of: base)
             } else {
@@ -167,7 +167,7 @@ extension Shell {
         case .bridged(let typeName, let member, let receiver, let arguments):
             return try runBridged(typeName, member, receiver: receiver, arguments)
         case .filePath:
-            return .string(scriptPath ?? "<prompt>")
+            return .string(file ?? "<prompt>")
         case .ifExpression(let node):
             let (branch, bindings) = try chooseBranch(node)
             guard let branch, let expr = IfStatement.branchExpression(branch) else { return .nothing }
@@ -218,39 +218,24 @@ extension Shell {
                 return try commandAccess().start(node, true)
             }
         case .await(let target, let throwing):
-            let job: Job
-            if let target {
-                let value = try evaluate(target)
-                guard case .object(let object as Job) = value else {
-                    throw RuntimeError("await needs a Job, not \(value.typeName)")
-                }
-                job = object
-            } else {
-                guard let latest = jobs.last else { throw RuntimeError("there are no jobs to await") }
-                job = latest
-            }
-            let output = try awaitJob(job)
-            if throwing && !output.succeeded {
-                throw RuntimeError("\(job.source) failed with status \(job.status)", status: job.status, output: output)
-            }
-            return .output(output)
+            return try commandAccess().await(try target.map { try evaluate($0) }, throwing)
         case .binary(.coalesce, let lhs, let rhs):
             let value = try evaluate(lhs)
             if value == .nothing { return try evaluate(rhs) }
             // `(try? $(git config x)) ?? "vi"` is a String: the checker types
             // it so, so the Output gives its text.
-            if case .object = value, let text = value.text, Interpreter.isStringExpression(rhs) { return .string(text) }
+            if case .object = value, let text = value.text, rhs.isStringExpression { return .string(text) }
             return value
         case .binary(let op, let lhs, let rhs) where [.less, .lessEqual, .greater, .greaterEqual].contains(op)
-            && (Shell.isCaseLiteral(lhs) || Shell.isCaseLiteral(rhs)):
+            && (Interpreter.isCaseLiteral(lhs) || Interpreter.isCaseLiteral(rhs)):
             // `level < .high`: the case comes from the other side's enum.
-            let known = try evaluate(Shell.isCaseLiteral(lhs) ? rhs : lhs)
+            let known = try evaluate(Interpreter.isCaseLiteral(lhs) ? rhs : lhs)
             guard case .enumValue(let enumValue) = known else {
                 throw RuntimeError("\(op.rawValue) with a .case needs an enum on the other side, not \(known.typeName)")
             }
-            guard case .caseLiteral(let name, let arguments) = Shell.isCaseLiteral(lhs) ? lhs : rhs else { preconditionFailure() }
+            guard case .caseLiteral(let name, let arguments) = Interpreter.isCaseLiteral(lhs) ? lhs : rhs else { preconditionFailure() }
             let literal = try makeCase(enumValue.type, name, arguments)
-            return Shell.isCaseLiteral(lhs) ? try apply(op, literal, known) : try apply(op, known, literal)
+            return Interpreter.isCaseLiteral(lhs) ? try apply(op, literal, known) : try apply(op, known, literal)
         case .binary(let op, let lhs, let rhs) where op == .closedRange || op == .halfOpenRange:
             return try makeRange(op, try evaluate(lhs), try evaluate(rhs))
         case .binary(let op, let lhs, let rhs):

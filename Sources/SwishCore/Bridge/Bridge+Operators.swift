@@ -32,7 +32,7 @@ extension TypeChecker {
     }
 }
 
-extension Shell {
+extension Interpreter {
     /// Applies an operator a bridged type declares to its operands; nil if no
     /// operand's type declares one. A Swift operator that throws (an overflow)
     /// is an error here, with no `try`, as for Int.

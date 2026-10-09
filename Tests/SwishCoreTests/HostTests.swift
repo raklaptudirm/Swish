@@ -23,11 +23,11 @@ private final class Recorder {
 private func shellWithRecorder() -> (Shell, Recorder) {
     let shell = Shell()
     let recorder = Recorder()
-    shell.host = SwishHost(
+    shell.interpreter.host = SwishHost(
         output: OutputSink(write: { recorder.written.append("out: " + $0); return true }),
         error: OutputSink(write: { recorder.written.append("err: " + $0); return true }),
         interrupt: { recorder.interrupt() })
-    shell.shellLayer = ShellLayer(
+    shell.interpreter.shellLayer = ShellLayer(
         environment: EnvironmentAccess(
             get: { recorder.variables[$0] },
             all: { recorder.variables.sorted { $0.key < $1.key }.map { (name: $0.key, value: $0.value) } },
@@ -37,7 +37,12 @@ private func shellWithRecorder() -> (Shell, Recorder) {
             hasProgram: { recorder.programs.contains($0) },
             run: { node, _ in recorder.ranPipelines.append(node.source); return recorder.pipelineStatus },
             start: { node, _ in recorder.ranPipelines.append("async " + node.source); return .nothing },
-            jobs: { [] }))
+            jobs: { [] },
+            await: { _, _ in .nothing },
+            callSequenceMethod: { _, _, _ in .nothing }),
+        importPlugin: { _, _ in },
+        history: { [] },
+        columns: [:])
     return (shell, recorder)
 }
 
@@ -93,7 +98,7 @@ private func shellWithRecorder() -> (Shell, Recorder) {
     // The sandbox: output goes where it's told, `env` is empty and read-only
     // nowhere, and commands, `$(…)` and jobs can't run.
     let (shell, recorder) = shellWithRecorder()
-    shell.shellLayer = nil
+    shell.interpreter.shellLayer = nil
     #expect(shell.execute("let h = env.HOME; h ?? \"none\"") == 0)
     #expect(shell.execute(#"env.X = "1""#) != 0)
     #expect(shell.execute("make") != 0)

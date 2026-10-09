@@ -1,7 +1,7 @@
 import Foundation
 import SwishKit
 
-extension Shell {
+extension Interpreter {
     // MARK: Declaring
 
     /// `enum Name: Raw { … }`: builds the type, checking raw values, and binds

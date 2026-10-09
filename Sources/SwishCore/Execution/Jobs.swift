@@ -75,7 +75,7 @@ final class Job: SwishObject, @unchecked Sendable {
                 case .line(let line): return .string(line)
                 case .end: return nil
                 // Waiting for a line is where Ctrl-C has to be noticed.
-                case .pending: try shell.checkInterrupt()
+                case .pending: try shell.interpreter.checkInterrupt()
                 }
             }
         }, as: "Flow")
@@ -93,7 +93,7 @@ final class Job: SwishObject, @unchecked Sendable {
         ("id", .int, { .int($0.id) }),
         ("command", .string, { .string($0.source) }),
         ("state", .named("JobState"), { job in
-            job.shell.declaredCase("JobState", job.cancelled && job.state == .done ? "cancelled" : job.state.rawValue)
+            job.shell.interpreter.declaredCase("JobState", job.cancelled && job.state == .done ? "cancelled" : job.state.rawValue)
         }),
         ("pids", .list(.int), { .list($0.running.map { .int(Int($0)) }) }),
         ("output", .optional(.output), { $0.output.map(Value.output) ?? .nothing }),
@@ -219,7 +219,7 @@ extension Shell {
                 job.running.append(pid)
                 if isLast { job.lastPid = pid }
             case .failure(let failure):
-                report(failure.message)
+                interpreter.report(failure.message)
                 if isLast { job.status = failure.status }
             }
         }

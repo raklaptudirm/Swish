@@ -2,45 +2,7 @@ import Foundation
 import SwishKit
 import SwishStandardLibrary
 
-/// A pull-based stream of values between in-process pipeline stages. A
-/// stage only runs when downstream asks for its next item, so
-/// `… | first 5` stops upstream work early.
-final class ValueStream {
-    private let pull: () throws -> Value?
-
-    init(_ pull: @escaping () throws -> Value?) {
-        self.pull = pull
-    }
-
-    func next() throws -> Value? {
-        try pull()
-    }
-
-    static var empty: ValueStream {
-        ValueStream { nil }
-    }
-
-    /// A list flows as its elements, as does a Swift sequence (a Set, a
-    /// range of Ints, a FilePath's components); nothing as no items,
-    /// anything else as a single item.
-    static func elements(of value: Value) -> ValueStream {
-        if let flow = Shell.flow(of: value) { return ValueStream { try flow.read() } }
-        let items: AnyIterator<Value>
-        switch value {
-        case .nothing:
-            return .empty
-        case .list:
-            items = Shell.items(of: value)!
-        case .object(let box as SwiftValue) where Bridge.types[box.typeName].map({
-            !$0.genericParameters.isEmpty || $0.conformances["Sequence"] != nil
-        }) == true:
-            items = Shell.items(of: value) ?? AnyIterator([value].makeIterator())
-        default:
-            items = AnyIterator([value].makeIterator())
-        }
-        return ValueStream { items.next() }
-    }
-
+extension ValueStream {
     /// Lines of an external program's output, read as they arrive.
     static func lines(from fd: Int32) -> ValueStream {
         let reader = LineReader(fd: fd)
@@ -117,7 +79,7 @@ extension Shell {
         do {
             if toExternal {
                 // Records as the rows they'd display as, so `ls | grep x` works.
-                let formatter = DisplayFormatter.forProgram(fd: output, registry: displayRegistry)
+                let formatter = DisplayFormatter.forProgram(fd: output, registry: interpreter.displayRegistry)
                 while let item = try stream.next() {
                     if case .function = item { throw RuntimeError("can't send a function to an external command") }
                     guard formatter.add(item) else { throw BrokenPipe() }
@@ -125,7 +87,7 @@ extension Shell {
                 guard formatter.finish() else { throw BrokenPipe() }
             } else {
                 // The end of the pipeline: format for a person.
-                let formatter = DisplayFormatter(fd: output, registry: displayRegistry)
+                let formatter = DisplayFormatter(fd: output, registry: interpreter.displayRegistry)
                 while let item = try stream.next() {
                     guard formatter.add(item) else { throw BrokenPipe() }
                 }
@@ -147,19 +109,19 @@ extension Shell {
         guard let upstream else {
             // First in the pipeline: every parameter, @input included, comes
             // from the command line, and the function runs once.
-            let (function, bindings) = try resolve(set) { try self.bind(commandLine: args, to: $0, excludingInput: false) }
+            let (function, bindings) = try interpreter.resolve(set) { try self.bind(commandLine: args, to: $0, excludingInput: false) }
             if case .stream(let transform) = function.body {
                 let input = function.inputParameter.flatMap { bindings[$0.name] } ?? .list([])
-                return try transform(self, .elements(of: input), bindings)
+                return try transform(interpreter, .elements(of: input), bindings)
             }
-            let result = try invoke(function, with: bindings)
+            let result = try interpreter.invoke(function, with: bindings)
             if let input = function.inputParameter, !input.type.isList {
                 return .elements(of: .list([result]))
             }
             return .elements(of: result)
         }
 
-        let (function, bindings) = try resolve(set) { try self.bind(commandLine: args, to: $0, excludingInput: true) }
+        let (function, bindings) = try interpreter.resolve(set) { try self.bind(commandLine: args, to: $0, excludingInput: true) }
         return try stream(function, bindings, upstream: upstream, upstreamIsExternal: upstreamIsExternal)
     }
 
@@ -169,7 +131,7 @@ extension Shell {
         _ function: Function, _ bindings: [String: Value], upstream: ValueStream, upstreamIsExternal: Bool
     ) throws -> ValueStream {
         if case .stream(let transform) = function.body {
-            return try transform(self, upstream, bindings)
+            return try transform(interpreter, upstream, bindings)
         }
         let name = function.name ?? "closure"
         guard let input = function.inputParameter else {
@@ -178,7 +140,7 @@ extension Shell {
             if !upstreamIsExternal {
                 while try upstream.next() != nil {}
             }
-            return .elements(of: try invoke(function, with: bindings))
+            return .elements(of: try interpreter.invoke(function, with: bindings))
         }
 
         if case .list(let elementType) = input.type {
@@ -191,7 +153,7 @@ extension Shell {
                     }
                     var arguments = bindings
                     arguments[input.name] = .list(items)
-                    output = .elements(of: try self.invoke(function, with: arguments))
+                    output = .elements(of: try self.interpreter.invoke(function, with: arguments))
                 }
                 return try output!.next()
             }
@@ -201,7 +163,7 @@ extension Shell {
             while let item = try upstream.next() {
                 var arguments = bindings
                 arguments[input.name] = try self.inputValue(item, as: input.type, of: name)
-                let result = try self.invoke(function, with: arguments)
+                let result = try self.interpreter.invoke(function, with: arguments)
                 if result != .nothing { return result }
             }
             return nil
@@ -215,12 +177,12 @@ extension Shell {
     func callSequenceMethod(_ methods: OverloadSet, on items: [Value], _ arguments: [Argument]) throws -> Value {
         let values = try [Argument(label: nil, value: .literal(.list(items)))] + arguments.map { argument -> Argument in
             if case .caseLiteral = argument.value { return argument }
-            return Argument(label: argument.label, value: .literal(try evaluate(argument.value)))
+            return Argument(label: argument.label, value: .literal(try interpreter.evaluate(argument.value)))
         }
-        let (function, bindings) = try resolve(methods) { try self.bind(values, to: $0) }
-        guard let input = function.inputParameter else { return try invoke(function, with: bindings) }
+        let (function, bindings) = try interpreter.resolve(methods) { try self.interpreter.bind(values, to: $0) }
+        guard let input = function.inputParameter else { return try interpreter.invoke(function, with: bindings) }
         if input.type.isList, case .native = function.body {
-            return try invoke(function, with: bindings)
+            return try interpreter.invoke(function, with: bindings)
         }
         var rest = bindings
         rest.removeValue(forKey: input.name)
@@ -245,22 +207,22 @@ extension Shell {
     private func callItemMethod(_ name: String, _ args: [CommandArgument], on item: Value) throws -> Value {
         switch item {
         case .record(let record):
-            if let type = structType(of: record), let methods = type.methods[name] {
-                let (method, bindings) = try resolve(methods) { try self.bind(commandLine: args, to: $0, excludingInput: false) }
+            if let type = interpreter.structType(of: record), let methods = type.methods[name] {
+                let (method, bindings) = try interpreter.resolve(methods) { try self.bind(commandLine: args, to: $0, excludingInput: false) }
                 guard !method.isMutating else {
                     throw RuntimeError("\(type.name).\(name) is mutating, and a piped value can't change: call it on a variable")
                 }
-                return try invoke(method, with: bindings, receiver: Receiver(item, mutable: false))
+                return try interpreter.invoke(method, with: bindings, receiver: Receiver(item, mutable: false))
             }
         case .object(let object):
             let callable: OverloadSet? = switch object.member(name) {
             case .function(let set as OverloadSet)?: set
-            case .function(let native as NativeFunction)?: OverloadSet(name: name, candidates: [hostFunction(native.function)])
+            case .function(let native as NativeFunction)?: OverloadSet(name: name, candidates: [interpreter.hostFunction(native.function)])
             default: nil
             }
             if let callable {
-                let (method, bindings) = try resolve(callable) { try self.bind(commandLine: args, to: $0, excludingInput: false) }
-                return try invoke(method, with: bindings)
+                let (method, bindings) = try interpreter.resolve(callable) { try self.bind(commandLine: args, to: $0, excludingInput: false) }
+                return try interpreter.invoke(method, with: bindings)
             }
         default:
             break
@@ -272,7 +234,7 @@ extension Shell {
     /// Input items as the parameter's type. Lines from external programs
     /// are text, so they're converted like command-line arguments.
     private func inputValue(_ item: Value, as type: TypeAnnotation, of name: String) throws -> Value {
-        if let value = conform(item, to: type) { return value }
+        if let value = interpreter.conform(item, to: type) { return value }
         if case .string(let text) = item, let value = try? converted(text, to: type, for: "input", of: name) {
             return value
         }

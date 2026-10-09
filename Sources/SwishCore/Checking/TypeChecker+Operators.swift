@@ -20,7 +20,7 @@ extension TypeChecker {
             let right = try typeOf(&rhs, expecting: wrapped == .unknown ? expected : wrapped)
             if wrapped == .unknown { return right }
             // An Output or some text: the Output's text.
-            if standsForText(wrapped), right == .string, Interpreter.isStringExpression(rhs) { return .string }
+            if standsForText(wrapped), right == .string, rhs.isStringExpression { return .string }
             if fits(right, wrapped) { return wrapped }
             if fits(right, left) { return left }
             throw TypeError("'??' needs a \(wrapped) on its right, not \(right)")

@@ -15,7 +15,7 @@ func bridgeKeyPath(_ value: Value) throws -> KeyPath<Value, Value> {
 /// Runs `body`, which reads fields through key paths, with fields read as the
 /// shell reads them; the first failure (a field that isn't there) is thrown
 /// after it, since a key path can't throw.
-func withFieldReader<T>(_ shell: Shell, _ body: () throws -> T) throws -> T {
+func withFieldReader<T>(_ shell: Interpreter, _ body: () throws -> T) throws -> T {
     var failure: Error?
     let saved = FieldAccess.reader
     FieldAccess.reader = { value, name in
@@ -56,7 +56,7 @@ enum FieldKind {
 /// them and all there: the encoder leaves out a nil, and the declaration says
 /// it's a field. A field of `patches` is read from the Swift value itself and
 /// made what it is declared as.
-func bridgeRecord<T: Encodable>(_ shell: Shell, _ value: T, patches: [String: FieldKind] = [:]) -> Value {
+func bridgeRecord<T: Encodable>(_ shell: Interpreter, _ value: T, patches: [String: FieldKind] = [:]) -> Value {
     guard case .record(let encoded)? = try? ValueEncoder().encode(value) else { return .nothing }
     var record = Record(typeName: encoded.typeName)
     for child in Mirror(reflecting: value).children {
@@ -76,7 +76,7 @@ func bridgeRecord<T: Encodable>(_ shell: Shell, _ value: T, patches: [String: Fi
     return .record(record)
 }
 
-extension Shell {
+extension Interpreter {
     /// What a standard library function that asks for it is lent.
     var context: ShellContext {
         ShellContext(history: historyEntries, colorOutput: host.output.traits().styled, display: displayRegistry)
@@ -127,11 +127,11 @@ func bridgeTuple<T>(_ tuple: T, _ elements: (T) -> [(String?, Value)]) -> Value 
 func bridgeSequence(_ value: Value) throws -> [Value] {
     switch value {
     case .string(let text):
-        return Array(Shell.iterator(text))
+        return Array(Interpreter.iterator(text))
     case .dictionary(let dictionary):
         return dictionary.map { bridgeTuple(($0.key, $0.value)) { [("key", $0.0), ("value", $0.1)] } }
     default:
-        guard let items = Shell.items(of: value) else { throw SwishError("expected a sequence, not \(value.typeName)") }
+        guard let items = Interpreter.items(of: value) else { throw SwishError("expected a sequence, not \(value.typeName)") }
         return Array(items)
     }
 }
@@ -164,7 +164,7 @@ func makeRange(_ op: BinaryOperator, _ lower: Value, _ upper: Value) throws -> V
     return SwiftValue.make(Range(uncheckedBounds: (lower: lower, upper: upper)), as: "Range")
 }
 
-extension Shell {
+extension Interpreter {
     /// The items a value gives as they come, which can throw: a `Flow`'s,
     /// one at a time; nil for anything else.
     static func flow(of value: Value) -> Flow<Value>? {
@@ -213,7 +213,7 @@ extension Shell {
 }
 
 /// A Swish function as a Swift closure.
-func bridgeClosure(_ shell: Shell, _ function: Value) -> ([Value]) throws -> Value {
+func bridgeClosure(_ shell: Interpreter, _ function: Value) -> ([Value]) throws -> Value {
     { arguments in try shell.call(function, with: arguments) }
 }
 

@@ -11,7 +11,7 @@ extension Shell {
         var styles = [String?](repeating: nil, count: characters.count)
         // Longer spans first, so what's inside them (an interpolation in a
         // string) is painted over them.
-        for span in Parser.highlight(text, bound: globalNames()).sorted(by: { $0.range.count > $1.range.count }) {
+        for span in Parser.highlight(text, bound: interpreter.globalNames()).sorted(by: { $0.range.count > $1.range.count }) {
             let range = span.range.clamped(to: 0..<characters.count)
             let style: String? = switch span.kind {
             case .keyword, .punctuation: DisplayStyle.keyword.escape
@@ -41,7 +41,7 @@ extension Shell {
         // Names built at run time can't be checked while typing.
         guard !name.isEmpty, !name.contains(where: { "$\\\"'(".contains($0) }) else { return nil }
         let known: Bool
-        if !external && (commandFunctions(named: name) != nil || sequenceMethods[name] != nil || Bridge.flowNames.contains(name)
+        if !external && (interpreter.commandFunctions(named: name) != nil || interpreter.sequenceMethods[name] != nil || Bridge.flowNames.contains(name)
                          || Shell.shellBuiltins[name] != nil) {
             known = true
         } else if !external && piped && isMemberName(name) {

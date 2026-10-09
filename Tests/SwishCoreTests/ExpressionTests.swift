@@ -11,12 +11,12 @@ private func checkError(_ source: String) -> String? {
     let shell = Shell()
     let program: Program
     do {
-        program = try Parser.parse(source, bound: shell.globalNames())
+        program = try Parser.parse(source, bound: shell.interpreter.globalNames())
     } catch {
         return "syntax error: \(error)"
     }
     do {
-        _ = try TypeChecker(shell: shell).check(program)
+        _ = try TypeChecker(interpreter: shell.interpreter, shell: shell).check(program)
         return nil
     } catch {
         return "error: \(error.message)"

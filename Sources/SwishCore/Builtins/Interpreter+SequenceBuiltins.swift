@@ -1,7 +1,7 @@
 import Foundation
 import SwishKit
 
-extension Shell {
+extension Interpreter {
     // MARK: Sequence methods
 
     // What the prelude adds to every sequence that Swift can't say (see

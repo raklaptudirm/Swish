@@ -2,7 +2,7 @@ import Foundation
 import SwishKit
 import SwishStandardLibrary
 
-extension Shell {
+extension Interpreter {
     // MARK: Conversions
 
     func members() -> Function {

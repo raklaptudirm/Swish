@@ -9,14 +9,14 @@ extension Shell {
     /// asked. The status is 1 for a false result and 0 otherwise.
     func callCommand(_ set: OverloadSet, _ args: [CommandArgument], display shouldDisplay: Bool) throws -> Int32 {
         if helpRequested(args, for: set) {
-            host.output.write(helpText(for: set, styled: host.output.traits().styled))
+            interpreter.host.output.write(helpText(for: set, styled: interpreter.host.output.traits().styled))
             return 0
         }
-        let (function, bindings) = try resolve(set) { try self.bind(commandLine: args, to: $0, excludingInput: false) }
-        let result = try invoke(function, with: bindings)
+        let (function, bindings) = try interpreter.resolve(set) { try self.bind(commandLine: args, to: $0, excludingInput: false) }
+        let result = try interpreter.invoke(function, with: bindings)
         // A command that found nothing (`ls` of an empty directory) shows nothing.
         if shouldDisplay && result != .list([]) {
-            show(result)
+            interpreter.show(result)
         }
         if case .bool(let truth) = result { return truth ? 0 : 1 }
         return 0
@@ -42,7 +42,7 @@ extension Shell {
                 name: function.name, parameters: parameters, returnType: function.returnType, body: function.body,
                 captured: function.captured, documentation: function.documentation
             )
-            return try bind(callArguments, to: stripped)
+            return try interpreter.bind(callArguments, to: stripped)
         }
         var longFlags: [String: (parameter: Parameter, negated: Bool)] = [:]
         var shortFlags: [Character: Parameter] = [:]
@@ -63,7 +63,7 @@ extension Shell {
                 if type == .string || type == .any { penalty += 1 }
                 return try converted(text, to: type, for: what, of: name)
             case .value(let value):
-                guard let conforming = conform(value, to: type) else {
+                guard let conforming = interpreter.conform(value, to: type) else {
                     throw RuntimeError("\(name): \(what) must be \(type), not \(value.typeName)")
                 }
                 return conforming
@@ -190,7 +190,7 @@ extension Shell {
         }
         for parameter in parameters where bound[parameter.name] == nil {
             if let defaultValue = parameter.defaultValue {
-                bound[parameter.name] = try defaultArgument(defaultValue, for: parameter, of: function)
+                bound[parameter.name] = try interpreter.defaultArgument(defaultValue, for: parameter, of: function)
             } else if parameter.externalDefault != nil {
                 continue // The plugin fills it in.
             } else if parameter.type == .bool && parameter.label != nil {
@@ -221,7 +221,7 @@ extension Shell {
         switch type {
         case .any, .unknown, .parameter, .keyPath, .output: return true
         case .optional(let wrapped): return takesWords(wrapped)
-        case .named(let name) where enumType(named: name) != nil: return true
+        case .named(let name) where interpreter.enumType(named: name) != nil: return true
         default:
             guard let (bridged, _) = Bridge.type(of: type) else { return false }
             return bridged.parse != nil || bridged.literal != nil
@@ -230,8 +230,8 @@ extension Shell {
 
     func converted(_ text: String, to type: TypeAnnotation, for what: String, of function: String) throws -> Value {
         let value: Value?
-        if case .named(let name) = type, let enumType = enumType(named: name) {
-            value = enumCase(fromText: text, enumType)
+        if case .named(let name) = type, let enumType = interpreter.enumType(named: name) {
+            value = interpreter.enumCase(fromText: text, enumType)
         } else if let (bridgedType, _) = Bridge.type(of: type), let made = Bridge.value(of: bridgedType.name, from: text) {
             // A Swift type text can be, by its own declarations: `--n 3` for
             // an Int, `--separator " "` for a Character, a FilePath.

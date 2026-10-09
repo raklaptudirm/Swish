@@ -7,11 +7,11 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 
 /// The type error `source` has, or nil if it checks.
 private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
-    guard case .success(let program) = Result(catching: { try Parser.parse(source, bound: shell.globalNames()) }) else {
+    guard case .success(let program) = Result(catching: { try Parser.parse(source, bound: shell.interpreter.globalNames()) }) else {
         return "syntax error"
     }
     do {
-        _ = try TypeChecker(shell: shell).check(program)
+        _ = try TypeChecker(interpreter: shell.interpreter, shell: shell).check(program)
         return nil
     } catch {
         return error.message
