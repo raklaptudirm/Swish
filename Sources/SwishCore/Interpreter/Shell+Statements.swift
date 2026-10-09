@@ -131,11 +131,7 @@ extension Shell {
                 throw RuntimeError("an environment variable's name must be a String without '=', not \(name)")
             }
             let value = try evaluate(valueExpr)
-            if value == .nothing {
-                unsetenv(key)
-            } else {
-                setenv(key, value.description, 1)
-            }
+            try environmentAccess().set(key, value == .nothing ? nil : value.description)
             return 0
         case .doCatch(let body, let errorName, let handler):
             do {
@@ -192,8 +188,7 @@ extension Shell {
     func run(_ unit: Unit, context: UnitContext) throws -> Int32 {
         switch unit {
         case .pipeline(let node):
-            let stages = try stages(for: node)
-            let status = try runPipeline(stages, source: node.source, display: context == .statement)
+            let status = try commandAccess().run(node, context == .statement)
             // `try make`: failing throws, with the status in the error.
             if case .some(let kind) = node.throwing, status != 0 {
                 let (code, signal) = exitCode(status)
@@ -304,6 +299,6 @@ extension Shell {
     }
 
     func checkInterrupt() throws {
-        if let signal = takeInterruptSignal() { throw Interrupted(signal: signal) }
+        if let reason = host.interrupt() { throw Interrupted(reason: reason) }
     }
 }

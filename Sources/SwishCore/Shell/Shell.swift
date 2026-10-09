@@ -26,6 +26,14 @@ public final class Shell {
 
     let terminal = STDIN_FILENO
     /// Whether the shell owns the terminal and does job control.
+    /// How the interpreter is run: where its output goes, how to tell it to
+    /// stop. This is the process; an embedder's would be its own.
+    lazy var host = SwishHost(process: self)
+
+    /// The shell's constructs the core still depends on (environment,
+    /// commands, jobs), temporary and internal; see `ShellLayer`.
+    lazy var shellLayer: ShellLayer? = ShellLayer(process: self)
+
     var interactive = false
     var shellPgid = getpgrp()
     var shellModes = termios()
@@ -151,11 +159,11 @@ extension Shell {
 
     /// Reports an error, to wherever standard error is redirected.
     func report(_ message: String) {
-        let styled = DisplayStyle.enabled(for: stderrFD)
+        let styled = host.error.traits().styled
         if message.hasPrefix("error: ") {
-            writeAll(stderrFD, "swish: error:".styled(DisplayStyle.error, styled) + message.dropFirst(6) + "\n")
+            host.error.write("swish: error:".styled(DisplayStyle.error, styled) + message.dropFirst(6) + "\n")
         } else {
-            writeAll(stderrFD, "swish:".styled(DisplayStyle.error, styled) + " \(message)\n")
+            host.error.write("swish:".styled(DisplayStyle.error, styled) + " \(message)\n")
         }
     }
 

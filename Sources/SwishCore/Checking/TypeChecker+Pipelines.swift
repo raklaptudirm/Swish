@@ -128,7 +128,7 @@ extension TypeChecker {
         if input != nil { command.resolution = .other }
         // A method with nothing piped in, and no function or program by
         // that name, has nothing to work on.
-        if input == nil, shell.isStageMethod(name), lookup(name) == nil, shell.findExecutable(name) == nil {
+        if input == nil, shell.isStageMethod(name), lookup(name) == nil, shell.shellLayer?.commands.hasProgram(name) != true {
             throw TypeError("\(name) is a method: pipe something into it, as in `ls | \(name)`, or call it on a value, as in `xs.\(name)(…)`")
         }
         if case .functions(let overloads)? = lookup(name) {

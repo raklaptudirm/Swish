@@ -79,7 +79,7 @@ func bridgeRecord<T: Encodable>(_ shell: Shell, _ value: T, patches: [String: Fi
 extension Shell {
     /// What a standard library function that asks for it is lent.
     var context: ShellContext {
-        ShellContext(history: historyEntries, colorOutput: DisplayStyle.enabled(for: stdoutFD), display: displayRegistry)
+        ShellContext(history: historyEntries, colorOutput: host.output.traits().styled, display: displayRegistry)
     }
 }
 

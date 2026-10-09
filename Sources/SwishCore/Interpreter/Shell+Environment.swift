@@ -10,8 +10,8 @@ extension Shell {
 
     func environmentRecord() -> Value {
         var record = Record(typeName: "Environment")
-        for (key, value) in ProcessInfo.processInfo.environment.sorted(by: { $0.key < $1.key }) {
-            record[key] = .string(value)
+        for (name, value) in shellLayer?.environment.all() ?? [] {
+            record[name] = .string(value)
         }
         return .record(record)
     }

@@ -38,7 +38,7 @@ struct FatalError: Error {
 /// ^C while the shell itself was running code.
 /// ^C, or in a script SIGTERM or SIGHUP: stops what's running.
 struct Interrupted: Error {
-    var signal: Int32 = SIGINT
+    var reason: StopReason
 }
 
 /// Non-local exits, thrown up to the loop or call that handles them. The

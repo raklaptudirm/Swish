@@ -2,11 +2,11 @@ import Foundation
 import SwishKit
 import SwishStandardLibrary
 
-/// The columns shown by default for records of a type, and what styles them;
-/// the rest are still there for `filter`, `select` and `get`, and `table`
-/// shows everything. Each type says so itself (`Tabular`): the standard
-/// library module's structs, and the shell's own, beside where they're made.
-/// How the standard library's and the shell's own types show in a table.
+/// How the standard library's and the shell's own types show in a table:
+/// the columns shown by default for records of a type, and what styles them.
+/// The rest are still there for `filter`, `select` and `get`, and `table`
+/// shows everything. Each type says so itself (`Tabular`), beside where it's
+/// made.
 let standardDisplayRegistry = DisplayRegistry(
     columns: Bridge.standardColumns.merging([
         "Job": Job.columns,
@@ -15,18 +15,11 @@ let standardDisplayRegistry = DisplayRegistry(
     enumStyles: Bridge.standardEnumStyles)
 
 extension DisplayFormatter {
-    /// Writes to `fd`, fitting the terminal and styling the header when it
-    /// is one. A file gets every character: nothing is cut to fit.
-    convenience init(fd: Int32, registry: DisplayRegistry) {
-        let isTerminal = isatty(fd) != 0
-        self.init(maxWidth: terminalWidth(fd) ?? .max, styled: DisplayStyle.enabled(for: fd),
-                  columnCap: isTerminal ? 40 : .max, registry: registry) { writeAll(fd, $0) }
-    }
-
-    /// Rows for another program to read, as in `ls | grep x`: the view's
-    /// columns, no header, nothing cut short.
-    static func forProgram(fd: Int32, registry: DisplayRegistry) -> DisplayFormatter {
-        DisplayFormatter(header: false, columnCap: .max, registry: registry) { writeAll(fd, $0) }
+    /// Writes with `write`, fitting what the stream is: a terminal's width
+    /// and a styled header, or every character for a file.
+    convenience init(traits: StreamTraits, registry: DisplayRegistry, write: @escaping (String) -> Bool) {
+        self.init(maxWidth: traits.width ?? .max, styled: traits.styled,
+                  columnCap: traits.isTerminal ? 40 : .max, registry: registry, write: write)
     }
 }
 
@@ -54,6 +47,8 @@ extension Shell {
     /// key/value list for one record, and otherwise its text, or its
     /// `debugDescription` for a bare value (`let r = $(echo hi); r`).
     func show(_ value: Value, debug: Bool = false) {
+        let output = host.output
+        let traits = output.traits()
         switch value {
         case .nothing:
             return
@@ -62,30 +57,22 @@ extension Shell {
         case .object where value.displayShape.isEmpty && !debug:
             return
         case .record(let record) where !debug:
-            for line in DisplayFormatter.keyValueLines(record, styled: DisplayStyle.enabled(for: stdoutFD), registry: displayRegistry) {
-                writeAll(stdoutFD, line + "\n")
+            for line in DisplayFormatter.keyValueLines(record, styled: traits.styled, registry: displayRegistry) {
+                output.write(line + "\n")
             }
         // A command's list reads as a pipeline's output would: records as a
         // table, anything else an item per line. A bare list is a value.
         case .list(let items) where !debug || items.contains(where: { $0.asRecord != nil }):
-            let formatter = DisplayFormatter(fd: stdoutFD, registry: displayRegistry)
+            let formatter = DisplayFormatter(traits: traits, registry: displayRegistry) { output.write($0) }
             for item in items { formatter.add(item) }
             formatter.finish()
         case _ where debug:
-            let printer = PrettyPrinter(width: terminalWidth(stdoutFD) ?? 80, styled: DisplayStyle.enabled(for: stdoutFD))
-            writeAll(stdoutFD, printer.format(value) + "\n")
+            let printer = PrettyPrinter(width: traits.width ?? 80, styled: traits.styled)
+            output.write(printer.format(value) + "\n")
         default:
-            writeAll(stdoutFD, value.description + "\n")
+            output.write(value.description + "\n")
         }
     }
-}
-
-/// The width of the terminal `fd` is, if it is one.
-func terminalWidth(_ fd: Int32) -> Int? {
-    var size = winsize()
-    // TIOCGWINSZ is a UInt on macOS and an Int32 on Linux.
-    guard isatty(fd) != 0, ioctl(fd, UInt(TIOCGWINSZ), &size) == 0, size.ws_col > 0 else { return nil }
-    return Int(size.ws_col)
 }
 
 extension Value {

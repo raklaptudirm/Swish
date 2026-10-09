@@ -15,17 +15,16 @@ extension Shell {
             switch binding.special {
             case .environment?: return environmentRecord()
             case .jobs?:
-                updateJobs() // So their states are current.
-                return .list(jobs.map { .object($0) })
+                return .list(try commandAccess().jobs())
             case .initializing?, nil: return binding.value
             }
         case .dollar(let name):
             if let binding = lookup(name) { return binding.value }
-            if let value = env(name) { return .string(value) }
+            if let value = shellLayer?.environment.get(name) { return .string(value) }
             throw RuntimeError("no variable or environment variable named '\(name)'")
         case .substitution(let program, let throwing):
             var status: Int32 = 0
-            var text = try capturing { status = try runBlock(program) }
+            var text = try commandAccess().capture { status = try runBlock(program) }
             while text.last == "\n" { text.removeLast() }
             let (code, signal) = exitCode(status)
             let output = Output(text: text, code: code, signal: signal)
@@ -81,7 +80,7 @@ extension Shell {
             return .bool(op == .equal ? equal : !equal)
         case .member(let base, let name):
             // An unset environment variable is nil, not a missing field.
-            if isEnvironment(base) { return env(name).map(Value.string) ?? .nothing }
+            if isEnvironment(base) { return shellLayer?.environment.get(name).map(Value.string) ?? .nothing }
             return try member(name, of: try evaluate(base))
         case .closure(let literal):
             return .function(Function(
@@ -214,9 +213,9 @@ extension Shell {
         case .async(let target):
             switch target {
             case .command(let node):
-                return .object(try startJob(try stages(for: node), source: node.source, capture: false))
+                return try commandAccess().start(node, false)
             case .capture(let node):
-                return .object(try startJob(try stages(for: node), source: node.source, capture: true))
+                return try commandAccess().start(node, true)
             }
         case .await(let target, let throwing):
             let job: Job
@@ -260,7 +259,7 @@ extension Shell {
             if isEnvironment(base) {
                 let key = try evaluate(index)
                 guard case .string(let name) = key else { throw RuntimeError("env is indexed by name, not \(key.typeName)") }
-                return env(name).map(Value.string) ?? .nothing
+                return shellLayer?.environment.get(name).map(Value.string) ?? .nothing
             }
             return try element(of: try evaluate(base), at: try evaluate(index))
         }
