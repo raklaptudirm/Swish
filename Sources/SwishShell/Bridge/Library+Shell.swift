@@ -22,11 +22,25 @@ extension Library {
     /// Swish source read after the core's prelude. The checker works from the
     /// signatures; the bodies are in Swift, found by name (`bodies`).
     private static let shellDeclarations = #"""
-    /// How a command exited: `output.status`.
+    /// How a command exited: `output.status`, and what `Command.run()` gives.
+    /// A command statement is a `Status`, and `a && b || c` is
+    /// `a.and { b }.or { c }`: run on the status, left to right.
     struct Status: Equatable, Hashable, Encodable {
         let code: Int?
         let signal: Int?
         let succeeded: Bool
+
+        /// `next` when this succeeded; otherwise this.
+        func and(_ next: () -> Status) -> Status {
+            if succeeded { return next() }
+            return self
+        }
+
+        /// This when it succeeded; otherwise `next`.
+        func or(_ next: () -> Status) -> Status {
+            if succeeded { return self }
+            return next()
+        }
     }
 
     /// What `try $(…)` throws when the command fails, and `try await job`:

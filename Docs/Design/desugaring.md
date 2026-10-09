@@ -228,8 +228,21 @@ compile the printed Swift with `swiftc` and compare it with the interpreter.
 - **`$name`:** a variable in scope (the checker records which) is that
   variable; otherwise `env["name"]!`. An unset name now stops with
   `env["name"] is nil, but '!' needs a value` instead of its own message.
-- **Not yet printable:** a command still prints as a comment, since nothing
-  rewrites commands into `Command(…)` calls yet.
+- **The status design, and `Command` as hand-written host objects (option 1).**
+  A command statement is a `Status` value: `Command("git", "status").run()`
+  gives `Status { code, signal, succeeded }`, and a statement whose value is a
+  `Status` has that status (the prompt records it and shows nothing).
+  `a && b || c` is `a.and { b }.or { c }`, methods of `Status` written in Swish
+  in the shell's prelude; for all 27 combinations of three programs it gives the
+  statuses the shell's own `&&` and `||` do. `output()` is `$(…)`. `Command` is
+  a `SwishObject` the shell registers (like `Job`), which runs the same
+  pipeline machinery, so the rewrite changes nothing about how a command runs.
+- **Rewritten now:** a command statement of plain words (one command, literal
+  words, no redirect, environment, `try`, `^`, closure or call, and not
+  `exit`) is `Command(…).run()`. Everything else about a command still runs as
+  a node of its own and prints as a comment: words with `~`, `$name` or globs
+  (`Words`), redirects, `X=1 cmd`, pipelines, `try`, `&&`/`||` over commands,
+  conditions and `$(…)`.
 
 What building it showed: **every command-shaped construct depends on how a
 statement's exit status is carried.** `X=1 cmd` as `with(env:) { cmd }` loses
@@ -238,8 +251,10 @@ command's status isn't one; `a && b || c`, `try cmd`, `if cmd { }` and the
 statement sink all ask what a command statement evaluates to. So the order of
 work below changes: step 8's status design (what a statement gives, where the
 shell records it per task) comes before the constructs that need it, and the
-first of those is `Shell.chain` and `Command.run()` returning a status value.
-`X=1 cmd` on a single command is then `with(env:)` of that call.
+first of those, `Command.run()` returning a status value and `Status.and/or`,
+now exists. `X=1 cmd` on a single command is then `with(env:)` of that call,
+and `a && b` over commands, a condition (`if cmd { }`: `cmd.run().succeeded`)
+and `try cmd` (`.run().get()`-style) are the next rewrites.
 
 ## Open questions
 

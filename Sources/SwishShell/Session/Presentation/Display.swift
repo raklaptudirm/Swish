@@ -47,6 +47,8 @@ extension Interpreter {
     /// wrote to the terminal.
     func present(_ value: Value, from expression: Expr, discarded: Bool) {
         let awaitedToTerminal = expression.isAwait && value.showsNothing
+        // A command's `Status` is recorded as the status, not shown.
+        if case .record(let record) = value, record.typeName == "Status" { return }
         guard !discarded, !awaitedToTerminal else { return }
         show(value, debug: true)
     }

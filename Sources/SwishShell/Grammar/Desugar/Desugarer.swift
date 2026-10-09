@@ -47,9 +47,43 @@ final class Desugarer {
     }
 
     private func statement(_ statement: Statement) -> Statement {
+        if case .chain(let chain) = statement, chain.links.isEmpty, case .extended(let box) = chain.first,
+           let node = box.node as? PipelineUnit, let words = Desugarer.plainWords(of: node.node) {
+            // A command statement: its words run, and its status is the statement's.
+            return .chain(Chain(first: .expression(Desugarer.commandRun(words))))
+        }
         guard case .extended(let box) = statement, var node = box.node as? ImportPluginStatement else { return statement }
         node.path = rewriter.expression(node.path)
         return .extended(StatementExtensionBox(node))
+    }
+
+    /// The words of a command that is only words (no `~`, `$name`, glob,
+    /// redirect, environment, closure or call, and not `exit`, which ends the
+    /// program), when it is the one command of a pipeline. These are what
+    /// `Command(…)` takes as they are.
+    private static func plainWords(of node: PipelineNode) -> [String]? {
+        guard node.commands.count == 1, node.input == nil, node.throwing == nil else { return nil }
+        let command = node.commands[0]
+        guard !command.external, command.redirects.isEmpty, command.environment.isEmpty, command.call == nil,
+              command.notAnExpression == nil else { return nil }
+        var words: [String] = []
+        for word in command.words {
+            guard case .text(let parts) = word else { return nil }
+            var text = ""
+            for part in parts {
+                guard case .literal(let literal) = part else { return nil }
+                text += literal
+            }
+            words.append(text)
+        }
+        guard let first = words.first, first != "exit" else { return nil }
+        return words
+    }
+
+    /// `Command("git", "status").run()`.
+    private static func commandRun(_ words: [String]) -> Expr {
+        let command = Expr.call(.variable("Command"), words.map { Argument(label: nil, value: .literal(.string($0))) })
+        return .call(.member(command, "run"), [])
     }
 
     /// `$name` is the variable `name` if one is in scope, else the

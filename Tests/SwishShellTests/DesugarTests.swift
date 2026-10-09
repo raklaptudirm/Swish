@@ -45,3 +45,18 @@ private func desugared(_ source: String, in shell: Shell = Shell()) throws -> St
     #expect(node.commands[0].words.last == .text([.spread(.variable("d"))]))
     #expect(node.commands[0].redirects.last?.target == .file([.spread(.variable("d")), .literal("/x")], .write))
 }
+
+@Test func aPlainCommandStatementIsACommandRun() throws {
+    #expect(try desugared("git status -s") == #"Command("git", "status", "-s").run()"#)
+    #expect(try desugared("echo 'a b'; ls") == "Command(\"echo\", \"a b\").run()\nCommand(\"ls\").run()")
+    // Inside a block it is a statement too.
+    #expect(try desugared("if true { echo hi }") == "if true {\n    Command(\"echo\", \"hi\").run()\n}")
+}
+
+@Test func whatIsMoreThanWordsIsLeftForLater() throws {
+    // Each of these still runs as a node of its own, printed as a comment.
+    let node = "/* a construct from a layer over the core */"
+    for source in ["echo ~", "echo $HOME", "ls *.swift", "echo hi > /dev/null", "X=1 env", "echo a | cat", "try false", "^echo hi", "exit"] {
+        #expect(try desugared(source).contains(node), "\(source)")
+    }
+}
