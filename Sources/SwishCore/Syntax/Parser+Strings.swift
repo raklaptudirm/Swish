@@ -99,35 +99,10 @@ extension Parser {
         return expr
     }
 
-    /// `$(…)`, `$?`, `$name`, or `$0` in a closure, positioned at the dollar
-    /// sign; nil if the dollar is just a character.
+    /// `$0` in a closure, or a `$` form of the plug-in's (`$(…)`, `$name`),
+    /// positioned at the dollar sign; nil if the dollar is just a character.
     mutating func parseDollar() throws(SyntaxError) -> Expr? {
         switch peek(1) {
-        case "(" where dialect == .swift:
-            throw SyntaxError("$(…) runs commands, which are shell syntax, and isn't available in Swift-only code")
-        case let c? where dialect == .swift && Parser.isIdentifierStart(c):
-            throw SyntaxError("$name reads the environment, which is shell syntax, and isn't available in Swift-only code")
-        case "(":
-            mark(.punctuation, from: pos, to: pos + 2)
-            pos += 2
-            // A substitution is its own little program: newlines separate
-            // statements again, and it can't break or return out of its host.
-            // Whether this one throws is decided out here; the commands
-            // inside are a program of their own.
-            let throwing = tryDepth > 0
-            let saved = (bracketDepth, loopDepth, functionDepth, conditionDepth, tryDepth, switchDepth)
-            (bracketDepth, loopDepth, functionDepth, conditionDepth, tryDepth, switchDepth) = (0, 0, 0, 0, 0, 0)
-            scopes.append([:])
-            defer {
-                (bracketDepth, loopDepth, functionDepth, conditionDepth, tryDepth, switchDepth) = saved
-                scopes.removeLast()
-            }
-            let program = try parseProgram(until: ")")
-            mark(.punctuation, from: pos, to: pos + 1)
-            pos += 1
-            return .substitution(program, throwing: throwing)
-        case "?":
-            throw SyntaxError("$? isn't Swish: a captured command has its own .status, and `try` makes a failure throw")
         case let c? where Parser.isDigit(c):
             // Only special in a closure without named parameters; elsewhere,
             // as in "costs $5", it's just text.
@@ -138,14 +113,16 @@ extension Parser {
             mark(.variable, from: start)
             anonymousArity[anonymousArity.count - 1] = max(arity, index + 1)
             return .variable("$\(index)")
+        case "(", "?":
+            guard let plugin = self.plugin else {
+                throw SyntaxError("$(…) runs commands, which are shell syntax, and isn't available in Swift-only code")
+            }
+            return try plugin.expression(&self)
         case let c? where Parser.isIdentifierStart(c):
-            let start = pos
-            pos += 1
-            let name = identifier()!
-            pos += name.count
-            mark(.variable, from: start)
-            use(name)
-            return .dollar(name)
+            guard let plugin = self.plugin else {
+                throw SyntaxError("$name reads the environment, which is shell syntax, and isn't available in Swift-only code")
+            }
+            return try plugin.expression(&self)
         default:
             return nil
         }

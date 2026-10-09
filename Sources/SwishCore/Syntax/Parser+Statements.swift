@@ -67,7 +67,10 @@ extension Parser {
         case "enum":
             return .enumDecl(try parseEnum())
         case "import":
-            return try parseImport()
+            guard let plugin = self.plugin, let statement = try plugin.statement(&self) else {
+                throw SyntaxError("importing a package from a path is shell syntax, and isn't available in Swift-only code")
+            }
+            return statement
         case "struct":
             return .structDecl(try parseStruct())
         case "defer":
@@ -91,9 +94,8 @@ extension Parser {
             break
         }
 
-        if identifier() == "env", let assignment = try parseEnvironmentAssignment() {
-            return assignment
-        }
+        // A statement of the plug-in's, like the shell's `env.NAME = value`.
+        if let plugin = self.plugin, let statement = try plugin.statement(&self) { return statement }
 
         // A type's name starts an assignment too, to a static var: `Point.count += 1`.
         if let name = identifier(), canStartAssignment(kind(of: name)), let assignment = try parseAssignment(name) {
@@ -165,38 +167,6 @@ extension Parser {
         text.enumerated().allSatisfy { peek($0.offset) == $0.element }
     }
 
-    /// `env.NAME = value` or `env[name] = value`, or nil (having looked
-    /// ahead) if this is some other statement starting with `env`.
-    mutating func parseEnvironmentAssignment() throws(SyntaxError) -> Statement? {
-        let start = (pos, spans.count)
-        mark(.variable, from: pos, to: pos + 3)
-        pos += 3
-        let name: Expr
-        if peek() == ".", let next = peek(1), Parser.isIdentifierStart(next) {
-            pos += 1
-            let key = identifier()!
-            pos += key.count
-            name = .literal(.string(key))
-        } else if consume("[") {
-            bracketDepth += 1
-            skipSpaces()
-            name = try parseExpression()
-            skipSpaces()
-            bracketDepth -= 1
-            guard consume("]") else { throw expected("']'") }
-        } else {
-            rewind(to: start)
-            return nil
-        }
-        skipSpaces()
-        guard peek() == "=" && peek(1) != "=" else {
-            rewind(to: start)
-            return nil
-        }
-        pos += 1
-        return .setEnvironment(name: name, value: try parseExpression())
-    }
-
     /// `do { … }`, optionally `catch { … }` or `catch let name { … }`.
     mutating func parseDoCatch() throws(SyntaxError) -> Statement {
         keyword("do")
@@ -240,17 +210,6 @@ extension Parser {
         case .binding(let name, _): [name]
         case .enumCase(_, _, let arguments): (arguments ?? []).flatMap { names(boundBy: $0.pattern) }
         case .wildcard, .expression: []
-        }
-    }
-
-    /// What a unit is, as `commandAhead` decides.
-    enum UnitStart {
-        case expression
-        /// `notAnExpression`: why, when that's what decided it.
-        case command(notAnExpression: String?)
-
-        var isCommand: Bool {
-            if case .command = self { true } else { false }
         }
     }
 

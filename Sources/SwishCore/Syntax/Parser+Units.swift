@@ -42,15 +42,8 @@ extension Parser {
         default:
             break
         }
-        // `try make` or `try! make`: a command whose failure throws.
-        if dialect == .shell, identifier() == "try", let command = try parseThrowingCommand() {
-            return .pipeline(command)
-        }
-        if dialect == .shell, case .command(let reason) = commandAhead() {
-            var pipeline = try parsePipeline()
-            if !pipeline.commands.isEmpty { pipeline.commands[0].notAnExpression = reason }
-            return .pipeline(pipeline)
-        }
+        // A unit of the plug-in's, like the shell's commands.
+        if let plugin = self.plugin, let unit = try plugin.unit(&self) { return unit }
         let start = pos
         // `a < 1 || b > 2` is one expression, with Swift's precedence, so
         // `{ $0.a < 1 || $0.b > 2 }` returns it. Only when an operand
@@ -62,97 +55,16 @@ extension Parser {
             expr = try parseExpression(logical: true)
         } catch {
             // In Swift, an operand that isn't an expression is just an error.
-            guard dialect == .shell else { throw error }
+            guard plugin != nil else { throw error }
             self = beforeExpression
             expr = try parseExpression(logical: false)
         }
         skipSpaces()
         guard peek() == "|", peek(1) != "|" else { return .expression(expr) }
-        guard dialect == .shell else {
+        guard let plugin = self.plugin, let unit = try plugin.unit(continuing: expr, from: start, &self) else {
             throw SyntaxError("'|' pipes commands, which are shell syntax, and isn't an operator in Swift-only code")
         }
-        pos += 1
-        skipSpaces(newlines: true)
-        return .pipeline(try parsePipeline(from: start, input: expr))
-    }
-
-    /// `try cmd …` or `try! cmd …`, or nil (having looked ahead) when what
-    /// follows the `try` is an expression, as in `try? $(cmd)`.
-    mutating func parseThrowingCommand() throws(SyntaxError) -> PipelineNode? {
-        let before = (pos, spans.count)
-        guard let kind = try parseTry() else { return nil }
-        skipSpaces()
-        // `try false` is the command: a Bool value can't throw.
-        guard peek() != nil, commandAhead(boolIsCommand: kind != .optional).isCommand else {
-            rewind(to: before)
-            return nil
-        }
-        if kind == .optional {
-            throw SyntaxError("try? needs a value; capture the command with try? $(…)")
-        }
-        tryDepth += 1
-        defer { tryDepth -= 1 }
-        var pipeline = try parsePipeline()
-        pipeline.throwing = .some(kind)
-        return pipeline
-    }
-
-    /// Whether the unit ahead is a command rather than an expression. The
-    /// grammar decides, not the first character: it's an expression if one
-    /// parses there and the unit ends after it. It's a command if
-    ///
-    /// - it starts with shell syntax: `^`, or `$name` (`$EDITOR notes`);
-    /// - it starts with a function's name that isn't called or read there
-    ///   (`greet Rak`, but `greet(…)` and `greet.self` are expressions);
-    /// - no expression parses within its first word (`ls -la`, `git-lfs`,
-    ///   `2to3`, `./run`, `~/bin/x`), the name and the word being one; or
-    /// - a word follows the expression that parses (`"/opt/My App/run" x`).
-    ///
-    /// A name directly followed by `(` is a call either way. `boolIsCommand`:
-    /// after `try` or `async`, where a lone `true` or `false` is the program,
-    /// since a Bool value can't throw or run.
-    mutating func commandAhead(boolIsCommand: Bool = false) -> UnitStart {
-        let saved = self
-        defer { self = saved }
-        skipSpaces()
-        guard let c = peek() else { return .expression }
-        if c == "^" || (c == "$" && peek(1).map(Parser.isIdentifierStart) ?? false) { return .command(notAnExpression: nil) }
-        if let word = identifier() {
-            let after = peek(word.count)
-            if boolIsCommand && (word == "true" || word == "false") && after.map(isWordBoundary) ?? true {
-                return .command(notAnExpression: nil)
-            }
-            if after == "(" { return .expression }
-            if kind(of: word) == .function { return after != "." && after != "[" ? .command(notAnExpression: nil) : .expression }
-        }
-        var wordEnd = pos
-        while wordEnd < chars.count, !isWordBoundary(chars[wordEnd]) { wordEnd += 1 }
-        // Why it isn't an expression is worth saying only of a word that
-        // starts like one (`1...2...3`), not of one that starts like a name.
-        let startsLikeName = Parser.isIdentifierStart(c)
-        do {
-            _ = try parseExpression(logical: true)
-        } catch {
-            // Unfinished input is an unfinished expression, not a command.
-            guard !error.incomplete, pos <= wordEnd else { return .expression }
-            return .command(notAnExpression: startsLikeName ? nil : error.description)
-        }
-        skipSpaces()
-        guard endsUnit() else {
-            var end = pos
-            while end < chars.count, !isWordBoundary(chars[end]) { end += 1 }
-            return .command(notAnExpression: startsLikeName ? nil : "unexpected '\(String(chars[pos..<end]))'")
-        }
-        return .expression
-    }
-
-    /// Whether the unit ends here: at the end of the input or the statement,
-    /// before `|`, `&&` or `||`, a closing bracket, or a condition's body.
-    func endsUnit() -> Bool {
-        guard let c = peek() else { return true }
-        if ";\n|&})".contains(c) { return true }
-        if c == "{" && conditionDepth > 0 { return true }
-        return guardCondition && identifier() == "else"
+        return unit
     }
 
     mutating func parseIf() throws(SyntaxError) -> IfStatement {

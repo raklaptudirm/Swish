@@ -112,7 +112,10 @@ extension Parser {
             return try parseExpression()
         }
         if identifier() == "async" {
-            return try parseAsync()
+            guard let plugin = self.plugin, let expr = try plugin.expression(&self) else {
+                throw SyntaxError("'async' starts a command in the background, which is shell syntax; Swift-only code has no async yet")
+            }
+            return expr
         }
         if identifier() == "await" {
             keyword("await")
@@ -190,30 +193,6 @@ extension Parser {
                 return expr
             }
         }
-    }
-
-    /// `async cmd …` or `async $(cmd …)`: a pipeline of programs to start in
-    /// the background.
-    mutating func parseAsync() throws(SyntaxError) -> Expr {
-        guard dialect == .shell else {
-            throw SyntaxError("'async' starts a command in the background, which is shell syntax; Swift-only code has no async yet")
-        }
-        keyword("async")
-        skipSpaces()
-        if peek() == "$" && peek(1) == "(" {
-            guard case .substitution(let program, _)? = try parseDollar(),
-                  program.statements.count == 1, case .chain(let chain) = program.statements[0],
-                  chain.links.isEmpty, case .pipeline(let pipeline) = chain.first else {
-                throw SyntaxError("async $(…) runs one pipeline of commands")
-            }
-            return .async(.capture(pipeline))
-        }
-        guard peek() != nil else { throw .incomplete("expected a command after 'async'") }
-        // `async false` is the command: a Bool value can't run.
-        guard commandAhead(boolIsCommand: true).isCommand else {
-            throw SyntaxError("async runs a command, as in `async swift build` or `async $(curl …)`")
-        }
-        return .async(.command(try parsePipeline()))
     }
 
     mutating func parseArguments() throws(SyntaxError) -> [Argument] {

@@ -10,7 +10,7 @@ private func names(_ variables: Set<String>, functions: Set<String> = []) -> [St
 }
 
 private func parse(_ source: String, bound: Set<String> = [], functions: Set<String> = []) throws -> Program {
-    try Parser.parse(source, bound: names(bound, functions: functions))
+    try Parser.parse(source, bound: names(bound, functions: functions), plugin: ShellSyntax())
 }
 
 /// The kind of each top-level unit: "command", "expression", "if" or "loop".
@@ -18,7 +18,7 @@ private func modes(_ source: String, bound: Set<String> = [], functions: Set<Str
     try parse(source, bound: bound, functions: functions).statements.map { statement in
         guard case .chain(let chain) = statement else { return "declaration" }
         switch chain.first {
-        case .pipeline: return "command"
+        case .extended: return "command"
         case .expression: return "expression"
         case .ifStatement: return "if"
         case .forLoop, .whileLoop: return "loop"
@@ -36,9 +36,9 @@ private func closureParameters(_ source: String) throws -> [String] {
     return closure.parameters.map(\.name)
 }
 
-private func words(_ source: String, bound: Set<String> = []) throws -> [[StringPart]] {
+private func words(_ source: String, bound: Set<String> = []) throws -> [[WordPart]] {
     guard case .chain(let chain) = try parse(source, bound: bound).statements.first,
-          case .pipeline(let pipeline) = chain.first else {
+          let pipeline = chain.first.pipelineNode else {
         Issue.record("not a command: \(source)")
         return []
     }
@@ -50,7 +50,7 @@ private func words(_ source: String, bound: Set<String> = []) throws -> [[String
 
 private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxError? {
     do {
-        _ = try Parser.parse(source, bound: names(bound))
+        _ = try Parser.parse(source, bound: names(bound), plugin: ShellSyntax())
         return nil
     } catch {
         return error
@@ -175,7 +175,7 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
 
 @Test func valuesCanFeedPipelines() throws {
     guard case .chain(let chain) = try parse("[1, 2] | sorted | head -1").statements[0],
-          case .pipeline(let pipeline) = chain.first else { Issue.record(); return }
+          let pipeline = chain.first.pipelineNode else { Issue.record(); return }
     #expect(pipeline.input == .list([.literal(.int(1)), .literal(.int(2))]))
     #expect(pipeline.commands.map { $0.words.count } == [1, 2])
     #expect(pipeline.source == "[1, 2] | sorted | head -1")
@@ -213,7 +213,7 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
 
 @Test func closuresAsCommandArguments() throws {
     guard case .chain(let chain) = try parse("ls | filter { $0.size > 1.mb }").statements[0],
-          case .pipeline(let pipeline) = chain.first,
+          let pipeline = chain.first.pipelineNode,
           case .closure(let closure) = pipeline.commands[1].words[1] else { Issue.record(); return }
     #expect(closure.parameters.map(\.name) == ["$0"])
 }
@@ -222,7 +222,7 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
     guard case .chain(let chain) = try parse("if grep -q x f { echo yes }").statements[0],
           case .ifStatement(let node) = chain.first,
           case .chain(let conditionChain) = node.condition,
-          case .pipeline(let condition) = conditionChain.first else { Issue.record(); return }
+          let condition = conditionChain.first.pipelineNode else { Issue.record(); return }
     #expect(condition.commands[0].words.count == 4)
     #expect(node.then.statements.count == 1)
 }
@@ -307,7 +307,7 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
 
 private func command(_ source: String) throws -> CommandNode? {
     guard case .chain(let chain) = try parse(source).statements.first,
-          case .pipeline(let pipeline) = chain.first else { return nil }
+          let pipeline = chain.first.pipelineNode else { return nil }
     return pipeline.commands.first
 }
 
@@ -422,13 +422,13 @@ private func command(_ source: String) throws -> CommandNode? {
         Issue.record()
         return
     }
-    guard case .binding("x", false, .attempt(.substitution, .optional)) = node.condition else {
+    guard case .binding("x", false, .attempt(let substitution, .optional)) = node.condition, substitution.substitutionParts != nil else {
         Issue.record("not an optional binding: \(node.condition)")
         return
     }
     // In the body `x` is the variable; in the else branch it's a command.
     guard case .chain(let then) = node.then.statements[0], case .expression = then.first,
-          case .chain(let otherwise) = node.otherwise!.statements[0], case .pipeline = otherwise.first else {
+          case .chain(let otherwise) = node.otherwise!.statements[0], otherwise.first.pipelineNode != nil else {
         Issue.record()
         return
     }
@@ -451,10 +451,14 @@ private func command(_ source: String) throws -> CommandNode? {
 @Test func tryCoversTheRestOfTheExpression() throws {
     let program = try parse("let a = try? $(x) ?? 1; let b = (try? $(x)) ?? 1; let c = try $(x); let d = $(x)")
     // `try?` covers the `??` too, as in Swift, and marks the $(…) under it.
-    guard case .declare(_, _, .attempt(.binary(.coalesce, .substitution(_, throwing: true), _), .optional)) = program.statements[0],
-          case .declare(_, _, .binary(.coalesce, .attempt(.substitution(_, throwing: true), .optional), _)) = program.statements[1],
-          case .declare(_, _, .attempt(.substitution(_, throwing: true), .plain)) = program.statements[2],
-          case .declare(_, _, .substitution(_, throwing: false)) = program.statements[3] else {
+    guard case .declare(_, _, .attempt(.binary(.coalesce, let first, _), .optional)) = program.statements[0],
+          first.substitutionParts?.throwing == true,
+          case .declare(_, _, .binary(.coalesce, .attempt(let second, .optional), _)) = program.statements[1],
+          second.substitutionParts?.throwing == true,
+          case .declare(_, _, .attempt(let third, .plain)) = program.statements[2],
+          third.substitutionParts?.throwing == true,
+          case .declare(_, _, let fourth) = program.statements[3],
+          fourth.substitutionParts?.throwing == false else {
         Issue.record("\(program.statements)")
         return
     }
@@ -466,7 +470,8 @@ private func command(_ source: String) throws -> CommandNode? {
     guard case .declare(_, _, .attempt(.call(_, let arguments), .optional)) = try parse("let r = try? f({ $(x) })", bound: ["f"]).statements[0],
           case .closure(let closure) = arguments[0].value,
           case .chain(let chain) = closure.body.statements[0],
-          case .expression(.substitution(_, throwing: false)) = chain.first else {
+          case .expression(let substitution) = chain.first,
+          substitution.substitutionParts?.throwing == false else {
         Issue.record()
         return
     }
@@ -488,11 +493,11 @@ private func command(_ source: String) throws -> CommandNode? {
 
 @Test func tryBeforeACommand() throws {
     guard case .chain(let chain) = try parse("try make -j4").statements[0],
-          case .pipeline(let pipeline) = chain.first else { Issue.record(); return }
+          let pipeline = chain.first.pipelineNode else { Issue.record(); return }
     #expect(pipeline.throwing == .some(nil))
     #expect(pipeline.commands[0].words.count == 2)
     guard case .chain(let forced) = try parse("try! false").statements[0],
-          case .pipeline(let bang) = forced.first else { Issue.record(); return }
+          let bang = forced.first.pipelineNode else { Issue.record(); return }
     #expect(bang.throwing == .some(.forced))
     // An expression after `try` is still an expression.
     #expect(try modes("try $(x); try? false") == ["expression", "expression"])
@@ -502,8 +507,8 @@ private func command(_ source: String) throws -> CommandNode? {
 
 @Test func asyncAndAwaitForms() throws {
     let program = try parse("let j = async make -j4 | tee log; let p = async $(curl x); await j; await; try await p")
-    guard case .declare(_, _, .async(.command(let command))) = program.statements[0],
-          case .declare(_, _, .async(.capture(let capture))) = program.statements[1],
+    guard case .declare(_, _, let started) = program.statements[0], case .command(let command)? = started.asyncTarget,
+          case .declare(_, _, let captured) = program.statements[1], case .capture(let capture)? = captured.asyncTarget,
           case .chain(let a) = program.statements[2], case .expression(.await(.variable("j"), throwing: false)) = a.first,
           case .chain(let b) = program.statements[3], case .expression(.await(nil, throwing: false)) = b.first,
           case .chain(let c) = program.statements[4], case .expression(.attempt(.await(.variable("p"), throwing: true), .plain)) = c.first else {

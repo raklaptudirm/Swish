@@ -2,10 +2,17 @@
 import SwishKit
 import Testing
 
+/// Swift's syntax alone, or with the shell's added.
+private enum Dialect {
+    case swift, shell
+
+    var plugin: (any SyntaxPlugin)? { self == .shell ? ShellSyntax() : nil }
+}
+
 /// The syntax error that stops `source`, or nil if it parses.
-private func syntaxError(_ source: String, _ dialect: Parser.Dialect, bound: [String: NameKind] = [:]) -> String? {
+private func syntaxError(_ source: String, _ dialect: Dialect, bound: [String: NameKind] = [:]) -> String? {
     do {
-        _ = try Parser.parse(source, bound: bound, dialect: dialect)
+        _ = try Parser.parse(source, bound: bound, plugin: dialect.plugin)
         return nil
     } catch {
         return error.description
@@ -56,8 +63,8 @@ private func syntaxError(_ source: String, _ dialect: Parser.Dialect, bound: [St
 }
 
 @Test func theShellSpeaksTheShellsDialectAndTheCoreSpeaksSwift() {
-    #expect(Interpreter().dialect == .swift)
-    #expect(Shell().interpreter.dialect == .shell)
+    #expect(Interpreter().syntax == nil)
+    #expect(Shell().interpreter.syntax != nil)
 }
 
 /// What a script wrote and how it ended, run on an `Interpreter` alone: no

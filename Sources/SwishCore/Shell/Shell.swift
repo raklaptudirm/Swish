@@ -55,7 +55,7 @@ public final class Shell {
         // should end that write with EPIPE, not kill the shell.
         signal(SIGPIPE, SIG_IGN)
         interpreter = Interpreter()
-        interpreter.dialect = .shell
+        interpreter.syntax = ShellSyntax()
         interpreter.host = SwishHost(process: self)
         interpreter.shellLayer = ShellLayer(process: self)
         interpreter.installBuiltinFunctions(providing: ["help": help().body])

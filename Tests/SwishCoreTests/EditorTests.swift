@@ -145,7 +145,7 @@ private func completion(_ text: String, in shell: Shell = Shell()) -> (start: In
 
 @Test func highlightSpansFollowTheParse() {
     let source = #"if x > 1 { echo "hi \(x)" --flag } // note"#
-    let spans = Parser.highlight(source, bound: ["x": .variable])
+    let spans = Parser.highlight(source, bound: ["x": .variable], plugin: ShellSyntax())
     func kinds(_ text: String) -> [SpanKind] {
         let chars = Array(source)
         return spans.filter { String(chars[$0.range]) == text }.map(\.kind)
@@ -161,7 +161,7 @@ private func completion(_ text: String, in shell: Shell = Shell()) -> (start: In
 }
 
 @Test func unfinishedInputStillHighlights() {
-    let spans = Parser.highlight(#"echo "unterminated"#, bound: [:])
+    let spans = Parser.highlight(#"echo "unterminated"#, bound: [:], plugin: ShellSyntax())
     #expect(spans.map(\.kind) == [.command, .string])
 }
 
@@ -186,6 +186,6 @@ private func completion(_ text: String, in shell: Shell = Shell()) -> (start: In
 @Test func redirectOperatorsHighlight() {
     let source = "sort < in e>o > out o+e>> log"
     let chars = Array(source)
-    let marked = Parser.highlight(source, bound: [:]).filter { $0.kind == .punctuation }.map { String(chars[$0.range]) }
+    let marked = Parser.highlight(source, bound: [:], plugin: ShellSyntax()).filter { $0.kind == .punctuation }.map { String(chars[$0.range]) }
     #expect(marked == ["<", "e>o", ">", "o+e>>"])
 }

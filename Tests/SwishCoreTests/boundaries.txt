@@ -12,6 +12,7 @@
 
 leaves	Syntax/CommandNodes.swift
 leaves	Syntax/Parser+Commands.swift
+leaves	Syntax/ShellSyntax.swift
 leaves	Checking/TypeChecker+Pipelines.swift
 leaves	Interpreter/Shell+CommandLine.swift
 leaves	Interpreter/ShellLayer.swift
@@ -19,42 +20,28 @@ leaves	Bridge/Bridge+Stages.swift
 leaves	Builtins/Shell+ShellBuiltins.swift
 leaves	Builtins/Shell+Help.swift
 
-allow	Syntax/Expressions.swift	grammar	2
-allow	Syntax/Parser+Declarations.swift	plugin	1
-allow	Syntax/Parser+Expressions.swift	grammar	1
 allow	Syntax/Parser+Expressions.swift	chain	1
-allow	Syntax/Parser+Units.swift	grammar	4
 allow	Syntax/Parser+Units.swift	chain	5
-allow	Syntax/Statements.swift	grammar	1
 allow	Syntax/Statements.swift	chain	8
-allow	Syntax/Statements.swift	plugin	1
+allow	Syntax/SyntaxPlugin.swift	chain	2
 allow	Checking/TypeChecker+Closures.swift	chain	1
-allow	Checking/TypeChecker+Declarations.swift	grammar	1
 allow	Checking/TypeChecker+Declarations.swift	chain	1
 allow	Checking/TypeChecker+Expressions.swift	env	1
-allow	Checking/TypeChecker+Expressions.swift	jobs	4
+allow	Checking/TypeChecker+Expressions.swift	jobs	3
 allow	Checking/TypeChecker+Members.swift	env	3
 allow	Checking/TypeChecker+Members.swift	jobs	2
 allow	Checking/TypeChecker+Names.swift	env	2
 allow	Checking/TypeChecker+Names.swift	jobs	2
-allow	Checking/TypeChecker+Statements.swift	grammar	2
 allow	Checking/TypeChecker+Statements.swift	chain	2
-allow	Checking/TypeChecker+Statements.swift	plugin	2
 allow	Checking/TypeChecker.swift	shell	2
-allow	Interpreter/Interpreter+Environment.swift	grammar	4
 allow	Interpreter/Interpreter+Environment.swift	env	4
 allow	Interpreter/Interpreter+Environment.swift	layer	1
-allow	Interpreter/Interpreter+Environment.swift	status	1
-allow	Interpreter/Interpreter+Expressions.swift	env	7
+allow	Interpreter/Interpreter+Expressions.swift	env	6
 allow	Interpreter/Interpreter+Expressions.swift	jobs	2
-allow	Interpreter/Interpreter+Expressions.swift	layer	9
+allow	Interpreter/Interpreter+Expressions.swift	layer	5
 allow	Interpreter/Interpreter+Scopes.swift	commands	1
-allow	Interpreter/Interpreter+Statements.swift	grammar	1
 allow	Interpreter/Interpreter+Statements.swift	chain	2
-allow	Interpreter/Interpreter+Statements.swift	env	2
-allow	Interpreter/Interpreter+Statements.swift	layer	1
 allow	Interpreter/Interpreter+Statements.swift	status	3
-allow	Interpreter/Interpreter+Statements.swift	plugin	2
 allow	Interpreter/Interpreter.swift	layer	4
 allow	Interpreter/Interpreter.swift	status	2
 allow	Interpreter/Scope.swift	jobs	1

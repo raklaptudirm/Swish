@@ -79,17 +79,11 @@ struct Parser {
     /// Levels whose operators can't be chained, like `a < b < c`.
     static let nonAssociativeLevels: Set = [2, 4]
 
-    /// The syntax the parser accepts. Swish is Swift with the shell's syntax on
-    /// top: in the `swift` dialect (the embeddable core's) a line that isn't a
-    /// Swift expression or statement is an error, where the `shell` dialect
-    /// reads it as a command, a pipeline or a substitution.
-    enum Dialect: Sendable {
-        case swift, shell
-    }
-
     let chars: [Character]
     var pos = 0
-    var dialect = Dialect.shell
+    /// Syntax added to Swift's, which the grammar asks about where it has no
+    /// meaning for what is there. Nil is Swift alone (SyntaxPlugin.swift).
+    var plugin: (any SyntaxPlugin)?
     var scopes: [[String: NameKind]]
     /// Parsing the prelude: builtins' declarations, which may be generic and
     /// have no bodies (their bodies are in Swift).
@@ -137,9 +131,9 @@ struct Parser {
     /// found before the problem.
     private(set) var spans: [Span] = []
 
-    static func parse(_ source: String, bound: [String: NameKind], dialect: Dialect = .shell) throws(SyntaxError) -> Program {
+    static func parse(_ source: String, bound: [String: NameKind], plugin: (any SyntaxPlugin)? = nil) throws(SyntaxError) -> Program {
         var parser = Parser(source, bound: bound)
-        parser.dialect = dialect
+        parser.plugin = plugin
         return try parser.parseProgram(until: nil)
     }
 
@@ -150,8 +144,9 @@ struct Parser {
         return try parser.parseProgram(until: nil)
     }
 
-    static func highlight(_ source: String, bound: [String: NameKind]) -> [Span] {
+    static func highlight(_ source: String, bound: [String: NameKind], plugin: (any SyntaxPlugin)? = nil) -> [Span] {
         var parser = Parser(source, bound: bound)
+        parser.plugin = plugin
         _ = try? parser.parseProgram(until: nil)
         return parser.spans
     }

@@ -83,29 +83,6 @@ extension Parser {
         return EnumDecl(name: name, rawType: rawType, cases: cases, conformances: conformances)
     }
 
-    /// `import Name from "path"`. The functions it brings aren't known until
-    /// it runs; the module's name is, for `Tools.greet(…)`.
-    mutating func parseImport() throws(SyntaxError) -> Statement {
-        keyword("import")
-        skipSpaces()
-        let nameStart = pos
-        let name = try parseName(after: "'import'")
-        mark(.type, from: nameStart)
-        skipSpaces()
-        guard dialect == .shell else {
-            throw SyntaxError("importing a package from a path is shell syntax, and isn't available in Swift-only code")
-        }
-        guard identifier() == "from" else {
-            throw SyntaxError("import needs where the package is: import \(name) from \"path/to/\(name)\"")
-        }
-        keyword("from")
-        skipSpaces()
-        let path = try parsePrimary()
-        scopes[scopes.count - 1][name] = .variable
-        sawImport = true
-        return .importPlugin(name: name, path: path)
-    }
-
     /// `struct Name { … }`: properties, methods and initializers. In their
     /// bodies, members are in scope and go through `self`, as in Swift.
     mutating func parseStruct() throws(SyntaxError) -> StructDecl {

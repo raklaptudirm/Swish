@@ -188,8 +188,8 @@ extension Parser {
         c == " " || c == "\t" || c == "\n" || "|;&(){}<>".contains(c)
     }
 
-    mutating func parseWord() throws(SyntaxError) -> [StringPart] {
-        var parts: [StringPart] = []
+    mutating func parseWord() throws(SyntaxError) -> [WordPart] {
+        var parts: [WordPart] = []
         var literal = ""
         // Whether the unquoted text in `literal` has a wildcard in it.
         var wildcard = false
@@ -218,7 +218,7 @@ extension Parser {
                 parts.append(.literal(try parseRawString()))
             case "\"":
                 flush()
-                parts += try parseInterpolatedString(dollar: true)
+                parts += try parseInterpolatedString(dollar: true).map(WordPart.init)
             case "\\":
                 guard let next = peek(1) else { throw .incomplete("expected a character after '\\'") }
                 if next == "(" {
