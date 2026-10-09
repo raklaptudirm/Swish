@@ -12,11 +12,7 @@ extension Interpreter {
             return .string(try expand(parts))
         case .variable(let name):
             guard let binding = lookup(name) else { throw RuntimeError("no variable named '\(name)'") }
-            switch binding.special {
-            case .jobs?:
-                return .list(try commandAccess().jobs())
-            case .initializing?, nil: return binding.value
-            }
+            return binding.value
         case .extended(let box):
             return try box.node.evaluate(in: self)
         case .list(let elements):
@@ -195,7 +191,8 @@ extension Interpreter {
                 throw FatalError(error: error)
             }
         case .await(let target, let throwing):
-            return try commandAccess().await(try target.map { try evaluate($0) }, throwing)
+            guard let awaiting else { throw RuntimeError("there is nothing to await here") }
+            return try awaiting.perform(try target.map { try evaluate($0) }, throwing)
         case .binary(.coalesce, let lhs, let rhs):
             let value = try evaluate(lhs)
             if value == .nothing { return try evaluate(rhs) }

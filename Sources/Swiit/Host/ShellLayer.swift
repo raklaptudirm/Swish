@@ -1,21 +1,14 @@
 import SwishKit
 
-/// The shell's constructs the core still calls: jobs, `await` and the
-/// sequence methods. (Running pipelines and `$(…)` are the shell's own nodes,
-/// which reach their `Shell` through `Interpreter.owner`.)
+/// The shell's constructs the core still calls: the sequence methods.
+/// (Running pipelines and `$(…)` are the shell's own nodes, which reach their
+/// `Shell` through `Interpreter.owner`.)
 package struct CommandAccess {
-    /// The jobs there are, with their states current.
-    package var jobs: () -> [Value]
-    /// `await`, on a job or (with no operand) the latest one; `throwing`
-    /// for `try await`.
-    package var await: (_ job: Value?, _ throwing: Bool) throws -> Value
     /// `xs.select(…)`: a sequence method called on a list, whose `@input`
     /// the pipeline machinery feeds.
     package var callSequenceMethod: (OverloadSet, _ items: [Value], [Argument]) throws -> Value
 
-    package init(jobs: @escaping () -> [Value], `await`: @escaping (_ job: Value?, _ throwing: Bool) throws -> Value, callSequenceMethod: @escaping (OverloadSet, _ items: [Value], [Argument]) throws -> Value) {
-        self.jobs = jobs
-        self.await = `await`
+    package init(callSequenceMethod: @escaping (OverloadSet, _ items: [Value], [Argument]) throws -> Value) {
         self.callSequenceMethod = callSequenceMethod
     }
 }
@@ -28,8 +21,6 @@ package struct CommandAccess {
 ///
 /// | Entry | Belongs to | Exit |
 /// |---|---|---|
-/// | `jobs` | vocabulary | a registered global |
-/// | `commands.jobs`, `await` | vocabulary | `Job` as a registered type, `jobs` a global |
 /// | `commands.callSequenceMethod` | grammar | the desugaring |
 package struct ShellLayer {
     package var commands: CommandAccess

@@ -258,3 +258,29 @@ private final class Settings: DynamicObject, @unchecked Sendable {
     group.wait()
     #expect(wrong == 0)
 }
+
+@Test func aComputedGlobalIsReadFreshAndCannotBeAssigned() throws {
+    let swish = interpreter()
+    nonisolated(unsafe) var reads = 0
+    swish.bind(computed: "counter", type: .int) { reads += 1; return .int(reads) }
+    #expect(try swish.eval("counter") == .int(1))
+    #expect(try swish.eval("counter + counter") == .int(5)) // 2 + 3: read each time
+    do {
+        _ = try swish.eval("counter = 9")
+        Issue.record("expected a diagnostic")
+    } catch let error as Diagnostic {
+        #expect(error.kind == .type)
+    }
+}
+
+@Test func awaitNeedsAHostThatHasSomethingToWaitFor() throws {
+    let swish = interpreter()
+    do {
+        _ = try swish.eval("await 1")
+        Issue.record("expected a diagnostic")
+    } catch let error as Diagnostic {
+        #expect(error.message.contains("nothing to await"))
+    }
+    swish.awaiting = Awaiting(operand: .int, result: .int) { value, _ in .int((value.flatMap { v -> Int? in if case .int(let n) = v { n } else { nil } } ?? 0) * 2) }
+    #expect(try swish.eval("await 21") == .int(42))
+}

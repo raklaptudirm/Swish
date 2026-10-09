@@ -26,6 +26,8 @@ public final class Interpreter {
     /// How values lay out as tables, which only a host that shows them has
     /// (the shell installs it). Library functions that format are lent this.
     package var displayRegistryProvider: () -> DisplayRegistry = { DisplayRegistry() }
+    /// What `await` waits for, if the host has anything to wait for.
+    package var awaiting: Awaiting?
     package var objectMembers: [String: [String: TypeAnnotation]] = [:]
 
     /// Variable scopes, innermost last. The outermost holds the builtin
@@ -109,6 +111,7 @@ extension Interpreter {
     package func globalNames() -> [String: NameKind] {
         scopes[0].bindings.merging(scopes[1].bindings) { $1 }.mapValues { binding in
             if binding.isFunction { return .function }
+            if binding.isComputed { return .variable }
             if case .object(is EnumType) = binding.value { return .type }
             if case .object(is StructType) = binding.value { return .type }
             if case .object(is BridgedTypeName) = binding.value { return .type }

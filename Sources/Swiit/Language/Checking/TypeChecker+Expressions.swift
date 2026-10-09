@@ -90,10 +90,11 @@ extension TypeChecker {
                 return .optional(type)
             }
         case .await(var job, let throwing):
+            guard let awaiting = interpreter.awaiting else { throw TypeError("there is nothing to await here") }
             if throwing { try throwingSite("awaiting a job") }
-            if job != nil { try expect(&job!, .named("Job"), "what 'await' waits for") }
+            if job != nil { try expect(&job!, awaiting.operand, "what 'await' waits for") }
             expr = .await(job, throwing: throwing)
-            return .output
+            return awaiting.result
         case .list(var items):
             let type = try listType(&items, expected: expected)
             expr = .list(items)

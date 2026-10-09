@@ -65,6 +65,7 @@ public final class Shell {
         interpreter.objectMembers["Job"] = Dictionary(uniqueKeysWithValues: Job.members.map { ($0.name, $0.type) })
         interpreter.installBuiltinFunctions(libraries: [.shell(for: self)])
         interpreter.installJSON()
+        installJobs()
     }
 }
 

@@ -22,27 +22,6 @@ extension ShellLayer {
     init(process shell: Shell) {
         self.init(
             commands: CommandAccess(
-                jobs: { [unowned shell] in
-                    shell.updateJobs() // So their states are current.
-                    return shell.jobs.map { .object($0) }
-                },
-                await: { [unowned shell] value, throwing in
-                    let job: Job
-                    if let value {
-                        guard case .object(let object as Job) = value else {
-                            throw RuntimeError("await needs a Job, not \(value.typeName)")
-                        }
-                        job = object
-                    } else {
-                        guard let latest = shell.jobs.last else { throw RuntimeError("there are no jobs to await") }
-                        job = latest
-                    }
-                    let output = try shell.awaitJob(job)
-                    if throwing && !output.succeeded {
-                        throw RuntimeError.commandFailure("\(job.source) failed with status \(job.status)", status: job.status, output: output)
-                    }
-                    return .output(output)
-                },
                 callSequenceMethod: { [unowned shell] methods, items, arguments in
                     try shell.callSequenceMethod(methods, on: items, arguments)
                 }),

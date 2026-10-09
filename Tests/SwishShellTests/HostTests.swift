@@ -28,8 +28,6 @@ private func shellWithRecorder() -> (Shell, Recorder) {
         set: { recorder.variables[$0] = $1 })))
     shell.interpreter.shellLayer = ShellLayer(
         commands: CommandAccess(
-            jobs: { [] },
-            await: { _, _ in .nothing },
             callSequenceMethod: { _, _, _ in .nothing }),
         importPlugin: { _, _ in },
         history: { [] })

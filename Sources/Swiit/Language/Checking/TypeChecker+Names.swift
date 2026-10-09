@@ -9,10 +9,7 @@ extension TypeChecker {
             if let symbol = scope[name] { return symbol }
         }
         guard let binding = interpreter.lookup(name) else { return nil }
-        switch binding.special {
-        case .jobs?: return .variable(.list(.named("Job")), mutable: false)
-        default: break
-        }
+        if binding.isComputed { return .variable(interpreter.staticTypes[name] ?? .unknown, mutable: false) }
         switch binding.value {
         case .object(let type as StructType):
             return .structType(structInfo(type))

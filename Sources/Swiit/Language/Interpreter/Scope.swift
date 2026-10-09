@@ -2,10 +2,7 @@ import Foundation
 import SwishKit
 
 package struct Binding {
-    /// Builtin names whose values are live: read when they're used.
     package enum Special {
-        /// `jobs`: the jobs in the background, oldest first.
-        case jobs
         /// `self` in a struct's `init`, which may set its `let` properties.
         case initializing
     }
@@ -18,6 +15,8 @@ package struct Binding {
         nonmutating set { cell.value = newValue }
     }
     package let mutable: Bool
+    /// Its value is worked out on each read; looking at its type reads nothing.
+    package var isComputed: Bool { cell.isComputed }
     /// Declared with `func`, which makes it callable in command mode.
     package var isFunction = false
     package var special: Special?
@@ -29,11 +28,36 @@ package struct Binding {
         self.special = special
     }
 
+    /// A name whose value is worked out each time it is read, like the shell's
+    /// `jobs`, and can't be assigned.
+    package init(computed value: @escaping () -> Value) {
+        cell = Cell(compute: value)
+        mutable = false
+    }
+
     /// A variable's storage, so a closure can share it without keeping the
     /// whole scope it's in.
     package final class Cell {
-        package var value: Value
-        package init(_ value: Value) { self.value = value }
+        private var stored: Value
+        private let compute: (() -> Value)?
+
+        package var value: Value {
+            get { compute?() ?? stored }
+            set { stored = newValue }
+        }
+
+        package init(_ value: Value) {
+            stored = value
+            compute = nil
+        }
+
+        /// Worked out on each read, not stored.
+        package var isComputed: Bool { compute != nil }
+
+        package init(compute: @escaping () -> Value) {
+            stored = .nothing
+            self.compute = compute
+        }
     }
 }
 
