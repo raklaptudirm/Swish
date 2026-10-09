@@ -73,7 +73,7 @@ private func status(_ source: String) -> Int32 {
 
 @Test func variablesAndScopes() throws {
     #expect(try output("var i = 1; i = i + 1; i") == "2\n")
-    #expect(try output("let x = 1; if true { let x = 2; x }; x") == "2\n1\n")
+    #expect(try output("let x = 1; if true { let x = 2; print(x) }; x") == "2\n1\n")
     #expect(try output("var x = 1; if true { x = 5 }; x") == "5\n")
 }
 
@@ -111,10 +111,10 @@ private func withVariable(_ name: String, _ value: Any) -> Shell {
 // MARK: Loops
 
 @Test func forLoops() throws {
-    #expect(try output("for i in 1...3 { i }") == "1\n2\n3\n")
-    #expect(try output("for i in 0..<2 { i }; for x in [\"a\", \"b\"] { x }") == "0\n1\n\"a\"\n\"b\"\n")
+    #expect(try output("for i in 1...3 { print(i) }") == "1\n2\n3\n")
+    #expect(try output("for i in 0..<2 { print(i) }; for x in [\"a\", \"b\"] { print(x) }") == "0\n1\na\nb\n")
     // Strings iterate by character, as in Swift; command output by `.lines`.
-    #expect(try output(#"for c in "héy" { c }"#) == "\"h\"\n\"é\"\n\"y\"\n")
+    #expect(try output(#"for c in "héy" { print(c) }"#) == "h\né\ny\n")
     #expect(try output(#"for line in $(printf 'a b\nc').lines { echo "<\(line)>" }"#) == "<a b>\n<c>\n")
     #expect(try output(#"for line in "" { echo never }"#) == "")
     #expect(try output("for _ in 1...2 { echo x }") == "x\nx\n")
@@ -133,7 +133,7 @@ private func withVariable(_ name: String, _ value: Any) -> Shell {
 }
 
 @Test func breakAndContinue() throws {
-    #expect(try output("for i in 0..<10 { if i == 1 { continue }; if i == 3 { break }; i }") == "0\n2\n")
+    #expect(try output("for i in 0..<10 { if i == 1 { continue }; if i == 3 { break }; print(i) }") == "0\n2\n")
     #expect(try output("for i in 1...2 { for j in 1...3 { if j == 2 { break }; echo \\(i)\\(j) } }") == "11\n21\n")
 }
 
@@ -466,7 +466,7 @@ private func fixture() throws -> String {
     #expect(try output(#"(try? $(false)) ?? "fallback""#) == "\"fallback\"\n")
     #expect(try output("try? $(grep -q nope /dev/null) != nil || echo missing") == "missing\n")
     #expect(try output(#"if let h = try? $(echo hi) { echo "got \(h)" } else { echo none }"#) == "got hi\n")
-    #expect(try output(#"if let h = try? $(false) { h } else if let g = try? $(echo second) { g }"#) == "Output(text: \"second\", status: Status(code: 0, signal: nil, succeeded: true))\n")
+    #expect(try output(#"if let h = try? $(false) { print(h) } else if let g = try? $(echo second) { print(g) }"#) == "second\n")
     #expect(status("if let h = try? $(false) { }; h") == 127) // h is only bound inside: here it's a command
     // Any runtime error, not just a failed command.
     #expect(try output("try? [1][5] == nil; try? 1 / 0 == nil") == "")
@@ -550,16 +550,16 @@ private func fixture() throws -> String {
 // MARK: do/catch
 
 @Test func catchingAFailedCapture() throws {
-    #expect(try output(#"do { let r = try $(sh -c 'echo partial; exit 3') } catch { error.status.code; error.text }"#) == "3\n\"partial\"\n")
-    #expect(try output(#"do { let r = try $(sh -c 'kill -TERM $$') } catch { error.status.signal; error.status.code == nil }"#) == "15\ntrue\n")
+    #expect(try output(#"do { let r = try $(sh -c 'echo partial; exit 3') } catch { print(error.status.code); print(error.text) }"#) == "3\npartial\n")
+    #expect(try output(#"do { let r = try $(sh -c 'kill -TERM $$') } catch { print(error.status.signal); print(error.status.code == nil) }"#) == "15\ntrue\n")
     // Without `try`, nothing throws, so the catch doesn't run.
     #expect(try output(#"do { let r = $(false) } catch { echo never }; echo done"#) == "done\n")
 }
 
 @Test func catchingAnyRuntimeError() throws {
-    #expect(try output("do { 1 / 0 } catch let e { e.message; e.status.code }") == "\"division by zero\"\n1\n")
+    #expect(try output("do { 1 / 0 } catch let e { print(e.message); print(e.status.code) }") == "division by zero\n1\n")
     #expect(try output("do { echo fine } catch { echo never }") == "fine\n")
-    #expect(try output("do { let x = 1; x }") == "1\n") // do alone is a scope
+    #expect(try output("do { let x = 1; print(x) }") == "1\n") // do alone is a scope
     #expect(status("do { 1 / 0 }") == 1) // no catch: still an error
 }
 
@@ -617,4 +617,15 @@ private func fixture() throws -> String {
     #expect(try output(#"func names() -> [String] { ["a", "b"] }; names; names(); names | cat"#)
         == "a\nb\n" + #"["a", "b"]"# + "\na\nb\n")
     #expect(try output("func none() -> [Int] { [] }; none").isEmpty)
+}
+
+@Test func onlyAProgramsOwnValuesAreShown() throws {
+    // As in Swift's REPL: a top-level expression statement shows its value,
+    // at the prompt and in a script alike; one nested in a block doesn't.
+    // `print` is how a block speaks.
+    #expect(try output("1; 2; \"a\"") == "1\n2\n\"a\"\n")
+    #expect(try output("for i in 1...3 { i }") == "")
+    #expect(try output("if true { 1 } else { 2 }") == "")
+    #expect(try output("do { 1 }; 2") == "2\n")
+    #expect(try output("func f() -> Int { 1 }; f()") == "1\n")
 }

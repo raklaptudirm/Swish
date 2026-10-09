@@ -70,7 +70,7 @@ step "^C discards a pending block" "\nafter\r\n"
 # says so with a value, not a command: after a command the shell drops the ^C
 # it sees, as the command's own status has it. The word is joined from two,
 # so the echo of what's typed doesn't match.
-send "var spins = 0; while true { if spins == 0 { \"run\" + \"ning\" }; spins += 1 }\r"
+send "var spins = 0; while true { if spins == 0 { print(\"run\" + \"ning\") }; spins += 1 }\r"
 step "the loop is running" "running"
 send "\x03"
 step "^C stops a loop running in the shell itself" {\[130\]}

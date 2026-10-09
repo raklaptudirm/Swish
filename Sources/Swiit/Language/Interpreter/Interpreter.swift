@@ -26,9 +26,6 @@ public final class Interpreter {
     /// How values lay out as tables, which only a host that shows them has
     /// (the shell installs it). Library functions that format are lent this.
     package var displayRegistryProvider: () -> DisplayRegistry = { DisplayRegistry() }
-    /// Told each expression statement's value while a program runs, if the
-    /// host shows them (set by `run(_:observing:)`).
-    package var observer: ValueObserver?
     package var objectMembers: [String: [String: TypeAnnotation]] = [:]
 
     /// Variable scopes, innermost last. The outermost holds the builtin

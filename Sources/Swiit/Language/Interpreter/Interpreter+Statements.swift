@@ -14,14 +14,12 @@ package enum UnitContext {
 extension Interpreter {
     // MARK: Statements
 
-    /// Runs a program. A host that shows what a program gives, as the shell's
-    /// prompt does, passes an `observer`: it is told the value of each
-    /// expression statement while the program runs, nested blocks included
-    /// (`for i in 1...3 { i }` gives three), but not inside a function call.
-    package func run(_ program: Program, observing newObserver: ValueObserver? = nil) throws -> Int32 {
-        let outerObserver = observer
-        if let newObserver { observer = newObserver }
-        defer { observer = outerObserver }
+    /// Runs a program. A host that shows what a program gives, as the shell
+    /// does at the prompt and in scripts, passes an `observer`: it is told the
+    /// value of each of the program's own expression statements. Statements
+    /// nested in blocks, like the body of a `for`, aren't the program's own,
+    /// as in Swift's REPL: use `print` for those.
+    package func run(_ program: Program, observing observer: ValueObserver? = nil) throws -> Int32 {
         var status: Int32 = 0
         try hoistDeclarations(program)
         // `defer` blocks run as the block ends, however it ends.
@@ -34,7 +32,12 @@ extension Interpreter {
             }
             if statement.declaresType { continue } // Hoisted.
             try checkInterrupt()
-            status = try run(statement)
+            if let observer, case .chain(let chain) = statement, chain.links.isEmpty,
+               case .expression(let expression) = chain.first {
+                status = try runObserved(expression, observer)
+            } else {
+                status = try run(statement)
+            }
             lastStatus = status
         }
         return status
@@ -161,9 +164,6 @@ extension Interpreter {
         case .continueStatement:
             throw ControlFlow.continueLoop
         case .chain(let chain):
-            if let observer, callDepth == 0, chain.links.isEmpty, case .expression(let expr) = chain.first {
-                return try runObserved(expr, observer)
-            }
             return try run(chain, context: .statement)
         }
     }

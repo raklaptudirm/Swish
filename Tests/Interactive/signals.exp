@@ -11,7 +11,7 @@ set file [open $script w]
 # It says so with a value, not a command, whose end would take the signal.
 puts $file {defer { echo "cleaned up" }
 var spins = 0
-while true { if spins == 0 { "started" }; spins += 1 }}
+while true { if spins == 0 { print("started") }; spins += 1 }}
 close $file
 
 foreach signal {INT TERM HUP} {

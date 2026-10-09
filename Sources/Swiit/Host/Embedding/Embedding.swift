@@ -86,13 +86,12 @@ extension Interpreter {
         installBuiltinFunctions(providing: ["help": .native { _, _ in
             throw RuntimeError("help isn't available in this interpreter")
         }])
-        installPrint()
     }
 
     /// `print("a", 1)`: its arguments, as interpolation shows them, separated
     /// by spaces, then a newline, to the host's output. The one way a script
     /// speaks, since a bare value gives nothing here.
-    private func installPrint() {
+    package func installPrint() {
         nonisolated(unsafe) let interpreter = self
         let print = hostFunction(ExportedFunction(
             name: "print", summary: "Writes its arguments to the output, separated by spaces, then a newline.",

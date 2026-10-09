@@ -55,7 +55,7 @@ private func typeError(_ source: String) -> String? {
     #expect(try output("let r = 1...5; r; r.count; r.contains(3); r.map { $0 * 2 }; r.filter { $0 % 2 == 0 }")
         == "ClosedRange(1...5)\n5\ntrue\n[2, 4, 6, 8, 10]\n[2, 4]\n")
     #expect(try output("0..<3; (0..<3).lowerBound; Array(0..<3); (1...3) | map { $0 * 10 }") == "Range(0..<3)\n0\n[0, 1, 2]\n10\n20\n30\n")
-    #expect(try output("for i in 0..<2 { i }; let r = 5...6; for i in r { i }") == "0\n1\n5\n6\n")
+    #expect(try output("for i in 0..<2 { print(i) }; let r = 5...6; for i in r { print(i) }") == "0\n1\n5\n6\n")
     // Any bounds that compare make a range; only Int bounds make a sequence.
     #expect(try output("(1.0...2.0).contains(1.5); (\"a\"...\"f\").contains(\"c\")") == "true\ntrue\n")
     #expect(typeError("for x in 1.0...2.0 {}") == "can't iterate over ClosedRange<Double>: it isn't a Sequence")

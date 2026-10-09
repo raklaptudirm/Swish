@@ -43,6 +43,7 @@ extension Interpreter {
         scopes[0].bindings["args"] = Binding(value: .list([]), mutable: false)
         installPrelude(providing: provided)
         installJSONAccess()
+        installPrint()
         installStandardFunctions()
         // Swift's types by name, for their initializers and static members.
         for name in Bridge.types.keys {
