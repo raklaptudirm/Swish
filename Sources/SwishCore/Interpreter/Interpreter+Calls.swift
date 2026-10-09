@@ -8,8 +8,8 @@ extension Interpreter {
     /// Calls `function`. A method gets `receiver` as `self`, and leaves it
     /// there as the method changed it.
     package func invoke(_ function: Function, with arguments: [String: Value], receiver: Receiver? = nil) throws -> Value {
-        guard callDepth < maxCallDepth else {
-            throw RuntimeError("maximum call depth (\(maxCallDepth)) exceeded")
+        guard callDepth < limits.depth else {
+            throw RuntimeError("maximum call depth (\(limits.depth)) exceeded")
         }
         try checkInterrupt()
         switch function.body {

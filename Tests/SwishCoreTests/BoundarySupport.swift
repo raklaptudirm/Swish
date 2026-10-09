@@ -5,7 +5,11 @@ import Foundation
 /// with Foundation, which the test file can't import beside Testing.
 enum Boundaries {
     /// The directories of `Sources/SwishCore` that stay in the core.
-    static let coreDirectories = ["Syntax", "Checking", "Interpreter", "Bridge", "Display", "Builtins"]
+    static let coreDirectories = ["Syntax", "Checking", "Interpreter", "Bridge", "Display", "Builtins", "Embedding"]
+
+    /// The one place the core makes a thread: a run goes on a large stack,
+    /// so deep recursion needs no setup from the embedder (embedding.md, step 5).
+    static let permitted: [String: Set<String>] = ["Embedding/LargeStack.swift": ["Thread", "DispatchSemaphore", "signal("]]
 
     /// The shell's concepts, by the group the ledger counts them under.
     static let groups: [(name: String, pattern: String)] = [
@@ -51,7 +55,7 @@ enum Boundaries {
                 seen.insert(file)
                 let source = code(of: try String(contentsOf: url.appendingPathComponent(name), encoding: .utf8))
 
-                let reached = matches(operatingSystem, in: source)
+                let reached = matches(operatingSystem, in: source).filter { !(permitted[file]?.contains($0) ?? false) }
                 if !reached.isEmpty {
                     problems.append("\(file): reaches the operating system directly (\(Set(reached).sorted().joined(separator: ", "))); go through SwishHost")
                 }

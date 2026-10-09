@@ -10,9 +10,9 @@ private func runOnTheCore(_ source: String) -> (output: String, problem: String?
     var output = ""
     let host = SwishHost(output: OutputSink(write: { output += $0; return true }),
                          error: OutputSink(write: { output += "err: " + $0; return true }))
-    let interpreter = Interpreter(host: host)
-    // The prelude declares the shell's `help`, and the shell supplies its body.
-    interpreter.installBuiltinFunctions(providing: ["help": .native { _, _ in .nothing }])
+    let interpreter = Interpreter(host: host, limits: Limits())
+    // As at a prompt: a bare value is shown.
+    interpreter.echoesValues = true
     switch interpreter.parse(source) {
     case .failure(let error):
         return (output, "syntax error: \(error)")

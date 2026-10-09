@@ -11,8 +11,6 @@ package enum UnitContext {
     case condition
 }
 
-package let maxCallDepth = 10_000
-
 extension Interpreter {
     // MARK: Statements
 
@@ -270,11 +268,18 @@ extension Interpreter {
 
     /// A bare value at the prompt, shown as `debugPrint` would.
     package func display(_ value: Value) {
-        guard callDepth == 0 else { return }
+        guard echoesValues, callDepth == 0 else { return }
         show(value, debug: true)
     }
 
     package func checkInterrupt() throws {
+        if cancellation.isSet { throw Cancelled() }
         if let reason = host.interrupt() { throw Interrupted(reason: reason) }
+        steps += 1
+        if let maximum = limits.steps, steps > maximum { throw LimitExceeded("step limit (\(maximum)) exceeded") }
+        if let deadline, ContinuousClock.now > deadline { throw LimitExceeded("time limit exceeded") }
+        if let maximum = limits.output, outputCounter.written > maximum {
+            throw LimitExceeded("output limit (\(maximum) bytes) exceeded")
+        }
     }
 }

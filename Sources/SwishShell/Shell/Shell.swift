@@ -55,7 +55,7 @@ public final class Shell {
         // The shell writes into pipes itself now; a reader exiting early
         // should end that write with EPIPE, not kill the shell.
         signal(SIGPIPE, SIG_IGN)
-        interpreter = Interpreter()
+        interpreter = Interpreter(host: SwishHost(), shellLayer: nil)
         interpreter.syntax = ShellSyntax()
         interpreter.host = SwishHost(process: self)
         interpreter.shellLayer = ShellLayer(process: self)

@@ -6,7 +6,7 @@ import SwishKit
 /// terminal, processes or jobs: it reaches the world through its `host`, and
 /// the shell's constructs through a `shellLayer`, which is internal and
 /// temporary (Docs/Design/boundaries.md). The shell owns one.
-package final class Interpreter {
+public final class Interpreter {
     /// How this interpreter is run: where its output goes, how to tell it to stop.
     package var host: SwishHost
 
@@ -54,9 +54,23 @@ package final class Interpreter {
     /// apart from a command that exited with 130.
     package var lastSignalStatus: Int32?
 
-    package init(host: SwishHost = SwishHost(), shellLayer: ShellLayer? = nil) {
+    /// What bounds a run (steps, depth, time, output), counted from the start
+    /// of each `eval`.
+    package var limits = Limits()
+    package var steps = 0
+    package var deadline: ContinuousClock.Instant?
+    /// What a run has written, against `limits.output`.
+    package let outputCounter: OutputCounter
+    /// Asks a run to stop, from any thread.
+    package let cancellation = Cancellation()
+    /// Whether a bare value statement shows its value, as at the shell's
+    /// prompt. An embedder asks for values from `eval` instead.
+    package var echoesValues = true
+
+    package init(host: SwishHost, shellLayer: ShellLayer?, outputCounter: OutputCounter = OutputCounter()) {
         self.host = host
         self.shellLayer = shellLayer
+        self.outputCounter = outputCounter
     }
 }
 
