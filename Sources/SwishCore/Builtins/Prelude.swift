@@ -66,7 +66,7 @@ extension Interpreter {
         let bridgedTypeNames = Dictionary(uniqueKeysWithValues: Bridge.types.keys.map { ($0, NameKind.type) })
         let program: Program
         do {
-            program = try Parser.parsePrelude(Interpreter.prelude + "\n" + Bridge.standardTypes, bound: bridgedTypeNames)
+            program = try Parser.parsePrelude(([Interpreter.prelude] + libraries.map(\.types)).joined(separator: "\n"), bound: bridgedTypeNames)
         } catch {
             preconditionFailure("the prelude doesn't parse: \(error)")
         }

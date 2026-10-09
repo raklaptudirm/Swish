@@ -61,7 +61,7 @@ public final class Shell {
         interpreter.shellLayer = ShellLayer(process: self)
         interpreter.owner = self
         interpreter.objectMembers["Job"] = Dictionary(uniqueKeysWithValues: Job.members.map { ($0.name, $0.type) })
-        interpreter.installBuiltinFunctions(providing: ["help": help().body])
+        interpreter.installBuiltinFunctions(providing: ["help": help().body], libraries: [.shell])
     }
 }
 

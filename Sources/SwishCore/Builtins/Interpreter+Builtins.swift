@@ -4,10 +4,41 @@ import SwishKit
 /// Builtins written in Swift. They're ordinary functions to the rest of
 /// the shell: the same flags, help, overloads and streaming as Swish ones.
 
+/// A library of functions and types written in Swift and bridged by
+/// `swish-bridge`: the core's own is `Library.standard`; a host has others
+/// (the shell's `ls` and `ps` are `SwishShellLibrary`).
+package struct Library {
+    /// Its structs and enums, as Swish source, declared with the prelude.
+    package var types: String
+    /// The columns a table starts with, for its types that say so.
+    package var columns: [String: [DisplayColumn]]
+    /// How its enums' cases are styled, by case name.
+    package var enumStyles: [String: @Sendable (String) -> DisplayStyle?]
+    package var functions: [BridgedMember]
+
+    package init(
+        types: String, columns: [String: [DisplayColumn]],
+        enumStyles: [String: @Sendable (String) -> DisplayStyle?], functions: [BridgedMember]
+    ) {
+        self.types = types
+        self.columns = columns
+        self.enumStyles = enumStyles
+        self.functions = functions
+    }
+
+    /// The core's own: conversions (`from`, `to`, `table`, `list`) and styles.
+    package nonisolated(unsafe) static let standard = Library(
+        types: Bridge.standardTypes, columns: Bridge.standardColumns,
+        enumStyles: Bridge.standardEnumStyles, functions: Bridge.standardFunctions
+    )
+}
+
 extension Interpreter {
     /// `provided` are bodies for prelude functions the host owns (the shell's
-    /// `help`, which describes its builtins and programs).
-    package func installBuiltinFunctions(providing provided: [String: FunctionBody] = [:]) {
+    /// `help`, which describes its builtins and programs); `libraries` are
+    /// the host's own bridged functions and types, beside the core's.
+    package func installBuiltinFunctions(providing provided: [String: FunctionBody] = [:], libraries added: [Library] = []) {
+        libraries = [.standard] + added
         scopes[0].bindings["env"] = Binding(value: .nothing, mutable: false, special: .environment)
         scopes[0].bindings["jobs"] = Binding(value: .nothing, mutable: false, special: .jobs)
         scopes[0].bindings["args"] = Binding(value: .list([]), mutable: false)
@@ -24,7 +55,7 @@ extension Interpreter {
     /// bridged: `pwd`, `readLine`. Each is an ordinary function to the rest
     /// of the shell, with its flags, help and overloads.
     private func installStandardFunctions() {
-        for member in Bridge.standardFunctions {
+        for member in libraries.flatMap(\.functions) {
             let function = Function(
                 name: member.name, parameters: member.parameters, returnType: member.returns, body: member.body,
                 documentation: Documentation(summary: member.summary, parameters: member.parameterDocs),

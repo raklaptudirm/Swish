@@ -17,9 +17,10 @@ func test() {
     }
 }
 
-/// Regenerates the bridges in Sources/SwishCore/Bridge/Generated, from the
-/// symbol graphs of the standard library, Foundation, swift-system and the
-/// shell's own modules. Run it after changing swish-bridge, the Swift
+/// Regenerates the bridges in Sources/SwishCore/Bridge/Generated (and the
+/// shell's own in Sources/SwishShell/Bridge/Generated), from the symbol
+/// graphs of the standard library, Foundation, swift-system and the shell's
+/// own modules. Run it after changing swish-bridge, the Swift
 /// toolchain or swift-system. A graph is read on the platform it's made on,
 /// so each platform's members are kept in Bridges/<platform>, and what's
 /// bridged is what all the platforms there have: CI makes Linux's (see
@@ -38,7 +39,7 @@ func bridge() {
     // Linux. Their graphs are read with it, and what adds to them is too.
     let reexports = ["Foundation": ["FoundationEssentials"]]
     func exists(_ file: String) -> Bool { $(^test -f $file).status.succeeded }
-    for module in ["Swift", "SystemPackage", "SwishKit", "Foundation", "SwishStandardLibrary"] {
+    for module in ["Swift", "SystemPackage", "SwishKit", "Foundation", "SwishStandardLibrary", "SwishShellLibrary"] {
         try! _graph(module, into: graphs)
         var extra: [String] = []
         var hosts = [module]
@@ -57,15 +58,17 @@ func bridge() {
             }
             if declaresTypes.contains(other) { extra.append("\(graphs)/\(other).symbols.json") }
         }
-        let outputs = ["Swift": "StandardLibrary", "SwishStandardLibrary": "SwishLibrary"]
+        let outputs = ["Swift": "StandardLibrary", "SwishStandardLibrary": "SwishLibrary", "SwishShellLibrary": "ShellLibrary"]
         let output = outputs[module] ?? module
+        // The core's bridges are in the core; the shell's library is the shell's.
+        let target = module == "SwishShellLibrary" ? "SwishShell" : "SwishCore"
         // This platform's members to write, and the others' to keep to.
         var platforms = ["--manifest", "Bridges/\(platform)/\(module).json"]
         for other in ["macos", "linux"] {
             let manifest = "Bridges/\(other)/\(module).json"
             if other != platform && $(^test -f $manifest).status.succeeded { platforms += ["--also", manifest] }
         }
-        try! swift run -c release swish-bridge "\(graphs)/\(module).symbols.json" "Sources/SwishCore/Bridge/Generated/\(output).swift" $extra $platforms
+        try! swift run -c release swish-bridge "\(graphs)/\(module).symbols.json" "Sources/\(target)/Bridge/Generated/\(output).swift" $extra $platforms
     }
 }
 

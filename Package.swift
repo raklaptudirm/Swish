@@ -31,6 +31,16 @@ let package = Package(
                 .product(name: "SystemPackage", package: "swift-system"),
             ]
         ),
+        // The shell's functions that reach the process, the files and the
+        // session: `ls`, `ps`, `pwd`, `with(env:)`, `readLine`, `history`.
+        .target(
+            name: "SwishShellLibrary",
+            dependencies: [
+                "SwishStandardLibrary",
+                .product(name: "SwishKit", package: "SwishKit"),
+                .product(name: "SystemPackage", package: "swift-system"),
+            ]
+        ),
         .target(
             name: "SwishCore",
             dependencies: [
@@ -45,6 +55,7 @@ let package = Package(
             name: "SwishShell",
             dependencies: [
                 "SwishCore",
+                "SwishShellLibrary",
                 .product(name: "SwishKit", package: "SwishKit"),
                 .product(name: "SystemPackage", package: "swift-system"),
             ]

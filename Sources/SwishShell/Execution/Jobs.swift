@@ -1,3 +1,4 @@
+import SwishShellLibrary
 import SwishCore
 import Foundation
 import SwishKit

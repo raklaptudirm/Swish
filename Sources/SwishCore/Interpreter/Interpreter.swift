@@ -19,6 +19,8 @@ package final class Interpreter {
     package weak var owner: AnyObject?
     /// The members, by name, of the host's object types that Swift doesn't
     /// declare (the shell's `Job`), for the checker.
+    /// The bridged libraries installed: the core's, and the host's.
+    package var libraries: [Library] = []
     package var objectMembers: [String: [String: TypeAnnotation]] = [:]
 
     /// Variable scopes, innermost last. The outermost holds the builtin

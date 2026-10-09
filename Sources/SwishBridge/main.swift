@@ -7,7 +7,7 @@
 //
 // `run bridge` (Tasks.swish) runs it on the standard library, on swift-system
 // (for FilePath) and on the shell's own SwishStandardLibrary, which also
-// adds to the standard library's types. A member is bridged only if every
+// adds to the standard library's types, and on SwishShellLibrary. A member is bridged only if every
 // type in its signature is one Swish can pass or hold (see `supported`); the
 // rest are left out, and counted on stderr.
 //
@@ -67,27 +67,30 @@ let graph: Graph = try {
 
 /// What's bridged from each module: its types, with their generic
 /// parameters, and the name of the list the output declares.
-let modules: [String: (list: String, types: [(String, [String])], functions: String?, external: [String], records: [String])] = [
+let modules: [String: (list: String, types: [(String, [String])], functions: String?, external: [String], records: [String], outsideCore: Bool)] = [
     "Swift": ("standardLibrary", [
         ("String", []), ("Substring", []), ("Character", []), ("Int", []), ("Double", []), ("Bool", []),
         ("Array", ["Element"]), ("ArraySlice", ["Element"]), ("Set", ["Element"]), ("Dictionary", ["Key", "Value"]),
         ("Optional", ["Wrapped"]), ("Range", ["Bound"]), ("ClosedRange", ["Bound"]),
         // The shell's own, which a pipeline reads lazily (SwishStandardLibrary).
         ("Flow", ["Element"]),
-    ], nil, [], []),
+    ], nil, [], [], false),
     // FilePath.Root is left out: the standard library's FilePath (SE-0529)
     // calls it Anchor.
-    "SystemPackage": ("system", [("FilePath", []), ("FilePath.Component", []), ("FilePath.ComponentView", [])], nil, [], []),
+    "SystemPackage": ("system", [("FilePath", []), ("FilePath.Component", []), ("FilePath.ComponentView", [])], nil, [], [], false),
     // Foundation's types Swish holds as Swift's: a date.
-    "Foundation": ("foundation", [("Date", []), ("AttributedString", [])], nil, [], []),
+    "Foundation": ("foundation", [("Date", []), ("AttributedString", [])], nil, [], [], false),
     // SwishKit's own types, which Swish holds as Swift's: a file size, a
     // command's output. `Status` is a struct Swish declares itself (the
     // prelude), made from the Swift value as a record.
     // A column of a table, which a struct of Swish's lists for `Tabular`.
-    "SwishKit": ("swishKit", [("FileSize", []), ("Output", []), ("DisplayColumn", [])], nil, [], ["Status"]),
+    "SwishKit": ("swishKit", [("FileSize", []), ("Output", []), ("DisplayColumn", [])], nil, [], ["Status"], false),
     // The shell's own functions: every public free function. Their types are
     // Swift's (bridged from the other modules, so held here as they are).
-    "SwishStandardLibrary": ("", [], "standardFunctions", ["FilePath", "FileSize", "Date"], []),
+    "SwishStandardLibrary": ("", [], "standardFunctions", ["FilePath", "FileSize", "Date"], [], false),
+    // The shell's: the part of the library that reaches the process, the file
+    // system and the session. It is generated into the shell's target.
+    "SwishShellLibrary": ("", [], "shellFunctions", ["FilePath", "FileSize", "Date"], [], true),
 ]
 guard let module = modules[graph.module.name] else {
     FileHandle.standardError.write(Data("swish-bridge: nothing to bridge from \(graph.module.name)\n".utf8))
@@ -252,9 +255,9 @@ var output = """
 // Don't edit: `run bridge` remakes it.
 import Foundation
 import SwishKit
-\(graph.module.name == "Swift" ? "" : "import \(graph.module.name)\n")\(module.external.isEmpty ? "" : "import SystemPackage\n")\(extraModules.map { "import \($0)\n" }.joined())
+\(module.outsideCore ? "import SwishCore\n" : "")\(graph.module.name == "Swift" ? "" : "import \(graph.module.name)\n")\(module.external.isEmpty ? "" : "import SystemPackage\n")\(extraModules.map { "import \($0)\n" }.joined())
 extension Bridge {
-\(module.types.isEmpty ? "" : "    nonisolated(unsafe) static let \(module.list): [BridgedType] = [\n")
+\(module.types.isEmpty ? "" : "    package nonisolated(unsafe) static let \(module.list): [BridgedType] = [\n")
 
 """
 var skipped: [String: Int] = [:]
@@ -387,11 +390,14 @@ for (name, _) in bridgedTypeNames {
 if !module.types.isEmpty { output += "    ]\n" }
 if let list = module.functions {
     output += "    /// The module's structs, as Swish source: declared with the prelude.\n"
-    output += "    static let standardTypes = #\"\"\"\n" + typeSources.joined(separator: "\n\n") + "\n\"\"\"#\n\n"
+    // What the module is called in the names of its tables: `standard` for
+    // `standardFunctions`, `shell` for `shellFunctions`.
+    let prefix = String(list.dropLast("Functions".count))
+    output += "    package static let \(prefix)Types = #\"\"\"\n" + typeSources.joined(separator: "\n\n") + "\n\"\"\"#\n\n"
     output += "    /// How the module's structs say which columns a table starts with.\n"
-    output += "    nonisolated(unsafe) static let standardColumns: [String: [DisplayColumn]] = [\(columnSources.isEmpty ? ":" : columnSources.joined(separator: ", "))]\n\n"
+    output += "    package nonisolated(unsafe) static let \(prefix)Columns: [String: [DisplayColumn]] = [\(columnSources.isEmpty ? ":" : columnSources.joined(separator: ", "))]\n\n"
     output += "    /// How the module's enums say how a case is shown, by case name.\n"
-    output += "    nonisolated(unsafe) static let standardEnumStyles: [String: @Sendable (String) -> DisplayStyle?] = [\(styleSources.isEmpty ? ":" : styleSources.joined(separator: ", "))]\n\n"
+    output += "    package nonisolated(unsafe) static let \(prefix)EnumStyles: [String: @Sendable (String) -> DisplayStyle?] = [\(styleSources.isEmpty ? ":" : styleSources.joined(separator: ", "))]\n\n"
     var functions: [String] = []
     for symbol in graph.symbols where symbol.kind.identifier == "swift.func" && symbol.pathComponents.count == 1
         && symbol.accessLevel == "public" && available(symbol) {
@@ -402,7 +408,7 @@ if let list = module.functions {
             FileHandle.standardError.write(Data("\(symbol.pathComponents[0]): \(unsupported.reason)\n".utf8))
         }
     }
-    output += "    nonisolated(unsafe) static let \(list): [BridgedMember] = [\(functions.joined(separator: ", "))]\n"
+    output += "    package nonisolated(unsafe) static let \(list): [BridgedMember] = [\(functions.joined(separator: ", "))]\n"
 }
 output += declarations.joined(separator: "\n") + "}\n"
 try output.write(to: URL(fileURLWithPath: arguments[2]), atomically: true, encoding: .utf8)

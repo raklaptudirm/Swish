@@ -24,6 +24,10 @@ extension Interpreter {
     /// (`Tabular`).
     package var displayRegistry: DisplayRegistry {
         var registry = standardDisplayRegistry
+        for library in libraries {
+            registry.columns.merge(library.columns) { first, _ in first }
+            registry.enumStyles.merge(library.enumStyles) { first, _ in first }
+        }
         registry.columns.merge(shellLayer?.columns ?? [:]) { first, _ in first }
         for scope in scopes {
             for case .object(let type as StructType) in scope.bindings.values.map(\.value)
