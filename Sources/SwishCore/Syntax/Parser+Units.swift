@@ -43,10 +43,10 @@ extension Parser {
             break
         }
         // `try make` or `try! make`: a command whose failure throws.
-        if identifier() == "try", let command = try parseThrowingCommand() {
+        if dialect == .shell, identifier() == "try", let command = try parseThrowingCommand() {
             return .pipeline(command)
         }
-        if case .command(let reason) = commandAhead() {
+        if dialect == .shell, case .command(let reason) = commandAhead() {
             var pipeline = try parsePipeline()
             if !pipeline.commands.isEmpty { pipeline.commands[0].notAnExpression = reason }
             return .pipeline(pipeline)
@@ -61,11 +61,16 @@ extension Parser {
         do {
             expr = try parseExpression(logical: true)
         } catch {
+            // In Swift, an operand that isn't an expression is just an error.
+            guard dialect == .shell else { throw error }
             self = beforeExpression
             expr = try parseExpression(logical: false)
         }
         skipSpaces()
         guard peek() == "|", peek(1) != "|" else { return .expression(expr) }
+        guard dialect == .shell else {
+            throw SyntaxError("'|' pipes commands, which are shell syntax, and isn't an operator in Swift-only code")
+        }
         pos += 1
         skipSpaces(newlines: true)
         return .pipeline(try parsePipeline(from: start, input: expr))

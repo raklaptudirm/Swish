@@ -195,6 +195,9 @@ extension Parser {
     /// `async cmd …` or `async $(cmd …)`: a pipeline of programs to start in
     /// the background.
     mutating func parseAsync() throws(SyntaxError) -> Expr {
+        guard dialect == .shell else {
+            throw SyntaxError("'async' starts a command in the background, which is shell syntax; Swift-only code has no async yet")
+        }
         keyword("async")
         skipSpaces()
         if peek() == "$" && peek(1) == "(" {

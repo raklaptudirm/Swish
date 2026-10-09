@@ -92,6 +92,9 @@ extension Parser {
         let name = try parseName(after: "'import'")
         mark(.type, from: nameStart)
         skipSpaces()
+        guard dialect == .shell else {
+            throw SyntaxError("importing a package from a path is shell syntax, and isn't available in Swift-only code")
+        }
         guard identifier() == "from" else {
             throw SyntaxError("import needs where the package is: import \(name) from \"path/to/\(name)\"")
         }

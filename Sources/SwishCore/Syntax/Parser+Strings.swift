@@ -103,6 +103,10 @@ extension Parser {
     /// sign; nil if the dollar is just a character.
     mutating func parseDollar() throws(SyntaxError) -> Expr? {
         switch peek(1) {
+        case "(" where dialect == .swift:
+            throw SyntaxError("$(…) runs commands, which are shell syntax, and isn't available in Swift-only code")
+        case let c? where dialect == .swift && Parser.isIdentifierStart(c):
+            throw SyntaxError("$name reads the environment, which is shell syntax, and isn't available in Swift-only code")
         case "(":
             mark(.punctuation, from: pos, to: pos + 2)
             pos += 2

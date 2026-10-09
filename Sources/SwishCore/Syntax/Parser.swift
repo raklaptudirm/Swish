@@ -79,8 +79,17 @@ struct Parser {
     /// Levels whose operators can't be chained, like `a < b < c`.
     static let nonAssociativeLevels: Set = [2, 4]
 
+    /// The syntax the parser accepts. Swish is Swift with the shell's syntax on
+    /// top: in the `swift` dialect (the embeddable core's) a line that isn't a
+    /// Swift expression or statement is an error, where the `shell` dialect
+    /// reads it as a command, a pipeline or a substitution.
+    enum Dialect: Sendable {
+        case swift, shell
+    }
+
     let chars: [Character]
     var pos = 0
+    var dialect = Dialect.shell
     var scopes: [[String: NameKind]]
     /// Parsing the prelude: builtins' declarations, which may be generic and
     /// have no bodies (their bodies are in Swift).
@@ -128,8 +137,9 @@ struct Parser {
     /// found before the problem.
     private(set) var spans: [Span] = []
 
-    static func parse(_ source: String, bound: [String: NameKind]) throws(SyntaxError) -> Program {
+    static func parse(_ source: String, bound: [String: NameKind], dialect: Dialect = .shell) throws(SyntaxError) -> Program {
         var parser = Parser(source, bound: bound)
+        parser.dialect = dialect
         return try parser.parseProgram(until: nil)
     }
 

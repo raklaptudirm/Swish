@@ -34,6 +34,8 @@ final class Interpreter {
     var staticTypes: [String: TypeAnnotation] = [:]
     /// Per-item errors reported so far, like a file `ls` couldn't read.
     var itemErrorCount = 0
+    /// The syntax it accepts. Swift only, unless its owner adds the shell's.
+    var dialect = Parser.Dialect.swift
     /// The file being run, for `#filePath`; nil at the prompt.
     var file: String?
     /// The status the last statement gave.
@@ -71,7 +73,7 @@ extension Interpreter {
     /// Parses a program, knowing the names already declared.
     func parse(_ source: String) -> Result<Program, SyntaxError> {
         do {
-            return .success(try Parser.parse(source, bound: globalNames()))
+            return .success(try Parser.parse(source, bound: globalNames(), dialect: dialect))
         } catch {
             return .failure(error)
         }
