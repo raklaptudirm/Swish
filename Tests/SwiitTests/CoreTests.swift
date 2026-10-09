@@ -51,11 +51,12 @@ private func runOnTheCore(_ source: String) -> (output: String, problem: String?
 }
 
 @Test func theCoreHasTheStandardLibraryButNotTheShellsFunctions() {
-    // Conversions are the core's; `ls`, `ps` and `pwd` reach the file system and the process.
-    let (output, problem) = runOnTheCore(#"[1, 2].map { $0 * 2 }; try from(.json, ["[1, 2]"])"#)
+    // Members of Swift's types are the core's; functions that reach the file
+    // system, the process or a pipeline's data are the shell's.
+    let (output, problem) = runOnTheCore(#"[1, 2].map { $0 * 2 }; [1, 1, 2].uniqued()"#)
     #expect(problem == nil)
     #expect(output == "[2, 4]\n[1, 2]\n")
-    for name in ["ls", "ps", "pwd", "history", "readLine"] {
+    for name in ["ls", "ps", "pwd", "history", "readLine", "from", "to", "table", "list"] {
         #expect(runOnTheCore("\(name)()").problem?.contains("no function named '\(name)'") == true, "\(name)")
     }
 }

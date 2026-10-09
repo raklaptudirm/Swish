@@ -284,8 +284,8 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
 | `Bridges` | Which members of each bridged type a platform has, one list a platform and module: what's bridged is what every platform has (`run bridge` keeps them current; CI checks). |
 | `Tests/Interactive` | `expect` scripts that drive the shell through a real terminal. |
 | `Examples/Tools` | An example plugin, which the tests import. |
-| `Sources/SwishStandardLibrary` | Plain Swift the interpreter bridges: `Flow`, `JSON`, the formatters and `from`/`to`/`table`/`list`. |
-| `Sources/SwishShellLibrary` | The shell's functions and types in plain Swift (`pwd`, `readLine`, `history`, `ls` and `FileEntry`, `ps` and `ProcessEntry`), bridged like the standard library. |
+| `Sources/Swiit/Library` | `SwishStandardLibrary`, a module of its own so the generator can read it: plain Swift the interpreter bridges. `Flow`, the formatters and pretty printer, and the members it adds to Swift's types (`uniqued`, `get`, `sorted(by:)`, `String.styled`, date arithmetic). |
+| `Sources/SwishShell/Library` | `SwishShellLibrary`: the shell's functions and types in plain Swift (`pwd`, `readLine`, `history`, `ls` and `FileEntry`, `ps` and `ProcessEntry`, and `from`, `to`, `table`, `list` with `JSON`), bridged like the standard library. |
 | `Sources/SwiitBridge` | Reads Swift's symbol graphs and generates the glue that bridges the standard library, swift-system and `SwishStandardLibrary` and `SwishShellLibrary` (`run bridge`): the graph, declaration parsing, what Swish can hold and how values cross, and one member's glue each have a file. |
 
 </details>

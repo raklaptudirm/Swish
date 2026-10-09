@@ -29,7 +29,8 @@ let package = Package(
             dependencies: [
                 .product(name: "SwishKit", package: "SwishKit"),
                 .product(name: "SystemPackage", package: "swift-system"),
-            ]
+            ],
+            path: "Sources/Swiit/Library"
         ),
         // The shell's functions that reach the process, the files and the
         // session: `ls`, `ps`, `pwd`, `with(env:)`, `readLine`, `history`.
@@ -39,7 +40,8 @@ let package = Package(
                 "SwishStandardLibrary",
                 .product(name: "SwishKit", package: "SwishKit"),
                 .product(name: "SystemPackage", package: "swift-system"),
-            ]
+            ],
+            path: "Sources/SwishShell/Library"
         ),
         .target(
             name: "Swiit",
@@ -47,7 +49,9 @@ let package = Package(
                 "SwishStandardLibrary",
                 .product(name: "SwishKit", package: "SwishKit"),
                 .product(name: "SystemPackage", package: "swift-system"),
-            ]
+            ],
+            // Its standard library is a module of its own, so the generator can read it.
+            exclude: ["Library"]
         ),
         // The shell: commands, pipelines, jobs, the line editor and the process
         // it runs in, built on the core's interpreter.
@@ -58,7 +62,8 @@ let package = Package(
                 "SwishShellLibrary",
                 .product(name: "SwishKit", package: "SwishKit"),
                 .product(name: "SystemPackage", package: "swift-system"),
-            ]
+            ],
+            exclude: ["Library"]
         ),
         // boundaries.txt is data the boundary test reads from the source tree.
         .testTarget(name: "SwiitTests", dependencies: ["Swiit"], exclude: ["boundaries.txt"]),

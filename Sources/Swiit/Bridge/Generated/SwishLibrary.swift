@@ -9,16 +9,6 @@ extension Bridge {
 
     /// The module's structs, as Swish source: declared with the prelude.
     package static let standardTypes = #"""
-/// What text `from` can parse.
-enum InputFormat: Equatable, Hashable {
-    case json
-}
-
-/// What `to` can make of values.
-enum OutputFormat: Equatable, Hashable {
-    case json, text
-}
-
 /// What `String.styled` can make text, each with its terminal code as its raw value.
 enum TextStyle: Equatable, Hashable {
     case bold, dim, italic, underline, red, green, yellow, blue, magenta, cyan, white, gray
@@ -31,58 +21,5 @@ enum TextStyle: Equatable, Hashable {
     /// How the module's enums say how a case is shown, by case name.
     package nonisolated(unsafe) static let standardEnumStyles: [String: @Sendable (String) -> DisplayStyle?] = [:]
 
-    package nonisolated(unsafe) static let standardFunctions: [BridgedMember] = [member0, member1, member2, member3]
-    nonisolated(unsafe) private static let member0: BridgedMember =                 BridgedMember(
-                    kind: .method, name: "from", isStatic: false,
-                    parameters: [Parameter(label: nil, name: "format", type: .named("InputFormat")), Parameter(label: nil, name: "text", type: .list(.string), isInput: true)],
-                    returns: .named("JSON"), generics: [:],
-                    isThrowing: true, isRethrowing: false, isMutating: false,
-                    discardableResult: false, summary: "Parses text into values.",
-                    body: .native { shell, args in
-                        _ = shell
-                        let result = try SwishStandardLibrary.from(try bridgeCase(InputFormat.self, args["format"]!), try bridgeList(args["text"]!).map { try String(swishValue: $0) })
-                return result.value
-                    },
-                    parameterDocs: ["format": "json"]
-                )
-
-    nonisolated(unsafe) private static let member1: BridgedMember =                 BridgedMember(
-                    kind: .method, name: "to", isStatic: false,
-                    parameters: [Parameter(label: nil, name: "format", type: .named("OutputFormat")), Parameter(label: nil, name: "items", type: .list(.any), isInput: true)],
-                    returns: .string, generics: [:],
-                    isThrowing: true, isRethrowing: false, isMutating: false,
-                    discardableResult: false, summary: "Converts the input to text: json, or text for how it would be displayed.",
-                    body: .native { shell, args in
-                        _ = shell
-                        let result = try SwishStandardLibrary.to(try bridgeCase(OutputFormat.self, args["format"]!), try bridgeList(args["items"]!).map { $0 }, in: shell.context)
-                return result.swishValue
-                    },
-                    parameterDocs: ["format": "json or text"]
-                )
-
-    nonisolated(unsafe) private static let member2: BridgedMember =                 BridgedMember(
-                    kind: .method, name: "table", isStatic: false,
-                    parameters: [Parameter(label: nil, name: "items", type: .list(.any), isInput: true)],
-                    returns: .list(.string), generics: [:],
-                    isThrowing: false, isRethrowing: false, isMutating: false,
-                    discardableResult: false, summary: "Lays records out as a table with every field.",
-                    body: .native { shell, args in
-                        _ = shell
-                        let result: [String] = SwishStandardLibrary.table(try bridgeList(args["items"]!).map { $0 }, in: shell.context)
-                return .list(result.map { $0.swishValue })
-                    }
-                )
-
-    nonisolated(unsafe) private static let member3: BridgedMember =                 BridgedMember(
-                    kind: .method, name: "list", isStatic: false,
-                    parameters: [Parameter(label: nil, name: "items", type: .list(.any), isInput: true)],
-                    returns: .list(.string), generics: [:],
-                    isThrowing: false, isRethrowing: false, isMutating: false,
-                    discardableResult: false, summary: "Shows each record as a list of fields.",
-                    body: .native { shell, args in
-                        _ = shell
-                        let result: [String] = SwishStandardLibrary.list(try bridgeList(args["items"]!).map { $0 }, in: shell.context)
-                return .list(result.map { $0.swishValue })
-                    }
-                )
+    package nonisolated(unsafe) static let standardFunctions: [BridgedMember] = []
 }
