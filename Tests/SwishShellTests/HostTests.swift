@@ -22,11 +22,11 @@ private func shellWithRecorder() -> (Shell, Recorder) {
         output: OutputSink(write: { recorder.written.append("out: " + $0); return true }),
         error: OutputSink(write: { recorder.written.append("err: " + $0); return true }),
         interrupt: { recorder.interrupt() })
+    shell.interpreter.bind("env", to: EnvironmentObject(access: EnvironmentAccess(
+        get: { recorder.variables[$0] },
+        all: { recorder.variables.sorted { $0.key < $1.key }.map { (name: $0.key, value: $0.value) } },
+        set: { recorder.variables[$0] = $1 })))
     shell.interpreter.shellLayer = ShellLayer(
-        environment: EnvironmentAccess(
-            get: { recorder.variables[$0] },
-            all: { recorder.variables.sorted { $0.key < $1.key }.map { (name: $0.key, value: $0.value) } },
-            set: { recorder.variables[$0] = $1 }),
         commands: CommandAccess(
             jobs: { [] },
             await: { _, _ in .nothing },
@@ -66,16 +66,16 @@ private func shellWithRecorder() -> (Shell, Recorder) {
 }
 
 @Test func aHostThatGrantsNothingRefusesPlainly() {
-    // The sandbox: output goes where it's told, and `env` is empty and
-    // read-only nowhere. (Commands, `$(…)` and `async` aren't refused here
-    // but at the parser: an interpreter with no shell syntax plugged in
-    // doesn't read them; see SwiftDialectTests.)
+    // The sandbox: output goes where it's told, and there is no `env` to read
+    // or write unless the host registers one. (Commands, `$(…)` and `async`
+    // are refused at the parser: an interpreter with no shell syntax plugged
+    // in doesn't read them; see SwiftDialectTests.)
     let (shell, recorder) = shellWithRecorder()
-    shell.interpreter.shellLayer = nil
-    #expect(shell.execute("let h = env.HOME; h ?? \"none\"") == 0)
+    shell.interpreter.scopes[0].bindings["env"] = nil
+    #expect(shell.execute("let h = env.HOME; h ?? \"none\"") != 0)
     #expect(shell.execute(#"env.X = "1""#) != 0)
     #expect(recorder.written == [
-        "out: \"none\"\n",
-        "err: swish: error: the environment isn't available here\n",
+        "err: swish: syntax error: no variable named 'env'\n",
+        "err: swish: env.X: command not found\n",
     ])
 }

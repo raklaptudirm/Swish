@@ -58,8 +58,6 @@ extension TypeChecker {
                 return type
             case .functions(let overloads):
                 return functionValue(name, overloads, expected: expected, expr: &expr)
-            case .environment:
-                return .dictionary(.string, .string)
             case .structType, .enumType, .module, .swiftType:
                 return .unknown
             }

@@ -10,7 +10,6 @@ extension TypeChecker {
         }
         guard let binding = interpreter.lookup(name) else { return nil }
         switch binding.special {
-        case .environment?: return .environment
         case .jobs?: return .variable(.list(.named("Job")), mutable: false)
         default: break
         }
@@ -19,6 +18,8 @@ extension TypeChecker {
             return .structType(structInfo(type))
         case .object(let type as EnumType):
             return .enumType(enumInfo(type))
+        case .object(let object as DynamicObject):
+            return .variable(.named(object.typeName), mutable: false)
         case .object(let object as CheckedObject) where object.isModule:
             return .module
         case .object(let type as BridgedTypeName):

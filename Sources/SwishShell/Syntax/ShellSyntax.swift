@@ -36,7 +36,6 @@ struct ShellSyntax: SyntaxPlugin {
     func statement(_ parser: inout Parser) throws(SyntaxError) -> Statement? {
         switch parser.identifier() {
         case "import": return try parser.parseImport()
-        case "env": return try parser.parseEnvironmentAssignment()
         default: return nil
         }
     }
@@ -161,38 +160,6 @@ extension Parser {
         scopes[scopes.count - 1][name] = .variable
         sawImport = true
         return .importPlugin(name: name, path: path)
-    }
-
-    /// `env.NAME = value` or `env[name] = value`, or nil (having looked
-    /// ahead) if this is some other statement starting with `env`.
-    mutating func parseEnvironmentAssignment() throws(SyntaxError) -> Statement? {
-        let start = (pos, spans.count)
-        mark(.variable, from: pos, to: pos + 3)
-        pos += 3
-        let name: Expr
-        if peek() == ".", let next = peek(1), Parser.isIdentifierStart(next) {
-            pos += 1
-            let key = identifier()!
-            pos += key.count
-            name = .literal(.string(key))
-        } else if consume("[") {
-            bracketDepth += 1
-            skipSpaces()
-            name = try parseExpression()
-            skipSpaces()
-            bracketDepth -= 1
-            guard consume("]") else { throw expected("']'") }
-        } else {
-            rewind(to: start)
-            return nil
-        }
-        skipSpaces()
-        guard peek() == "=" && peek(1) != "=" else {
-            rewind(to: start)
-            return nil
-        }
-        pos += 1
-        return .setEnvironment(name: name, value: try parseExpression())
     }
 
     /// `$(…)`, `$?` or `$name`, positioned at the dollar sign; nil if the dollar

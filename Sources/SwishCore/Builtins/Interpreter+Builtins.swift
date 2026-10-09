@@ -39,7 +39,6 @@ extension Interpreter {
     /// the host's own bridged functions and types, beside the core's.
     package func installBuiltinFunctions(providing provided: [String: FunctionBody] = [:], libraries added: [Library] = []) {
         libraries = [.standard] + added
-        scopes[0].bindings["env"] = Binding(value: .nothing, mutable: false, special: .environment)
         scopes[0].bindings["jobs"] = Binding(value: .nothing, mutable: false, special: .jobs)
         scopes[0].bindings["args"] = Binding(value: .list([]), mutable: false)
         installPrelude(providing: provided)

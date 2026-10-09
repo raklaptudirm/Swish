@@ -379,9 +379,10 @@ private func command(_ source: String) throws -> CommandNode? {
     ])
     #expect(node?.words.count == 2)
     #expect(syntaxError("FOO=bar")?.description.contains("env.FOO") == true)
-    #expect(try parse(#"env.EDITOR = "vim"; env["X"] = nil"#).statements == [
-        .setEnvironment(name: .literal(.string("EDITOR")), value: .literal(.string("vim"))),
-        .setEnvironment(name: .literal(.string("X")), value: .literal(.nothing)),
+    // `env` is an object like any other: these are ordinary assignments.
+    #expect(try parse(#"env.EDITOR = "vim"; env["X"] = nil"#, bound: ["env"]).statements == [
+        .assign(Assignment(root: "env", path: [.member("EDITOR")], value: .literal(.string("vim")))),
+        .assign(Assignment(root: "env", path: [.index(.literal(.string("X")))], value: .literal(.nothing))),
     ])
 }
 

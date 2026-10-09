@@ -13,7 +13,6 @@ extension Interpreter {
         case .variable(let name):
             guard let binding = lookup(name) else { throw RuntimeError("no variable named '\(name)'") }
             switch binding.special {
-            case .environment?: return environmentRecord()
             case .jobs?:
                 return .list(try commandAccess().jobs())
             case .initializing?, nil: return binding.value
@@ -66,8 +65,6 @@ extension Interpreter {
             let equal = try makeCase(enumValue.type, name, arguments) == known
             return .bool(op == .equal ? equal : !equal)
         case .member(let base, let name):
-            // An unset environment variable is nil, not a missing field.
-            if isEnvironment(base) { return shellLayer?.environment.get(name).map(Value.string) ?? .nothing }
             return try member(name, of: try evaluate(base))
         case .closure(let literal):
             return .function(Function(
@@ -221,11 +218,6 @@ extension Interpreter {
         case .binary(let op, let lhs, let rhs):
             return try apply(op, try evaluate(lhs), try evaluate(rhs))
         case .index(let base, let index):
-            if isEnvironment(base) {
-                let key = try evaluate(index)
-                guard case .string(let name) = key else { throw RuntimeError("env is indexed by name, not \(key.typeName)") }
-                return shellLayer?.environment.get(name).map(Value.string) ?? .nothing
-            }
             return try element(of: try evaluate(base), at: try evaluate(index))
         }
     }
@@ -244,6 +236,8 @@ extension Interpreter {
             return try makeCase(type, name, nil) // Says what values it needs.
         }
         if case .object(let type as StructType) = value, let found = try staticMember(name, of: type) { return found }
+        // An unset environment variable is nil, not a missing field.
+        if case .object(let object as DynamicObject) = value { return try object.read(name) }
         if case .object(let object) = value, name != "description" && name != "debugDescription" {
             if object is SwiftValue, let property = try bridgedProperty(name, of: value) { return property }
             guard let member = object.member(name) else {
@@ -289,6 +283,12 @@ extension Interpreter {
     }
 
     package func element(of base: Value, at index: Value) throws -> Value {
+        if case .object(let object as DynamicObject) = base {
+            guard case .string(let name) = index else {
+                throw RuntimeError("\(object.typeName) is indexed by name, not \(index.typeName)")
+            }
+            return try object.read(name)
+        }
         if case .dictionary(let dictionary) = base {
             return dictionary[index] ?? .nothing
         }

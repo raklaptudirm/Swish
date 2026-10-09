@@ -21,12 +21,6 @@ extension ShellLayer {
     /// The process's environment, and commands that are programs.
     init(process shell: Shell) {
         self.init(
-            environment: EnvironmentAccess(
-                get: { env($0) },
-                all: { ProcessInfo.processInfo.environment.sorted(by: { $0.key < $1.key }).map { (name: $0.key, value: $0.value) } },
-                set: { name, value in
-                    if let value { setenv(name, value, 1) } else { unsetenv(name) }
-                }),
             commands: CommandAccess(
                 jobs: { [unowned shell] in
                     shell.updateJobs() // So their states are current.

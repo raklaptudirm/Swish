@@ -314,7 +314,9 @@ extension Interpreter {
     /// `x = v`, `p.x += 1`, `xs[0] = v`, `r["k"] = v`.
     package func assign(_ assignment: Assignment) throws {
         // `Point.count += 1`: a static var, set through its type.
-        if structType(named: assignment.root) == nil { try checkAssignable(assignment.root, what: "assign to") }
+        if structType(named: assignment.root) == nil, !(lookup(assignment.root)?.value.isDynamicObject ?? false) {
+            try checkAssignable(assignment.root, what: "assign to")
+        }
         try update(assignment.root, assignment.path) { current, type in
             let value = try evaluate(assignment.value, expecting: type)
             guard let op = assignment.op else { return value }
@@ -419,6 +421,17 @@ extension Interpreter {
                 throw RuntimeError("\(box.typeName).\(name) gave back no receiver")
             }
             return parts[1]
+        case (.member(let name), .object(let object as DynamicObject)):
+            guard rest.isEmpty else { throw RuntimeError("cannot assign into \(object.typeName).\(name)") }
+            try object.write(name, try change(try object.read(name), nil))
+            return base
+        case (.index(let indexExpr), .object(let object as DynamicObject)):
+            let key = try evaluate(indexExpr)
+            guard case .string(let name) = key, rest.isEmpty else {
+                throw RuntimeError("\(object.typeName) is indexed by name, not \(key.typeName)")
+            }
+            try object.write(name, try change(try object.read(name), nil))
+            return base
         case (.member(let name), _):
             throw RuntimeError("cannot assign to '\(name)' of \(base.typeName)")
         case (.index, _):

@@ -21,6 +21,8 @@ public final class Interpreter {
     /// declare (the shell's `Job`), for the checker.
     /// The bridged libraries installed: the core's, and the host's.
     package var libraries: [Library] = []
+    /// The types of dynamic objects' members (`DynamicObject`), by type name.
+    package var dynamicTypes: [String: DynamicType] = [:]
     package var objectMembers: [String: [String: TypeAnnotation]] = [:]
 
     /// Variable scopes, innermost last. The outermost holds the builtin

@@ -153,7 +153,7 @@ extension TypeChecker {
     package static func namesSomething(_ expr: Expr, in checker: TypeChecker) -> Bool {
         guard case .variable(let name) = expr else { return false }
         switch checker.lookup(name) {
-        case .enumType?, .environment?, .module?, .swiftType?, .structType?: return true
+        case .enumType?, .module?, .swiftType?, .structType?: return true
         default: return false
         }
     }
@@ -181,8 +181,6 @@ extension TypeChecker {
                 if let property = info.staticProperty(name) { return property.type ?? .unknown }
                 if let methods = info.staticMethods[name] { return methods.count == 1 ? functionType(methods[0]) : .function }
                 throw TypeError("\(info.name) has no static member '\(name)'")
-            case .environment:
-                return .optional(.string)
             case .module:
                 return .unknown
             default:
@@ -193,6 +191,7 @@ extension TypeChecker {
     }
 
     package func memberType(of base: TypeAnnotation, _ name: String) throws -> TypeAnnotation {
+        if let dynamic = dynamicType(of: base) { return dynamic.read }
         lastMemberBase = base
         if base == TypeChecker.json {
             return TypeChecker.jsonAccessors[name] ?? .optional(TypeChecker.json)
@@ -298,16 +297,16 @@ extension TypeChecker {
     }
 
     package func indexType(_ baseExpr: inout Expr, _ index: inout Expr) throws -> TypeAnnotation {
-        if case .variable(let name) = baseExpr, case .environment? = lookup(name) {
-            try expect(&index, .string, "an environment variable's name")
-            return .optional(.string)
-        }
         return try indexType(of: try typeOf(&baseExpr), &index)
     }
 
     /// Indexing a value of type `base` with `index`.
     package func indexType(of base: TypeAnnotation, _ index: inout Expr) throws -> TypeAnnotation {
         lastMemberBase = base
+        if let dynamic = dynamicType(of: base) {
+            try expect(&index, .string, "\(base)'s member name")
+            return dynamic.read
+        }
         if base == TypeChecker.json {
             let key = try typeOf(&index)
             guard key == .string || key == .int || key == .unknown else {

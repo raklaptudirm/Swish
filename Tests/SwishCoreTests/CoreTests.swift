@@ -44,12 +44,10 @@ private func runOnTheCore(_ source: String) -> (output: String, problem: String?
 }
 
 @Test func theCoreRefusesWhatItWasNotGiven() {
-    // Shell syntax doesn't parse, and the environment, which no layer gives, reads as empty.
+    // Shell syntax doesn't parse, and there is no environment to read.
     #expect(runOnTheCore("git status").problem?.contains("no variable named 'git'") == true)
     #expect(runOnTheCore("let h = $(echo hi)").problem?.contains("runs commands") == true)
-    let (output, problem) = runOnTheCore(#"let h = env.HOME; h ?? "none""#)
-    #expect(problem == nil)
-    #expect(output == "\"none\"\n")
+    #expect(runOnTheCore(#"let h = env.HOME"#).problem?.contains("env") == true)
 }
 
 @Test func theCoreHasTheStandardLibraryButNotTheShellsFunctions() {

@@ -20,7 +20,8 @@ struct DollarExpr: ExprExtension, Equatable {
 
     func evaluate(in interpreter: Interpreter) throws -> Value {
         if let binding = interpreter.lookup(name) { return binding.value }
-        if let value = interpreter.shellLayer?.environment.get(name) { return .string(value) }
+        if case .object(let environment as DynamicObject)? = interpreter.lookup("env")?.value,
+           case .string(let value) = try environment.read(name) { return .string(value) }
         throw RuntimeError("no variable or environment variable named '\(name)'")
     }
 }
@@ -112,30 +113,6 @@ struct PipelineUnit: UnitExtension, Equatable {
 
 // MARK: Statements
 
-/// `env.NAME = value` or `env["NAME"] = value`; nil unsets it.
-struct SetEnvironmentStatement: StatementExtension, Equatable {
-    var name: Expr
-    var value: Expr
-
-    mutating func check(in checker: TypeChecker) throws {
-        try checker.expect(&name, .string, "an environment variable's name")
-        _ = try checker.typeOf(&value)
-    }
-
-    func run(in interpreter: Interpreter) throws -> Int32 {
-        guard interpreter.lookup("env")?.special == .environment else {
-            throw RuntimeError("env is a variable here, not the environment")
-        }
-        let nameValue = try interpreter.evaluate(name)
-        guard case .string(let key) = nameValue, !key.isEmpty, !key.contains("=") else {
-            throw RuntimeError("an environment variable's name must be a String without '=', not \(nameValue)")
-        }
-        let newValue = try interpreter.evaluate(value)
-        try interpreter.environmentAccess().set(key, newValue == .nothing ? nil : newValue.description)
-        return 0
-    }
-}
-
 /// `import Tools from "./Tools"`: builds a Swift package and loads the
 /// functions it exports.
 struct ImportPluginStatement: StatementExtension, Equatable {
@@ -192,16 +169,8 @@ extension Unit {
 }
 
 extension Statement {
-    static func setEnvironment(name: Expr, value: Expr) -> Statement {
-        .extended(StatementExtensionBox(SetEnvironmentStatement(name: name, value: value)))
-    }
-
     static func importPlugin(name: String, path: Expr) -> Statement {
         .extended(StatementExtensionBox(ImportPluginStatement(name: name, path: path)))
-    }
-
-    var setEnvironmentParts: (name: Expr, value: Expr)? {
-        if case .extended(let box) = self, let node = box.node as? SetEnvironmentStatement { (node.name, node.value) } else { nil }
     }
 }
 

@@ -107,8 +107,6 @@ package final class TypeChecker {
         case enumType(EnumInfo)
         /// An imported module, `Tools`; its members aren't known until it loads.
         case module
-        /// `env`: the environment.
-        case environment
         /// A Swift type by name, bridged: `String`, `Int`.
         case swiftType(String)
     }

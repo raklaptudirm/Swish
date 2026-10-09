@@ -104,8 +104,7 @@ private func interpreter(limits: Limits = Limits(), log: Log = Log()) -> Interpr
     #expect(message("$(date)") != nil)
     #expect(message("ls()")?.contains("ls") == true)
     #expect(message("readLine()")?.contains("readLine") == true)
-    #expect(message(#"env["HOME"]"#) == nil)
-    #expect((try? swish.eval(#"env["HOME"]"#)) == .nothing)
+    #expect(message(#"env["HOME"]"#)?.contains("env") == true)
 }
 
 @Test func anInfiniteLoopStopsAtItsLimit() {
@@ -190,4 +189,43 @@ private func interpreter(limits: Limits = Limits(), log: Log = Log()) -> Interpr
     #expect((try? b.eval("shared")) == nil)
     #expect((try? b.eval("only(1)")) == nil)
     #expect(try a.eval("only(shared)") == .int(1))
+}
+
+/// A bag of settings: every member is an Int, assigned through a `let`.
+private final class Settings: DynamicObject, @unchecked Sendable {
+    var values: [String: Int] = ["volume": 7]
+
+    var typeName: String { "Settings" }
+    var readType: TypeAnnotation { .optional(.int) }
+    var writeType: TypeAnnotation { .optional(.int) }
+    var memberNames: [String] { values.keys.sorted() }
+    var description: String { "Settings" }
+    func member(_ name: String) -> Value? { values[name].map(Value.int) }
+    func read(_ name: String) throws -> Value { values[name].map(Value.int) ?? .nothing }
+    func write(_ name: String, _ value: Value) throws {
+        guard case .int(let number) = value else { values[name] = nil; return }
+        values[name] = number
+    }
+}
+
+@Test func aDynamicObjectAnswersForItsOwnMembers() throws {
+    let swish = interpreter()
+    let settings = Settings()
+    swish.bind("settings", to: settings)
+    #expect(try swish.eval("settings.volume") == .int(7))
+    #expect(try swish.eval(#"settings["volume"]"#) == .int(7))
+    #expect(try swish.eval("settings.missing") == .nothing)
+    // Assigned through a `let`, as a class would be; nil removes.
+    _ = try swish.eval("settings.brightness = 3; settings.volume = settings.volume! + 1")
+    #expect(settings.values == ["volume": 8, "brightness": 3])
+    _ = try swish.eval(#"settings["volume"] = nil"#)
+    #expect(settings.values == ["brightness": 3])
+    // The checker knows the members' type.
+    do {
+        _ = try swish.eval(#"settings.volume = "loud""#)
+        Issue.record("expected a diagnostic")
+    } catch let error as Diagnostic {
+        #expect(error.kind == .type)
+    }
+    #expect((try? swish.eval("let v: String = settings.volume")) == nil)
 }

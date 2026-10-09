@@ -4,8 +4,6 @@ import SwishKit
 package struct Binding {
     /// Builtin names whose values are live: read when they're used.
     package enum Special {
-        /// `env`: the environment, as a record; `env.NAME` is nil if unset.
-        case environment
         /// `jobs`: the jobs in the background, oldest first.
         case jobs
         /// `self` in a struct's `init`, which may set its `let` properties.
