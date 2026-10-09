@@ -39,14 +39,14 @@ private func shellWithRecorder() -> (Shell, Recorder) {
 @Test func outputAndErrorsGoToTheHost() {
     let (shell, recorder) = shellWithRecorder()
     // A bare value is shown as its debug form; an error is reported.
-    #expect(shell.execute("1 + 1; 1 / 0") != 0)
+    #expect(shell.enter("1 + 1; 1 / 0") != 0)
     #expect(recorder.written == ["out: 2\n", "err: swish: error: division by zero\n"])
 }
 
 @Test func theEnvironmentIsTheHosts() {
     let (shell, recorder) = shellWithRecorder()
     recorder.variables = ["GREETING": "hi"]
-    shell.execute(#"let a = env.GREETING; let b = env["MISSING"]; a; b; env.NEW = "x"; env.GREETING = nil; env.NEW"#)
+    shell.enter(#"let a = env.GREETING; let b = env["MISSING"]; a; b; env.NEW = "x"; env.GREETING = nil; env.NEW"#)
     // Reads, writes and removals went to the host's variables, and the process was left alone.
     #expect(recorder.written == ["out: \"hi\"\n", "out: \"x\"\n"])
     #expect(recorder.variables == ["NEW": "x"])

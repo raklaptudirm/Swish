@@ -6,7 +6,7 @@ import Testing
 
 /// Runs `source` in `shell`, returning what it wrote to standard output.
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
-    try onLargeStack { try shell.capturing { shell.execute(source) } }
+    try onLargeStack { try shell.capturing { shell.enter(source) } }
 }
 
 private func status(_ source: String) -> Int32 {
@@ -619,13 +619,16 @@ private func fixture() throws -> String {
     #expect(try output("func none() -> [Int] { [] }; none").isEmpty)
 }
 
-@Test func onlyAProgramsOwnValuesAreShown() throws {
-    // As in Swift's REPL: a top-level expression statement shows its value,
-    // at the prompt and in a script alike; one nested in a block doesn't.
-    // `print` is how a block speaks.
+@Test func onlyThePromptShowsValues() throws {
+    // The prompt shows the value of each expression it is given; a block's
+    // own expressions aren't shown, and `print` is how a block speaks.
     #expect(try output("1; 2; \"a\"") == "1\n2\n\"a\"\n")
     #expect(try output("for i in 1...3 { i }") == "")
     #expect(try output("if true { 1 } else { 2 }") == "")
     #expect(try output("do { 1 }; 2") == "2\n")
     #expect(try output("func f() -> Int { 1 }; f()") == "1\n")
+    // Running code (a script, `swish -c`, `execute`) shows nothing for a bare expression.
+    let shell = Shell()
+    let code = try onLargeStack { try shell.capturing { shell.execute("1; 2; print(3)") } }
+    #expect(code == "3\n")
 }

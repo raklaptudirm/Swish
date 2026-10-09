@@ -3,7 +3,7 @@
 import Testing
 
 private func output(_ source: String, in shell: Shell) throws -> String {
-    try onLargeStack { try shell.capturing { shell.execute(source) } }
+    try onLargeStack { try shell.capturing { shell.enter(source) } }
 }
 
 /// The example plugin, `Examples/Tools`, from this file's path.

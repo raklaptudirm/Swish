@@ -27,7 +27,7 @@ extension Shell {
             }
             switch editor.readLine(prompt: pending.isEmpty ? prompt() : "…".styled(DisplayStyle.dim) + " ") {
             case .eof:
-                if !pending.isEmpty { execute(pending) }
+                if !pending.isEmpty { enter(pending) }
                 return lastStatus
             case .interrupted:
                 pending = ""
@@ -41,7 +41,7 @@ extension Shell {
                     lastStatus = 2
                 case .success(let program):
                     // Checked first, as everywhere else: a type error runs nothing.
-                    if let program = typeCheck(program) { runReportingErrors(program) }
+                    if let program = typeCheck(program) { runReportingErrors(program, atPrompt: true) }
                 }
                 pending = ""
             }

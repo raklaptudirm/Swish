@@ -345,8 +345,8 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
 - [x] **Line editor**: persistent history (`$SWISH_HISTORY`, default `$XDG_STATE_HOME/swish/history`) with
   prefix search and `^R`, completion from signatures, highlighting from the parser,
   multi-line editing and wrapping
-- [x] **Display**: bare values shown with their `debugDescription`, pretty-printed to fit the
-  terminal; color for what matters (errors, job states, directories) and for structure
+- [x] **Display**: at the prompt, the value of an expression is shown with its `debugDescription`,
+  pretty-printed to fit the terminal (scripts and `-c` print only what they `print`); color for what matters (errors, job states, directories) and for structure
 - [x] **Plugin ABI**: `@SwishExport` functions with `@Flag`/`@Input`, `SwishEnum` enums,
   `@SwishObject` classes and `Encodable` results; exports found by symbol, no list to keep;
   `import Name from "path"` builds, loads and registers a local package

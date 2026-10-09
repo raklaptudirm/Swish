@@ -68,14 +68,27 @@ public final class Shell {
 }
 
 extension Shell {
+    /// Runs source as code: nothing is shown for a bare expression, as in a
+    /// script or `swish -c`. Use `print` to show a value.
     @discardableResult
     public func execute(_ source: String) -> Int32 {
+        run(source, atPrompt: false)
+    }
+
+    /// Runs what was entered at the prompt: like `execute`, but the value of
+    /// each expression is shown, as a REPL does.
+    @discardableResult
+    public func enter(_ source: String) -> Int32 {
+        run(source, atPrompt: true)
+    }
+
+    private func run(_ source: String, atPrompt: Bool) -> Int32 {
         switch interpreter.parse(source) {
         case .failure(let error):
             interpreter.report("syntax error: \(error)")
             lastStatus = 2
         case .success(let program):
-            if let program = typeCheck(program) { runReportingErrors(program) }
+            if let program = typeCheck(program) { runReportingErrors(program, atPrompt: atPrompt) }
         }
         return lastStatus
     }
@@ -99,13 +112,14 @@ extension Shell {
 
     /// A runtime error abandons the rest of the input, unlike a failing
     /// command, which only sets the status.
-    func runReportingErrors(_ program: Program) {
+    func runReportingErrors(_ program: Program, atPrompt: Bool = false) {
         // Drop a stale ^C from while the prompt was up; a script's stops it.
         if interactive && interpreter.file == nil { _ = takeInterrupt() }
         do {
-            lastStatus = try interpreter.run(program) { [unowned interpreter] value, expression, discarded in
+            // Only the prompt shows values; running code prints what it prints.
+            lastStatus = try interpreter.run(program, observing: atPrompt ? { [unowned interpreter] value, expression, discarded in
                 interpreter.present(value, from: expression, discarded: discarded)
-            }
+            } : nil)
         } catch let interrupt as Interrupted {
             if interactive && interpreter.file == nil {
                 writeAll(STDERR_FILENO, "\n")
