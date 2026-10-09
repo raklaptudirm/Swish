@@ -236,3 +236,25 @@ private final class Settings: DynamicObject, @unchecked Sendable {
     }
     #expect((try? swish.eval("let v: String = settings.volume")) == nil)
 }
+
+@Test func interpretersOnDifferentThreadsDontShareKeyPathReads() {
+    // `sorted(by: \.n)` reads fields through a reader set for the length of
+    // the call; two runs at once must each have their own.
+    let program = #"[(n: 3, s: "c"), (n: 1, s: "a"), (n: 2, s: "b")].sorted(by: \.n).map { $0.s }"#
+    let expected = Value.list([.string("a"), .string("b"), .string("c")])
+    nonisolated(unsafe) var wrong = 0
+    let lock = NSLock()
+    let group = DispatchGroup()
+    for _ in 0..<4 {
+        group.enter()
+        Thread {
+            let swish = interpreter()
+            for _ in 0..<150 where (try? swish.eval(program)) != expected {
+                lock.withLock { wrong += 1 }
+            }
+            group.leave()
+        }.start()
+    }
+    group.wait()
+    #expect(wrong == 0)
+}

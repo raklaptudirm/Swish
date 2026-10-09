@@ -1,3 +1,4 @@
+import Foundation
 /// What the shell lends a function that asks for it. A parameter of this type
 /// is filled in when the function is called and is never a command-line
 /// argument or a flag: `func history(in shell: ShellContext) -> [String]`.
@@ -37,8 +38,22 @@ public struct Partial<Value> {
 /// How a value's field is read by name, set by the shell for the length of a
 /// call that takes a key path: the shell knows what a record, a struct or an
 /// object has.
+///
+/// It belongs to the thread that set it, because a call runs on one thread
+/// from start to finish and interpreters run on threads of their own: a
+/// reader shared by all would be another interpreter's.
 public enum FieldAccess {
-    nonisolated(unsafe) public static var reader: ((Value, String) -> Value)?
+    private final class Box {
+        let reader: (Value, String) -> Value
+        init(_ reader: @escaping (Value, String) -> Value) { self.reader = reader }
+    }
+
+    private static let key = "SwishKit.FieldAccess.reader"
+
+    public static var reader: ((Value, String) -> Value)? {
+        get { (Thread.current.threadDictionary[key] as? Box)?.reader }
+        set { Thread.current.threadDictionary[key] = newValue.map(Box.init) }
+    }
 }
 
 extension Value {
