@@ -40,6 +40,14 @@ its syntax as a layer over it. See [embedding.md](embedding.md), and [boundaries
 line between the core and the shell, what crosses it today and how each
 crossing exits.
 
+## The front end is swappable
+
+Text becomes the core's tree through a front end behind a contract: today a
+hand-written parser, later SwiftSyntax with a lowering, so that Swish accepts
+Swift's syntax by construction and follows the language. The shell's grammar
+plugs in at the level of statements, not tokens, so it survives the swap. See
+[frontend.md](frontend.md).
+
 ## The engine is a hybrid
 
 The interpreter (the parser, the checker, the tree-walking evaluator, the
