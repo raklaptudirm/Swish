@@ -47,8 +47,7 @@ extension ShellLayer {
                     try shell.callSequenceMethod(methods, on: items, arguments)
                 }),
             importPlugin: { [unowned shell] name, path in try shell.importPlugin(name, from: path) },
-            history: { [unowned shell] in shell.historyEntries },
-            columns: ["Job": Job.columns, "Help": Shell.helpColumns]
+            history: { [unowned shell] in shell.historyEntries }
         )
     }
 }

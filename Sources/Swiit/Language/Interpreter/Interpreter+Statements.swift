@@ -14,7 +14,14 @@ package enum UnitContext {
 extension Interpreter {
     // MARK: Statements
 
-    package func run(_ program: Program) throws -> Int32 {
+    /// Runs a program. A host that shows what a program gives, as the shell's
+    /// prompt does, passes an `observer`: it is told the value of each
+    /// expression statement while the program runs, nested blocks included
+    /// (`for i in 1...3 { i }` gives three), but not inside a function call.
+    package func run(_ program: Program, observing newObserver: ValueObserver? = nil) throws -> Int32 {
+        let outerObserver = observer
+        if let newObserver { observer = newObserver }
+        defer { observer = outerObserver }
         var status: Int32 = 0
         try hoistDeclarations(program)
         // `defer` blocks run as the block ends, however it ends.
@@ -154,6 +161,9 @@ extension Interpreter {
         case .continueStatement:
             throw ControlFlow.continueLoop
         case .chain(let chain):
+            if let observer, callDepth == 0, chain.links.isEmpty, case .expression(let expr) = chain.first {
+                return try runObserved(expr, observer)
+            }
             return try run(chain, context: .statement)
         }
     }
@@ -173,32 +183,7 @@ extension Interpreter {
             return try box.node.run(in: self, context: context)
 
         case .expression(let expr):
-            let value = try evaluate(expr)
-            // A bare `true`/`false` stands in for the Unix commands: status only.
-            let isBoolLiteral = if case .literal(.bool) = expr { true } else { false }
-            // `await build`: the job wrote to the terminal; its Output has
-            // nothing more to show.
-            let awaitedToTerminal = expr.isAwait && value.showsNothing
-            // `xs.removeLast()` alone: Swift's @discardableResult.
-            let discarded = if case .bridged(let type, let member, _, _) = expr {
-                Bridge.types[type]?.members[member].discardableResult == true
-            } else { false }
-            if context == .statement && !isBoolLiteral && !awaitedToTerminal && !discarded {
-                display(value)
-            }
-            if case .bool(let truth) = value { return truth ? 0 : 1 }
-            // `await build && echo ok`: an Output's status is its command's.
-            if let output = value.commandOutput, !output.succeeded {
-                return output.code.map(Int32.init) ?? 128 + Int32(output.signal ?? 0)
-            }
-            // A `try?` that caught an error is a failure, so `try? $(…) != nil
-            // && …` and `if try? …` work. Other nils, like a function that
-            // returns nothing, aren't.
-            if case .attempt(_, .optional) = expr { return value == .nothing ? 1 : 0 }
-            if context == .condition {
-                throw RuntimeError("condition must be a Bool, not \(value.typeName)")
-            }
-            return 0
+            return try status(of: try evaluate(expr), from: expr, context: context)
 
         case .switchStatement(let node):
             return try runSwitch(node)
@@ -223,6 +208,37 @@ extension Interpreter {
             }
             return status
         }
+    }
+
+    /// An expression statement at the top level: evaluated, shown to the
+    /// observer (unless it is a bare `true` or `false`, which stand in for the
+    /// Unix commands), and its status.
+    package func runObserved(_ expr: Expr, _ observer: ValueObserver) throws -> Int32 {
+        let value = try evaluate(expr)
+        let isBoolLiteral = if case .literal(.bool) = expr { true } else { false }
+        // `xs.removeLast()` alone: Swift's @discardableResult.
+        let discarded = if case .bridged(let type, let member, _, _) = expr {
+            Bridge.types[type]?.members[member].discardableResult == true
+        } else { false }
+        if !isBoolLiteral { try observer(value, expr, discarded) }
+        return try status(of: value, from: expr, context: .statement)
+    }
+
+    /// The exit status an expression's value gives.
+    package func status(of value: Value, from expr: Expr, context: UnitContext) throws -> Int32 {
+        if case .bool(let truth) = value { return truth ? 0 : 1 }
+        // `await build && echo ok`: an Output's status is its command's.
+        if let output = value.commandOutput, !output.succeeded {
+            return output.code.map(Int32.init) ?? 128 + Int32(output.signal ?? 0)
+        }
+        // A `try?` that caught an error is a failure, so `try? $(…) != nil
+        // && …` and `if try? …` work. Other nils, like a function that
+        // returns nothing, aren't.
+        if case .attempt(_, .optional) = expr { return value == .nothing ? 1 : 0 }
+        if context == .condition {
+            throw RuntimeError("condition must be a Bool, not \(value.typeName)")
+        }
+        return 0
     }
 
     /// Runs one iteration; false means `break`.
@@ -266,12 +282,6 @@ extension Interpreter {
         }
     }
 
-    /// A bare value at the prompt, shown as `debugPrint` would.
-    package func display(_ value: Value) {
-        guard echoesValues, callDepth == 0 else { return }
-        show(value, debug: true)
-    }
-
     package func checkInterrupt() throws {
         if cancellation.isSet { throw Cancelled() }
         if let reason = host.interrupt() { throw Interrupted(reason: reason) }
@@ -283,3 +293,8 @@ extension Interpreter {
         }
     }
 }
+
+/// Told the value of each top-level expression statement: the value, the
+/// expression it came from, and whether Swift would discard it
+/// (`@discardableResult`).
+package typealias ValueObserver = (_ value: Value, _ expression: Expr, _ discarded: Bool) throws -> Void

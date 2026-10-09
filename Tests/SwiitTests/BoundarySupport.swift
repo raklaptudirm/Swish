@@ -7,7 +7,7 @@ enum Boundaries {
     /// The directories of `Sources/Swiit` that stay in the core.
     static let coreDirectories = [
         "Language/Syntax", "Language/Checking", "Language/Interpreter", "Language/Prelude", "Bridge",
-        "Host", "Host/Embedding", "Presentation/Display", "Presentation/Reflection",
+        "Language/Reflection", "Host", "Host/Embedding",
     ]
 
     /// The one place the core makes a thread: a run goes on a large stack,

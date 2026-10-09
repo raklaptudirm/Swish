@@ -1,4 +1,5 @@
 import Foundation
+import Swiit
 import SwishKit
 import SwishStandardLibrary
 
@@ -7,8 +8,6 @@ import SwishStandardLibrary
 /// The rest are still there for `filter`, `select` and `get`, and `table`
 /// shows everything. Each type says so itself (`Tabular`), beside where it's
 /// made.
-package let standardDisplayRegistry = DisplayRegistry(columns: Bridge.standardColumns, enumStyles: Bridge.standardEnumStyles)
-
 extension DisplayFormatter {
     /// Writes with `write`, fitting what the stream is: a terminal's width
     /// and a styled header, or every character for a file.
@@ -19,16 +18,18 @@ extension DisplayFormatter {
 }
 
 extension Interpreter {
-    /// How types show in a table: the standard library's and the shell's own,
-    /// and the columns of the structs declared in Swish that say so
-    /// (`Tabular`).
-    package var displayRegistry: DisplayRegistry {
-        var registry = standardDisplayRegistry
+    /// How types show in a table: every installed library's, the shell's own
+    /// (`Job`, `Help`), and the columns of the structs declared in Swish that
+    /// say so (`Tabular`).
+    var displayRegistry: DisplayRegistry { displayRegistryProvider() }
+
+    func tableRegistry() -> DisplayRegistry {
+        var registry = DisplayRegistry()
         for library in libraries {
             registry.columns.merge(library.columns) { first, _ in first }
             registry.enumStyles.merge(library.enumStyles) { first, _ in first }
         }
-        registry.columns.merge(shellLayer?.columns ?? [:]) { first, _ in first }
+        registry.columns.merge(["Job": Job.columns, "Help": Shell.helpColumns]) { first, _ in first }
         for scope in scopes {
             for case .object(let type as StructType) in scope.bindings.values.map(\.value)
             where type.conformances.contains("Tabular") && registry.columns[type.name] == nil {
@@ -39,6 +40,15 @@ extension Interpreter {
             }
         }
         return registry
+    }
+
+    /// What the prompt does with an expression statement's value: shows it,
+    /// unless Swift would discard it or it is an `await` whose job already
+    /// wrote to the terminal.
+    func present(_ value: Value, from expression: Expr, discarded: Bool) {
+        let awaitedToTerminal = expression.isAwait && value.showsNothing
+        guard !discarded, !awaitedToTerminal else { return }
+        show(value, debug: true)
     }
 }
 
@@ -76,14 +86,6 @@ extension Interpreter {
 }
 
 extension Value {
-    /// A list's items, or an Output's lines: what sequence methods work on.
-    package var sequenceItems: [Value]? {
-        switch self {
-        case .list(let items): items
-        default: commandOutput?.lines.map(Value.string)
-        }
-    }
-
     /// It has nothing to show, as a command that printed nothing.
     package var showsNothing: Bool {
         displayShape.isEmpty

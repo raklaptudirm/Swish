@@ -103,6 +103,14 @@ extension Value {
 }
 
 extension SwishKit.Value {
+    /// A list's items, or an Output's lines: what sequence methods work on.
+    package var sequenceItems: [Value]? {
+        switch self {
+        case .list(let items): items
+        default: commandOutput?.lines.map(Value.string)
+        }
+    }
+
     /// A total order for sorting: numbers numerically (Int and Double
     /// together), then by kind for values of different kinds.
     package func order(comparedTo other: SwishKit.Value) -> ComparisonResult {

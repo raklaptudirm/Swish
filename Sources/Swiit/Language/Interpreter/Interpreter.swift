@@ -23,6 +23,12 @@ public final class Interpreter {
     package var libraries: [Library] = []
     /// The types of dynamic objects' members (`DynamicObject`), by type name.
     package var dynamicTypes: [String: DynamicType] = [:]
+    /// How values lay out as tables, which only a host that shows them has
+    /// (the shell installs it). Library functions that format are lent this.
+    package var displayRegistryProvider: () -> DisplayRegistry = { DisplayRegistry() }
+    /// Told each expression statement's value while a program runs, if the
+    /// host shows them (set by `run(_:observing:)`).
+    package var observer: ValueObserver?
     package var objectMembers: [String: [String: TypeAnnotation]] = [:]
 
     /// Variable scopes, innermost last. The outermost holds the builtin
@@ -65,9 +71,6 @@ public final class Interpreter {
     package let outputCounter: OutputCounter
     /// Asks a run to stop, from any thread.
     package let cancellation = Cancellation()
-    /// Whether a bare value statement shows its value, as at the shell's
-    /// prompt. An embedder asks for values from `eval` instead.
-    package var echoesValues = true
 
     package init(host: SwishHost, shellLayer: ShellLayer?, outputCounter: OutputCounter = OutputCounter()) {
         self.host = host

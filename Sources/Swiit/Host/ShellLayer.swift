@@ -37,15 +37,11 @@ package struct ShellLayer {
     package var importPlugin: (_ name: String, _ path: String) throws -> Void
     /// What was entered before, oldest first.
     package var history: () -> [String]
-    /// The columns a table starts with for the shell's own types (`Job`,
-    /// `Help`), which the core doesn't know by name.
-    package var columns: [String: [DisplayColumn]]
 
-    package init(commands: CommandAccess, importPlugin: @escaping (_ name: String, _ path: String) throws -> Void, history: @escaping () -> [String], columns: [String: [DisplayColumn]]) {
+    package init(commands: CommandAccess, importPlugin: @escaping (_ name: String, _ path: String) throws -> Void, history: @escaping () -> [String]) {
         self.commands = commands
         self.importPlugin = importPlugin
         self.history = history
-        self.columns = columns
     }
 }
 

@@ -11,15 +11,16 @@ private func runOnTheCore(_ source: String) -> (output: String, problem: String?
     let host = SwishHost(output: OutputSink(write: { output += $0; return true }),
                          error: OutputSink(write: { output += "err: " + $0; return true }))
     let interpreter = Interpreter(host: host, limits: Limits())
-    // As at a prompt: a bare value is shown.
-    interpreter.echoesValues = true
     switch interpreter.parse(source) {
     case .failure(let error):
         return (output, "syntax error: \(error)")
     case .success(let program):
         do {
             let checked = try TypeChecker(interpreter: interpreter).check(program)
-            _ = try interpreter.run(checked)
+            // As a prompt would: each top-level value statement is shown.
+            _ = try interpreter.run(checked) { value, _, _ in
+                output += value.debugDescription + "\n"
+            }
             return (output, nil)
         } catch let error as TypeError {
             return (output, "error: \(error.message)")

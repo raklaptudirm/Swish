@@ -86,7 +86,6 @@ extension Interpreter {
         installBuiltinFunctions(providing: ["help": .native { _, _ in
             throw RuntimeError("help isn't available in this interpreter")
         }])
-        echoesValues = false
         installPrint()
     }
 

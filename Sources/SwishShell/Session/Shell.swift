@@ -60,6 +60,7 @@ public final class Shell {
         interpreter.host = SwishHost(process: self)
         interpreter.shellLayer = ShellLayer(process: self)
         interpreter.owner = self
+        interpreter.displayRegistryProvider = { [unowned interpreter] in interpreter.tableRegistry() }
         interpreter.bind("env", to: EnvironmentObject(access: .process))
         interpreter.objectMembers["Job"] = Dictionary(uniqueKeysWithValues: Job.members.map { ($0.name, $0.type) })
         interpreter.installBuiltinFunctions(providing: ["help": help().body], libraries: [.shell])
@@ -102,7 +103,9 @@ extension Shell {
         // Drop a stale ^C from while the prompt was up; a script's stops it.
         if interactive && interpreter.file == nil { _ = takeInterrupt() }
         do {
-            lastStatus = try interpreter.run(program)
+            lastStatus = try interpreter.run(program) { [unowned interpreter] value, expression, discarded in
+                interpreter.present(value, from: expression, discarded: discarded)
+            }
         } catch let interrupt as Interrupted {
             if interactive && interpreter.file == nil {
                 writeAll(STDERR_FILENO, "\n")

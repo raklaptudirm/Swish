@@ -32,8 +32,7 @@ private func shellWithRecorder() -> (Shell, Recorder) {
             await: { _, _ in .nothing },
             callSequenceMethod: { _, _, _ in .nothing }),
         importPlugin: { _, _ in },
-        history: { [] },
-        columns: [:])
+        history: { [] })
     return (shell, recorder)
 }
 

@@ -9,13 +9,10 @@
 # No file here may reach the operating system directly (stdoutFD, getenv,
 # waitpid, …); that goes through SwishHost, and has no allowance.
 
-allow	Bridge/Bridge+Conversions.swift	history	1
-allow	Host/Embedding/Embedding.swift	layer	1
-allow	Host/Interpreter+Builtins.swift	jobs	2
-allow	Host/ShellLayer.swift	history	1
-allow	Host/ShellLayer.swift	jobs	4
-allow	Host/ShellLayer.swift	layer	4
-allow	Host/ShellLayer.swift	plugin	6
+allow	Language/Syntax/Parser+Expressions.swift	chain	1
+allow	Language/Syntax/Parser+Units.swift	chain	5
+allow	Language/Syntax/Statements.swift	chain	11
+allow	Language/Syntax/SyntaxPlugin.swift	chain	2
 allow	Language/Checking/TypeChecker+Closures.swift	chain	1
 allow	Language/Checking/TypeChecker+Declarations.swift	chain	1
 allow	Language/Checking/TypeChecker+Expressions.swift	jobs	1
@@ -29,8 +26,10 @@ allow	Language/Interpreter/Interpreter+Statements.swift	status	3
 allow	Language/Interpreter/Interpreter.swift	layer	4
 allow	Language/Interpreter/Interpreter.swift	status	2
 allow	Language/Interpreter/Scope.swift	jobs	1
-allow	Language/Syntax/Parser+Expressions.swift	chain	1
-allow	Language/Syntax/Parser+Units.swift	chain	5
-allow	Language/Syntax/Statements.swift	chain	11
-allow	Language/Syntax/SyntaxPlugin.swift	chain	2
-allow	Presentation/Display/Display.swift	layer	1
+allow	Bridge/Bridge+Conversions.swift	history	1
+allow	Host/Interpreter+Builtins.swift	jobs	2
+allow	Host/ShellLayer.swift	jobs	4
+allow	Host/ShellLayer.swift	layer	4
+allow	Host/ShellLayer.swift	history	1
+allow	Host/ShellLayer.swift	plugin	6
+allow	Host/Embedding/Embedding.swift	layer	1

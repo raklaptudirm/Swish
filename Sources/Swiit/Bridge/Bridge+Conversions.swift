@@ -79,7 +79,7 @@ package func bridgeRecord<T: Encodable>(_ shell: Interpreter, _ value: T, patche
 extension Interpreter {
     /// What a standard library function that asks for it is lent.
     package var context: ShellContext {
-        ShellContext(history: historyEntries, colorOutput: host.output.traits().styled, display: displayRegistry)
+        ShellContext(history: historyEntries, colorOutput: host.output.traits().styled, display: displayRegistryProvider())
     }
 }
 
