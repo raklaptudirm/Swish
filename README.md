@@ -212,7 +212,7 @@ over lines when they're wide.
 ## Getting started
 
 Swish needs Swift 6 on macOS or Linux. It's all Swift: what differs between the two (starting
-programs, plugin libraries) is in `Sources/SwishCore/Platform`.
+programs, plugin libraries) is in `Sources/Swiit/Platform`.
 
 ```sh
 swift build -c release
@@ -265,15 +265,18 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
 | Path | What |
 |---|---|
 | `Packages/SwishKit` | `Value` and the plugin API, with the `@SwishExport` and `@SwishObject` macros. A separate package so it links as a **dynamic library** shared by the shell and every plugin. |
-| `Sources/SwishCore` | The shell, in a folder for each part: |
-| `…/Shell` | The `Shell` itself: the prompt's loop, scripts, tasks, the config file. |
-| `…/Syntax` | The syntax tree, and the parser that decides command or expression mode. |
+| `Sources/Swiit` | The interpreter (Swiit): the syntax tree and parser, the type checker, the evaluator, the bridged Swift types, display, builtins, and the embedding API. It builds on its own and knows nothing of the shell: |
+| `…/Syntax` | The syntax tree, and the parser, with a plug-in for syntax a host adds. |
 | `…/Checking` | The type checker, which runs before anything else. |
-| `…/Interpreter` | Running statements and expressions, calls, command lines, structs and enums. |
-| `…/Execution` | Pipelines, value streams, redirects, jobs and globs. |
-| `…/Builtins` | The prelude, builtin functions and shell builtins, and `help`. |
+| `…/Interpreter` | Running statements and expressions, calls, structs and enums. |
+| `…/Builtins` | The prelude and builtin functions. |
 | `…/Bridge` | Swift's types and members, generated into `Bridge/Generated` from symbol graphs. |
-| `…/Display` | Tables, pretty-printing, colors and JSON. |
+| `…/Display` | How values show in tables and key/value lists. |
+| `…/Embedding` | `Interpreter(host:limits:)`, `eval`, `register`, `set`, `Diagnostic`. |
+| `Sources/SwishShell` | The shell (Swish), a client of Swiit: |
+| `…/Shell` | The `Shell` itself: the prompt's loop, scripts, tasks, the config file. |
+| `…/Syntax` | The shell's grammar: commands, pipelines, `$(…)`, redirects. |
+| `…/Execution` | Pipelines, value streams, redirects, jobs, globs and `env`. |
 | `…/Editor` | The line editor: history, completion and highlighting. |
 | `…/Plugins` | Building and loading plugins. |
 | `…/Platform` | The operating system: `posix_spawn` with process groups and terminal handoff, resource limits, and what differs between macOS and Linux. |
@@ -281,8 +284,9 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
 | `Bridges` | Which members of each bridged type a platform has, one list a platform and module: what's bridged is what every platform has (`run bridge` keeps them current; CI checks). |
 | `Tests/Interactive` | `expect` scripts that drive the shell through a real terminal. |
 | `Examples/Tools` | An example plugin, which the tests import. |
-| `Sources/SwishStandardLibrary` | The shell's own functions and types in plain Swift (`pwd`, `readLine`, `history`, `ls` and `FileEntry`, `ps` and `ProcessEntry`), bridged like the standard library. |
-| `Sources/SwishBridge` | Reads Swift's symbol graphs and generates the glue that bridges the standard library, swift-system and `SwishStandardLibrary` (`run bridge`): the graph, declaration parsing, what Swish can hold and how values cross, and one member's glue each have a file. |
+| `Sources/SwishStandardLibrary` | Plain Swift the interpreter bridges: `Flow`, `JSON`, the formatters and `from`/`to`/`table`/`list`. |
+| `Sources/SwishShellLibrary` | The shell's functions and types in plain Swift (`pwd`, `readLine`, `history`, `ls` and `FileEntry`, `ps` and `ProcessEntry`), bridged like the standard library. |
+| `Sources/SwiitBridge` | Reads Swift's symbol graphs and generates the glue that bridges the standard library, swift-system and `SwishStandardLibrary` and `SwishShellLibrary` (`run bridge`): the graph, declaration parsing, what Swish can hold and how values cross, and one member's glue each have a file. |
 
 </details>
 

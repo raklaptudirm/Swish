@@ -1,5 +1,5 @@
 import Foundation
-import SwishCore
+import Swiit
 import SwishKit
 
 /// The process's variables, for `env`.

@@ -1,4 +1,4 @@
-import SwishCore
+import Swiit
 import Foundation
 
 /// A redirect with its file name worked out.

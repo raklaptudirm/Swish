@@ -7,7 +7,7 @@ let package = Package(
     products: [
         // The commands keep their lowercase names, as Unix programs do.
         .executable(name: "swish", targets: ["Swish"]),
-        .executable(name: "swish-bridge", targets: ["SwishBridge"]),
+        .executable(name: "swiit-bridge", targets: ["SwiitBridge"]),
     ],
     dependencies: [
         // A separate package so the host links SwishKit as a dylib (products of
@@ -21,9 +21,9 @@ let package = Package(
         .executableTarget(name: "Swish", dependencies: ["SwishShell"]),
         // Reads Swift's symbol graphs and writes the glue that bridges them
         // (`run bridge`); not part of the shell.
-        .executableTarget(name: "SwishBridge"),
-        // The shell's own functions, written in Swift: `swish-bridge` reads
-        // their declarations (`run bridge`) and SwishCore calls them.
+        .executableTarget(name: "SwiitBridge"),
+        // The shell's own functions, written in Swift: `swiit-bridge` reads
+        // their declarations (`run bridge`) and Swiit calls them.
         .target(
             name: "SwishStandardLibrary",
             dependencies: [
@@ -42,7 +42,7 @@ let package = Package(
             ]
         ),
         .target(
-            name: "SwishCore",
+            name: "Swiit",
             dependencies: [
                 "SwishStandardLibrary",
                 .product(name: "SwishKit", package: "SwishKit"),
@@ -54,14 +54,14 @@ let package = Package(
         .target(
             name: "SwishShell",
             dependencies: [
-                "SwishCore",
+                "Swiit",
                 "SwishShellLibrary",
                 .product(name: "SwishKit", package: "SwishKit"),
                 .product(name: "SystemPackage", package: "swift-system"),
             ]
         ),
         // boundaries.txt is data the boundary test reads from the source tree.
-        .testTarget(name: "SwishCoreTests", dependencies: ["SwishCore"], exclude: ["boundaries.txt"]),
-        .testTarget(name: "SwishShellTests", dependencies: ["SwishShell", "SwishCore"]),
+        .testTarget(name: "SwiitTests", dependencies: ["Swiit"], exclude: ["boundaries.txt"]),
+        .testTarget(name: "SwishShellTests", dependencies: ["SwishShell", "Swiit"]),
     ]
 )

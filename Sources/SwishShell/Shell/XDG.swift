@@ -1,4 +1,4 @@
-import SwishCore
+import Swiit
 import Foundation
 
 /// Where files go, by the XDG Base Directory spec. A relative directory in

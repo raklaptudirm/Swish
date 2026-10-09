@@ -4,7 +4,7 @@ import SystemPackage
 
 /// Swift's own types and members, as Swish sees them: read from the
 /// standard library's symbol graph (and swift-system's, for FilePath) by
-/// `swish-bridge`, which writes StandardLibrary.swift and SystemPackage.swift
+/// `swiit-bridge`, which writes StandardLibrary.swift and SystemPackage.swift
 /// beside this file (see `run bridge` in Tasks.swish
 /// and Docs/Design/swift-interop.md). Each member comes with its signature,
 /// for the checker, and its glue, which calls Swift.

@@ -1,4 +1,4 @@
-import SwishCore
+import Swiit
 import Foundation
 import SwishKit
 
@@ -193,4 +193,4 @@ extension Interpreter {
 }
 
 // Foundation has a `Unit` too; the language's is the one the shell means.
-typealias Unit = SwishCore.Unit
+typealias Unit = Swiit.Unit

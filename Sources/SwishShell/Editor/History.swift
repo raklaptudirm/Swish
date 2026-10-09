@@ -1,4 +1,4 @@
-import SwishCore
+import Swiit
 import Foundation
 
 /// Accepted input lines, newest last, kept in a file across sessions. Each

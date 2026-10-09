@@ -5,7 +5,7 @@ import SwishKit
 /// the shell: the same flags, help, overloads and streaming as Swish ones.
 
 /// A library of functions and types written in Swift and bridged by
-/// `swish-bridge`: the core's own is `Library.standard`; a host has others
+/// `swiit-bridge`: the core's own is `Library.standard`; a host has others
 /// (the shell's `ls` and `ps` are `SwishShellLibrary`).
 package struct Library {
     /// Its structs and enums, as Swish source, declared with the prelude.

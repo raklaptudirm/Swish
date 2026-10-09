@@ -1,4 +1,4 @@
-@testable import SwishCore
+@testable import Swiit
 @testable import SwishShell
 import Foundation
 

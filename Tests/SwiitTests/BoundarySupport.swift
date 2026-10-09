@@ -4,7 +4,7 @@ import Foundation
 /// rules (Docs/Design/boundaries.md). A support file because it reads source
 /// with Foundation, which the test file can't import beside Testing.
 enum Boundaries {
-    /// The directories of `Sources/SwishCore` that stay in the core.
+    /// The directories of `Sources/Swiit` that stay in the core.
     static let coreDirectories = ["Syntax", "Checking", "Interpreter", "Bridge", "Display", "Builtins", "Embedding"]
 
     /// The one place the core makes a thread: a run goes on a large stack,
@@ -31,7 +31,7 @@ enum Boundaries {
 
     private static let here = URL(fileURLWithPath: #filePath)
     private static let sources = here.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        .appendingPathComponent("Sources/SwishCore")
+        .appendingPathComponent("Sources/Swiit")
     private static let ledger = here.deletingLastPathComponent().appendingPathComponent("boundaries.txt")
 
     /// What's wrong, one line each; empty when the core is inside its boundaries.

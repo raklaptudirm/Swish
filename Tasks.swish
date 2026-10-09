@@ -17,10 +17,10 @@ func test() {
     }
 }
 
-/// Regenerates the bridges in Sources/SwishCore/Bridge/Generated (and the
+/// Regenerates the bridges in Sources/Swiit/Bridge/Generated (and the
 /// shell's own in Sources/SwishShell/Bridge/Generated), from the symbol
 /// graphs of the standard library, Foundation, swift-system and the shell's
-/// own modules. Run it after changing swish-bridge, the Swift
+/// own modules. Run it after changing swiit-bridge, the Swift
 /// toolchain or swift-system. A graph is read on the platform it's made on,
 /// so each platform's members are kept in Bridges/<platform>, and what's
 /// bridged is what all the platforms there have: CI makes Linux's (see
@@ -61,14 +61,14 @@ func bridge() {
         let outputs = ["Swift": "StandardLibrary", "SwishStandardLibrary": "SwishLibrary", "SwishShellLibrary": "ShellLibrary"]
         let output = outputs[module] ?? module
         // The core's bridges are in the core; the shell's library is the shell's.
-        let target = module == "SwishShellLibrary" ? "SwishShell" : "SwishCore"
+        let target = module == "SwishShellLibrary" ? "SwishShell" : "Swiit"
         // This platform's members to write, and the others' to keep to.
         var platforms = ["--manifest", "Bridges/\(platform)/\(module).json"]
         for other in ["macos", "linux"] {
             let manifest = "Bridges/\(other)/\(module).json"
             if other != platform && $(^test -f $manifest).status.succeeded { platforms += ["--also", manifest] }
         }
-        try! swift run -c release swish-bridge "\(graphs)/\(module).symbols.json" "Sources/\(target)/Bridge/Generated/\(output).swift" $extra $platforms
+        try! swift run -c release swiit-bridge "\(graphs)/\(module).symbols.json" "Sources/\(target)/Bridge/Generated/\(output).swift" $extra $platforms
     }
 }
 

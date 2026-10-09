@@ -1,4 +1,4 @@
-@testable import SwishCore
+@testable import Swiit
 import Testing
 
 @Test func theCoreStaysInsideItsBoundaries() throws {

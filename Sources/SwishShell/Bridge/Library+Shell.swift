@@ -1,4 +1,4 @@
-import SwishCore
+import Swiit
 
 extension Library {
     /// The shell's own: `ls`, `ps`, `pwd`, `with(env:)`, `readLine`, `history`
