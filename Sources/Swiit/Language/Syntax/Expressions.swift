@@ -41,7 +41,7 @@ package indirect enum Expr: Equatable, Sendable {
     case string([StringPart])
     case variable(String)
     /// Syntax a layer over the core adds: the shell's `$name`, `$(…)` and
-    /// `async …` (Syntax/SyntaxExtension.swift).
+    /// `async …` (Language/Syntax/SyntaxExtension.swift).
     case extended(ExprExtensionBox)
     /// `try expr`, `try? expr` or `try! expr`.
     case attempt(Expr, TryKind)

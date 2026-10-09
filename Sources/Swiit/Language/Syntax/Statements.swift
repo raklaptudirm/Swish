@@ -33,7 +33,7 @@ package enum Statement: Equatable, Sendable {
     /// every sequence.
     case extensionDecl(name: String, methods: [FunctionDecl])
     /// Syntax a layer over the core adds: the shell's `env.NAME = value` and
-    /// `import Tools from "./Tools"` (Syntax/SyntaxExtension.swift).
+    /// `import Tools from "./Tools"` (Language/Syntax/SyntaxExtension.swift).
     case extended(StatementExtensionBox)
     /// `defer { … }`: runs when the block it's in ends, however it ends,
     /// last deferred first. At a script's top level, when the script ends.

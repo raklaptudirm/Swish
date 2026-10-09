@@ -5,11 +5,14 @@ import Foundation
 /// with Foundation, which the test file can't import beside Testing.
 enum Boundaries {
     /// The directories of `Sources/Swiit` that stay in the core.
-    static let coreDirectories = ["Syntax", "Checking", "Interpreter", "Bridge", "Display", "Builtins", "Embedding"]
+    static let coreDirectories = [
+        "Language/Syntax", "Language/Checking", "Language/Interpreter", "Language/Prelude", "Bridge",
+        "Host", "Host/Embedding", "Presentation/Display", "Presentation/Reflection",
+    ]
 
     /// The one place the core makes a thread: a run goes on a large stack,
     /// so deep recursion needs no setup from the embedder (embedding.md, step 5).
-    static let permitted: [String: Set<String>] = ["Embedding/LargeStack.swift": ["Thread", "DispatchSemaphore", "signal("]]
+    static let permitted: [String: Set<String>] = ["Host/Embedding/LargeStack.swift": ["Thread", "DispatchSemaphore", "signal("]]
 
     /// The shell's concepts, by the group the ledger counts them under.
     static let groups: [(name: String, pattern: String)] = [

@@ -3,7 +3,7 @@ import Foundation
 import SwishKit
 
 // The shell's syntax in the core's tree: each form is a node that checks and
-// runs itself, held in the tree as an extension (Syntax/SyntaxExtension.swift),
+// runs itself, held in the tree as an extension (Language/Syntax/SyntaxExtension.swift),
 // so the checker and the interpreter never name them. The factory functions
 // keep the parser's spelling, `.pipeline(node)`, `.substitution(program)`.
 
