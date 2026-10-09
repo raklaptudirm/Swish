@@ -12,9 +12,14 @@ import SwishKit
 /// `$name`: a Swish variable, falling back to the environment.
 struct DollarExpr: ExprExtension, Equatable {
     var name: String
+    /// What the checker found: a variable in scope, not the environment's.
+    var isVariable = false
 
     mutating func check(in checker: TypeChecker, expecting expected: TypeAnnotation?) throws -> TypeAnnotation {
-        if case .variable(let type, _)? = checker.lookup(name) { return type }
+        if case .variable(let type, _)? = checker.lookup(name) {
+            isVariable = true
+            return type
+        }
         return .string
     }
 

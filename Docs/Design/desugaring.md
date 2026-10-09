@@ -10,11 +10,14 @@ The rewrite and the library it targets belong to the shell layer, not the
 embeddable core ([embedding.md](embedding.md)): the core is Swift only, and
 reaches the outside only through its `SwishHost`.
 
-Nothing here is built as a rewrite yet. Today the shell constructs are nodes
-the interpreter runs itself, about 2,000 lines (`Execution/`, command
+Little of this is built as a rewrite yet. Today the shell constructs are
+nodes the interpreter runs itself, about 2,000 lines (`Execution/`, command
 parsing, the pipeline checker). The standard library half of this already
 exists and is what the rewrite targets: `with(env:)`, `Output`, `Flow`,
-`Job`, `from`, `to`, `table`, `list`.
+`Job`, `from`, `to`, `table`, `list`. **Built so far:** the pass itself
+(`Desugarer` in the shell, over `TreeRewriter` in Swiit), the printer that
+shows its result (`SwiftPrinter`, checked by reading what it prints back as
+the same tree), and the first rewrite, `$name`. See "Where it stands".
 
 ## How the rewrite works
 
@@ -185,8 +188,9 @@ rediscovering them in each construct, keeps the table above complete
 
 ## Order of work
 
-Each step removes a path from the interpreter, and the 267 existing tests are
-the net: the behavior doesn't change.
+Each step removes a path from the interpreter, and the existing tests are
+the net: the behavior doesn't change. (Steps 2 and part of 3 are done; see
+"Where it stands" for why the status design moves ahead of the rest.)
 
 1. **The library types, by hand.** `Command`, `Pipeline`, `Words`,
    `Environment`, `Shell.capture`, `Shell.chain` in `SwishStandardLibrary`,
@@ -213,6 +217,29 @@ the net: the behavior doesn't change.
 
 Golden tests print each construct's desugaring; differential tests later
 compile the printed Swift with `swiftc` and compare it with the interpreter.
+
+## Where it stands
+
+- **Done:** `SwiftPrinter` prints the core's tree as Swift, and 33 programs
+  read back from it as the same tree. `TreeRewriter` rewrites a tree bottom-up.
+  The shell's `Desugarer` runs after the checker, in `Shell.typeCheck`, so every
+  entry, script and config goes through it, and goes inside commands (words,
+  redirects, environment assignments, closure words, `$(…)`, `async`).
+- **`$name`:** a variable in scope (the checker records which) is that
+  variable; otherwise `env["name"]!`. An unset name now stops with
+  `env["name"] is nil, but '!' needs a value` instead of its own message.
+- **Not yet printable:** a command still prints as a comment, since nothing
+  rewrites commands into `Command(…)` calls yet.
+
+What building it showed: **every command-shaped construct depends on how a
+statement's exit status is carried.** `X=1 cmd` as `with(env:) { cmd }` loses
+`cmd`'s status, since a closure gives its last expression's value and a
+command's status isn't one; `a && b || c`, `try cmd`, `if cmd { }` and the
+statement sink all ask what a command statement evaluates to. So the order of
+work below changes: step 8's status design (what a statement gives, where the
+shell records it per task) comes before the constructs that need it, and the
+first of those is `Shell.chain` and `Command.run()` returning a status value.
+`X=1 cmd` on a single command is then `with(env:)` of that call.
 
 ## Open questions
 

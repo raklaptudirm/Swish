@@ -103,7 +103,8 @@ extension Shell {
         do {
             let checked = try checker.check(program)
             interpreter.staticTypes.merge(checker.declaredGlobals) { $1 }
-            return checked
+            // Now what the checker knows is written in: the shell's constructs become Swift.
+            return Desugarer().program(checked)
         } catch {
             let place = file.map { "\($0):\(error.line.map(String.init) ?? "")" + (error.line == nil ? "" : ":") + " " } ?? ""
             interpreter.report("\(place)error: \(error.message)")
