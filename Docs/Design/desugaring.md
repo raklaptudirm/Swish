@@ -237,12 +237,20 @@ compile the printed Swift with `swiftc` and compare it with the interpreter.
   statuses the shell's own `&&` and `||` do. `output()` is `$(…)`. `Command` is
   a `SwishObject` the shell registers (like `Job`), which runs the same
   pipeline machinery, so the rewrite changes nothing about how a command runs.
-- **Rewritten now:** a command statement of plain words (one command, literal
-  words, no redirect, environment, `try`, `^`, closure or call, and not
-  `exit`) is `Command(…).run()`. Everything else about a command still runs as
-  a node of its own and prints as a comment: words with `~`, `$name` or globs
-  (`Words`), redirects, `X=1 cmd`, pipelines, `try`, `&&`/`||` over commands,
-  conditions and `$(…)`.
+- **Rewritten now,** for a command of plain words (one command, literal
+  words, no redirect, `^`, closure or call, and not `exit`):
+  - a statement is `Command(…).run()`;
+  - `X=1 cmd` is `with(env: ["X": "1"]) { Command("cmd").run() }`;
+  - `try cmd` is `try Command(…).check()` (`try!` the same), which throws a
+    `CommandFailure`;
+  - `a && b || c` is `a.runQuietly().and { b.runQuietly() }.or { c.runQuietly() }`
+    (`runQuietly` is `run` where a function used as a command shows nothing it
+    gives, as in a chain or a condition);
+  - a condition (`if`, `while`, `guard`) asks whether that `succeeded`.
+
+  A chain with anything that isn't such a command in it is left as it is.
+  Still nodes of their own, printed as comments: words with `~`, `$name` or
+  globs (`Words`), redirects, pipelines, `^name`, `exit`, `$(…)` and `async`.
 
 What building it showed: **every command-shaped construct depends on how a
 statement's exit status is carried.** `X=1 cmd` as `with(env:) { cmd }` loses
@@ -252,9 +260,9 @@ statement sink all ask what a command statement evaluates to. So the order of
 work below changes: step 8's status design (what a statement gives, where the
 shell records it per task) comes before the constructs that need it, and the
 first of those, `Command.run()` returning a status value and `Status.and/or`,
-now exists. `X=1 cmd` on a single command is then `with(env:)` of that call,
-and `a && b` over commands, a condition (`if cmd { }`: `cmd.run().succeeded`)
-and `try cmd` (`.run().get()`-style) are the next rewrites.
+now exists, and `X=1 cmd`, `try cmd`, `&&`/`||` and conditions over plain
+commands are rewritten with it. What is left is `Words`, redirects and
+pipelines, and then flattening the statement itself.
 
 ## Open questions
 

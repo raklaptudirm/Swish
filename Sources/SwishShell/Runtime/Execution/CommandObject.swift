@@ -24,6 +24,8 @@ final class CommandObject: CheckedObject, @unchecked Sendable {
     static let memberTypes: [String: TypeAnnotation] = [
         "words": .list(.string),
         "run": .functionType([], .named("Status"), throws: false),
+        "runQuietly": .functionType([], .named("Status"), throws: false),
+        "check": .functionType([], .named("Status"), throws: true),
         "output": .functionType([], .output, throws: false),
     ]
 
@@ -33,15 +35,17 @@ final class CommandObject: CheckedObject, @unchecked Sendable {
     func member(_ name: String) -> Value? {
         switch name {
         case "words": .list(words.map(Value.string))
-        case "run": method("run") { try self.run() }
+        case "run": method("run") { try self.run(display: true) }
+        case "runQuietly": method("runQuietly") { try self.run(display: false) }
+        case "check": method("check", throwing: true) { try self.check() }
         case "output": method("output") { try self.output() }
         default: nil
         }
     }
 
-    private func method(_ name: String, _ body: @escaping () throws -> Value) -> Value {
+    private func method(_ name: String, throwing: Bool = false, _ body: @escaping () throws -> Value) -> Value {
         .function(OverloadSet(name: name, candidates: [
-            Function(name: name, parameters: [], returnType: nil, body: .native { _, _ in try body() }),
+            Function(name: name, parameters: [], returnType: nil, body: .native { _, _ in try body() }, isThrowing: throwing),
         ]))
     }
 
@@ -54,9 +58,22 @@ final class CommandObject: CheckedObject, @unchecked Sendable {
         )
     }
 
-    /// As a statement: its output goes where the shell's does.
-    func run() throws -> Value {
-        statusValue(of: try shell.run(node, display: true))
+    /// As a statement: its output goes where the shell's does. (`runQuietly()`
+    /// is the same where a condition or a part of a chain has it: a function
+    /// used as a command shows nothing it gives there.)
+    func run(display: Bool) throws -> Value {
+        statusValue(of: try shell.run(node, display: display))
+    }
+
+    /// As `try make`: failing throws a `CommandFailure`.
+    func check() throws -> Value {
+        let status = try shell.run(node, display: true)
+        if status != 0 {
+            let (code, signal) = shell.interpreter.exitCode(status)
+            throw RuntimeError.commandFailure("\(node.source) failed with status \(status)", status: status,
+                                              output: Output(text: "", code: code, signal: signal))
+        }
+        return statusValue(of: status)
     }
 
     /// As `$(…)`: its output is gathered, whatever its status.

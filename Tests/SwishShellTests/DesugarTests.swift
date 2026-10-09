@@ -53,10 +53,22 @@ private func desugared(_ source: String, in shell: Shell = Shell()) throws -> St
     #expect(try desugared("if true { echo hi }") == "if true {\n    Command(\"echo\", \"hi\").run()\n}")
 }
 
+@Test func environmentTryChainsAndConditionsOverPlainCommands() throws {
+    let withEnvironment = try desugared("X=1 env")
+    #expect(withEnvironment == #"with(env: ["X": "1"]) { Command("env").run() }"#)
+    #expect(try desugared("try sh -c 'exit 1'") == #"try Command("sh", "-c", "exit 1").check()"#)
+    #expect(try desugared("try! sh -c 'exit 1'") == #"try! Command("sh", "-c", "exit 1").check()"#)
+    let chained = try desugared("make && echo ok || echo no")
+    #expect(chained == #"Command("make").runQuietly().and { Command("echo", "ok").runQuietly() }.or { Command("echo", "no").runQuietly() }"#)
+    #expect(try desugared("if grep -q x f { echo hi }")
+        == "if Command(\"grep\", \"-q\", \"x\", \"f\").runQuietly().succeeded {\n    Command(\"echo\", \"hi\").run()\n}")
+    #expect(try desugared("while sh -c 'exit 1' { echo no }").hasPrefix(#"while Command("sh", "-c", "exit 1").runQuietly().succeeded"#))
+}
+
 @Test func whatIsMoreThanWordsIsLeftForLater() throws {
     // Each of these still runs as a node of its own, printed as a comment.
     let node = "/* a construct from a layer over the core */"
-    for source in ["echo ~", "echo $HOME", "ls *.swift", "echo hi > /dev/null", "X=1 env", "echo a | cat", "try false", "^echo hi", "exit"] {
+    for source in ["echo ~", "echo $HOME", "ls *.swift", "echo hi > /dev/null", "echo a | cat", "^echo hi", "exit", "make && exit"] {
         #expect(try desugared(source).contains(node), "\(source)")
     }
 }

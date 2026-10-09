@@ -12,7 +12,8 @@ final class Desugarer {
     private lazy var rewriter = TreeRewriter(
         expr: { [unowned self] in expression($0) },
         unit: { [unowned self] in unit($0) },
-        statement: { [unowned self] in statement($0) }
+        statement: { [unowned self] in statement($0) },
+        chain: { [unowned self] in chain($0, $1) }
     )
 
     func program(_ program: Program) -> Program {
@@ -47,43 +48,9 @@ final class Desugarer {
     }
 
     private func statement(_ statement: Statement) -> Statement {
-        if case .chain(let chain) = statement, chain.links.isEmpty, case .extended(let box) = chain.first,
-           let node = box.node as? PipelineUnit, let words = Desugarer.plainWords(of: node.node) {
-            // A command statement: its words run, and its status is the statement's.
-            return .chain(Chain(first: .expression(Desugarer.commandRun(words))))
-        }
         guard case .extended(let box) = statement, var node = box.node as? ImportPluginStatement else { return statement }
         node.path = rewriter.expression(node.path)
         return .extended(StatementExtensionBox(node))
-    }
-
-    /// The words of a command that is only words (no `~`, `$name`, glob,
-    /// redirect, environment, closure or call, and not `exit`, which ends the
-    /// program), when it is the one command of a pipeline. These are what
-    /// `Command(…)` takes as they are.
-    private static func plainWords(of node: PipelineNode) -> [String]? {
-        guard node.commands.count == 1, node.input == nil, node.throwing == nil else { return nil }
-        let command = node.commands[0]
-        guard !command.external, command.redirects.isEmpty, command.environment.isEmpty, command.call == nil,
-              command.notAnExpression == nil else { return nil }
-        var words: [String] = []
-        for word in command.words {
-            guard case .text(let parts) = word else { return nil }
-            var text = ""
-            for part in parts {
-                guard case .literal(let literal) = part else { return nil }
-                text += literal
-            }
-            words.append(text)
-        }
-        guard let first = words.first, first != "exit" else { return nil }
-        return words
-    }
-
-    /// `Command("git", "status").run()`.
-    private static func commandRun(_ words: [String]) -> Expr {
-        let command = Expr.call(.variable("Command"), words.map { Argument(label: nil, value: .literal(.string($0))) })
-        return .call(.member(command, "run"), [])
     }
 
     /// `$name` is the variable `name` if one is in scope, else the
@@ -92,6 +59,93 @@ final class Desugarer {
     private func dollar(_ node: DollarExpr) -> Expr {
         if node.isVariable { return .variable(node.name) }
         return .forceUnwrap(.index(.variable("env"), .literal(.string(node.name))))
+    }
+
+    // MARK: Command statements and conditions
+
+    /// A chain of plain commands, as the Swift they mean. A statement is the
+    /// `Status` of `Command(…).run()`, with `a && b || c` as
+    /// `a.run().and { b.run() }.or { c.run() }`; a condition asks whether that
+    /// `succeeded`. A chain with anything else in it is left as it is.
+    private func chain(_ chain: Chain, _ position: TreeRewriter.Position) -> Chain {
+        let standalone = position == .statement && chain.links.isEmpty
+        // `try make`, alone: failing throws.
+        if standalone, let call = Desugarer.checkedCall(chain.first) {
+            return Chain(first: .expression(call))
+        }
+        guard let first = Desugarer.call(chain.first, display: standalone) else { return chain }
+        var status = first
+        for link in chain.links {
+            guard let next = Desugarer.call(link.unit, display: false) else { return chain }
+            let body = Program(statements: [.chain(Chain(first: .expression(next)))])
+            status = .call(.member(status, link.op == .and ? "and" : "or"), [
+                Argument(label: nil, value: .closure(ClosureLiteral(parameters: [], body: body))),
+            ])
+        }
+        return Chain(first: .expression(position == .condition ? .member(status, "succeeded") : status))
+    }
+
+    /// The command a unit is, when it is only words (no `~`, `$name`, glob,
+    /// redirect, closure or call, and not `exit`, which ends the program) and
+    /// the one command of its pipeline: `Command(…).run()`, which shows its
+    /// output when it is a whole statement, inside `with(env:)` when it sets
+    /// variables for itself. Not a `try`.
+    private static func call(_ unit: Unit, display: Bool) -> Expr? {
+        guard let (command, words) = plain(unit), command.node.throwing == nil else { return nil }
+        return run(words, environment: command.environment, display: display)
+    }
+
+    /// `try make` as `try Command("make").check()`, and `try!` as `try!`.
+    private static func checkedCall(_ unit: Unit) -> Expr? {
+        guard let (node, words) = plain(unit), let kind = node.node.throwing else { return nil }
+        let command = Expr.call(.variable("Command"), words.map { Argument(label: nil, value: .literal(.string($0))) })
+        let check = Expr.call(.member(command, "check"), [])
+        return .attempt(check, kind ?? .plain)
+    }
+
+    /// A single command of plain words, if the unit is one.
+    private static func plain(_ unit: Unit) -> (command: (node: PipelineNode, environment: [(String, String)]), words: [String])? {
+        guard case .extended(let box) = unit, let pipeline = box.node as? PipelineUnit else { return nil }
+        let node = pipeline.node
+        guard node.commands.count == 1, node.input == nil else { return nil }
+        let command = node.commands[0]
+        guard !command.external, command.redirects.isEmpty, command.call == nil, command.notAnExpression == nil else { return nil }
+        func text(_ parts: [WordPart]) -> String? {
+            var text = ""
+            for part in parts {
+                guard case .literal(let literal) = part else { return nil }
+                text += literal
+            }
+            return text
+        }
+        var environment: [(String, String)] = []
+        for assignment in command.environment {
+            guard let value = text(assignment.value) else { return nil }
+            environment.append((assignment.name, value))
+        }
+        var words: [String] = []
+        for word in command.words {
+            guard case .text(let parts) = word, let word = text(parts) else { return nil }
+            words.append(word)
+        }
+        guard let first = words.first, first != "exit" else { return nil }
+        return ((node, environment), words)
+    }
+
+    /// `Command("git", "status").run()`, or `runQuietly()`.
+    private static func run(_ words: [String], environment: [(String, String)], display: Bool) -> Expr {
+        let command = Expr.call(.variable("Command"), words.map { Argument(label: nil, value: .literal(.string($0))) })
+        let call = Expr.call(.member(command, display ? "run" : "runQuietly"), [])
+        guard !environment.isEmpty else { return call }
+        // `X=1 cmd` sets X for the command: `with(env: ["X": "1"]) { cmd }`.
+        let variables = Expr.record(environment.map {
+            RecordEntry(key: .literal(.string($0.0)), value: .literal(.string($0.1)))
+        })
+        let body = Program(statements: [.chain(Chain(first: .expression(call)))])
+        return .call(.variable("with"), [
+            Argument(label: "env", value: variables),
+            Argument(label: nil, value: .closure(ClosureLiteral(parameters: [], body: body))),
+        ])
     }
 
     // MARK: What is inside a command
