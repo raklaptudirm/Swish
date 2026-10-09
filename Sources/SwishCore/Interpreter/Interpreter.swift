@@ -6,46 +6,53 @@ import SwishKit
 /// terminal, processes or jobs: it reaches the world through its `host`, and
 /// the shell's constructs through a `shellLayer`, which is internal and
 /// temporary (Docs/Design/boundaries.md). The shell owns one.
-final class Interpreter {
+package final class Interpreter {
     /// How this interpreter is run: where its output goes, how to tell it to stop.
-    var host: SwishHost
+    package var host: SwishHost
 
     /// What the core still can't do without the shell: the environment,
     /// commands, jobs. Nil for an embedder, which is refused plainly.
-    var shellLayer: ShellLayer?
+    package var shellLayer: ShellLayer?
+    /// What runs this interpreter, if it is more than an embedder's call: the
+    /// shell, whose nodes reach it from here. Weak, as the owner holds the
+    /// interpreter.
+    package weak var owner: AnyObject?
+    /// The members, by name, of the host's object types that Swift doesn't
+    /// declare (the shell's `Job`), for the checker.
+    package var objectMembers: [String: [String: TypeAnnotation]] = [:]
 
     /// Variable scopes, innermost last. The outermost holds the builtin
     /// functions, so a `func` at the prompt shadows one rather than
     /// overloading it.
-    var scopes = [Scope(), Scope()]
+    package var scopes = [Scope(), Scope()]
     /// How many Swish function calls are in progress.
-    var callDepth = 0
+    package var callDepth = 0
     /// Each enum's associated value types, by case, for checking them.
-    var enumPayloadTypes: [ObjectIdentifier: [String: [TypeAnnotation]]] = [:]
+    package var enumPayloadTypes: [ObjectIdentifier: [String: [TypeAnnotation]]] = [:]
     /// The protocols each enum declares.
-    var enumConformances: [ObjectIdentifier: [String]] = [:]
+    package var enumConformances: [ObjectIdentifier: [String]] = [:]
     /// The return types of the functions being run, innermost last, so a
     /// returned `.case` knows its enum.
-    var returnTypes: [TypeAnnotation?] = []
+    package var returnTypes: [TypeAnnotation?] = []
     /// Methods every sequence has, like `sorted` and `filter`.
-    var sequenceMethods: [String: OverloadSet] = [:]
+    package var sequenceMethods: [String: OverloadSet] = [:]
     /// The declared types of globals, from entries already checked, so a
     /// later one knows `let xs: [Int] = []` is an [Int].
-    var staticTypes: [String: TypeAnnotation] = [:]
+    package var staticTypes: [String: TypeAnnotation] = [:]
     /// Per-item errors reported so far, like a file `ls` couldn't read.
-    var itemErrorCount = 0
+    package var itemErrorCount = 0
     /// Syntax added to Swift's, which its owner supplies (the shell's). Nil is
     /// Swift alone.
-    var syntax: (any SyntaxPlugin)?
+    package var syntax: (any SyntaxPlugin)?
     /// The file being run, for `#filePath`; nil at the prompt.
-    var file: String?
+    package var file: String?
     /// The status the last statement gave.
-    var lastStatus: Int32 = 0
+    package var lastStatus: Int32 = 0
     /// The status the last signal-killed command gave, to tell 130 from ^C
     /// apart from a command that exited with 130.
-    var lastSignalStatus: Int32?
+    package var lastSignalStatus: Int32?
 
-    init(host: SwishHost = SwishHost(), shellLayer: ShellLayer? = nil) {
+    package init(host: SwishHost = SwishHost(), shellLayer: ShellLayer? = nil) {
         self.host = host
         self.shellLayer = shellLayer
     }
@@ -53,7 +60,7 @@ final class Interpreter {
 
 extension Interpreter {
     /// Reports an error, to wherever standard error is redirected.
-    func report(_ message: String) {
+    package func report(_ message: String) {
         let styled = host.error.traits().styled
         if message.hasPrefix("error: ") {
             host.error.write("swish: error:".styled(DisplayStyle.error, styled) + message.dropFirst(6) + "\n")
@@ -64,7 +71,7 @@ extension Interpreter {
 
     /// Reports a problem with one item, like a file `ls` couldn't read,
     /// without stopping; the statement's status becomes a failure.
-    func reportItemError(_ message: String) {
+    package func reportItemError(_ message: String) {
         report(message)
         itemErrorCount += 1
     }
@@ -72,7 +79,7 @@ extension Interpreter {
 
 extension Interpreter {
     /// Parses a program, knowing the names already declared.
-    func parse(_ source: String) -> Result<Program, SyntaxError> {
+    package func parse(_ source: String) -> Result<Program, SyntaxError> {
         do {
             return .success(try Parser.parse(source, bound: globalNames(), plugin: syntax))
         } catch {
@@ -81,7 +88,7 @@ extension Interpreter {
     }
 
     /// Names the parser should know: builtins and globals, as variables or functions.
-    func globalNames() -> [String: NameKind] {
+    package func globalNames() -> [String: NameKind] {
         scopes[0].bindings.merging(scopes[1].bindings) { $1 }.mapValues { binding in
             if binding.isFunction { return .function }
             if case .object(is EnumType) = binding.value { return .type }

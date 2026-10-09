@@ -5,19 +5,19 @@ import SwishKit
 /// without knowing what it is, and each pass asks it to do its part: the
 /// checker to check it, the interpreter to run it. The core never names the
 /// node types, so it can be built without them (Docs/Design/frontend.md).
-protocol SyntaxExtension: Sendable {
+package protocol SyntaxExtension: Sendable {
     /// Trees compare, so extensions do.
     func isEqual(to other: any SyntaxExtension) -> Bool
 }
 
 extension SyntaxExtension where Self: Equatable {
-    func isEqual(to other: any SyntaxExtension) -> Bool {
+    package func isEqual(to other: any SyntaxExtension) -> Bool {
         (other as? Self) == self
     }
 }
 
 /// An expression an extension adds: `$(…)`, `$name`, `async …`.
-protocol ExprExtension: SyntaxExtension {
+package protocol ExprExtension: SyntaxExtension {
     /// Checks it, with whatever the checker found written in, and gives its type.
     mutating func check(in checker: TypeChecker, expecting expected: TypeAnnotation?) throws -> TypeAnnotation
     func evaluate(in interpreter: Interpreter) throws -> Value
@@ -25,7 +25,7 @@ protocol ExprExtension: SyntaxExtension {
 
 /// A unit an extension adds: a command or a pipeline of them. A unit has an
 /// exit status, which `&&`, `||` and conditions go by.
-protocol UnitExtension: SyntaxExtension {
+package protocol UnitExtension: SyntaxExtension {
     mutating func check(in checker: TypeChecker) throws
     func run(in interpreter: Interpreter, context: UnitContext) throws -> Int32
     /// Whether it ends the program (`exit`), for a function that must return
@@ -34,48 +34,48 @@ protocol UnitExtension: SyntaxExtension {
 }
 
 extension UnitExtension {
-    var leavesProgram: Bool { false }
+    package var leavesProgram: Bool { false }
 }
 
 /// A statement an extension adds: `env.NAME = value`, `import Name from path`.
-protocol StatementExtension: SyntaxExtension {
+package protocol StatementExtension: SyntaxExtension {
     mutating func check(in checker: TypeChecker) throws
     func run(in interpreter: Interpreter) throws -> Int32
 }
 
 /// What the tree holds for each: the node, compared through `isEqual`.
-struct ExprExtensionBox: Equatable, Sendable {
-    var node: any ExprExtension
+package struct ExprExtensionBox: Equatable, Sendable {
+    package var node: any ExprExtension
 
-    init(_ node: any ExprExtension) {
+    package init(_ node: any ExprExtension) {
         self.node = node
     }
 
-    static func == (lhs: ExprExtensionBox, rhs: ExprExtensionBox) -> Bool {
+    package static func == (lhs: ExprExtensionBox, rhs: ExprExtensionBox) -> Bool {
         lhs.node.isEqual(to: rhs.node)
     }
 }
 
-struct UnitExtensionBox: Equatable, Sendable {
-    var node: any UnitExtension
+package struct UnitExtensionBox: Equatable, Sendable {
+    package var node: any UnitExtension
 
-    init(_ node: any UnitExtension) {
+    package init(_ node: any UnitExtension) {
         self.node = node
     }
 
-    static func == (lhs: UnitExtensionBox, rhs: UnitExtensionBox) -> Bool {
+    package static func == (lhs: UnitExtensionBox, rhs: UnitExtensionBox) -> Bool {
         lhs.node.isEqual(to: rhs.node)
     }
 }
 
-struct StatementExtensionBox: Equatable, Sendable {
-    var node: any StatementExtension
+package struct StatementExtensionBox: Equatable, Sendable {
+    package var node: any StatementExtension
 
-    init(_ node: any StatementExtension) {
+    package init(_ node: any StatementExtension) {
         self.node = node
     }
 
-    static func == (lhs: StatementExtensionBox, rhs: StatementExtensionBox) -> Bool {
+    package static func == (lhs: StatementExtensionBox, rhs: StatementExtensionBox) -> Bool {
         lhs.node.isEqual(to: rhs.node)
     }
 }

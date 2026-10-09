@@ -7,12 +7,12 @@ import SwishStandardLibrary
 /// The rest are still there for `filter`, `select` and `get`, and `table`
 /// shows everything. Each type says so itself (`Tabular`), beside where it's
 /// made.
-let standardDisplayRegistry = DisplayRegistry(columns: Bridge.standardColumns, enumStyles: Bridge.standardEnumStyles)
+package let standardDisplayRegistry = DisplayRegistry(columns: Bridge.standardColumns, enumStyles: Bridge.standardEnumStyles)
 
 extension DisplayFormatter {
     /// Writes with `write`, fitting what the stream is: a terminal's width
     /// and a styled header, or every character for a file.
-    convenience init(traits: StreamTraits, registry: DisplayRegistry, write: @escaping (String) -> Bool) {
+    package convenience init(traits: StreamTraits, registry: DisplayRegistry, write: @escaping (String) -> Bool) {
         self.init(maxWidth: traits.width ?? .max, styled: traits.styled,
                   columnCap: traits.isTerminal ? 40 : .max, registry: registry, write: write)
     }
@@ -22,7 +22,7 @@ extension Interpreter {
     /// How types show in a table: the standard library's and the shell's own,
     /// and the columns of the structs declared in Swish that say so
     /// (`Tabular`).
-    var displayRegistry: DisplayRegistry {
+    package var displayRegistry: DisplayRegistry {
         var registry = standardDisplayRegistry
         registry.columns.merge(shellLayer?.columns ?? [:]) { first, _ in first }
         for scope in scopes {
@@ -42,7 +42,7 @@ extension Interpreter {
     /// Shows a value to a person: a table for a list of records, a
     /// key/value list for one record, and otherwise its text, or its
     /// `debugDescription` for a bare value (`let r = $(echo hi); r`).
-    func show(_ value: Value, debug: Bool = false) {
+    package func show(_ value: Value, debug: Bool = false) {
         let output = host.output
         let traits = output.traits()
         switch value {
@@ -73,7 +73,7 @@ extension Interpreter {
 
 extension Value {
     /// A list's items, or an Output's lines: what sequence methods work on.
-    var sequenceItems: [Value]? {
+    package var sequenceItems: [Value]? {
         switch self {
         case .list(let items): items
         default: commandOutput?.lines.map(Value.string)
@@ -81,7 +81,7 @@ extension Value {
     }
 
     /// It has nothing to show, as a command that printed nothing.
-    var showsNothing: Bool {
+    package var showsNothing: Bool {
         displayShape.isEmpty
     }
 }

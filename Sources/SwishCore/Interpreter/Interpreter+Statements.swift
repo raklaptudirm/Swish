@@ -2,7 +2,7 @@ import Foundation
 import SwishKit
 
 /// How a unit's result is used.
-enum UnitContext {
+package enum UnitContext {
     /// A whole statement: an expression's value is displayed.
     case statement
     /// Part of a chain: only the exit status matters.
@@ -11,12 +11,12 @@ enum UnitContext {
     case condition
 }
 
-let maxCallDepth = 10_000
+package let maxCallDepth = 10_000
 
 extension Interpreter {
     // MARK: Statements
 
-    func run(_ program: Program) throws -> Int32 {
+    package func run(_ program: Program) throws -> Int32 {
         var status: Int32 = 0
         try hoistDeclarations(program)
         // `defer` blocks run as the block ends, however it ends.
@@ -37,13 +37,13 @@ extension Interpreter {
 
     /// The branch of an `if` its condition picks, with what the condition
     /// binds; nil for no `else`.
-    func chooseBranch(_ node: IfStatement) throws -> (Program?, [String: Binding]) {
+    package func chooseBranch(_ node: IfStatement) throws -> (Program?, [String: Binding]) {
         if let bindings = try holds(node.condition) { return (node.then, bindings) }
         return (node.otherwise, [:])
     }
 
     /// What an `if` or `guard` condition binds when it holds; nil when it doesn't.
-    func holds(_ condition: IfStatement.Condition) throws -> [String: Binding]? {
+    package func holds(_ condition: IfStatement.Condition) throws -> [String: Binding]? {
         switch condition {
         case .pattern(let pattern, let expr):
             var bindings: [String: Binding] = [:]
@@ -60,7 +60,7 @@ extension Interpreter {
     /// be used before their declarations, as in Swift. A function is
     /// declared again where it's written, which captures what's been
     /// declared by then, as it always has.
-    func hoistDeclarations(_ program: Program) throws {
+    package func hoistDeclarations(_ program: Program) throws {
         for statement in program.statements {
             if case .function = statement { _ = try run(statement) }
             else if statement.declaresType { _ = try run(statement) }
@@ -69,7 +69,7 @@ extension Interpreter {
 
     /// Deferred blocks, last first. One that fails is reported; the rest
     /// still run, as nothing can leave a `defer`.
-    func runDeferred(_ blocks: [Program]) {
+    package func runDeferred(_ blocks: [Program]) {
         let status = lastStatus
         for body in blocks.reversed() {
             do {
@@ -83,7 +83,7 @@ extension Interpreter {
         lastStatus = status
     }
 
-    func runBlock(_ program: Program, declaring bindings: [String: Binding] = [:]) throws -> Int32 {
+    package func runBlock(_ program: Program, declaring bindings: [String: Binding] = [:]) throws -> Int32 {
         scopes.append(Scope(bindings))
         defer { scopes.removeLast() }
         return try run(program)
@@ -91,13 +91,13 @@ extension Interpreter {
 
     /// Per-item errors reported while a statement runs make its status a
     /// failure, even though the statement carried on.
-    func run(_ statement: Statement) throws -> Int32 {
+    package func run(_ statement: Statement) throws -> Int32 {
         let errorsBefore = itemErrorCount
         let status = try runReportedErrorsAside(statement)
         return itemErrorCount > errorsBefore && status == 0 ? 1 : status
     }
 
-    func runReportedErrorsAside(_ statement: Statement) throws -> Int32 {
+    package func runReportedErrorsAside(_ statement: Statement) throws -> Int32 {
         switch statement {
         case .extensionDecl:
             return 0 // Only the prelude has these; it's read at startup.
@@ -160,7 +160,7 @@ extension Interpreter {
         }
     }
 
-    func run(_ chain: Chain, context: UnitContext) throws -> Int32 {
+    package func run(_ chain: Chain, context: UnitContext) throws -> Int32 {
         let unitContext = chain.links.isEmpty || context == .condition ? context : .operand
         var status = try run(chain.first, context: unitContext)
         for link in chain.links where (link.op == .and) == (status == 0) {
@@ -169,7 +169,7 @@ extension Interpreter {
         return status
     }
 
-    func run(_ unit: Unit, context: UnitContext) throws -> Int32 {
+    package func run(_ unit: Unit, context: UnitContext) throws -> Int32 {
         switch unit {
         case .extended(let box):
             return try box.node.run(in: self, context: context)
@@ -228,7 +228,7 @@ extension Interpreter {
     }
 
     /// Runs one iteration; false means `break`.
-    func runLoopBody(_ body: Program, declaring bindings: [String: Binding], status: inout Int32) throws -> Bool {
+    package func runLoopBody(_ body: Program, declaring bindings: [String: Binding], status: inout Int32) throws -> Bool {
         try checkInterrupt()
         do {
             status = try runBlock(body, declaring: bindings)
@@ -241,7 +241,7 @@ extension Interpreter {
     /// Iterates lists, ranges lazily (so `for i in 1...1_000_000_000` never
     /// builds a list), strings by character, as in Swift, the Swift
     /// sequences Swish holds, and command output by line.
-    func forEachElement(of sequence: Expr, _ body: (Value) throws -> Bool) throws {
+    package func forEachElement(of sequence: Expr, _ body: (Value) throws -> Bool) throws {
         if case .binary(let op, let lower, let upper) = sequence, op == .closedRange || op == .halfOpenRange {
             for i in try intRange(op, try evaluate(lower), try evaluate(upper)) {
                 guard try body(.int(i)) else { return }
@@ -269,12 +269,12 @@ extension Interpreter {
     }
 
     /// A bare value at the prompt, shown as `debugPrint` would.
-    func display(_ value: Value) {
+    package func display(_ value: Value) {
         guard callDepth == 0 else { return }
         show(value, debug: true)
     }
 
-    func checkInterrupt() throws {
+    package func checkInterrupt() throws {
         if let reason = host.interrupt() { throw Interrupted(reason: reason) }
     }
 }

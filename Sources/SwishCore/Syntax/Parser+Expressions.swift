@@ -8,7 +8,7 @@ extension Parser {
     /// `&&` and `||` are left to join it with commands in a chain.
     /// `try`, `try?` and `try!` cover everything to their right, as in
     /// Swift: `(try? $(cmd)) ?? "default"` needs its parentheses.
-    mutating func parseExpression(logical: Bool = true) throws(SyntaxError) -> Expr {
+    package mutating func parseExpression(logical: Bool = true) throws(SyntaxError) -> Expr {
         skipSpaces()
         if let kind = try parseTry() {
             tryDepth += 1
@@ -35,7 +35,7 @@ extension Parser {
 
     /// Whether a ternary's `?` comes next: with space on both sides, as
     /// Swift wants, so `x?.y`, `try?` and `Int?` aren't one.
-    func ternaryAhead() -> Bool {
+    package func ternaryAhead() -> Bool {
         var index = pos
         while index < chars.count, chars[index] == " " || chars[index] == "\t" || (bracketDepth > 0 && chars[index] == "\n") { index += 1 }
         guard index > 0, " \t\n".contains(chars[index - 1]), index + 1 < chars.count, chars[index] == "?" else { return false }
@@ -43,7 +43,7 @@ extension Parser {
     }
 
     /// `try` (.some(nil)), `try?` or `try!` at the current position; nil if none.
-    mutating func parseTry() throws(SyntaxError) -> TryKind?? {
+    package mutating func parseTry() throws(SyntaxError) -> TryKind?? {
         guard identifier() == "try" else { return nil }
         let start = pos
         pos += "try".count
@@ -57,7 +57,7 @@ extension Parser {
         return .some(kind)
     }
 
-    mutating func parseBinary(level: Int) throws(SyntaxError) -> Expr {
+    package mutating func parseBinary(level: Int) throws(SyntaxError) -> Expr {
         guard level < Parser.precedence.count else { return try parseUnary() }
         var lhs = try parseOperand(level: level)
         var chained = false
@@ -78,7 +78,7 @@ extension Parser {
 
     /// An operand of `level`'s operators. `??`'s may be cast, as Swift's
     /// precedence has it: `x ?? y as? Int` is `x ?? (y as? Int)`.
-    mutating func parseOperand(level: Int) throws(SyntaxError) -> Expr {
+    package mutating func parseOperand(level: Int) throws(SyntaxError) -> Expr {
         var expr = try parseBinary(level: level + 1)
         guard Parser.precedence[level] == [.coalesce] else { return expr }
         while true {
@@ -103,7 +103,7 @@ extension Parser {
         }
     }
 
-    mutating func parseUnary() throws(SyntaxError) -> Expr {
+    package mutating func parseUnary() throws(SyntaxError) -> Expr {
         skipSpaces()
         if consume("!") { return .unary(.not, try parseUnary()) }
         if consume("-") { return .unary(.negate, try parseUnary()) }
@@ -195,7 +195,7 @@ extension Parser {
         }
     }
 
-    mutating func parseArguments() throws(SyntaxError) -> [Argument] {
+    package mutating func parseArguments() throws(SyntaxError) -> [Argument] {
         pos += 1
         bracketDepth += 1
         defer { bracketDepth -= 1 }
@@ -216,7 +216,7 @@ extension Parser {
         }
     }
 
-    mutating func parsePrimary() throws(SyntaxError) -> Expr {
+    package mutating func parsePrimary() throws(SyntaxError) -> Expr {
         skipSpaces()
         guard let c = peek() else { throw .incomplete("expected an expression") }
         if Parser.isDigit(c) { return try parseNumber() }
@@ -333,7 +333,7 @@ extension Parser {
     }
 
     /// `[1, 2]`, or a record like `["name": "x", "size": 1.kb]` or `[:]`.
-    mutating func parseList() throws(SyntaxError) -> Expr {
+    package mutating func parseList() throws(SyntaxError) -> Expr {
         pos += 1
         bracketDepth += 1
         defer { bracketDepth -= 1 }
@@ -368,7 +368,7 @@ extension Parser {
         return isRecord == true ? .record(entries) : .list(elements)
     }
 
-    mutating func parseNumber() throws(SyntaxError) -> Expr {
+    package mutating func parseNumber() throws(SyntaxError) -> Expr {
         let start = pos
         defer { mark(.number, from: start) }
         var text = readDigits()

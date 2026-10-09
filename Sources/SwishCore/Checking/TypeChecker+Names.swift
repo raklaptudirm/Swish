@@ -4,7 +4,7 @@ import SwishKit
 extension TypeChecker {
     // MARK: Names
 
-    func lookup(_ name: String) -> Symbol? {
+    package func lookup(_ name: String) -> Symbol? {
         for scope in scopes.reversed() {
             if let symbol = scope[name] { return symbol }
         }
@@ -19,7 +19,7 @@ extension TypeChecker {
             return .structType(structInfo(type))
         case .object(let type as EnumType):
             return .enumType(enumInfo(type))
-        case .object(is Module):
+        case .object(let object as CheckedObject) where object.isModule:
             return .module
         case .object(let type as BridgedTypeName):
             return .swiftType(type.name)
@@ -34,7 +34,7 @@ extension TypeChecker {
         }
     }
 
-    func signature(_ function: Function) -> Signature {
+    package func signature(_ function: Function) -> Signature {
         // A builtin that hasn't declared its result isn't known; a Swish
         // function without `->` returns nothing.
         var returns = function.returnType ?? (function.isBuiltin ? .unknown : .void)
@@ -44,17 +44,17 @@ extension TypeChecker {
                          isRethrowing: function.isRethrowing, generics: function.generics)
     }
 
-    func structInfo(named name: String) -> StructInfo? {
+    package func structInfo(named name: String) -> StructInfo? {
         if case .structType(let info)? = lookup(name) { return info }
         return nil
     }
 
-    func enumInfo(named name: String) -> EnumInfo? {
+    package func enumInfo(named name: String) -> EnumInfo? {
         if case .enumType(let info)? = lookup(name) { return info }
         return nil
     }
 
-    func structInfo(_ type: StructType) -> StructInfo {
+    package func structInfo(_ type: StructType) -> StructInfo {
         var methods: [String: [Signature]] = [:]
         for (name, set) in type.methods {
             methods[name] = set.candidates.enumerated().map { index, method in
@@ -84,7 +84,7 @@ extension TypeChecker {
         )
     }
 
-    func enumInfo(_ type: EnumType) -> EnumInfo {
+    package func enumInfo(_ type: EnumType) -> EnumInfo {
         let payloads = interpreter.enumPayloadTypes[ObjectIdentifier(type)] ?? [:]
         let cases = type.cases.map { enumCase in
             (enumCase.name, zip(enumCase.labels, payloads[enumCase.name] ?? enumCase.labels.map { _ in .unknown })

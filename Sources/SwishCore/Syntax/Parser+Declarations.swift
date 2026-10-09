@@ -3,7 +3,7 @@ import SwishKit
 
 extension Parser {
     /// `enum Name[: RawType] { case a, b = raw; case c(label: Type, Type) }`
-    mutating func parseEnum() throws(SyntaxError) -> EnumDecl {
+    package mutating func parseEnum() throws(SyntaxError) -> EnumDecl {
         keyword("enum")
         skipSpaces()
         let nameStart = pos
@@ -85,7 +85,7 @@ extension Parser {
 
     /// `struct Name { … }`: properties, methods and initializers. In their
     /// bodies, members are in scope and go through `self`, as in Swift.
-    mutating func parseStruct() throws(SyntaxError) -> StructDecl {
+    package mutating func parseStruct() throws(SyntaxError) -> StructDecl {
         keyword("struct")
         skipSpaces()
         let nameStart = pos
@@ -154,7 +154,7 @@ extension Parser {
     }
 
     /// `var x: Int`, `let y = 2`, or a computed `var z: Int { … }`.
-    mutating func parseProperty() throws(SyntaxError) -> PropertyDecl {
+    package mutating func parseProperty() throws(SyntaxError) -> PropertyDecl {
         let word = identifier()!
         keyword(word)
         skipSpaces()
@@ -182,7 +182,7 @@ extension Parser {
     }
 
     /// `init(x: Int) { self.x = x }`.
-    mutating func parseInitializer() throws(SyntaxError) -> FunctionDecl {
+    package mutating func parseInitializer() throws(SyntaxError) -> FunctionDecl {
         let documentation = documentation(before: pos)
         keyword("init")
         skipSpaces()
@@ -198,7 +198,7 @@ extension Parser {
 
     /// The names a struct's body declares, found before parsing it so a
     /// member can use one declared further down.
-    func memberNames(static wantStatic: Bool = false) -> [String] {
+    package func memberNames(static wantStatic: Bool = false) -> [String] {
         declaredNames(["var", "let", "func"], statementsOnly: false, statics: wantStatic).map(\.name)
     }
 
@@ -206,7 +206,7 @@ extension Parser {
     /// the block: each with the keyword that declares it. With
     /// `statementsOnly`, only where a statement starts, so `echo func x`
     /// declares nothing.
-    func declaredNames(_ keywords: Set<String>, statementsOnly: Bool, statics wantStatic: Bool = false) -> [(keyword: String, name: String)] {
+    package func declaredNames(_ keywords: Set<String>, statementsOnly: Bool, statics wantStatic: Bool = false) -> [(keyword: String, name: String)] {
         var names: [(keyword: String, name: String)] = []
         var depth = 0
         var index = pos
@@ -254,7 +254,7 @@ extension Parser {
     }
 
     /// `Equatable, Hashable` after a type's `:`.
-    mutating func parseConformances() throws(SyntaxError) -> [String] {
+    package mutating func parseConformances() throws(SyntaxError) -> [String] {
         var names: [String] = []
         repeat {
             skipSpaces()
@@ -271,7 +271,7 @@ extension Parser {
         return names
     }
 
-    mutating func parseDeclaration() throws(SyntaxError) -> Statement {
+    package mutating func parseDeclaration() throws(SyntaxError) -> Statement {
         let keyword = identifier()!
         self.keyword(keyword)
         skipSpaces()

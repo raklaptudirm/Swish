@@ -4,7 +4,7 @@ import SwishKit
 extension TypeChecker {
     // MARK: Operators
 
-    func binaryExprType(_ op: BinaryOperator, _ lhs: inout Expr, _ rhs: inout Expr, expected: TypeAnnotation?) throws -> TypeAnnotation {
+    package func binaryExprType(_ op: BinaryOperator, _ lhs: inout Expr, _ rhs: inout Expr, expected: TypeAnnotation?) throws -> TypeAnnotation {
         switch op {
         case .and, .or:
             try expect(&lhs, .bool, "'\(op.rawValue)''s left side")
@@ -46,7 +46,7 @@ extension TypeChecker {
 
     /// Both sides' types, letting a literal or `.case` on one side take its
     /// type from the other, as Swift does: `1 + 2.5`, `k == .file`.
-    func operandTypes(_ lhs: inout Expr, _ rhs: inout Expr) throws -> (TypeAnnotation, TypeAnnotation) {
+    package func operandTypes(_ lhs: inout Expr, _ rhs: inout Expr) throws -> (TypeAnnotation, TypeAnnotation) {
         if case .caseLiteral = lhs, !TypeChecker.isContextual(rhs) {
             let right = try typeOf(&rhs)
             return (try typeOf(&lhs, expecting: right), right)
@@ -62,7 +62,7 @@ extension TypeChecker {
         return (left, right)
     }
 
-    static func isContextual(_ expr: Expr) -> Bool {
+    package static func isContextual(_ expr: Expr) -> Bool {
         switch expr {
         case .caseLiteral: true
         case .ifExpression(let node): branches(of: node).contains(where: isContextual)
@@ -71,11 +71,11 @@ extension TypeChecker {
     }
 
     /// An `if` expression's branches.
-    static func branches(of node: IfStatement) -> [Expr] {
+    package static func branches(of node: IfStatement) -> [Expr] {
         [node.then, node.otherwise].compactMap { $0.flatMap(IfStatement.branchExpression) }
     }
 
-    static func isIntegerLiteral(_ expr: Expr) -> Bool {
+    package static func isIntegerLiteral(_ expr: Expr) -> Bool {
         switch expr {
         case .literal(.int): true
         case .unary(.negate, let inner): isIntegerLiteral(inner)
@@ -83,7 +83,7 @@ extension TypeChecker {
         }
     }
 
-    func binaryType(_ op: BinaryOperator, _ left: TypeAnnotation, _ right: TypeAnnotation) throws -> TypeAnnotation {
+    package func binaryType(_ op: BinaryOperator, _ left: TypeAnnotation, _ right: TypeAnnotation) throws -> TypeAnnotation {
         if left == .unknown || right == .unknown {
             switch op {
             case .less, .lessEqual, .greater, .greaterEqual: return .bool

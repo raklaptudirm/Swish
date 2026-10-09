@@ -3,7 +3,7 @@ import SwishKit
 
 extension Expr {
     /// A string literal, interpolated or not.
-    var isStringExpression: Bool {
+    package var isStringExpression: Bool {
         switch self {
         case .literal(.string), .string: true
         default: false
@@ -12,7 +12,7 @@ extension Expr {
 }
 
 extension Value {
-    var typeName: String {
+    package var typeName: String {
         switch self {
         case .nothing: "Nothing"
         case .bool: "Bool"
@@ -29,7 +29,7 @@ extension Value {
         }
     }
 
-    var asDouble: Double? {
+    package var asDouble: Double? {
         switch self {
         case .int(let n): Double(n)
         case .double(let d): d
@@ -39,7 +39,7 @@ extension Value {
 
     /// `==` with Int and Double comparing numerically, as their literals
     /// would in Swift.
-    func isEqual(to other: Value) -> Bool {
+    package func isEqual(to other: Value) -> Bool {
         switch (self, other) {
         case (.int, .double), (.double, .int):
             return asDouble == other.asDouble
@@ -52,7 +52,7 @@ extension Value {
 
     /// This value as `type`, or nil if it doesn't fit. An Int passes as a
     /// Double, as an integer literal would in Swift.
-    func conforming(to type: TypeAnnotation) -> Value? {
+    package func conforming(to type: TypeAnnotation) -> Value? {
         switch (type, self) {
         // What stands for text is the text where a String is wanted, and a
         // command's output is its lines where a list of them is.
@@ -105,7 +105,7 @@ extension Value {
 extension SwishKit.Value {
     /// A total order for sorting: numbers numerically (Int and Double
     /// together), then by kind for values of different kinds.
-    func order(comparedTo other: SwishKit.Value) -> ComparisonResult {
+    package func order(comparedTo other: SwishKit.Value) -> ComparisonResult {
         func compare<T: Comparable>(_ a: T, _ b: T) -> ComparisonResult {
             a < b ? .orderedAscending : a > b ? .orderedDescending : .orderedSame
         }

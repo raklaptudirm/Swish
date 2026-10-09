@@ -7,7 +7,7 @@ import SwishKit
 extension Interpreter {
     /// `provided` are bodies for prelude functions the host owns (the shell's
     /// `help`, which describes its builtins and programs).
-    func installBuiltinFunctions(providing provided: [String: FunctionBody] = [:]) {
+    package func installBuiltinFunctions(providing provided: [String: FunctionBody] = [:]) {
         scopes[0].bindings["env"] = Binding(value: .nothing, mutable: false, special: .environment)
         scopes[0].bindings["jobs"] = Binding(value: .nothing, mutable: false, special: .jobs)
         scopes[0].bindings["args"] = Binding(value: .list([]), mutable: false)
@@ -74,7 +74,7 @@ extension Interpreter {
     /// Each builtin's body, by name, for the prelude's declarations; a
     /// sequence method's also says how it reads the sequence: each item
     /// (`filter`), or all of them (`sorted`).
-    func builtinBodies(providing provided: [String: FunctionBody]) -> [String: (body: FunctionBody, input: Parameter?)] {
+    package func builtinBodies(providing provided: [String: FunctionBody]) -> [String: (body: FunctionBody, input: Parameter?)] {
         var bodies: [String: (body: FunctionBody, input: Parameter?)] = [:]
         for function in [members()] {
             bodies[function.name!] = (function.body, nil)
@@ -91,7 +91,7 @@ extension Interpreter {
 
     /// A case of an enum the prelude or the standard library module
     /// declares: `FileType.directory`.
-    func declaredCase(_ type: String, _ name: String) -> Value {
+    package func declaredCase(_ type: String, _ name: String) -> Value {
         .enumValue(EnumValue(type: enumType(named: type)!, name: name))
     }
 }
@@ -100,7 +100,7 @@ extension Interpreter {
 
 extension Function {
     /// A builtin written in Swift, with its documentation.
-    static func builtin(
+    package static func builtin(
         _ name: String, _ summary: String, _ parameters: [Parameter],
         docs: [String: String] = [:], _ body: FunctionBody
     ) -> Function {
@@ -113,24 +113,24 @@ extension Function {
 
 extension Parameter {
     /// An argument by position.
-    static func positional(_ name: String, _ type: TypeAnnotation, default value: Value? = nil, variadic: Bool = false) -> Parameter {
+    package static func positional(_ name: String, _ type: TypeAnnotation, default value: Value? = nil, variadic: Bool = false) -> Parameter {
         Parameter(label: nil, name: name, type: type, variadic: variadic, defaultValue: value.map(Expr.literal))
     }
 
     /// A labeled argument: a flag on the command line.
-    static func option(_ label: String, _ type: TypeAnnotation, default value: Value? = nil, short: Character? = nil) -> Parameter {
+    package static func option(_ label: String, _ type: TypeAnnotation, default value: Value? = nil, short: Character? = nil) -> Parameter {
         Parameter(label: label, name: label, type: type, defaultValue: value.map(Expr.literal), shortFlag: short)
     }
 
     /// What's piped in.
-    static func input(_ name: String, _ type: TypeAnnotation) -> Parameter {
+    package static func input(_ name: String, _ type: TypeAnnotation) -> Parameter {
         Parameter(label: nil, name: name, type: type, isInput: true)
     }
 }
 
 extension Dictionary where Key == String, Value == SwishKit.Value {
     /// A String or list-of-Strings argument as an array; empty if absent.
-    func strings(_ key: String) -> [String] {
+    package func strings(_ key: String) -> [String] {
         switch self[key] {
         case .string(let text)?: [text]
         case .list(let items)?: items.map(\.description)

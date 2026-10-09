@@ -1,9 +1,9 @@
 import Foundation
 import SwishKit
 
-struct Binding {
+package struct Binding {
     /// Builtin names whose values are live: read when they're used.
-    enum Special {
+    package enum Special {
         /// `env`: the environment, as a record; `env.NAME` is nil if unset.
         case environment
         /// `jobs`: the jobs in the background, oldest first.
@@ -14,17 +14,17 @@ struct Binding {
 
     /// Where the value lives, shared by every scope that has this
     /// variable: the one it was declared in, and closures that use it.
-    let cell: Cell
-    var value: Value {
+    package let cell: Cell
+    package var value: Value {
         get { cell.value }
         nonmutating set { cell.value = newValue }
     }
-    let mutable: Bool
+    package let mutable: Bool
     /// Declared with `func`, which makes it callable in command mode.
-    var isFunction = false
-    var special: Special?
+    package var isFunction = false
+    package var special: Special?
 
-    init(value: Value, mutable: Bool, isFunction: Bool = false, special: Special? = nil) {
+    package init(value: Value, mutable: Bool, isFunction: Bool = false, special: Special? = nil) {
         cell = Cell(value)
         self.mutable = mutable
         self.isFunction = isFunction
@@ -33,28 +33,28 @@ struct Binding {
 
     /// A variable's storage, so a closure can share it without keeping the
     /// whole scope it's in.
-    final class Cell {
-        var value: Value
-        init(_ value: Value) { self.value = value }
+    package final class Cell {
+        package var value: Value
+        package init(_ value: Value) { self.value = value }
     }
 }
 
 /// A reference type so closures share variables with the scope they
 /// captured, as in Swift.
-final class Scope {
-    var bindings: [String: Binding]
+package final class Scope {
+    package var bindings: [String: Binding]
     /// For a closure's scope: where it was made, held weakly so it can't
     /// keep them alive, for names bound there after it was made (a local
     /// function declared further down).
-    var fallbacks: [WeakScope] = []
+    package var fallbacks: [WeakScope] = []
 
-    init(_ bindings: [String: Binding] = [:]) {
+    package init(_ bindings: [String: Binding] = [:]) {
         self.bindings = bindings
     }
 
     /// Declares a function by its name: another of that name is overloaded,
     /// unless the signature is the same, which replaces it.
-    func declare(_ function: Function, named name: String) {
+    package func declare(_ function: Function, named name: String) {
         var candidates = [function]
         if let existing = bindings[name], existing.isFunction,
            case .function(let callable) = existing.value, let set = callable as? OverloadSet {
@@ -64,7 +64,7 @@ final class Scope {
     }
 
     /// The scope binding `name`: this one, or where it was made.
-    func holding(_ name: String) -> Scope? {
+    package func holding(_ name: String) -> Scope? {
         if bindings[name] != nil { return self }
         for fallback in fallbacks.reversed() {
             if let scope = fallback.scope, scope.bindings[name] != nil { return scope }
@@ -73,6 +73,6 @@ final class Scope {
     }
 }
 
-struct WeakScope {
-    weak var scope: Scope?
+package struct WeakScope {
+    package weak var scope: Scope?
 }

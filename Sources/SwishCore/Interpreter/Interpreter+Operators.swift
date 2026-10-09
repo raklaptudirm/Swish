@@ -2,7 +2,7 @@ import Foundation
 import SwishKit
 
 extension Interpreter {
-    func intRange(_ op: BinaryOperator, _ lower: Value, _ upper: Value) throws -> Range<Int> {
+    package func intRange(_ op: BinaryOperator, _ lower: Value, _ upper: Value) throws -> Range<Int> {
         guard case .int(let low) = lower, case .int(let high) = upper else {
             throw RuntimeError("a range needs Int bounds, not \(lower.typeName) and \(upper.typeName)")
         }
@@ -12,7 +12,7 @@ extension Interpreter {
         return low..<(high + 1)
     }
 
-    func truth(_ expr: Expr, for op: BinaryOperator) throws -> Bool {
+    package func truth(_ expr: Expr, for op: BinaryOperator) throws -> Bool {
         let value = try evaluate(expr)
         guard case .bool(let truth) = value else {
             throw RuntimeError("'\(op.rawValue)' needs Bool operands, not \(value.typeName)")
@@ -20,7 +20,7 @@ extension Interpreter {
         return truth
     }
 
-    func apply(_ op: UnaryOperator, _ value: Value) throws -> Value {
+    package func apply(_ op: UnaryOperator, _ value: Value) throws -> Value {
         switch (op, value) {
         case (.not, .bool(let b)):
             return .bool(!b)
@@ -36,7 +36,7 @@ extension Interpreter {
         }
     }
 
-    func apply(_ op: BinaryOperator, _ lhs: Value, _ rhs: Value) throws -> Value {
+    package func apply(_ op: BinaryOperator, _ lhs: Value, _ rhs: Value) throws -> Value {
         // What stands for text (a command's output) compares as its text;
         // other String operations go through `.text`.
         let comparisons: [BinaryOperator] = [.equal, .notEqual, .less, .lessEqual, .greater, .greaterEqual]
@@ -82,7 +82,7 @@ extension Interpreter {
         throw RuntimeError("'\(op.rawValue)' can't be applied to \(lhs.typeName) and \(rhs.typeName)")
     }
 
-    func integerArithmetic(_ op: BinaryOperator, _ a: Int, _ b: Int) throws -> Value {
+    package func integerArithmetic(_ op: BinaryOperator, _ a: Int, _ b: Int) throws -> Value {
         let result: (partialValue: Int, overflow: Bool)
         switch op {
         case .add: result = a.addingReportingOverflow(b)
@@ -99,7 +99,7 @@ extension Interpreter {
         return .int(result.partialValue)
     }
 
-    func floatingArithmetic(_ op: BinaryOperator, _ a: Double, _ b: Double) throws -> Value? {
+    package func floatingArithmetic(_ op: BinaryOperator, _ a: Double, _ b: Double) throws -> Value? {
         switch op {
         case .add: .double(a + b)
         case .subtract: .double(a - b)
@@ -109,7 +109,7 @@ extension Interpreter {
         }
     }
 
-    func compare<T: Comparable>(_ op: BinaryOperator, _ a: T, _ b: T) -> Bool? {
+    package func compare<T: Comparable>(_ op: BinaryOperator, _ a: T, _ b: T) -> Bool? {
         switch op {
         case .less: a < b
         case .lessEqual: a <= b

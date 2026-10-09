@@ -6,7 +6,7 @@ extension TypeChecker {
 
     /// `expr`'s type, which must fit `expected`.
     /// The expressions interpolated into a string.
-    func checkParts(_ parts: inout [StringPart]) throws {
+    package func checkParts(_ parts: inout [StringPart]) throws {
         for index in parts.indices {
             if case .expression(var expr) = parts[index] {
                 _ = try typeOf(&expr)
@@ -15,7 +15,7 @@ extension TypeChecker {
         }
     }
 
-    func expect(_ expr: inout Expr, _ expected: TypeAnnotation, _ what: String) throws {
+    package func expect(_ expr: inout Expr, _ expected: TypeAnnotation, _ what: String) throws {
         let type = try typeOf(&expr, expecting: expected)
         guard fits(type, expected) else {
             throw TypeError("\(what) must be \(expected), not \(type)")
@@ -25,7 +25,7 @@ extension TypeChecker {
     /// `expr`'s type, given what the context expects of it (which a literal,
     /// a closure or a `.case` takes its type from); `expr` gets what the
     /// checker decided.
-    func typeOf(_ expr: inout Expr, expecting expected: TypeAnnotation? = nil) throws -> TypeAnnotation {
+    package func typeOf(_ expr: inout Expr, expecting expected: TypeAnnotation? = nil) throws -> TypeAnnotation {
         switch expr {
         case .literal(let value):
             switch value {
@@ -258,7 +258,7 @@ extension TypeChecker {
     /// `\.size`: its root comes from the type written, or from context
     /// (`sorted(by:)` on [FileEntry] wants a KeyPath<FileEntry, V>). Where a
     /// function is wanted, it's one, as in Swift.
-    func keyPathType(root rootName: String?, _ path: [String], expected: TypeAnnotation?) throws -> TypeAnnotation {
+    package func keyPathType(root rootName: String?, _ path: [String], expected: TypeAnnotation?) throws -> TypeAnnotation {
         var root: TypeAnnotation?
         if let rootName {
             guard lookup(rootName) != nil else { throw TypeError("no type named '\(rootName)'") }
@@ -284,7 +284,7 @@ extension TypeChecker {
     }
 
     /// What `x` in `x?.name` is when it isn't nil.
-    func optionalBase(_ base: inout Expr) throws -> TypeAnnotation {
+    package func optionalBase(_ base: inout Expr) throws -> TypeAnnotation {
         let type = try typeOf(&base)
         if case .optional(let wrapped) = type { return wrapped }
         if type == .unknown { return .unknown }
@@ -293,7 +293,7 @@ extension TypeChecker {
 
     /// A function used as a value: an overloaded one is picked by the
     /// function type wanted, as in `xs.map(double)`.
-    func functionValue(_ name: String, _ overloads: [Signature], expected: TypeAnnotation?, expr: inout Expr) -> TypeAnnotation {
+    package func functionValue(_ name: String, _ overloads: [Signature], expected: TypeAnnotation?, expr: inout Expr) -> TypeAnnotation {
         if overloads.count == 1 { return functionType(overloads[0]) }
         guard let expected, case .functionType = expected else { return .function }
         let matching = overloads.filter { fits(functionType($0), expected) }
@@ -302,7 +302,7 @@ extension TypeChecker {
         return functionType(matching[0])
     }
 
-    func type(of value: Value) -> TypeAnnotation {
+    package func type(of value: Value) -> TypeAnnotation {
         switch value {
         case .nothing: .optional(.unknown)
         case .bool: .bool
@@ -326,7 +326,7 @@ extension TypeChecker {
             } else {
                 .named(box.typeName)
             }
-        case .object(is Job): .named("Job")
+        case .object(let object as CheckedObject): object.checkedType
         case .object: .unknown
         case .function: .function
         @unknown default: .unknown
@@ -334,7 +334,7 @@ extension TypeChecker {
     }
 
     /// The one type all of `types` fit, if there is one.
-    func commonType(_ types: [TypeAnnotation]) -> TypeAnnotation? {
+    package func commonType(_ types: [TypeAnnotation]) -> TypeAnnotation? {
         guard var common = types.first else { return nil }
         for type in types.dropFirst() {
             if fits(type, common) { continue }
@@ -345,7 +345,7 @@ extension TypeChecker {
         return common
     }
 
-    func listType(_ items: inout [Expr], expected: TypeAnnotation?) throws -> TypeAnnotation {
+    package func listType(_ items: inout [Expr], expected: TypeAnnotation?) throws -> TypeAnnotation {
         if case .list(let element)? = expected {
             for index in items.indices { try expect(&items[index], element, "a list element") }
             return .list(element)
@@ -372,7 +372,7 @@ extension TypeChecker {
 
     /// The elements' own types; a `.case` or `nil` takes its type from the
     /// others, as in `[Level.high, .low]`.
-    func elementTypes(_ items: inout [Expr]) throws -> [TypeAnnotation] {
+    package func elementTypes(_ items: inout [Expr]) throws -> [TypeAnnotation] {
         var types = [TypeAnnotation?](repeating: nil, count: items.count)
         for index in items.indices where TypeChecker.hasNaturalType(items[index]) || !TypeChecker.isContextual(items[index]) {
             if case .literal(.nothing) = items[index] { continue }
@@ -387,7 +387,7 @@ extension TypeChecker {
         return types.map { $0! }
     }
 
-    func dictionaryType(_ entries: inout [RecordEntry], expected: TypeAnnotation?) throws -> TypeAnnotation {
+    package func dictionaryType(_ entries: inout [RecordEntry], expected: TypeAnnotation?) throws -> TypeAnnotation {
         if case .dictionary(let key, let value)? = expected {
             for index in entries.indices {
                 try expect(&entries[index].key, key, "a key")

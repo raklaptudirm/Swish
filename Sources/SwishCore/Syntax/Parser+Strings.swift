@@ -4,7 +4,7 @@ import SwishKit
 extension Parser {
     // MARK: Strings and interpolation
 
-    mutating func parseRawString() throws(SyntaxError) -> String {
+    package mutating func parseRawString() throws(SyntaxError) -> String {
         guard let end = chars[(pos + 1)...].firstIndex(of: "'") else {
             mark(.string, from: pos, to: chars.count)
             throw .incomplete("unterminated string")
@@ -18,7 +18,7 @@ extension Parser {
     /// A double-quoted string: Swift escapes and `\(…)`, and in commands
     /// (`dollar`) also `$name` and `$(…)`. In expressions it's pure Swift,
     /// so `"costs $5"` and `"$HOME"` are literal there.
-    mutating func parseInterpolatedString(dollar: Bool) throws(SyntaxError) -> [StringPart] {
+    package mutating func parseInterpolatedString(dollar: Bool) throws(SyntaxError) -> [StringPart] {
         let start = pos
         pos += 1
         var parts: [StringPart] = []
@@ -72,7 +72,7 @@ extension Parser {
     }
 
     /// `\u{1F600}`, positioned after the `u`.
-    mutating func parseUnicodeEscape() throws(SyntaxError) -> Character {
+    package mutating func parseUnicodeEscape() throws(SyntaxError) -> Character {
         guard consume("{") else { throw SyntaxError("expected '{' after '\\u'") }
         var hex = ""
         while let c = peek(), c.isHexDigit {
@@ -86,7 +86,7 @@ extension Parser {
     }
 
     /// `\(expression)`, positioned at the backslash.
-    mutating func parseInterpolation() throws(SyntaxError) -> Expr {
+    package mutating func parseInterpolation() throws(SyntaxError) -> Expr {
         mark(.punctuation, from: pos, to: pos + 2)
         pos += 2
         bracketDepth += 1
@@ -101,7 +101,7 @@ extension Parser {
 
     /// `$0` in a closure, or a `$` form of the plug-in's (`$(…)`, `$name`),
     /// positioned at the dollar sign; nil if the dollar is just a character.
-    mutating func parseDollar() throws(SyntaxError) -> Expr? {
+    package mutating func parseDollar() throws(SyntaxError) -> Expr? {
         switch peek(1) {
         case let c? where Parser.isDigit(c):
             // Only special in a closure without named parameters; elsewhere,

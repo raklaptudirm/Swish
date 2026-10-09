@@ -3,19 +3,19 @@ import SwishKit
 
 /// A mistake in types, found before anything runs: the statement (or, in a
 /// script, the whole script) doesn't run. See Docs/Design/types.md.
-struct TypeError: Error, CustomStringConvertible {
-    let message: String
+package struct TypeError: Error, CustomStringConvertible {
+    package let message: String
     /// The line of the statement it's in, when there's more than one.
-    var line: Int?
+    package var line: Int?
     /// A call's arguments don't line up with a signature's parameters, as
     /// opposed to lining up with a value of the wrong type.
-    var isArity = false
+    package var isArity = false
 
-    init(_ message: String) {
+    package init(_ message: String) {
         self.message = message
     }
 
-    var description: String { message }
+    package var description: String { message }
 }
 
 /// Works out the type of every expression and checks it fits where it's
@@ -28,49 +28,79 @@ struct TypeError: Error, CustomStringConvertible {
 /// and writes that into the program it returns: which overload a call
 /// uses (`.chosen`). Commands, pipelines and builtins' results are
 /// `unknown` until phase 3, which fits anywhere.
-final class TypeChecker {
-    struct Signature {
-        var name: String
-        var parameters: [Parameter]
-        var returns: TypeAnnotation
-        var isMutating = false
-        var isThrowing = false
+package final class TypeChecker {
+    package struct Signature {
+        package var name: String
+        package var parameters: [Parameter]
+        package var returns: TypeAnnotation
+        package var isMutating = false
+        package var isThrowing = false
         /// `rethrows`: a call throws if a closure passed to it does.
-        var isRethrowing = false
+        package var isRethrowing = false
         /// Its position among the overloads the interpreter will have.
-        var index = 0
+        package var index = 0
         /// Its type parameters and the protocols each must conform to:
         /// `sorted<V: Comparable>(by:)`, and a sequence method's `Element`.
-        var generics: [String: [String]] = [:]
+        package var generics: [String: [String]] = [:]
+    
+        package init(name: String, parameters: [Parameter], returns: TypeAnnotation, isMutating: Bool = false, isThrowing: Bool = false, isRethrowing: Bool = false, index: Int = 0, generics: [String: [String]] = [:]) {
+            self.name = name
+            self.parameters = parameters
+            self.returns = returns
+            self.isMutating = isMutating
+            self.isThrowing = isThrowing
+            self.isRethrowing = isRethrowing
+            self.index = index
+            self.generics = generics
+        }
     }
 
-    struct StructInfo {
-        var name: String
-        var stored: [PropertyDecl]
-        var computed: [String: TypeAnnotation]
-        var methods: [String: [Signature]]
-        var initializers: [Signature]
-        var memberwise: Signature
-        var conformances: [String] = []
+    package struct StructInfo {
+        package var name: String
+        package var stored: [PropertyDecl]
+        package var computed: [String: TypeAnnotation]
+        package var methods: [String: [Signature]]
+        package var initializers: [Signature]
+        package var memberwise: Signature
+        package var conformances: [String] = []
         /// `static let` and `static var`, stored and computed: read on the type.
-        var staticProperties: [PropertyDecl] = []
-        var staticMethods: [String: [Signature]] = [:]
+        package var staticProperties: [PropertyDecl] = []
+        package var staticMethods: [String: [Signature]] = [:]
 
-        func property(_ name: String) -> PropertyDecl? { stored.first { $0.name == name } }
-        func staticProperty(_ name: String) -> PropertyDecl? { staticProperties.first { $0.name == name } }
+        package func property(_ name: String) -> PropertyDecl? { stored.first { $0.name == name } }
+        package func staticProperty(_ name: String) -> PropertyDecl? { staticProperties.first { $0.name == name } }
+    
+        package init(name: String, stored: [PropertyDecl], computed: [String: TypeAnnotation], methods: [String: [Signature]], initializers: [Signature], memberwise: Signature, conformances: [String] = [], staticProperties: [PropertyDecl] = [], staticMethods: [String: [Signature]] = [:]) {
+            self.name = name
+            self.stored = stored
+            self.computed = computed
+            self.methods = methods
+            self.initializers = initializers
+            self.memberwise = memberwise
+            self.conformances = conformances
+            self.staticProperties = staticProperties
+            self.staticMethods = staticMethods
+        }
     }
 
-    struct EnumInfo {
-        var name: String
+    package struct EnumInfo {
+        package var name: String
         /// Each case's associated values, in declaration order.
-        var cases: [(name: String, payload: [AssociatedValue])]
-        var rawType: TypeAnnotation?
-        var conformances: [String] = []
+        package var cases: [(name: String, payload: [AssociatedValue])]
+        package var rawType: TypeAnnotation?
+        package var conformances: [String] = []
 
-        func payload(of name: String) -> [AssociatedValue]? { cases.first { $0.name == name }?.payload }
+        package func payload(of name: String) -> [AssociatedValue]? { cases.first { $0.name == name }?.payload }
+    
+        package init(name: String, cases: [(name: String, payload: [AssociatedValue])], rawType: TypeAnnotation? = nil, conformances: [String] = []) {
+            self.name = name
+            self.cases = cases
+            self.rawType = rawType
+            self.conformances = conformances
+        }
     }
 
-    enum Symbol {
+    package enum Symbol {
         case variable(TypeAnnotation, mutable: Bool)
         case functions([Signature])
         case structType(StructInfo)
@@ -85,27 +115,27 @@ final class TypeChecker {
 
     /// Where `return` goes: the declared result, or, for a closure that
     /// didn't say, the types its `return`s give.
-    final class ReturnContext {
-        let declared: TypeAnnotation?
-        var seen: [TypeAnnotation] = []
+    package final class ReturnContext {
+        package let declared: TypeAnnotation?
+        package var seen: [TypeAnnotation] = []
 
-        init(declared: TypeAnnotation?) {
+        package init(declared: TypeAnnotation?) {
             self.declared = declared
         }
     }
 
     /// Whether an error thrown here is handled: in a `throws` function, a
     /// closure, a `do` with a `catch`, or at the top level.
-    struct ErrorContext {
-        var handled: Bool
+    package struct ErrorContext {
+        package var handled: Bool
         /// What an error would have to leave, for messages.
-        var boundary: Boundary = .topLevel
+        package var boundary: Boundary = .topLevel
 
-        enum Boundary {
+        package enum Boundary {
             case topLevel, function(String), deferBlock
 
             /// Why an error can't get out, and what would let it.
-            var unhandled: String {
+            package var unhandled: String {
                 switch self {
                 case .topLevel: "nothing catches it: use do/catch, try? or try!"
                 case .function(let name): "\(name) isn't 'throws': mark it 'throws', or use do/catch, try? or try!"
@@ -113,53 +143,53 @@ final class TypeChecker {
                 }
             }
         }
+    
+        package init(handled: Bool, boundary: Boundary = .topLevel) {
+            self.handled = handled
+            self.boundary = boundary
+        }
     }
 
-    unowned let interpreter: Interpreter
-    /// The shell, when checking its commands: pipeline stages are typed with
-    /// the shell's help on what a name is. Temporary, with the pipeline
-    /// checker itself (Docs/Design/boundaries.md).
-    unowned let shell: Shell?
+    package unowned let interpreter: Interpreter
     /// The type whose member was last looked up, so a JSON field can be
     /// written into a lookup that runs.
-    var lastMemberBase: TypeAnnotation?
+    package var lastMemberBase: TypeAnnotation?
 
     /// Parsed JSON: any of its values, read by field (`json.name`,
     /// `json["name"]`) or position (`json[0]`), each giving `JSON?`.
-    static let json = TypeAnnotation.named("JSON")
+    package static let json = TypeAnnotation.named("JSON")
 
     /// What a JSON value is, when it's that: `json.port?.int`.
-    static let jsonAccessors: [String: TypeAnnotation] = [
+    package static let jsonAccessors: [String: TypeAnnotation] = [
         "string": .optional(.string), "int": .optional(.int), "double": .optional(.double), "bool": .optional(.bool),
         "array": .optional(.list(json)), "object": .optional(.dictionary(.string, json)), "isNull": .bool,
     ]
 
     /// `json.name` as it runs: a lookup that gives nil for a missing field,
     /// or the value as one of the accessors' types.
-    static func jsonAccess(_ base: Expr, _ name: String) -> Expr {
+    package static func jsonAccess(_ base: Expr, _ name: String) -> Expr {
         let function = jsonAccessors[name] != nil ? "$jsonAs" : "$json"
         return .call(.variable(function), [Argument(label: nil, value: base), Argument(label: nil, value: .literal(.string(name)))])
     }
     /// What the program declares, innermost last, on top of the shell's names.
-    var scopes: [[String: Symbol]] = [[:]]
-    var returns: [ReturnContext] = []
-    var errorContexts = [ErrorContext(handled: true)]
+    package var scopes: [[String: Symbol]] = [[:]]
+    package var returns: [ReturnContext] = []
+    package var errorContexts = [ErrorContext(handled: true)]
     /// Above zero while checking what a `try` covers.
-    var tryDepth = 0
+    package var tryDepth = 0
     /// Places that can throw, so far: how a `try` or a closure knows it
     /// covers one.
-    var throwingSites = 0
+    package var throwingSites = 0
     /// After an `import`, names it may bring can't be checked.
-    var afterImport = false
-    var line: Int?
+    package var afterImport = false
+    package var line: Int?
 
-    init(interpreter: Interpreter, shell: Shell? = nil) {
+    package init(interpreter: Interpreter) {
         self.interpreter = interpreter
-        self.shell = shell
     }
 
     /// Checks a program, returning it with what was decided written in.
-    func check(_ program: Program) throws(TypeError) -> Program {
+    package func check(_ program: Program) throws(TypeError) -> Program {
         var checked = program
         do {
             try checkBlock(&checked)
@@ -174,8 +204,21 @@ final class TypeChecker {
 
     /// The types of the globals a checked program declared, for the next
     /// entry at the prompt.
-    var declaredGlobals: [String: TypeAnnotation] {
+    package var declaredGlobals: [String: TypeAnnotation] {
         scopes[0].compactMapValues { if case .variable(let type, _) = $0 { type } else { nil } }
     }
 
+}
+
+/// A host object the checker types without knowing its class: `Job`, an
+/// imported module. Its members' types come from `Interpreter.objectMembers`.
+package protocol CheckedObject: SwishObject {
+    var checkedType: TypeAnnotation { get }
+    /// Whether a name bound to it is a module, whose members are looked up
+    /// in the value.
+    var isModule: Bool { get }
+}
+
+extension CheckedObject {
+    package var isModule: Bool { false }
 }

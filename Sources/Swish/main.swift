@@ -1,5 +1,5 @@
 import Foundation
-import SwishCore
+import SwishShell
 
 let arguments = Array(CommandLine.arguments.dropFirst())
 

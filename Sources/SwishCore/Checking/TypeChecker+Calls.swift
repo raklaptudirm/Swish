@@ -4,7 +4,7 @@ import SwishKit
 extension TypeChecker {
     // MARK: Calls
 
-    func callType(_ callee: inout Expr, _ arguments: inout [Argument], expected: TypeAnnotation?) throws -> TypeAnnotation {
+    package func callType(_ callee: inout Expr, _ arguments: inout [Argument], expected: TypeAnnotation?) throws -> TypeAnnotation {
         // `Point(x: 1)`, `Level(rawValue: 2)`, `f(x)`.
         if case .variable(let name) = callee, let symbol = lookup(name) {
             switch symbol {
@@ -76,7 +76,7 @@ extension TypeChecker {
     }
 
     /// A call to a named function: the overload is chosen here.
-    func call(_ overloads: [Signature], callee: inout Expr, _ arguments: inout [Argument], name: String) throws -> TypeAnnotation {
+    package func call(_ overloads: [Signature], callee: inout Expr, _ arguments: inout [Argument], name: String) throws -> TypeAnnotation {
         guard let chosen = try resolve(overloads, &arguments, name: name) else {
             // Which one isn't known until it runs (an argument isn't typed yet).
             return commonReturn(overloads)
@@ -86,13 +86,13 @@ extension TypeChecker {
         return chosen.returns
     }
 
-    func commonReturn(_ overloads: [Signature]) -> TypeAnnotation {
+    package func commonReturn(_ overloads: [Signature]) -> TypeAnnotation {
         overloads.allSatisfy { $0.returns == overloads[0].returns } ? overloads[0].returns : .unknown
     }
 
     /// `base.name(arguments)` for a receiver of type `base`; `baseExpr` is
     /// where it came from, if it can be changed by a mutating method.
-    func methodCallType(
+    package func methodCallType(
         _ base: TypeAnnotation, baseExpr: Expr?, _ name: String, _ callee: inout Expr, _ arguments: inout [Argument]
     ) throws -> TypeAnnotation {
         if case .named(let structName) = base, let info = structInfo(named: structName), let methods = info.methods[name] {
@@ -130,7 +130,7 @@ extension TypeChecker {
     }
 
     /// Calling a value of type `type`.
-    func apply(_ type: TypeAnnotation, _ arguments: inout [Argument], name: String) throws -> TypeAnnotation {
+    package func apply(_ type: TypeAnnotation, _ arguments: inout [Argument], name: String) throws -> TypeAnnotation {
         switch type {
         case .functionType(let parameters, let result, let throwing):
             let signature = Signature(name: name, parameters: parameters.map { Parameter(label: nil, name: "_", type: $0) },
@@ -150,7 +150,7 @@ extension TypeChecker {
 
     /// A mutating method changes its receiver, which must be a `var` (or
     /// part of one).
-    func checkMutable(_ base: Expr, method: String) throws {
+    package func checkMutable(_ base: Expr, method: String) throws {
         var root = base
         while true {
             switch root {
@@ -164,5 +164,15 @@ extension TypeChecker {
                 throw TypeError("cannot use mutating method '\(method)' on a value that isn't in a variable")
             }
         }
+    }
+}
+
+extension TypeChecker {
+    /// When neither the prelude's method nor Swift's fits: the prelude's
+    /// error, unless its overloads didn't even line up with the arguments
+    /// (one was missing), when Swift's is the one that applies.
+    package static func preferred(prelude: TypeError, swift: TypeError?) -> TypeError {
+        guard let swift, prelude.message.contains("missing") else { return prelude }
+        return swift
     }
 }

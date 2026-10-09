@@ -4,7 +4,7 @@ import SwishKit
 extension Interpreter {
     // MARK: Expressions
 
-    func evaluate(_ expr: Expr) throws -> Value {
+    package func evaluate(_ expr: Expr) throws -> Value {
         switch expr {
         case .literal(let value):
             return value
@@ -230,12 +230,12 @@ extension Interpreter {
         }
     }
 
-    static func isCaseLiteral(_ expr: Expr) -> Bool {
+    package static func isCaseLiteral(_ expr: Expr) -> Bool {
         if case .caseLiteral = expr { true } else { false }
     }
 
     /// Record fields first, then the few members values have.
-    func member(_ name: String, of value: Value) throws -> Value {
+    package func member(_ name: String, of value: Value) throws -> Value {
         if case .enumValue(let enumValue) = value, name == "rawValue" {
             guard let raw = enumValue.rawValue else { throw RuntimeError("\(enumValue.type.name) has no raw values") }
             return raw
@@ -288,7 +288,7 @@ extension Interpreter {
         }
     }
 
-    func element(of base: Value, at index: Value) throws -> Value {
+    package func element(of base: Value, at index: Value) throws -> Value {
         if case .dictionary(let dictionary) = base {
             return dictionary[index] ?? .nothing
         }

@@ -18,7 +18,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-system.git", from: "1.4.0"),
     ],
     targets: [
-        .executableTarget(name: "Swish", dependencies: ["SwishCore"]),
+        .executableTarget(name: "Swish", dependencies: ["SwishShell"]),
         // Reads Swift's symbol graphs and writes the glue that bridges them
         // (`run bridge`); not part of the shell.
         .executableTarget(name: "SwishBridge"),
@@ -39,7 +39,18 @@ let package = Package(
                 .product(name: "SystemPackage", package: "swift-system"),
             ]
         ),
+        // The shell: commands, pipelines, jobs, the line editor and the process
+        // it runs in, built on the core's interpreter.
+        .target(
+            name: "SwishShell",
+            dependencies: [
+                "SwishCore",
+                .product(name: "SwishKit", package: "SwishKit"),
+                .product(name: "SystemPackage", package: "swift-system"),
+            ]
+        ),
         // boundaries.txt is data the boundary test reads from the source tree.
         .testTarget(name: "SwishCoreTests", dependencies: ["SwishCore"], exclude: ["boundaries.txt"]),
+        .testTarget(name: "SwishShellTests", dependencies: ["SwishShell", "SwishCore"]),
     ]
 )

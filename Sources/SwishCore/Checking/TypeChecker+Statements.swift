@@ -4,7 +4,7 @@ import SwishKit
 extension TypeChecker {
     // MARK: Statements
 
-    func checkBlock(_ program: inout Program, declaring names: [String: Symbol] = [:], newScope: Bool = false) throws {
+    package func checkBlock(_ program: inout Program, declaring names: [String: Symbol] = [:], newScope: Bool = false) throws {
         if newScope { scopes.append(names) }
         defer { if newScope { scopes.removeLast() } }
         // Declared first, so functions and types can be used before (and by)
@@ -23,7 +23,7 @@ extension TypeChecker {
         }
     }
 
-    func checkStatement(_ statement: inout Statement) throws {
+    package func checkStatement(_ statement: inout Statement) throws {
         switch statement {
         case .declare(let name, let mutable, var value):
             var type = try typeOf(&value)
@@ -98,14 +98,14 @@ extension TypeChecker {
         }
     }
 
-    func checkChain(_ chain: inout Chain, condition: Bool) throws {
+    package func checkChain(_ chain: inout Chain, condition: Bool) throws {
         try checkUnit(&chain.first, condition: condition || !chain.links.isEmpty)
         for index in chain.links.indices { try checkUnit(&chain.links[index].unit, condition: true) }
     }
 
     /// `condition`: the unit's status decides something, as in `if` or
     /// `&&`: an expression there must be a Bool, an Output, or optional.
-    func checkUnit(_ unit: inout Unit, condition: Bool) throws {
+    package func checkUnit(_ unit: inout Unit, condition: Bool) throws {
         switch unit {
         case .extended(var box):
             try box.node.check(in: self)
@@ -139,7 +139,7 @@ extension TypeChecker {
         }
     }
 
-    func checkIf(_ node: inout IfStatement) throws {
+    package func checkIf(_ node: inout IfStatement) throws {
         let bound = try checkCondition(&node)
         try checkBlock(&node.then, declaring: bound, newScope: true)
         if var otherwise = node.otherwise {
@@ -150,7 +150,7 @@ extension TypeChecker {
 
     /// An `if` expression's type: what both branches are, as for a list's
     /// elements, so `c ? 1 : nil` is an Int?.
-    func ifExpressionType(_ node: inout IfStatement, expected: TypeAnnotation?) throws -> TypeAnnotation {
+    package func ifExpressionType(_ node: inout IfStatement, expected: TypeAnnotation?) throws -> TypeAnnotation {
         let bound = try checkCondition(&node)
         guard var thenExpr = IfStatement.branchExpression(node.then),
               var elseExpr = IfStatement.branchExpression(node.otherwise ?? Program(statements: [])) else {
@@ -172,7 +172,7 @@ extension TypeChecker {
     }
 
     /// Checks an `if`'s condition, giving what it binds for the `then` branch.
-    func checkCondition(_ node: inout IfStatement) throws -> [String: Symbol] {
+    package func checkCondition(_ node: inout IfStatement) throws -> [String: Symbol] {
         var bound: [String: Symbol] = [:]
         switch node.condition {
         case .chain(var chain):
@@ -195,7 +195,7 @@ extension TypeChecker {
         return bound
     }
 
-    func checkSwitch(_ node: inout SwitchStatement) throws {
+    package func checkSwitch(_ node: inout SwitchStatement) throws {
         let subject = try typeOf(&node.subject)
         for index in node.cases.indices {
             var bound: [String: Symbol] = [:]
@@ -211,7 +211,7 @@ extension TypeChecker {
         }
     }
 
-    func checkPattern(_ pattern: inout Pattern, against type: TypeAnnotation, binding bound: inout [String: Symbol]) throws {
+    package func checkPattern(_ pattern: inout Pattern, against type: TypeAnnotation, binding bound: inout [String: Symbol]) throws {
         switch pattern {
         case .wildcard:
             break
@@ -263,14 +263,14 @@ extension TypeChecker {
     // MARK: Throwing
 
     /// A plain `try` covers something that throws: it has to be handled.
-    func checkHandled(_ what: String) throws {
+    package func checkHandled(_ what: String) throws {
         guard let context = errorContexts.last, !context.handled else { return }
         throw TypeError("\(what) can throw, but \(context.boundary.unhandled)")
     }
 
     /// Something that can throw, like a call to a `throws` function: it
     /// needs a `try` covering it.
-    func throwingSite(_ what: String) throws {
+    package func throwingSite(_ what: String) throws {
         throwingSites += 1
         guard tryDepth > 0 else {
             throw TypeError("\(what) can throw, but isn't marked with 'try'")

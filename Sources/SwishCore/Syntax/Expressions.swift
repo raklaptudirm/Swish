@@ -1,25 +1,35 @@
 import Foundation
 import SwishKit
 
-struct RecordEntry: Equatable, Sendable {
-    var key: Expr
-    var value: Expr
+package struct RecordEntry: Equatable, Sendable {
+    package var key: Expr
+    package var value: Expr
+
+    package init(key: Expr, value: Expr) {
+        self.key = key
+        self.value = value
+    }
 }
 
 /// A piece of a string: text, or an interpolated expression.
-enum StringPart: Equatable, Sendable {
+package enum StringPart: Equatable, Sendable {
     case literal(String)
     case expression(Expr)
 }
 
-struct Argument: Equatable, Sendable {
-    var label: String?
-    var value: Expr
+package struct Argument: Equatable, Sendable {
+    package var label: String?
+    package var value: Expr
+
+    package init(label: String? = nil, value: Expr) {
+        self.label = label
+        self.value = value
+    }
 }
 
-indirect enum Expr: Equatable, Sendable {
+package indirect enum Expr: Equatable, Sendable {
     /// `await j`, or `try await j`.
-    var isAwait: Bool {
+    package var isAwait: Bool {
         switch self {
         case .await: true
         case .attempt(let inner, _): inner.isAwait
@@ -82,7 +92,7 @@ indirect enum Expr: Equatable, Sendable {
     case voidValue(Expr)
 }
 
-enum TryKind: Equatable, Sendable {
+package enum TryKind: Equatable, Sendable {
     /// `try`: an error goes on to whatever handles it.
     case plain
     /// `try?`: nil instead of a runtime error.
@@ -91,7 +101,7 @@ enum TryKind: Equatable, Sendable {
     case forced
 }
 
-enum CastKind: Equatable, Sendable {
+package enum CastKind: Equatable, Sendable {
     /// `as?`: the value as that type, or nil.
     case conditional
     /// `as!`: the value as that type, or an error.
@@ -102,12 +112,12 @@ enum CastKind: Equatable, Sendable {
     case upcast
 }
 
-enum UnaryOperator: String, Sendable {
+package enum UnaryOperator: String, Sendable {
     case not = "!"
     case negate = "-"
 }
 
-enum BinaryOperator: String, Sendable {
+package enum BinaryOperator: String, Sendable {
     case or = "||", and = "&&"
     case coalesce = "??"
     case equal = "==", notEqual = "!="

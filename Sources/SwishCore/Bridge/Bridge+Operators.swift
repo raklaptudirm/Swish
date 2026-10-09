@@ -8,7 +8,7 @@ import SwishKit
 extension Bridge {
     /// The members of the types of `typeNames` that are the operator
     /// `symbol` taking `arity` operands.
-    static func operators(_ symbol: String, arity: Int, of typeNames: [String]) -> [BridgedMember] {
+    package static func operators(_ symbol: String, arity: Int, of typeNames: [String]) -> [BridgedMember] {
         var seen: Set<String> = []
         return typeNames.filter { seen.insert($0).inserted }.flatMap { name in
             (types[name]?.members ?? []).filter {
@@ -22,7 +22,7 @@ extension TypeChecker {
     /// What `left op right` is, if a bridged type of one of them declares an
     /// operator they fit: the one whose parameters are exactly their types,
     /// else the first they fit.
-    func bridgedOperatorType(_ symbol: String, _ operands: [TypeAnnotation]) -> TypeAnnotation? {
+    package func bridgedOperatorType(_ symbol: String, _ operands: [TypeAnnotation]) -> TypeAnnotation? {
         let candidates = Bridge.operators(symbol, arity: operands.count, of: operands.compactMap { $0.swiftType?.name })
         func fitting(_ member: BridgedMember) -> Bool {
             zip(operands, member.parameters).allSatisfy { fits($0, $1.type) }
@@ -36,7 +36,7 @@ extension Interpreter {
     /// Applies an operator a bridged type declares to its operands; nil if no
     /// operand's type declares one. A Swift operator that throws (an overflow)
     /// is an error here, with no `try`, as for Int.
-    func bridgedOperator(_ symbol: String, _ operands: [Value]) throws -> Value? {
+    package func bridgedOperator(_ symbol: String, _ operands: [Value]) throws -> Value? {
         let names = operands.compactMap { operand -> String? in
             if case .object(let box as SwiftValue) = operand { box.typeName } else { nil }
         }

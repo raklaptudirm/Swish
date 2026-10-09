@@ -6,7 +6,7 @@ extension Interpreter {
 
     /// `enum Name: Raw { … }`: builds the type, checking raw values, and binds
     /// its name.
-    func declare(_ decl: EnumDecl) throws {
+    package func declare(_ decl: EnumDecl) throws {
         var cases: [EnumType.Case] = []
         var payloadTypes: [String: [TypeAnnotation]] = [:]
         var nextInt = 0
@@ -47,7 +47,7 @@ extension Interpreter {
     }
 
     /// The enum a type annotation names, looking through optionals.
-    func enumType(for type: TypeAnnotation?) -> EnumType? {
+    package func enumType(for type: TypeAnnotation?) -> EnumType? {
         switch type {
         case .named(let name)?: enumType(named: name)
         case .optional(let wrapped)?: enumType(for: wrapped)
@@ -55,7 +55,7 @@ extension Interpreter {
         }
     }
 
-    func enumType(named name: String) -> EnumType? {
+    package func enumType(named name: String) -> EnumType? {
         guard case .object(let type as EnumType)? = lookup(name)?.value else { return nil }
         return type
     }
@@ -64,7 +64,7 @@ extension Interpreter {
 
     /// `Kind.file`, `.failed(code: 2)` or `Kind.failed(code: 2)` for `type`:
     /// checks the case exists and its associated values' labels and types.
-    func makeCase(_ type: EnumType, _ name: String, _ arguments: [Argument]?) throws -> Value {
+    package func makeCase(_ type: EnumType, _ name: String, _ arguments: [Argument]?) throws -> Value {
         guard let definition = type.case(named: name) else {
             throw RuntimeError("\(type.name) has no case '\(name)'")
         }
@@ -99,7 +99,7 @@ extension Interpreter {
 
     /// An expression whose type is known from context: a `.case` literal
     /// becomes a case of the expected enum.
-    func evaluate(_ expr: Expr, expecting type: TypeAnnotation?) throws -> Value {
+    package func evaluate(_ expr: Expr, expecting type: TypeAnnotation?) throws -> Value {
         if case .caseLiteral(let name, let arguments) = expr, let enumType = enumType(for: type) {
             return try makeCase(enumType, name, arguments)
         }
@@ -107,7 +107,7 @@ extension Interpreter {
     }
 
     /// `value` as `type`, knowing the enums in scope; nil if it doesn't fit.
-    func conform(_ value: Value, to type: TypeAnnotation) -> Value? {
+    package func conform(_ value: Value, to type: TypeAnnotation) -> Value? {
         switch type {
         case .named(let name):
             // Parsed JSON is whatever it parsed as: a stand-in type until the
@@ -146,7 +146,7 @@ extension Interpreter {
 
     /// A case from the command line: its name (`directory` or `.directory`),
     /// or its raw value.
-    func enumCase(fromText text: String, _ type: EnumType) -> Value? {
+    package func enumCase(fromText text: String, _ type: EnumType) -> Value? {
         let name = text.hasPrefix(".") ? String(text.dropFirst()) : text
         if let definition = type.case(named: name), definition.labels.isEmpty {
             return .enumValue(EnumValue(type: type, name: name))
@@ -158,7 +158,7 @@ extension Interpreter {
     // MARK: Matching
 
     /// Whether `value` matches `pattern`, binding what the pattern names.
-    func match(_ pattern: Pattern, _ value: Value, into bindings: inout [String: Binding]) throws -> Bool {
+    package func match(_ pattern: Pattern, _ value: Value, into bindings: inout [String: Binding]) throws -> Bool {
         switch pattern {
         case .wildcard:
             return true
@@ -206,7 +206,7 @@ extension Interpreter {
     /// Runs a switch: the first case whose pattern (and `where`) matches,
     /// then on through `fallthrough`. No match is an error: Swift checks a
     /// switch covers everything when compiling; Swish can only check here.
-    func runSwitch(_ node: SwitchStatement) throws -> Int32 {
+    package func runSwitch(_ node: SwitchStatement) throws -> Int32 {
         let subject = try evaluate(node.subject)
         var start: (index: Int, bindings: [String: Binding])?
         search: for (index, switchCase) in node.cases.enumerated() {

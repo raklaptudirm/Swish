@@ -2,7 +2,7 @@ import Foundation
 import SwishKit
 
 /// A type, as written in a declaration and as the checker works it out.
-indirect enum TypeAnnotation: Hashable, Sendable, CustomStringConvertible {
+package indirect enum TypeAnnotation: Hashable, Sendable, CustomStringConvertible {
     case any, bool, int, double, string
     /// A record whose fields aren't known: a builtin's row, until the
     /// builtins declare their types.
@@ -35,17 +35,22 @@ indirect enum TypeAnnotation: Hashable, Sendable, CustomStringConvertible {
     /// declared its type. It fits anywhere, and anything fits it.
     case unknown
 
-    struct TupleElement: Hashable, Sendable {
-        var label: String?
-        var type: TypeAnnotation
+    package struct TupleElement: Hashable, Sendable {
+        package var label: String?
+        package var type: TypeAnnotation
+    
+        package init(label: String? = nil, type: TypeAnnotation) {
+            self.label = label
+            self.type = type
+        }
     }
 
-    var description: String { AttributedString(joining: styled).text }
+    package var description: String { AttributedString(joining: styled).text }
 
     /// As Swift writes it, in pieces by what each is (the name of a type, a
     /// label, a keyword, or punctuation), so help can color it and no one has
     /// to read the text back to find out.
-    var styled: [AttributedString] {
+    package var styled: [AttributedString] {
         func name(_ text: String) -> AttributedString { .init(text, .type) }
         func punctuation(_ text: String) -> AttributedString { .init(text) }
         func list(_ items: [[AttributedString]]) -> [AttributedString] {
@@ -91,7 +96,7 @@ extension TypeAnnotation {
     /// sugar: `[T]`, `T?`, `[K: V]`.
     /// What `$(…)` gives: a command's output, which is a Swift type like any
     /// other, held as it is.
-    static let output = TypeAnnotation.named("Output")
+    package static let output = TypeAnnotation.named("Output")
 
     private static let spelled: [(name: String, make: @Sendable ([TypeAnnotation]) -> TypeAnnotation?)] = [
         ("Int", { $0.isEmpty ? .int : nil }), ("Double", { $0.isEmpty ? .double : nil }),
@@ -106,14 +111,14 @@ extension TypeAnnotation {
 
     /// The annotation Swish writes `name<arguments>` with, if it has one of
     /// its own: `Int`, `Array<Int>` as `[Int]`.
-    static func spelled(_ name: String, _ arguments: [TypeAnnotation] = []) -> TypeAnnotation? {
+    package static func spelled(_ name: String, _ arguments: [TypeAnnotation] = []) -> TypeAnnotation? {
         spelled.lazy.compactMap { $0.name == name ? $0.make(arguments) : nil }.first
     }
 
     /// The Swift type this annotation stands for, by name, with its generic
     /// arguments: `.int` is `Int`, `[String]` is `Array<String>`. The
     /// inverse of `spelled`; nil for one that doesn't name a type.
-    var swiftType: (name: String, arguments: [TypeAnnotation])? {
+    package var swiftType: (name: String, arguments: [TypeAnnotation])? {
         switch self {
         case .named(let name): return (name, [])
         case .generic(let name, let arguments): return (name, arguments)

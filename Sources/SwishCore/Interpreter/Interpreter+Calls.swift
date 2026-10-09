@@ -7,7 +7,7 @@ extension Interpreter {
     /// Runs `function` with its parameters bound to `arguments`.
     /// Calls `function`. A method gets `receiver` as `self`, and leaves it
     /// there as the method changed it.
-    func invoke(_ function: Function, with arguments: [String: Value], receiver: Receiver? = nil) throws -> Value {
+    package func invoke(_ function: Function, with arguments: [String: Value], receiver: Receiver? = nil) throws -> Value {
         guard callDepth < maxCallDepth else {
             throw RuntimeError("maximum call depth (\(maxCallDepth)) exceeded")
         }
@@ -74,7 +74,7 @@ extension Interpreter {
 
     /// Calls a function value with positional arguments, as builtins like
     /// `where` call the closures they're given.
-    func call(_ value: Value, with arguments: [Value]) throws -> Value {
+    package func call(_ value: Value, with arguments: [Value]) throws -> Value {
         let unlabeled = arguments.map { Argument(label: nil, value: .literal($0)) }
         switch value {
         case .function(let set as OverloadSet):
@@ -96,7 +96,7 @@ extension Interpreter {
     /// A closure last and unlabeled can go to a labeled parameter, as a
     /// trailing closure does in Swift (`xs.sorted { $0.x < $1.x }` for
     /// `by:`), unless a later unlabeled parameter is waiting for it.
-    func isTrailingClosure(
+    package func isTrailingClosure(
         _ arguments: [Argument], at index: Int, for parameter: Parameter, before later: ArraySlice<Parameter>
     ) -> Bool {
         guard index == arguments.count - 1, arguments[index].label == nil, parameter.label != nil,
@@ -112,7 +112,7 @@ extension Interpreter {
     ///
     /// The penalty counts conversions and untyped parameters, so overload
     /// resolution can prefer the most specific match.
-    func bind(_ arguments: [Argument], to function: Function) throws -> (bindings: [String: Value], penalty: Int) {
+    package func bind(_ arguments: [Argument], to function: Function) throws -> (bindings: [String: Value], penalty: Int) {
         let name = function.name ?? "closure"
         var bound: [String: Value] = [:]
         var penalty = 0
@@ -155,14 +155,14 @@ extension Interpreter {
     }
 
     /// Defaults are evaluated at call time, in the scope the function was defined in.
-    func defaultArgument(_ expr: Expr, for parameter: Parameter, of function: Function) throws -> Value {
+    package func defaultArgument(_ expr: Expr, for parameter: Parameter, of function: Function) throws -> Value {
         let savedScopes = scopes
         scopes = function.captured
         defer { scopes = savedScopes }
         return try checked(try evaluate(expr, expecting: parameter.type), for: parameter, of: function.name ?? "closure")
     }
 
-    func checked(_ value: Value, for parameter: Parameter, of function: String) throws -> Value {
+    package func checked(_ value: Value, for parameter: Parameter, of function: String) throws -> Value {
         let type = parameter.variadic ? TypeAnnotation.list(parameter.type) : parameter.type
         guard let conforming = conform(value, to: type) else {
             throw RuntimeError("\(function): '\(parameter.name)' must be \(type), not \(value.typeName)")
@@ -172,7 +172,7 @@ extension Interpreter {
 }
 
 /// `set` with only the overload the checker chose, when it did.
-func narrowed(_ set: OverloadSet, _ overload: Int?) -> OverloadSet {
+package func narrowed(_ set: OverloadSet, _ overload: Int?) -> OverloadSet {
     guard let overload, set.candidates.indices.contains(overload) else { return set }
     return OverloadSet(name: set.name, candidates: [set.candidates[overload]])
 }
@@ -182,7 +182,7 @@ extension Interpreter {
 
     /// Picks the overload that `bind` accepts with the lowest penalty, the
     /// most specific match. Ties are an error, never a guess.
-    func resolve(
+    package func resolve(
         _ set: OverloadSet, _ bind: (Function) throws -> (bindings: [String: Value], penalty: Int)
     ) throws -> (Function, [String: Value]) {
         if set.candidates.count == 1 {
@@ -213,7 +213,7 @@ extension Interpreter {
 extension Interpreter {
     /// A plugin's function as the shell's own: the same binding, help and
     /// streaming as a Swish `func`. `plugin` names the module it came from.
-    func hostFunction(_ export: ExportedFunction, plugin: String? = nil) -> Function {
+    package func hostFunction(_ export: ExportedFunction, plugin: String? = nil) -> Function {
         let parameters = export.parameters.map { parameter in
             Parameter(
                 label: parameter.label, name: parameter.name, type: TypeAnnotation(parameter.type),
@@ -245,7 +245,7 @@ extension Interpreter {
 }
 
 extension TypeAnnotation {
-    init(_ type: SwishType) {
+    package init(_ type: SwishType) {
         self = switch type {
         case .any: .any
         case .bool: .bool

@@ -8,7 +8,7 @@ extension Interpreter {
     // `Flow` for `filter`, `map`, `compactMap` and `prefix`, which it can).
     // Its signature is in the prelude.
 
-    func select() -> Function {
+    package func select() -> Function {
         .builtin(
             "select", "Keeps only the named fields of each record or object.",
             [.input("item", .any), .positional("fields", .string, variadic: true)],

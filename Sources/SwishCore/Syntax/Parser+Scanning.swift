@@ -5,7 +5,7 @@ extension Parser {
     // MARK: Scanning
 
     /// Digits with optional `_` separators, which are dropped.
-    mutating func readDigits() -> String {
+    package mutating func readDigits() -> String {
         var digits = ""
         while let c = peek(), Parser.isDigit(c) || c == "_" {
             if c != "_" { digits.append(c) }
@@ -14,12 +14,12 @@ extension Parser {
         return digits
     }
 
-    func peek(_ offset: Int = 0) -> Character? {
+    package func peek(_ offset: Int = 0) -> Character? {
         let index = pos + offset
         return index < chars.count ? chars[index] : nil
     }
 
-    func startsWith(_ text: String) -> Bool {
+    package func startsWith(_ text: String) -> Bool {
         var index = pos
         for c in text {
             guard index < chars.count, chars[index] == c else { return false }
@@ -28,14 +28,14 @@ extension Parser {
         return true
     }
 
-    mutating func consume(_ text: String) -> Bool {
+    package mutating func consume(_ text: String) -> Bool {
         guard startsWith(text) else { return false }
         pos += text.count
         return true
     }
 
     /// The identifier starting at the current position, without consuming it.
-    func identifier() -> String? {
+    package func identifier() -> String? {
         guard let first = peek(), Parser.isIdentifierStart(first) else { return nil }
         var name = String(first)
         while let c = peek(name.count), Parser.isIdentifierPart(c) {
@@ -45,14 +45,14 @@ extension Parser {
     }
 
     /// The identifier starting at `index`, without moving.
-    func identifier(at index: Int) -> String? {
+    package func identifier(at index: Int) -> String? {
         guard index < chars.count, Parser.isIdentifierStart(chars[index]) else { return nil }
         var end = index + 1
         while end < chars.count, Parser.isIdentifierPart(chars[end]) { end += 1 }
         return String(chars[index..<end])
     }
 
-    func kind(of name: String) -> NameKind? {
+    package func kind(of name: String) -> NameKind? {
         for scope in scopes.reversed() {
             if let kind = scope[name] { return kind }
         }
@@ -61,7 +61,7 @@ extension Parser {
 
     /// Skips blanks, line continuations and comments; newlines too when
     /// asked or inside brackets.
-    mutating func skipSpaces(newlines: Bool = false) {
+    package mutating func skipSpaces(newlines: Bool = false) {
         while let c = peek() {
             if c == " " || c == "\t" {
                 pos += 1
@@ -80,7 +80,7 @@ extension Parser {
         }
     }
 
-    mutating func skipSeparators() {
+    package mutating func skipSeparators() {
         while true {
             skipSpaces()
             guard peek() == ";" || peek() == "\n" else { return }
@@ -88,30 +88,30 @@ extension Parser {
         }
     }
 
-    func unexpected(_ c: Character) -> SyntaxError {
+    package func unexpected(_ c: Character) -> SyntaxError {
         SyntaxError(c == "\n" ? "unexpected newline" : "unexpected '\(c)'")
     }
 
-    func expected(_ what: String) -> SyntaxError {
+    package func expected(_ what: String) -> SyntaxError {
         guard let c = peek() else { return .incomplete("expected \(what)") }
         return SyntaxError("expected \(what), found \(c == "\n" ? "newline" : "'\(c)'")")
     }
 
-    static func isDigit(_ c: Character) -> Bool {
+    package static func isDigit(_ c: Character) -> Bool {
         c.isASCII && c.isNumber
     }
 
     /// Whether `name` can be written as a name: `count`, not `$json`.
-    static func isIdentifier(_ name: String) -> Bool {
+    package static func isIdentifier(_ name: String) -> Bool {
         guard let first = name.first, isIdentifierStart(first) else { return false }
         return name.dropFirst().allSatisfy(isIdentifierPart)
     }
 
-    static func isIdentifierStart(_ c: Character) -> Bool {
+    package static func isIdentifierStart(_ c: Character) -> Bool {
         c == "_" || c.isLetter
     }
 
-    static func isIdentifierPart(_ c: Character) -> Bool {
+    package static func isIdentifierPart(_ c: Character) -> Bool {
         isIdentifierStart(c) || isDigit(c)
     }
 }

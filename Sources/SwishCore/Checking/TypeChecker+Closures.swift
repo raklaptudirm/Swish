@@ -4,7 +4,7 @@ import SwishKit
 extension TypeChecker {
     // MARK: Closures
 
-    func functionType(_ signature: Signature) -> TypeAnnotation {
+    package func functionType(_ signature: Signature) -> TypeAnnotation {
         .functionType(signature.parameters.map { $0.variadic ? .list($0.type) : $0.type }, signature.returns,
                       throws: signature.isThrowing)
     }
@@ -13,7 +13,7 @@ extension TypeChecker {
     /// expects (`filter` expects `(Element) -> Bool`), or aren't known; its
     /// result is what the context expects, what it says, or what its
     /// `return`s give; it throws if its body can.
-    func closureType(_ closure: inout ClosureLiteral, expecting expected: TypeAnnotation?) throws -> TypeAnnotation {
+    package func closureType(_ closure: inout ClosureLiteral, expecting expected: TypeAnnotation?) throws -> TypeAnnotation {
         var expectedParameters: [TypeAnnotation]?
         var expectedResult: TypeAnnotation?
         if case .functionType(let parameters, let result, _)? = expected, parameters.count == closure.parameters.count {

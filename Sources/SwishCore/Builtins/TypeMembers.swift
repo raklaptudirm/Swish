@@ -5,37 +5,50 @@ import SwishKit
 /// from the bridge (with Swish's own extensions, and for a sequence the
 /// shell's additions), a struct's or enum's from its declaration. One
 /// description, so what's shown is what can be called.
-struct TypeDescription {
+package struct TypeDescription {
     /// What a member is; the order of the cases is the order `help` shows
     /// them in.
-    enum Kind: String, CaseIterable {
+    package enum Kind: String, CaseIterable {
         case `case`, initializer, property, method
         case staticProperty = "static property", staticMethod = "static method"
 
         /// The heading `help` lists them under: "Properties", "Static methods".
-        var heading: String {
+        package var heading: String {
             let plural = rawValue.hasSuffix("y") ? rawValue.dropLast() + "ies" : rawValue + "s"
             return plural.prefix(1).uppercased() + plural.dropFirst()
         }
     }
 
-    struct Member {
-        let name: String
-        let kind: Kind
+    package struct Member {
+        package let name: String
+        package let kind: Kind
         /// As Swift writes it: `count: Int`, `uppercased() -> String`.
-        let signature: AttributedString
-        let summary: String
+        package let signature: AttributedString
+        package let summary: String
+    
+        package init(name: String, kind: Kind, signature: AttributedString, summary: String) {
+            self.name = name
+            self.kind = kind
+            self.signature = signature
+            self.summary = summary
+        }
     }
 
-    let name: String
+    package let name: String
     /// What kind of type: "Swift type", "struct" or "enum".
-    let kind: String
-    let members: [Member]
+    package let kind: String
+    package let members: [Member]
+
+    package init(name: String, kind: String, members: [Member]) {
+        self.name = name
+        self.kind = kind
+        self.members = members
+    }
 }
 
 extension Interpreter {
     /// The type named `name`, if Swish knows one by that name.
-    func typeDescription(named name: String) -> TypeDescription? {
+    package func typeDescription(named name: String) -> TypeDescription? {
         if let bridged = Bridge.types[name] { return describe(bridged) }
         switch lookup(name)?.value {
         case .object(let type as StructType)?: return describe(type)
@@ -45,7 +58,7 @@ extension Interpreter {
     }
 
     /// The name `typeDescription` knows a value's type by.
-    func describedTypeName(of value: Value) -> String? {
+    package func describedTypeName(of value: Value) -> String? {
         if case .record(let record) = value { return record.typeName }
         return TypeChecker(interpreter: self).type(of: value).swiftType?.name
     }
@@ -131,7 +144,7 @@ extension Interpreter {
     /// What `help Type` shows: its members, grouped by kind, each with its
     /// signature (highlighted as Swift) and, on the line below, what its
     /// documentation says.
-    func helpLines(for type: TypeDescription) -> [AttributedString] {
+    package func helpLines(for type: TypeDescription) -> [AttributedString] {
         var lines = [AttributedString(joining: [.init(type.kind, DisplayStyle.keyword), .init(" "), .init(type.name, DisplayStyle.type)])]
         let groups = Dictionary(grouping: type.members, by: \.kind)
         for kind in TypeDescription.Kind.allCases {
@@ -150,7 +163,7 @@ extension Interpreter {
 
 extension TypeDescription {
     /// A bridged member as Swift declares it, in pieces by what each is.
-    static func signature(_ member: BridgedMember, settable: Bool) -> AttributedString {
+    package static func signature(_ member: BridgedMember, settable: Bool) -> AttributedString {
         var pieces: [AttributedString] = []
         switch member.kind {
         case .initializer:
@@ -167,14 +180,14 @@ extension TypeDescription {
 
     /// A Swish function as a member, under `name` if given: its input is
     /// what it's called on, so it isn't shown.
-    static func signature(_ function: Function, as name: String? = nil) -> AttributedString {
+    package static func signature(_ function: Function, as name: String? = nil) -> AttributedString {
         AttributedString(joining: (function.isMutating ? [AttributedString("mutating", .keyword), .init(" ")] : [])
                    + function.declaration(as: name, nameStyle: name == "init" ? .keyword : .command) { $0.isInput })
     }
 
     /// `let x: Int`, `var x: Int`, or with no `mutable`, a computed
     /// `var x: Int { get }`.
-    static func property(_ name: String, _ type: TypeAnnotation, mutable: Bool?) -> [AttributedString] {
+    package static func property(_ name: String, _ type: TypeAnnotation, mutable: Bool?) -> [AttributedString] {
         [.init(mutable == false ? "let" : "var", .keyword), .init(" "), .init(name, .command), .init(": ")] + type.styled
             + (mutable == nil ? [.init(" { "), .init("get", .keyword), .init(" }")] : [])
     }
@@ -186,5 +199,5 @@ extension TypeDescription {
 
 private extension String {
     /// The first line: a documentation summary's first sentence's line.
-    var firstLine: String { String(prefix { $0 != "\n" }) }
+    package var firstLine: String { String(prefix { $0 != "\n" }) }
 }

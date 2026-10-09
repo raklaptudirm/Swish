@@ -5,7 +5,7 @@ import SystemPackage
 
 /// A Swish key path (`\.status.code`, or `--by size`) as a Swift one over
 /// values: each name a subscript that reads the field, one after another.
-func bridgeKeyPath(_ value: Value) throws -> KeyPath<Value, Value> {
+package func bridgeKeyPath(_ value: Value) throws -> KeyPath<Value, Value> {
     guard case .function(let keyPath as KeyPathValue) = value else {
         throw SwishError("expected a key path, not \(value.typeName)")
     }
@@ -15,7 +15,7 @@ func bridgeKeyPath(_ value: Value) throws -> KeyPath<Value, Value> {
 /// Runs `body`, which reads fields through key paths, with fields read as the
 /// shell reads them; the first failure (a field that isn't there) is thrown
 /// after it, since a key path can't throw.
-func withFieldReader<T>(_ shell: Interpreter, _ body: () throws -> T) throws -> T {
+package func withFieldReader<T>(_ shell: Interpreter, _ body: () throws -> T) throws -> T {
     var failure: Error?
     let saved = FieldAccess.reader
     FieldAccess.reader = { value, name in
@@ -32,7 +32,7 @@ func withFieldReader<T>(_ shell: Interpreter, _ body: () throws -> T) throws -> 
 
 /// A case of a Swift enum from a Swish value: the case of that name, among
 /// all the enum's.
-func bridgeCase<T: CaseIterable>(_ type: T.Type, _ value: Value) throws -> T {
+package func bridgeCase<T: CaseIterable>(_ type: T.Type, _ value: Value) throws -> T {
     guard case .enumValue(let found) = value, let match = T.allCases.first(where: { "\($0)" == found.name }) else {
         throw SwishError("expected a \(T.self), not \(value.typeName)")
     }
@@ -40,13 +40,13 @@ func bridgeCase<T: CaseIterable>(_ type: T.Type, _ value: Value) throws -> T {
 }
 
 /// A path as Swish holds it: a FilePath.
-func pathValue(_ path: String) -> Value {
+package func pathValue(_ path: String) -> Value {
     SwiftValue.make(FilePath(path), as: "FilePath")
 }
 
 /// What a record's field is that encoding loses: an enum is encoded as its
 /// raw text and a path as an object, and Swish holds them as what they are.
-enum FieldKind {
+package enum FieldKind {
     case enumeration(String)
     /// A Swift type held as it is, of this name: a `FilePath`, a `FileSize`.
     case boxed(String)
@@ -56,7 +56,7 @@ enum FieldKind {
 /// them and all there: the encoder leaves out a nil, and the declaration says
 /// it's a field. A field of `patches` is read from the Swift value itself and
 /// made what it is declared as.
-func bridgeRecord<T: Encodable>(_ shell: Interpreter, _ value: T, patches: [String: FieldKind] = [:]) -> Value {
+package func bridgeRecord<T: Encodable>(_ shell: Interpreter, _ value: T, patches: [String: FieldKind] = [:]) -> Value {
     guard case .record(let encoded)? = try? ValueEncoder().encode(value) else { return .nothing }
     var record = Record(typeName: encoded.typeName)
     for child in Mirror(reflecting: value).children {
@@ -78,13 +78,13 @@ func bridgeRecord<T: Encodable>(_ shell: Interpreter, _ value: T, patches: [Stri
 
 extension Interpreter {
     /// What a standard library function that asks for it is lent.
-    var context: ShellContext {
+    package var context: ShellContext {
         ShellContext(history: historyEntries, colorOutput: host.output.traits().styled, display: displayRegistry)
     }
 }
 
 /// A list's items, or an Output's lines.
-func bridgeList(_ value: Value) throws -> [Value] {
+package func bridgeList(_ value: Value) throws -> [Value] {
     switch value {
     case .list(let items): return items
     default:
@@ -94,18 +94,18 @@ func bridgeList(_ value: Value) throws -> [Value] {
 }
 
 /// A dictionary as Swift's, which is what it holds.
-func bridgeDictionary(_ value: Value) throws -> [Value: Value] {
+package func bridgeDictionary(_ value: Value) throws -> [Value: Value] {
     guard case .dictionary(let dictionary) = value else { throw SwishError("expected a dictionary, not \(value.typeName)") }
     return dictionary.dictionary
 }
 
 /// Swift's dictionary as Swish's.
-func bridgeDictionary(_ dictionary: [Value: Value]) -> Value {
+package func bridgeDictionary(_ dictionary: [Value: Value]) -> Value {
     .dictionary(ValueDictionary(dictionary))
 }
 
 /// A tuple's elements, by label or position, made into a Swift tuple.
-func bridgeTuple<T>(_ value: Value, _ labels: [String?], _ make: ([Value]) throws -> T) throws -> T {
+package func bridgeTuple<T>(_ value: Value, _ labels: [String?], _ make: ([Value]) throws -> T) throws -> T {
     guard case .record(let record) = value, record.typeName == nil, record.count == labels.count else {
         throw SwishError("expected a tuple of \(labels.count), not \(value.typeName)")
     }
@@ -115,7 +115,7 @@ func bridgeTuple<T>(_ value: Value, _ labels: [String?], _ make: ([Value]) throw
 }
 
 /// A Swift tuple as Swish's, from its elements' labels and values.
-func bridgeTuple<T>(_ tuple: T, _ elements: (T) -> [(String?, Value)]) -> Value {
+package func bridgeTuple<T>(_ tuple: T, _ elements: (T) -> [(String?, Value)]) -> Value {
     var record = Record()
     for (index, (label, value)) in elements(tuple).enumerated() { record[label ?? String(index)] = value }
     return .record(record)
@@ -124,7 +124,7 @@ func bridgeTuple<T>(_ tuple: T, _ elements: (T) -> [(String?, Value)]) -> Value 
 /// The items of any sequence, for a Swift parameter that takes one: a
 /// String's Characters, a dictionary's (key, value) pairs, or what
 /// `Shell.items(of:)` gives.
-func bridgeSequence(_ value: Value) throws -> [Value] {
+package func bridgeSequence(_ value: Value) throws -> [Value] {
     switch value {
     case .string(let text):
         return Array(Interpreter.iterator(text))
@@ -137,28 +137,28 @@ func bridgeSequence(_ value: Value) throws -> [Value] {
 }
 
 /// A range with bounds of a Swift type, from Swish's range of values.
-func bridgeRange<Bound: Comparable>(_ value: Value, _ bound: (Value) throws -> Bound) throws -> Range<Bound> {
+package func bridgeRange<Bound: Comparable>(_ value: Value, _ bound: (Value) throws -> Bound) throws -> Range<Bound> {
     let range = try SwiftValue.unbox(Range<Value>.self, value)
     return Range(uncheckedBounds: (lower: try bound(range.lowerBound), upper: try bound(range.upperBound)))
 }
 
-func bridgeClosedRange<Bound: Comparable>(_ value: Value, _ bound: (Value) throws -> Bound) throws -> ClosedRange<Bound> {
+package func bridgeClosedRange<Bound: Comparable>(_ value: Value, _ bound: (Value) throws -> Bound) throws -> ClosedRange<Bound> {
     let range = try SwiftValue.unbox(ClosedRange<Value>.self, value)
     return ClosedRange(uncheckedBounds: (lower: try bound(range.lowerBound), upper: try bound(range.upperBound)))
 }
 
 /// A Swift value boxed as Swish holds it, converted first (a `Set<Int>` to
 /// a `Set<Value>`).
-func bridgeBox<T, Boxed>(_ value: T, as typeName: String, _ convert: (T) -> Boxed) -> Value {
+package func bridgeBox<T, Boxed>(_ value: T, as typeName: String, _ convert: (T) -> Boxed) -> Value {
     SwiftValue.make(convert(value), as: typeName)
 }
 
-func bridgeBox<T, Boxed: Hashable>(_ value: T, as typeName: String, _ convert: (T) -> Boxed) -> Value {
+package func bridgeBox<T, Boxed: Hashable>(_ value: T, as typeName: String, _ convert: (T) -> Boxed) -> Value {
     SwiftValue.make(convert(value), as: typeName)
 }
 
 /// `lower...upper` or `lower..<upper`, of any values that compare.
-func makeRange(_ op: BinaryOperator, _ lower: Value, _ upper: Value) throws -> Value {
+package func makeRange(_ op: BinaryOperator, _ lower: Value, _ upper: Value) throws -> Value {
     guard lower <= upper else { throw RuntimeError("range \(lower)\(op.rawValue)\(upper) has its bounds reversed") }
     if op == .closedRange { return SwiftValue.make(ClosedRange(uncheckedBounds: (lower: lower, upper: upper)), as: "ClosedRange") }
     return SwiftValue.make(Range(uncheckedBounds: (lower: lower, upper: upper)), as: "Range")
@@ -167,14 +167,14 @@ func makeRange(_ op: BinaryOperator, _ lower: Value, _ upper: Value) throws -> V
 extension Interpreter {
     /// The items a value gives as they come, which can throw: a `Flow`'s,
     /// one at a time; nil for anything else.
-    static func flow(of value: Value) -> Flow<Value>? {
+    package static func flow(of value: Value) -> Flow<Value>? {
         if case .object(let box as SwiftValue) = value { box.value as? Flow<Value> } else { nil }
     }
 
     /// The items of a list, an Output's lines, or a Swift sequence Swish
     /// holds (a Set, a range of Ints, a dictionary's keys), one at a time,
     /// so a range of a billion never becomes a list; nil for anything else.
-    static func items(of value: Value) -> AnyIterator<Value>? {
+    package static func items(of value: Value) -> AnyIterator<Value>? {
         switch value {
         case .list(let items):
             return AnyIterator(items.makeIterator())
@@ -198,7 +198,7 @@ extension Interpreter {
     }
 
     /// A Swift sequence's elements as Swish values, boxed by their type's name.
-    static func iterator<S: Sequence>(_ sequence: S) -> AnyIterator<Value> {
+    package static func iterator<S: Sequence>(_ sequence: S) -> AnyIterator<Value> {
         var iterator = sequence.makeIterator()
         return AnyIterator {
             guard let next = iterator.next() else { return nil }
@@ -213,7 +213,7 @@ extension Interpreter {
 }
 
 /// A Swish function as a Swift closure.
-func bridgeClosure(_ shell: Interpreter, _ function: Value) -> ([Value]) throws -> Value {
+package func bridgeClosure(_ shell: Interpreter, _ function: Value) -> ([Value]) throws -> Value {
     { arguments in try shell.call(function, with: arguments) }
 }
 

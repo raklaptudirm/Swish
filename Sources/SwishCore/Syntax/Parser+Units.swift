@@ -2,7 +2,7 @@ import Foundation
 import SwishKit
 
 extension Parser {
-    mutating func parseChain() throws(SyntaxError) -> Chain {
+    package mutating func parseChain() throws(SyntaxError) -> Chain {
         var chain = Chain(first: try parseUnit())
         while true {
             skipSpaces()
@@ -19,7 +19,7 @@ extension Parser {
         }
     }
 
-    mutating func parseUnit() throws(SyntaxError) -> Unit {
+    package mutating func parseUnit() throws(SyntaxError) -> Unit {
         skipSpaces()
         guard peek() != nil else { throw .incomplete("expected a command") }
         switch identifier() {
@@ -67,7 +67,7 @@ extension Parser {
         return unit
     }
 
-    mutating func parseIf() throws(SyntaxError) -> IfStatement {
+    package mutating func parseIf() throws(SyntaxError) -> IfStatement {
         keyword("if")
         skipSpaces()
         let (condition, bound) = try parseIfCondition()
@@ -90,7 +90,7 @@ extension Parser {
     }
 
     /// `guard condition else { … }`, whose bindings last to the block's end.
-    mutating func parseGuard() throws(SyntaxError) -> Statement {
+    package mutating func parseGuard() throws(SyntaxError) -> Statement {
         keyword("guard")
         skipSpaces()
         guardCondition = true
@@ -108,7 +108,7 @@ extension Parser {
 
     /// An `if` or `guard` condition: a Bool (or command), `let x = y`, or
     /// `case pattern = y`; with the names it binds.
-    mutating func parseIfCondition() throws(SyntaxError) -> (IfStatement.Condition, [String: NameKind]) {
+    package mutating func parseIfCondition() throws(SyntaxError) -> (IfStatement.Condition, [String: NameKind]) {
         let condition: IfStatement.Condition
         var bound: [String: NameKind] = [:]
         if identifier() == "case" {
@@ -140,13 +140,13 @@ extension Parser {
         return (condition, bound)
     }
 
-    mutating func parseCondition() throws(SyntaxError) -> Chain {
+    package mutating func parseCondition() throws(SyntaxError) -> Chain {
         conditionDepth += 1
         defer { conditionDepth -= 1 }
         return try parseChain()
     }
 
-    mutating func parseFor() throws(SyntaxError) -> ForLoop {
+    package mutating func parseFor() throws(SyntaxError) -> ForLoop {
         keyword("for")
         skipSpaces()
         let variableStart = pos
@@ -165,7 +165,7 @@ extension Parser {
         return ForLoop(variable: variable, sequence: sequence, body: body)
     }
 
-    mutating func parseWhile() throws(SyntaxError) -> WhileLoop {
+    package mutating func parseWhile() throws(SyntaxError) -> WhileLoop {
         keyword("while")
         let condition = try parseCondition()
         skipSpaces()

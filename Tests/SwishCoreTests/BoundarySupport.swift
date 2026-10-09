@@ -32,13 +32,10 @@ enum Boundaries {
 
     /// What's wrong, one line each; empty when the core is inside its boundaries.
     static func violations() throws -> [String] {
-        var leaves: Set<String> = []
         var allowed: [String: Int] = [:] // "file\tgroup" to count
         for line in try String(contentsOf: ledger, encoding: .utf8).split(separator: "\n") where !line.hasPrefix("#") {
             let fields = line.split(separator: "\t").map(String.init)
-            if fields.count == 2, fields[0] == "leaves" {
-                leaves.insert(fields[1])
-            } else if fields.count == 4, fields[0] == "allow", let count = Int(fields[3]) {
+            if fields.count == 4, fields[0] == "allow", let count = Int(fields[3]) {
                 allowed["\(fields[1])\t\(fields[2])"] = count
             } else {
                 return ["boundaries.txt: can't read the line \(line)"]
@@ -52,7 +49,6 @@ enum Boundaries {
             for name in try FileManager.default.contentsOfDirectory(atPath: url.path).sorted() where name.hasSuffix(".swift") {
                 let file = "\(directory)/\(name)"
                 seen.insert(file)
-                if leaves.contains(file) { continue }
                 let source = code(of: try String(contentsOf: url.appendingPathComponent(name), encoding: .utf8))
 
                 let reached = matches(operatingSystem, in: source)
@@ -69,9 +65,6 @@ enum Boundaries {
                     }
                 }
             }
-        }
-        for entry in leaves where !seen.contains(entry) {
-            problems.append("boundaries.txt: leaves \(entry), which isn't in the core directories any more")
         }
         for key in allowed.keys.sorted() {
             let file = String(key.split(separator: "\t")[0])

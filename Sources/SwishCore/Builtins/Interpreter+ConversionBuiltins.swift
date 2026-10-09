@@ -5,7 +5,7 @@ import SwishStandardLibrary
 extension Interpreter {
     // MARK: Conversions
 
-    func members() -> Function {
+    package func members() -> Function {
         .builtin(
             "members", "Describes the input: each type's fields and members.", [.input("items", .list(.any))],
             .native { shell, args in

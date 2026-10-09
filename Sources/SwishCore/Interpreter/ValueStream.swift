@@ -4,25 +4,25 @@ import SwishKit
 /// A pull-based stream of values between in-process pipeline stages. A
 /// stage only runs when downstream asks for its next item, so
 /// `… | first 5` stops upstream work early.
-final class ValueStream {
+package final class ValueStream {
     private let pull: () throws -> Value?
 
-    init(_ pull: @escaping () throws -> Value?) {
+    package init(_ pull: @escaping () throws -> Value?) {
         self.pull = pull
     }
 
-    func next() throws -> Value? {
+    package func next() throws -> Value? {
         try pull()
     }
 
-    static var empty: ValueStream {
+    package static var empty: ValueStream {
         ValueStream { nil }
     }
 
     /// A list flows as its elements, as does a Swift sequence (a Set, a
     /// range of Ints, a FilePath's components); nothing as no items,
     /// anything else as a single item.
-    static func elements(of value: Value) -> ValueStream {
+    package static func elements(of value: Value) -> ValueStream {
         if let flow = Interpreter.flow(of: value) { return ValueStream { try flow.read() } }
         let items: AnyIterator<Value>
         switch value {

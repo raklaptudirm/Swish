@@ -6,7 +6,7 @@ extension Parser {
 
     /// `method`: a struct's, which is reached through `self` rather than
     /// bound as a function.
-    mutating func parseFunction(method: Bool = false) throws(SyntaxError) -> FunctionDecl {
+    package mutating func parseFunction(method: Bool = false) throws(SyntaxError) -> FunctionDecl {
         let documentation = documentation(before: pos)
         keyword("func")
         skipSpaces()
@@ -67,7 +67,7 @@ extension Parser {
     }
 
     /// `<T, V: Comparable>`: type parameters and their constraints.
-    mutating func parseGenericParameters() throws(SyntaxError) -> [String: [String]] {
+    package mutating func parseGenericParameters() throws(SyntaxError) -> [String: [String]] {
         pos += 1
         var generics: [String: [String]] = [:]
         repeat {
@@ -86,7 +86,7 @@ extension Parser {
 
     /// `extension Sequence { … }`: methods every sequence has, with its
     /// items' type as `Element`.
-    mutating func parseExtension() throws(SyntaxError) -> Statement {
+    package mutating func parseExtension() throws(SyntaxError) -> Statement {
         keyword("extension")
         skipSpaces()
         let name = try parseName(after: "'extension'")
@@ -110,7 +110,7 @@ extension Parser {
     }
 
     /// `throws` after a signature's parameters.
-    mutating func parseThrows() -> Bool {
+    package mutating func parseThrows() -> Bool {
         guard identifier() == "throws" else { return false }
         keyword("throws")
         skipSpaces()
@@ -118,7 +118,7 @@ extension Parser {
     }
 
     /// The `///` comment lines directly above the line starting at `index`.
-    func documentation(before index: Int) -> Documentation? {
+    package func documentation(before index: Int) -> Documentation? {
         var lineStart = index
         while lineStart > 0 && (chars[lineStart - 1] == " " || chars[lineStart - 1] == "\t") { lineStart -= 1 }
         guard lineStart > 0 && chars[lineStart - 1] == "\n" else { return nil }
@@ -155,7 +155,7 @@ extension Parser {
 
     /// A closure, positioned after its opening brace: `{ x, y in … }`,
     /// `{ (x: Int) -> Int in … }`, or `{ $0 * 2 }`.
-    mutating func parseClosure() throws(SyntaxError) -> ClosureLiteral {
+    package mutating func parseClosure() throws(SyntaxError) -> ClosureLiteral {
         var named: (parameters: [Parameter], returnType: TypeAnnotation?)?
         let beforeHead = self
         do {
@@ -168,7 +168,7 @@ extension Parser {
         return ClosureLiteral(parameters: parameters, returnType: named?.returnType, body: body, names: lastBodyNames)
     }
 
-    mutating func parseClosureHead() throws(SyntaxError) -> ([Parameter], TypeAnnotation?) {
+    package mutating func parseClosureHead() throws(SyntaxError) -> ([Parameter], TypeAnnotation?) {
         skipSpaces(newlines: true)
         var parameters: [Parameter] = []
         if peek() == "(" {
@@ -196,7 +196,7 @@ extension Parser {
     /// Statements up to the closing brace, whose opening brace is already
     /// consumed, in a new function scope. Returns the `$n` arity for
     /// anonymous closures.
-    mutating func parseFunctionBody(
+    package mutating func parseFunctionBody(
         parameters: [Parameter], anonymous: Bool
     ) throws(SyntaxError) -> (Program, Int) {
         let saved = (loopDepth, bracketDepth, conditionDepth, tryDepth, switchDepth)
@@ -236,7 +236,7 @@ extension Parser {
 
     /// `(label name: Type = default, …)` for functions (`named`), or
     /// `(name: Type, …)` for closures, where types are optional.
-    mutating func parseParameters(named: Bool) throws(SyntaxError) -> [Parameter] {
+    package mutating func parseParameters(named: Bool) throws(SyntaxError) -> [Parameter] {
         pos += 1
         bracketDepth += 1
         defer { bracketDepth -= 1 }
@@ -255,7 +255,7 @@ extension Parser {
         return parameters
     }
 
-    mutating func parseParameter(named: Bool) throws(SyntaxError) -> Parameter {
+    package mutating func parseParameter(named: Bool) throws(SyntaxError) -> Parameter {
         var isInput = false
         var shortFlag: Character?
         while named && peek() == "@" {
@@ -316,7 +316,7 @@ extension Parser {
         return parameter
     }
 
-    func validate(_ parameters: [Parameter]) throws(SyntaxError) {
+    package func validate(_ parameters: [Parameter]) throws(SyntaxError) {
         var seen: Set<String> = []
         var shortFlags: Set<Character> = []
         if parameters.filter(\.isInput).count > 1 {
@@ -344,12 +344,12 @@ extension Parser {
         }
     }
 
-    mutating func parseType() throws(SyntaxError) -> TypeAnnotation {
+    package mutating func parseType() throws(SyntaxError) -> TypeAnnotation {
         let type = try parseNonOptionalType()
         return consume("?") ? .optional(type) : type
     }
 
-    mutating func parseNonOptionalType() throws(SyntaxError) -> TypeAnnotation {
+    package mutating func parseNonOptionalType() throws(SyntaxError) -> TypeAnnotation {
         skipSpaces()
         if consume("[") {
             let element = try parseType()
@@ -441,7 +441,7 @@ extension Parser {
     }
 
     /// An identifier that isn't a keyword; `_` is allowed.
-    mutating func parseName(after context: String) throws(SyntaxError) -> String {
+    package mutating func parseName(after context: String) throws(SyntaxError) -> String {
         guard let name = identifier() else { throw expected("a name after \(context)") }
         guard !Parser.keywords.contains(name) else { throw SyntaxError("'\(name)' is a keyword") }
         pos += name.count

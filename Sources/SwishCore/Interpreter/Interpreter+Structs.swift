@@ -5,36 +5,36 @@ import SwishKit
 /// type, so they're values like Swift's structs, and tables, `where`,
 /// `select` and `to json` work on them as on any record; what the type adds
 /// (computed properties, methods, initializers) is looked up through here.
-final class StructType: SwishObject, @unchecked Sendable {
-    let name: String
+package final class StructType: SwishObject, @unchecked Sendable {
+    package let name: String
     /// Stored properties, in declaration order: the order of a value's fields.
-    let stored: [PropertyDecl]
-    let computed: [String: Function]
-    let methods: [String: OverloadSet]
+    package let stored: [PropertyDecl]
+    package let computed: [String: Function]
+    package let methods: [String: OverloadSet]
     /// Custom initializers; without any, the memberwise one.
-    let initializers: OverloadSet?
-    let memberwise: Function
+    package let initializers: OverloadSet?
+    package let memberwise: Function
     /// The protocols it declares: `struct Point: Equatable`.
-    let conformances: [String]
+    package let conformances: [String]
     /// `static let` and `static var`: declared, with their types once checked;
     /// the stored ones' values are in `statics`.
-    let staticProperties: [PropertyDecl]
-    let staticComputed: [String: Function]
-    let staticMethods: [String: OverloadSet]
-    var statics: [String: StaticValue] = [:]
+    package let staticProperties: [PropertyDecl]
+    package let staticComputed: [String: Function]
+    package let staticMethods: [String: OverloadSet]
+    package var statics: [String: StaticValue] = [:]
 
     /// A stored static property's value, kept on the type.
-    final class StaticValue {
-        var value: Value
-        let mutable: Bool
+    package final class StaticValue {
+        package var value: Value
+        package let mutable: Bool
 
-        init(_ value: Value, mutable: Bool) {
+        package init(_ value: Value, mutable: Bool) {
             self.value = value
             self.mutable = mutable
         }
     }
 
-    init(name: String, stored: [PropertyDecl], computed: [String: Function], methods: [String: OverloadSet],
+    package init(name: String, stored: [PropertyDecl], computed: [String: Function], methods: [String: OverloadSet],
          initializers: OverloadSet?, memberwise: Function, conformances: [String] = [],
          staticProperties: [PropertyDecl] = [], staticComputed: [String: Function] = [:],
          staticMethods: [String: OverloadSet] = [:]) {
@@ -50,29 +50,29 @@ final class StructType: SwishObject, @unchecked Sendable {
         self.memberwise = memberwise
     }
 
-    func property(_ name: String) -> PropertyDecl? {
+    package func property(_ name: String) -> PropertyDecl? {
         stored.first { $0.name == name }
     }
 
-    func staticProperty(_ name: String) -> PropertyDecl? {
+    package func staticProperty(_ name: String) -> PropertyDecl? {
         staticProperties.first { $0.name == name }
     }
 
-    var typeName: String { "struct" }
-    var memberNames: [String] { [] }
-    func member(_ name: String) -> Value? { nil }
-    var fields: Record? { nil }
-    var description: String { "struct \(name)" }
+    package var typeName: String { "struct" }
+    package var memberNames: [String] { [] }
+    package func member(_ name: String) -> Value? { nil }
+    package var fields: Record? { nil }
+    package var description: String { "struct \(name)" }
 }
 
 /// `self` for a method: its value going in, and as the method left it.
-final class Receiver {
-    var value: Value
-    let mutable: Bool
+package final class Receiver {
+    package var value: Value
+    package let mutable: Bool
     /// In an `init`, which may also set `let` properties.
-    let initializing: Bool
+    package let initializing: Bool
 
-    init(_ value: Value, mutable: Bool, initializing: Bool = false) {
+    package init(_ value: Value, mutable: Bool, initializing: Bool = false) {
         self.value = value
         self.mutable = mutable
         self.initializing = initializing
@@ -82,7 +82,7 @@ final class Receiver {
 extension Interpreter {
     // MARK: Declaring
 
-    func declare(_ decl: StructDecl) throws {
+    package func declare(_ decl: StructDecl) throws {
         var computed: [String: Function] = [:]
         for property in decl.properties {
             guard let getter = property.getter else { continue }
@@ -156,12 +156,12 @@ extension Interpreter {
         }
     }
 
-    func structType(named name: String) -> StructType? {
+    package func structType(named name: String) -> StructType? {
         guard case .object(let type as StructType)? = lookup(name)?.value else { return nil }
         return type
     }
 
-    func structType(of record: Record) -> StructType? {
+    package func structType(of record: Record) -> StructType? {
         record.typeName.flatMap(structType(named:))
     }
 
@@ -169,7 +169,7 @@ extension Interpreter {
 
     /// `Point(x: 1, y: 2)`: through an `init` the struct declares, or the
     /// memberwise one.
-    func construct(_ type: StructType, _ arguments: [Argument], overload: Int? = nil) throws -> Value {
+    package func construct(_ type: StructType, _ arguments: [Argument], overload: Int? = nil) throws -> Value {
         let values = try arguments.map { argument -> Argument in
             if case .caseLiteral = argument.value { return argument }
             return Argument(label: argument.label, value: .literal(try evaluate(argument.value)))
@@ -228,7 +228,7 @@ extension Interpreter {
 
     /// A computed property's value, or a method as a function value; nil if
     /// the type has neither by that name.
-    func structMember(_ name: String, of record: Record, _ type: StructType) throws -> Value? {
+    package func structMember(_ name: String, of record: Record, _ type: StructType) throws -> Value? {
         if let getter = type.computed[name] {
             return try invoke(getter, with: [:], receiver: Receiver(.record(record), mutable: false))
         }
@@ -248,14 +248,14 @@ extension Interpreter {
 
     /// `Point.origin`, `Point.count`, or a static method as a function value;
     /// nil if the type has no static member by that name.
-    func staticMember(_ name: String, of type: StructType) throws -> Value? {
+    package func staticMember(_ name: String, of type: StructType) throws -> Value? {
         if let getter = type.staticComputed[name] { return try invoke(getter, with: [:]) }
         if let slot = type.statics[name] { return slot.value }
         return type.staticMethods[name].map(Value.function)
     }
 
     /// `Point.make(1)`.
-    func callStatic(_ methods: OverloadSet, _ arguments: [Argument]) throws -> Value {
+    package func callStatic(_ methods: OverloadSet, _ arguments: [Argument]) throws -> Value {
         let values = try arguments.map { argument -> Argument in
             if case .caseLiteral = argument.value { return argument }
             return Argument(label: argument.label, value: .literal(try evaluate(argument.value)))
@@ -266,7 +266,7 @@ extension Interpreter {
 
     /// `p.move(by: 1)`. A mutating method changes `p` itself, so `p` must
     /// be a `var` (or a part of one).
-    func callMethod(_ methods: OverloadSet, of base: Value, at baseExpr: Expr, _ arguments: [Argument]) throws -> Value {
+    package func callMethod(_ methods: OverloadSet, of base: Value, at baseExpr: Expr, _ arguments: [Argument]) throws -> Value {
         let values = try arguments.map { argument -> Argument in
             if case .caseLiteral = argument.value { return argument }
             return Argument(label: argument.label, value: .literal(try evaluate(argument.value)))
@@ -287,7 +287,7 @@ extension Interpreter {
 
     /// Puts what a mutating method made of `receiver` back where it came
     /// from: a variable, or a part of one.
-    func mutate(_ receiver: Expr, by method: String, _ change: (Value) throws -> Value) throws {
+    package func mutate(_ receiver: Expr, by method: String, _ change: (Value) throws -> Value) throws {
         guard let (root, path) = lvalue(receiver) else {
             throw RuntimeError("cannot use mutating method '\(method)' on a value that isn't in a variable")
         }
@@ -312,7 +312,7 @@ extension Interpreter {
     // MARK: Assigning
 
     /// `x = v`, `p.x += 1`, `xs[0] = v`, `r["k"] = v`.
-    func assign(_ assignment: Assignment) throws {
+    package func assign(_ assignment: Assignment) throws {
         // `Point.count += 1`: a static var, set through its type.
         if structType(named: assignment.root) == nil { try checkAssignable(assignment.root, what: "assign to") }
         try update(assignment.root, assignment.path) { current, type in

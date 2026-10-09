@@ -4,7 +4,7 @@ import SwishKit
 extension Parser {
     // MARK: Statements
 
-    mutating func parseProgram(until terminator: Character?) throws(SyntaxError) -> Program {
+    package mutating func parseProgram(until terminator: Character?) throws(SyntaxError) -> Program {
         // Functions and types can be used before their declarations, as in
         // Swift, so the names this block declares are bound from its start.
         for (keyword, name) in declaredNames(["func", "struct", "enum"], statementsOnly: true)
@@ -30,7 +30,7 @@ extension Parser {
     }
 
     /// The 1-based line `index` is on.
-    func line(at index: Int) -> Int {
+    package func line(at index: Int) -> Int {
         var low = 0
         var high = lineStarts.count
         while low + 1 < high {
@@ -40,7 +40,7 @@ extension Parser {
         return low + 1
     }
 
-    mutating func parseStatement() throws(SyntaxError) -> Statement {
+    package mutating func parseStatement() throws(SyntaxError) -> Statement {
         switch identifier() {
         case "let", "var":
             return try parseDeclaration()
@@ -115,7 +115,7 @@ extension Parser {
     /// `name = v`, `name.a[i] += v`, …, or nil (having looked ahead) if the
     /// statement isn't an assignment. In a struct's body, a member's name
     /// assigns through `self`.
-    mutating func parseAssignment(_ name: String) throws(SyntaxError) -> Assignment? {
+    package mutating func parseAssignment(_ name: String) throws(SyntaxError) -> Assignment? {
         let start = (pos, spans.count)
         mark(.variable, from: pos, to: pos + name.count)
         pos += name.count
@@ -163,12 +163,12 @@ extension Parser {
         return assignment
     }
 
-    func matches(_ text: String) -> Bool {
+    package func matches(_ text: String) -> Bool {
         text.enumerated().allSatisfy { peek($0.offset) == $0.element }
     }
 
     /// `do { … }`, optionally `catch { … }` or `catch let name { … }`.
-    mutating func parseDoCatch() throws(SyntaxError) -> Statement {
+    package mutating func parseDoCatch() throws(SyntaxError) -> Statement {
         keyword("do")
         skipSpaces()
         let body = try parseBlock()
@@ -195,17 +195,17 @@ extension Parser {
 
     /// Whether a statement can start at `index`: only blanks since the
     /// start, a newline, `;` or a brace.
-    func startsStatement(_ index: Int) -> Bool {
+    package func startsStatement(_ index: Int) -> Bool {
         var before = index - 1
         while before >= 0, chars[before] == " " || chars[before] == "\t" { before -= 1 }
         return before < 0 || "\n;{}".contains(chars[before])
     }
 
     /// The protocols a type can conform to, for now all builtin.
-    static let protocols: Set = ["Equatable", "Hashable", "Comparable", "CustomStringConvertible", "Encodable", "Sequence", "Tabular"]
+    package static let protocols: Set = ["Equatable", "Hashable", "Comparable", "CustomStringConvertible", "Encodable", "Sequence", "Tabular"]
 
     /// The names a pattern binds.
-    static func names(boundBy pattern: Pattern) -> [String] {
+    package static func names(boundBy pattern: Pattern) -> [String] {
         switch pattern {
         case .binding(let name, _): [name]
         case .enumCase(_, _, let arguments): (arguments ?? []).flatMap { names(boundBy: $0.pattern) }
@@ -213,7 +213,7 @@ extension Parser {
         }
     }
 
-    mutating func parseBlock(declaring names: [String: NameKind] = [:]) throws(SyntaxError) -> Program {
+    package mutating func parseBlock(declaring names: [String: NameKind] = [:]) throws(SyntaxError) -> Program {
         guard peek() == "{" else { throw expected("'{'") }
         pos += 1
         let savedCondition = conditionDepth

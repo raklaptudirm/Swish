@@ -3,18 +3,23 @@ import SwishKit
 
 // MARK: - AST
 
-struct Program: Equatable, Sendable {
-    var statements: [Statement]
+package struct Program: Equatable, Sendable {
+    package var statements: [Statement]
     /// Each statement's line in the source, 1-based, for error messages.
-    var lines: [Int] = []
+    package var lines: [Int] = []
 
     /// Programs are equal by what they say, wherever it was written.
-    static func == (lhs: Program, rhs: Program) -> Bool {
+    package static func == (lhs: Program, rhs: Program) -> Bool {
         lhs.statements == rhs.statements
+    }
+
+    package init(statements: [Statement], lines: [Int] = []) {
+        self.statements = statements
+        self.lines = lines
     }
 }
 
-enum Statement: Equatable, Sendable {
+package enum Statement: Equatable, Sendable {
     case declare(name: String, mutable: Bool, value: Expr)
     /// `x = v`, `p.x += 1`, `xs[0] = v`.
     case assign(Assignment)
@@ -47,7 +52,7 @@ enum Statement: Equatable, Sendable {
 
 extension Statement {
     /// A struct or enum declaration, which a block declares before it runs.
-    var declaresType: Bool {
+    package var declaresType: Bool {
         switch self {
         case .structDecl, .enumDecl: true
         default: false
@@ -56,21 +61,31 @@ extension Statement {
 }
 
 /// Units joined by `&&`/`||`, evaluated left to right on exit status.
-struct Chain: Equatable, Sendable {
-    var first: Unit
-    var links: [Link] = []
+package struct Chain: Equatable, Sendable {
+    package var first: Unit
+    package var links: [Link] = []
+
+    package init(first: Unit, links: [Link] = []) {
+        self.first = first
+        self.links = links
+    }
 }
 
-struct Link: Equatable, Sendable {
-    var op: ChainOperator
-    var unit: Unit
+package struct Link: Equatable, Sendable {
+    package var op: ChainOperator
+    package var unit: Unit
+
+    package init(op: ChainOperator, unit: Unit) {
+        self.op = op
+        self.unit = unit
+    }
 }
 
-enum ChainOperator: Equatable, Sendable {
+package enum ChainOperator: Equatable, Sendable {
     case and, or
 }
 
-indirect enum Unit: Equatable, Sendable {
+package indirect enum Unit: Equatable, Sendable {
     /// A command or pipeline of them, from a layer over the core.
     case extended(UnitExtensionBox)
     case expression(Expr)
@@ -80,8 +95,8 @@ indirect enum Unit: Equatable, Sendable {
     case whileLoop(WhileLoop)
 }
 
-struct IfStatement: Equatable, Sendable {
-    enum Condition: Equatable, Sendable {
+package struct IfStatement: Equatable, Sendable {
+    package enum Condition: Equatable, Sendable {
         case chain(Chain)
         /// `if let name = value`: runs the body with `name` bound when the
         /// value isn't nil.
@@ -90,13 +105,13 @@ struct IfStatement: Equatable, Sendable {
         case pattern(Pattern, Expr)
     }
 
-    var condition: Condition
-    var then: Program
-    var otherwise: Program?
+    package var condition: Condition
+    package var then: Program
+    package var otherwise: Program?
 
     /// A branch of an `if` expression: the one expression it is, or an
     /// `else if`'s own `if` expression.
-    static func branchExpression(_ branch: Program) -> Expr? {
+    package static func branchExpression(_ branch: Program) -> Expr? {
         guard branch.statements.count == 1, case .chain(let chain) = branch.statements[0], chain.links.isEmpty else { return nil }
         switch chain.first {
         case .expression(let expr): return expr
@@ -106,52 +121,87 @@ struct IfStatement: Equatable, Sendable {
     }
 
     /// A branch that is `expr`.
-    static func branch(_ expr: Expr) -> Program {
+    package static func branch(_ expr: Expr) -> Program {
         Program(statements: [.chain(Chain(first: .expression(expr)))])
     }
 
     /// This `if` as an expression, when it can be one: with an `else`, and
     /// every branch one expression. `else if` branches become expressions too.
-    var asExpression: IfStatement? {
+    package var asExpression: IfStatement? {
         guard let otherwise, let thenExpr = IfStatement.branchExpression(then),
               let elseExpr = IfStatement.branchExpression(otherwise) else { return nil }
         return IfStatement(condition: condition, then: IfStatement.branch(thenExpr), otherwise: IfStatement.branch(elseExpr))
     }
+
+    package init(condition: Condition, then: Program, otherwise: Program? = nil) {
+        self.condition = condition
+        self.then = then
+        self.otherwise = otherwise
+    }
 }
 
 /// `enum Name: RawType { case a, b(label: Type) = raw }`
-struct EnumDecl: Equatable, Sendable {
-    var name: String
-    var rawType: TypeAnnotation?
-    var cases: [EnumCaseDecl]
+package struct EnumDecl: Equatable, Sendable {
+    package var name: String
+    package var rawType: TypeAnnotation?
+    package var cases: [EnumCaseDecl]
     /// `enum Level: Int, Comparable`: the protocols after any raw type.
-    var conformances: [String] = []
+    package var conformances: [String] = []
+
+    package init(name: String, rawType: TypeAnnotation? = nil, cases: [EnumCaseDecl], conformances: [String] = []) {
+        self.name = name
+        self.rawType = rawType
+        self.cases = cases
+        self.conformances = conformances
+    }
 }
 
-struct EnumCaseDecl: Equatable, Sendable {
-    var name: String
-    var rawValue: Expr?
-    var associated: [AssociatedValue]
+package struct EnumCaseDecl: Equatable, Sendable {
+    package var name: String
+    package var rawValue: Expr?
+    package var associated: [AssociatedValue]
+
+    package init(name: String, rawValue: Expr? = nil, associated: [AssociatedValue]) {
+        self.name = name
+        self.rawValue = rawValue
+        self.associated = associated
+    }
 }
 
-struct AssociatedValue: Equatable, Sendable {
-    var label: String?
-    var type: TypeAnnotation
+package struct AssociatedValue: Equatable, Sendable {
+    package var label: String?
+    package var type: TypeAnnotation
+
+    package init(label: String? = nil, type: TypeAnnotation) {
+        self.label = label
+        self.type = type
+    }
 }
 
-struct SwitchStatement: Equatable, Sendable {
-    var subject: Expr
-    var cases: [SwitchCase]
+package struct SwitchStatement: Equatable, Sendable {
+    package var subject: Expr
+    package var cases: [SwitchCase]
+
+    package init(subject: Expr, cases: [SwitchCase]) {
+        self.subject = subject
+        self.cases = cases
+    }
 }
 
 /// `case p1, p2 where guard: body`; no patterns is `default:`.
-struct SwitchCase: Equatable, Sendable {
-    var patterns: [Pattern]
-    var guardExpr: Expr?
-    var body: Program
+package struct SwitchCase: Equatable, Sendable {
+    package var patterns: [Pattern]
+    package var guardExpr: Expr?
+    package var body: Program
+
+    package init(patterns: [Pattern], guardExpr: Expr? = nil, body: Program) {
+        self.patterns = patterns
+        self.guardExpr = guardExpr
+        self.body = body
+    }
 }
 
-indirect enum Pattern: Equatable, Sendable {
+package indirect enum Pattern: Equatable, Sendable {
     /// `_`
     case wildcard
     /// `let x`: matches anything, binding it.
@@ -163,18 +213,34 @@ indirect enum Pattern: Equatable, Sendable {
     case expression(Expr)
 }
 
-struct PatternArgument: Equatable, Sendable {
-    var label: String?
-    var pattern: Pattern
+package struct PatternArgument: Equatable, Sendable {
+    package var label: String?
+    package var pattern: Pattern
+
+    package init(label: String? = nil, pattern: Pattern) {
+        self.label = label
+        self.pattern = pattern
+    }
 }
 
-struct ForLoop: Equatable, Sendable {
-    var variable: String
-    var sequence: Expr
-    var body: Program
+package struct ForLoop: Equatable, Sendable {
+    package var variable: String
+    package var sequence: Expr
+    package var body: Program
+
+    package init(variable: String, sequence: Expr, body: Program) {
+        self.variable = variable
+        self.sequence = sequence
+        self.body = body
+    }
 }
 
-struct WhileLoop: Equatable, Sendable {
-    var condition: Chain
-    var body: Program
+package struct WhileLoop: Equatable, Sendable {
+    package var condition: Chain
+    package var body: Program
+
+    package init(condition: Chain, body: Program) {
+        self.condition = condition
+        self.body = body
+    }
 }

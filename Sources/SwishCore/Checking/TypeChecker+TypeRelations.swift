@@ -5,7 +5,7 @@ extension TypeChecker {
     // MARK: Fitting
 
     /// Whether a value of type `actual` can be used where `expected` is.
-    func fits(_ actual: TypeAnnotation, _ expected: TypeAnnotation) -> Bool {
+    package func fits(_ actual: TypeAnnotation, _ expected: TypeAnnotation) -> Bool {
         if actual == expected || actual == .unknown || expected == .unknown || expected == .any { return true }
         switch (actual, expected) {
         case (.optional(let a), .optional(let b)): return fits(a, b)
@@ -45,7 +45,7 @@ extension TypeChecker {
 extension TypeChecker {
     /// Whether a type stands for text where a String is wanted: a Swift type
     /// that says so (`StandsForText`), as an Output does.
-    func standsForText(_ type: TypeAnnotation) -> Bool {
+    package func standsForText(_ type: TypeAnnotation) -> Bool {
         guard let (name, _) = type.swiftType else { return false }
         return Bridge.types[name]?.conformances["StandsForText"] != nil
     }
@@ -55,7 +55,7 @@ extension TypeChecker {
     /// Whether `type` conforms to `proto`: as in Swift for the builtin types;
     /// a struct or enum by declaring it (an enum without associated values
     /// is Equatable and Hashable anyway, as in Swift).
-    func conforms(_ type: TypeAnnotation, to proto: String) -> Bool {
+    package func conforms(_ type: TypeAnnotation, to proto: String) -> Bool {
         // `=String`: a bridged member for one element type only
         // (`joined(separator:)` where Element == String).
         if proto.hasPrefix("=") { return type == .unknown || type.description == String(proto.dropFirst()) }
@@ -96,7 +96,7 @@ extension TypeChecker {
 
     /// `type` with its type parameters replaced by what they're bound to;
     /// one not bound yet isn't known.
-    func substitute(_ type: TypeAnnotation, _ bindings: [String: TypeAnnotation]) -> TypeAnnotation {
+    package func substitute(_ type: TypeAnnotation, _ bindings: [String: TypeAnnotation]) -> TypeAnnotation {
         switch type {
         case .parameter(let name): return bindings[name] ?? .unknown
         case .list(let element): return .list(substitute(element, bindings))
@@ -114,7 +114,7 @@ extension TypeChecker {
 
     /// Binds the type parameters in `pattern` by matching it with `actual`,
     /// the type an argument turned out to have.
-    func unify(_ pattern: TypeAnnotation, _ actual: TypeAnnotation, _ bindings: inout [String: TypeAnnotation]) {
+    package func unify(_ pattern: TypeAnnotation, _ actual: TypeAnnotation, _ bindings: inout [String: TypeAnnotation]) {
         switch (pattern, actual) {
         case (_, .unknown):
             return
@@ -148,7 +148,7 @@ extension TypeChecker {
     }
 
     /// The type of each item when iterating `type`.
-    func elementType(of type: TypeAnnotation) throws -> TypeAnnotation {
+    package func elementType(of type: TypeAnnotation) throws -> TypeAnnotation {
         if case .named(let name) = type, let element = Bridge.types[name]?.associatedTypes["Element"] { return element }
         if case .generic = type {
             guard let element = bridgedElement(type) else { throw TypeError("can't iterate over \(type): it isn't a Sequence") }

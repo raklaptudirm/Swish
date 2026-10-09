@@ -8,7 +8,7 @@ extension TypeChecker {
     /// defaults and types fit, the one whose parameters match the arguments
     /// most exactly. A tie is ambiguous, unless an argument's type isn't
     /// known yet, when nil leaves the choice to run time.
-    func resolve(
+    package func resolve(
         _ candidates: [Signature], _ arguments: inout [Argument], name: String, bindings: [String: TypeAnnotation] = [:]
     ) throws -> Signature? {
         var fitting: [(signature: Signature, cost: Int, uncertain: Bool, arguments: [Argument], sites: Int)] = []
@@ -49,7 +49,7 @@ extension TypeChecker {
         return winners[0].signature
     }
 
-    func describe(_ signature: Signature) -> String {
+    package func describe(_ signature: Signature) -> String {
         "\(signature.name)(" + signature.parameters.map { "\($0.label ?? "_"): \($0.type)" }.joined(separator: ", ") + ")"
     }
 
@@ -57,7 +57,7 @@ extension TypeChecker {
     /// labels, defaults, variadics and trailing closures. The cost counts
     /// conversions (a literal Int as a Double, a value made optional, an
     /// Output as its text) and untyped parameters, which match anything.
-    func match(
+    package func match(
         _ arguments: inout [Argument], to signature: Signature, bindings initial: [String: TypeAnnotation]
     ) throws -> (cost: Int, uncertain: Bool, returns: TypeAnnotation, throws: Bool) {
         let name = signature.name
@@ -131,7 +131,7 @@ extension TypeChecker {
     /// Whether an argument has a type of its own, apart from context: not a
     /// closure, a `.case`, `nil` or a collection literal, which take theirs
     /// from the parameter.
-    static func hasNaturalType(_ expr: Expr) -> Bool {
+    package static func hasNaturalType(_ expr: Expr) -> Bool {
         switch expr {
         case .closure, .caseLiteral, .list, .record, .tuple, .literal(.nothing), .keyPath: false
         // `c ? .green : .red` takes its type from where it goes, as its branches do.

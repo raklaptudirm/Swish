@@ -2,12 +2,12 @@ import Foundation
 import SwishKit
 
 extension Interpreter {
-    func lookup(_ name: String) -> Binding? {
+    package func lookup(_ name: String) -> Binding? {
         scopeHolding(name)?.bindings[name]
     }
 
     /// The innermost scope binding `name`.
-    func scopeHolding(_ name: String) -> Scope? {
+    package func scopeHolding(_ name: String) -> Scope? {
         for scope in scopes.reversed() {
             if let holding = scope.holding(name) { return holding }
         }
@@ -18,7 +18,7 @@ extension Interpreter {
     /// the global ones, and only the local variables its body names, each
     /// shared with where it's declared. Keeping whole scopes would keep the
     /// one the closure itself is stored in: a cycle, never freed.
-    func captureScopes(_ names: NamesUsed) -> [Scope] {
+    package func captureScopes(_ names: NamesUsed) -> [Scope] {
         guard scopes.count > 2 else { return scopes }
         let local = scopes[2...]
         let capture = Scope()
@@ -32,7 +32,7 @@ extension Interpreter {
     }
 
     /// The functions a command name refers to, if it was declared with `func`.
-    func commandFunctions(named name: String) -> OverloadSet? {
+    package func commandFunctions(named name: String) -> OverloadSet? {
         guard let binding = lookup(name), binding.isFunction,
               case .function(let callable) = binding.value else { return nil }
         return callable as? OverloadSet

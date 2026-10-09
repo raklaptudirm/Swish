@@ -11,7 +11,7 @@ import SwishKit
 /// `$(…)`) by calling the parser's own functions. See Docs/Design/frontend.md
 /// for why this is the shape it is, and what changes when another front end
 /// is added.
-protocol SyntaxPlugin: Sendable {
+package protocol SyntaxPlugin: Sendable {
     /// At the start of a unit (a statement, or an operand of `&&` and `||`):
     /// a unit of the plug-in's, or nil to parse Swift.
     func unit(_ parser: inout Parser) throws(SyntaxError) -> Unit?

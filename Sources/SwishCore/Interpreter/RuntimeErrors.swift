@@ -1,14 +1,14 @@
 import Foundation
 import SwishKit
 
-struct RuntimeError: Error, CustomStringConvertible {
-    let description: String
+package struct RuntimeError: Error, CustomStringConvertible {
+    package let description: String
     /// The status the failure gives: a failed command's own, for `$(…)`.
-    var status: Int32 = 1
+    package var status: Int32 = 1
     /// For a failed command, its output, so `catch` can look at it.
-    var output: Output?
+    package var output: Output?
 
-    init(_ description: String, status: Int32 = 1, output: Output? = nil) {
+    package init(_ description: String, status: Int32 = 1, output: Output? = nil) {
         self.description = description
         self.status = status
         self.output = output
@@ -16,7 +16,7 @@ struct RuntimeError: Error, CustomStringConvertible {
 
     /// What `catch` binds: the message, how it ended (`status.code`,
     /// `status.signal`, `status.succeeded`), and a failed command's `text`.
-    var value: Value {
+    package var value: Value {
         let code = output.map { $0.code } ?? Int(status)
         return .record(Record([
             "message": .string(description),
@@ -31,21 +31,36 @@ struct RuntimeError: Error, CustomStringConvertible {
 }
 
 /// A runtime error under `try!`: it stops a script, not just the line.
-struct FatalError: Error {
-    let error: RuntimeError
+package struct FatalError: Error {
+    package let error: RuntimeError
+
+    package init(error: RuntimeError) {
+        self.error = error
+    }
 }
 
 /// ^C while the shell itself was running code.
 /// ^C, or in a script SIGTERM or SIGHUP: stops what's running.
-struct Interrupted: Error {
-    var reason: StopReason
+package struct Interrupted: Error {
+    package var reason: StopReason
+
+    package init(reason: StopReason) {
+        self.reason = reason
+    }
 }
 
 /// Non-local exits, thrown up to the loop or call that handles them. The
 /// parser guarantees each one has a handler.
-enum ControlFlow: Error {
+package enum ControlFlow: Error {
     case returned(Value)
     case breakLoop
     case continueLoop
     case fallthroughCase
+}
+
+/// A runtime error that has been reported already; it still fails the input.
+package struct AlreadyReported: Error {
+    package let error: RuntimeError
+
+    package init(error: RuntimeError) { self.error = error }
 }
