@@ -7,18 +7,10 @@ import SwishKit
 /// and `--help` show.
 extension Interpreter {
     static let prelude = #"""
-    /// How a command exited: `output.status`.
-    struct Status: Equatable, Hashable, Encodable {
-        let code: Int?
-        let signal: Int?
-        let succeeded: Bool
-    }
-
-    /// What `catch` binds.
+    /// What `catch` binds: any error, which tells what went wrong. Cast it to
+    /// get at more, as in Swift: `if let failure = error as? CommandFailure`.
     struct Error {
-        let message: String
-        let status: Status
-        let text: String
+        let localizedDescription: String
     }
 
     """#

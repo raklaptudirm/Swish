@@ -5,28 +5,20 @@ package struct RuntimeError: Error, CustomStringConvertible {
     package let description: String
     /// The status the failure gives: a failed command's own, for `$(…)`.
     package var status: Int32 = 1
-    /// For a failed command, its output, so `catch` can look at it.
-    package var output: Output?
+    /// What `catch` binds when the thrower has more to say than a message: the
+    /// shell's failed command carries its status and text.
+    package var thrown: Value?
 
-    package init(_ description: String, status: Int32 = 1, output: Output? = nil) {
+    package init(_ description: String, status: Int32 = 1, thrown: Value? = nil) {
         self.description = description
         self.status = status
-        self.output = output
+        self.thrown = thrown
     }
 
-    /// What `catch` binds: the message, how it ended (`status.code`,
-    /// `status.signal`, `status.succeeded`), and a failed command's `text`.
+    /// What `catch` binds. As in Swift it is an `Error`, which tells its
+    /// `localizedDescription`; to get at more, cast it (`error as? T`).
     package var value: Value {
-        let code = output.map { $0.code } ?? Int(status)
-        return .record(Record([
-            "message": .string(description),
-            "status": .record(Record([
-                "code": code.map(Value.int) ?? .nothing,
-                "signal": output?.signal.map(Value.int) ?? .nothing,
-                "succeeded": .bool(false),
-            ], typeName: "Status")),
-            "text": .string(output?.text ?? ""),
-        ], typeName: "Error"))
+        thrown ?? .record(Record(["localizedDescription": .string(description)], typeName: "Error"))
     }
 }
 

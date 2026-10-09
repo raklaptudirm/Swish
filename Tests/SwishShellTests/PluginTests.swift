@@ -31,7 +31,7 @@ private let tools = "/" + #filePath.split(separator: "/").dropLast(3).joined(sep
     #expect(try output("Tools.volume(.low); Tools", in: shell) == "1\nmodule Tools\n")
 
     // Errors: thrown by the plugin, and arguments of the wrong type.
-    #expect(try output(#"do { try fail("nope") } catch { print(error.message) }"#, in: shell) == "fail: nope\n")
+    #expect(try output(#"do { try fail("nope") } catch { print(error.localizedDescription) }"#, in: shell) == "fail: nope\n")
     // A wrong argument is found before anything runs, like any type error.
     _ = try output("greet(5)", in: shell)
     #expect(shell.lastStatus == 2)
@@ -44,14 +44,14 @@ private let tools = "/" + #filePath.split(separator: "/").dropLast(3).joined(sep
 
     // Importing again does nothing; from elsewhere, it's an error.
     #expect(try output(#"import Tools from "\#(tools)""#, in: shell) == "")
-    #expect(try output(#"do { import Tools from "/tmp" } catch { print(error.message) }"#, in: shell).contains("already imported from"))
+    #expect(try output(#"do { import Tools from "/tmp" } catch { print(error.localizedDescription) }"#, in: shell).contains("already imported from"))
 
     // A clash with a function of the same signature binds nothing.
     let other = Shell()
-    let clash = #"func greet(_ name: String, times: Int = 1, loud: Bool = false) {}; do { import Tools from "\#(tools)" } catch { print(error.message) }"#
+    let clash = #"func greet(_ name: String, times: Int = 1, loud: Bool = false) {}; do { import Tools from "\#(tools)" } catch { print(error.localizedDescription) }"#
     #expect(try output(clash, in: other) == "import Tools: greet(_ name: String, times: Int, loud: Bool) is already defined\n")
     #expect(other.interpreter.lookup("volume") == nil && other.interpreter.lookup("Tools") == nil)
 
-    #expect(try output(#"do { import Nope from "/nonexistent" } catch { print(error.message) }"#, in: other)
+    #expect(try output(#"do { import Nope from "/nonexistent" } catch { print(error.localizedDescription) }"#, in: other)
         == "import Nope: no Swift package at /nonexistent (no Package.swift)\n")
 }

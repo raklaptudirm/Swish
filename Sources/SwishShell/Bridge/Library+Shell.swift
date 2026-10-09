@@ -4,8 +4,8 @@ import SwishKit
 extension Library {
     /// The shell's own: `ls`, `ps`, `pwd`, `with(env:)`, `readLine`, `history`,
     /// `from`, `to`, `table`, `list` and the types they use (SwishShellLibrary),
-    /// with the prelude declarations that are the shell's: `help`, `members`,
-    /// `select` and `JSON`.
+    /// with the prelude declarations that are the shell's: `Status`,
+    /// `CommandFailure`, `help`, `members`, `select` and `JSON`.
     static func shell(for shell: Shell) -> Library {
         Library(
             types: Bridge.shellTypes, columns: Bridge.shellColumns,
@@ -22,6 +22,22 @@ extension Library {
     /// Swish source read after the core's prelude. The checker works from the
     /// signatures; the bodies are in Swift, found by name (`bodies`).
     private static let shellDeclarations = #"""
+    /// How a command exited: `output.status`.
+    struct Status: Equatable, Hashable, Encodable {
+        let code: Int?
+        let signal: Int?
+        let succeeded: Bool
+    }
+
+    /// What `try $(…)` throws when the command fails, and `try await job`:
+    /// `catch let` it with a cast, `if let failure = error as? CommandFailure`.
+    struct CommandFailure {
+        let message: String
+        let status: Status
+        let text: String
+        let localizedDescription: String
+    }
+
     /// A member `members` describes.
     struct Member: Equatable, Hashable, Encodable {
         let type: String

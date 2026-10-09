@@ -183,8 +183,10 @@ text, and `do`/`catch` catches it:
 do {
     let log = try $(make)
 } catch {
-    echo "make failed with \(error.status.code)"
-    error.text                            // what it printed before failing
+    if let failure = error as? CommandFailure {
+        echo "make failed with \(failure.status.code)"
+        failure.text                      // what it printed before failing
+    }
 }
 if let head = try? $(git rev-parse HEAD) { echo "at \(head)" } else { echo "not a repo" }
 let editor = (try? $(git config core.editor)) ?? "vi"

@@ -46,7 +46,7 @@ struct SubstitutionExpr: ExprExtension, Equatable {
         let output = Output(text: text, code: code, signal: signal)
         // Without `try`, failing is just what `.status` says.
         if throwing && status != 0 {
-            throw RuntimeError("$(…) failed with status \(status)", status: status, output: output)
+            throw RuntimeError.commandFailure("$(…) failed with status \(status)", status: status, output: output)
         }
         return .output(output)
     }
@@ -97,8 +97,8 @@ struct PipelineUnit: UnitExtension, Equatable {
         // `try make`: failing throws, with the status in the error.
         if case .some(let kind) = node.throwing, status != 0 {
             let (code, signal) = interpreter.exitCode(status)
-            let error = RuntimeError("\(node.source) failed with status \(status)", status: status,
-                                     output: Output(text: "", code: code, signal: signal))
+            let error = RuntimeError.commandFailure("\(node.source) failed with status \(status)", status: status,
+                                                    output: Output(text: "", code: code, signal: signal))
             throw kind == .forced ? FatalError(error: error) : error
         }
         return status

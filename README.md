@@ -140,7 +140,7 @@ let editor = (try? $(git config core.editor)) ?? "vi"
 do {
     let log = try $(make)
 } catch {
-    echo "make failed with \(error.status.code)"
+    if let failure = error as? CommandFailure { echo "make failed with \(failure.status.code)" }
 }
 ```
 

@@ -550,21 +550,21 @@ private func fixture() throws -> String {
 // MARK: do/catch
 
 @Test func catchingAFailedCapture() throws {
-    #expect(try output(#"do { let r = try $(sh -c 'echo partial; exit 3') } catch { print(error.status.code); print(error.text) }"#) == "3\npartial\n")
-    #expect(try output(#"do { let r = try $(sh -c 'kill -TERM $$') } catch { print(error.status.signal); print(error.status.code == nil) }"#) == "15\ntrue\n")
+    #expect(try output(#"do { let r = try $(sh -c 'echo partial; exit 3') } catch { if let f = error as? CommandFailure { print(f.status.code); print(f.text) } }"#) == "3\npartial\n")
+    #expect(try output(#"do { let r = try $(sh -c 'kill -TERM $$') } catch { if let f = error as? CommandFailure { print(f.status.signal); print(f.status.code == nil) } }"#) == "15\ntrue\n")
     // Without `try`, nothing throws, so the catch doesn't run.
     #expect(try output(#"do { let r = $(false) } catch { echo never }; echo done"#) == "done\n")
 }
 
 @Test func catchingAnyRuntimeError() throws {
-    #expect(try output("do { 1 / 0 } catch let e { print(e.message); print(e.status.code) }") == "division by zero\n1\n")
+    #expect(try output("do { 1 / 0 } catch let e { print(e.localizedDescription) }") == "division by zero\n")
     #expect(try output("do { echo fine } catch { echo never }") == "fine\n")
     #expect(try output("do { let x = 1; print(x) }") == "1\n") // do alone is a scope
     #expect(status("do { 1 / 0 }") == 1) // no catch: still an error
 }
 
 @Test func tryMakesACommandThrow() throws {
-    #expect(try output("do { try sh -c 'exit 4' } catch { echo \"failed with \\(error.status.code)\" }") == "failed with 4\n")
+    #expect(try output("do { try sh -c 'exit 4' } catch { if let failure = error as? CommandFailure { echo \"failed with \\(failure.status.code)\" } }") == "failed with 4\n")
     #expect(try output("try false; echo unreachable") == "")
     #expect(try output("try true && echo ok") == "ok\n")
     #expect(status("try? make") == 2) // try? needs a value: a syntax error
@@ -631,4 +631,15 @@ private func fixture() throws -> String {
     let shell = Shell()
     let code = try onLargeStack { try shell.capturing { shell.execute("1; 2; print(3)") } }
     #expect(code == "3\n")
+}
+
+@Test func aCaughtErrorIsAnErrorUntilCast() throws {
+    // As in Swift: `error` tells what went wrong, and a cast gets at more.
+    #expect(try output("do { 1 / 0 } catch { print(error.localizedDescription) }") == "division by zero\n")
+    #expect(status("do { 1 / 0 } catch { error.status }") == 2) // no `status` on an Error
+    #expect(status("do { 1 / 0 } catch { error.message }") == 2)
+    // A plain runtime error isn't a command failure; a failed `try $(…)` is.
+    #expect(try output("do { 1 / 0 } catch { print(error as? CommandFailure == nil) }") == "true\n")
+    #expect(try output(#"do { try $(sh -c 'echo no >&2; exit 2') } catch { if let f = error as? CommandFailure { print(f.status.code); print(f.localizedDescription) } }"#)
+        == "2\n$(…) failed with status 2\n")
 }

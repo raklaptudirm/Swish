@@ -23,7 +23,7 @@ private func status(_ source: String) -> Int32 {
 
 @Test func awaitGivesTheOutputAndTryThrows() throws {
     #expect(try output(#"let f = async sh -c 'exit 3'; let r = await f; r.status.code"#) == "3\n")
-    #expect(try output(#"let f = async sh -c 'exit 3'; do { try await f } catch { echo "caught \(error.status.code)" }"#) == "caught 3\n")
+    #expect(try output(#"let f = async sh -c 'exit 3'; do { try await f } catch { if let f = error as? CommandFailure { echo "caught \(f.status.code)" } }"#) == "caught 3\n")
     #expect(status(#"let f = async sh -c 'exit 3'; try await f"#) == 3)
     // An awaited Output's status is the statement's.
     #expect(try output("let j = async true; await j && echo ok; let k = async false; await k || echo failed") == "ok\nfailed\n")

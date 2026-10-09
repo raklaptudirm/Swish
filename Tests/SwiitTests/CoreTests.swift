@@ -65,7 +65,7 @@ private func runOnTheCore(_ source: String) -> (output: String, problem: String?
 @Test func theCorePreludeIsTheLanguagesOwn() {
     // What a `catch` binds is the language's; `members`, `select`, `help` and
     // `JSON` are declared by the shell.
-    let (output, problem) = runOnTheCore(#"do { 1 / 0 } catch { print(error.message) }"#)
+    let (output, problem) = runOnTheCore(#"do { 1 / 0 } catch { print(error.localizedDescription) }"#)
     #expect(problem == nil)
     #expect(output == "division by zero\n")
     #expect(runOnTheCore("members([1])").problem != nil)

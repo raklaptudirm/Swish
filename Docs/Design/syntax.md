@@ -86,18 +86,22 @@ result in the error:
 do {
     let log = try $(make)        // without `try`, a failure is only in log.status
 } catch {
-    echo "make failed with \(error.status.code)"
-    error.text                   // what it printed before failing
+    if let failure = error as? CommandFailure {
+        echo "make failed with \(failure.status.code)"
+        failure.text             // what it printed before failing
+    }
 }
 ```
 
-`catch` catches any runtime error; `error.message` says what happened,
-and `error.status` has `code`, `signal` (if one ended it) and `succeeded`.
+`catch` catches any runtime error. As in Swift, `error` is an `Error`:
+`error.localizedDescription` says what happened, and a cast gets at more. A
+failed command is a `CommandFailure`, whose `status` has `code`, `signal` (if
+one ended it) and `succeeded`, and whose `text` is what it printed.
 `catch let e { … }` names it something else.
 
 A command run as a statement only succeeds or fails, as in every shell:
 `if make { }`, `make && …`. `try make` makes its failure throw, so
-`do { try make } catch { error.status.code }` gets the code, and
+`do { try make } catch { (error as? CommandFailure)?.status.code }` gets the code, and
 `try! make` stops a script if make fails. There's no global `status` or
 `$?`; using it is an error that points here.
 

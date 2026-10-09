@@ -39,7 +39,7 @@ extension ShellLayer {
                     }
                     let output = try shell.awaitJob(job)
                     if throwing && !output.succeeded {
-                        throw RuntimeError("\(job.source) failed with status \(job.status)", status: job.status, output: output)
+                        throw RuntimeError.commandFailure("\(job.source) failed with status \(job.status)", status: job.status, output: output)
                     }
                     return .output(output)
                 },
