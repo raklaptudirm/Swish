@@ -89,7 +89,8 @@ private func checkError(_ source: String) -> String? {
     #expect(checkError(#"let z = true ? 1 : "a""#) == "error: an if expression's branches must have one type, not Int and String")
     #expect(checkError("let z = 3 ? 1 : 2") == "error: a condition must be a Bool, not Int")
     #expect(checkError("let z = if true { 1 }") == "syntax error: an if expression needs an else")
-    #expect(checkError("let z = if true { ls } else { 2 }") == "syntax error: each branch of an if expression must be one expression")
+    // A command is an expression too, whose value is how it ended.
+    #expect(checkError("let z = if true { ls } else { 2 }") == "error: an if expression's branches must have one type, not Status and Int")
 }
 
 @Test func guardStatements() throws {

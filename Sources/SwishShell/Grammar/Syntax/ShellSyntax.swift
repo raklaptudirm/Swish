@@ -7,24 +7,15 @@ import SwishKit
 /// Everything here is the shell's; the parser in Parser*.swift is Swift's and
 /// calls this where its grammar has no meaning for what is there.
 struct ShellSyntax: SyntaxPlugin {
-    func unit(_ parser: inout Parser) throws(SyntaxError) -> Unit? {
-        // `try make` or `try! make`: a command whose failure throws.
-        if parser.identifier() == "try", let command = try parser.parseThrowingCommand() {
-            return .pipeline(command)
-        }
-        if case .command(let reason) = parser.commandAhead() {
-            var pipeline = try parser.parsePipeline()
-            if !pipeline.commands.isEmpty { pipeline.commands[0].notAnExpression = reason }
-            return .pipeline(pipeline)
-        }
-        return nil
+    func chain(_ parser: inout Parser, condition: Bool) throws(SyntaxError) -> Expr? {
+        try parser.parseCommandChain(condition: condition).map(Expr.commands)
     }
 
-    func unit(continuing expression: Expr, from start: Int, _ parser: inout Parser) throws(SyntaxError) -> Unit? {
+    func continuing(_ expression: Expr, from start: Int, _ parser: inout Parser) throws(SyntaxError) -> Expr? {
         guard parser.peek() == "|", parser.peek(1) != "|" else { return nil }
         parser.pos += 1
         parser.skipSpaces(newlines: true)
-        return .pipeline(try parser.parsePipeline(from: start, input: expression))
+        return .commands(CommandChainExpr(first: .command(try parser.parsePipeline(from: start, input: expression))))
     }
 
     func expression(_ parser: inout Parser) throws(SyntaxError) -> Expr? {
@@ -42,6 +33,98 @@ struct ShellSyntax: SyntaxPlugin {
 }
 
 extension Parser {
+    /// Commands joined by `&&` and `||`, with Swift between them or not, as a
+    /// statement or a condition; nil (having looked ahead) when there is no
+    /// command in it, which is Swift's. `a < 1 || b > 2` is one expression,
+    /// with Swift's precedence, so `{ $0.a < 1 || $0.b > 2 }` returns it; only
+    /// when an operand isn't an expression, as in `x > 1 && echo big`, do
+    /// `&&` and `||` join operands by exit status instead.
+    mutating func parseCommandChain(condition: Bool) throws(SyntaxError) -> CommandChainExpr? {
+        let start = self
+        var operands: [CommandChainExpr.Operand] = []
+        var joins: [Bool] = []
+        var sawCommand = false
+        do {
+            operands.append(try parseChainOperand(&sawCommand))
+            while true {
+                skipSpaces()
+                if consume("&&") {
+                    joins.append(true)
+                } else if consume("||") {
+                    joins.append(false)
+                } else {
+                    break
+                }
+                skipSpaces(newlines: true)
+                operands.append(try parseChainOperand(&sawCommand))
+            }
+        } catch {
+            // What doesn't read before a command is read as Swift, which says
+            // what's wrong with it; input cut short asks for more either way.
+            guard sawCommand || error.incomplete else {
+                self = start
+                return nil
+            }
+            throw error
+        }
+        var chain = CommandChainExpr(first: operands[0], isCondition: condition)
+        chain.links = zip(joins, operands.dropFirst()).map { CommandChainExpr.Link(isAnd: $0, operand: $1) }
+        // A command makes it the shell's; so does a condition that asks
+        // whether a `try?` caught an error (`if try? build()`), which a Bool
+        // doesn't say.
+        let isShells = chain.operands.contains { operand in
+            switch operand {
+            case .command: true
+            case .expression(.attempt(_, .optional)): condition
+            case .expression: false
+            }
+        }
+        guard isShells else {
+            self = start
+            return nil
+        }
+        return chain
+    }
+
+    /// A command, or the Swift expression between commands.
+    /// `sawCommand`: set once it is reading a command, whose errors are the shell's.
+    private mutating func parseChainOperand(_ sawCommand: inout Bool) throws(SyntaxError) -> CommandChainExpr.Operand {
+        skipSpaces()
+        guard peek() != nil else { throw .incomplete("expected a command") }
+        if let word = identifier(), Parser.statementKeywords.union(["if", "for", "while", "switch", "else", "case", "default", "in"]).contains(word) {
+            throw SyntaxError("'\(word)' must start a statement")
+        }
+        // `try make` or `try! make`: a command whose failure throws.
+        if identifier() == "try" {
+            let before = sawCommand
+            sawCommand = true
+            if let command = try parseThrowingCommand() { return .command(command) }
+            sawCommand = before
+        }
+        if case .command(let reason) = commandAhead() {
+            sawCommand = true
+            var pipeline = try parsePipeline()
+            if !pipeline.commands.isEmpty { pipeline.commands[0].notAnExpression = reason }
+            return .command(pipeline)
+        }
+        let start = pos
+        let beforeExpression = self
+        var expr: Expr
+        do {
+            expr = try parseExpression(logical: true)
+        } catch {
+            self = beforeExpression
+            expr = try parseExpression(logical: false)
+        }
+        skipSpaces()
+        // `xs | sorted`: a value fed to commands.
+        guard peek() == "|", peek(1) != "|" else { return .expression(expr) }
+        pos += 1
+        skipSpaces(newlines: true)
+        sawCommand = true
+        return .command(try parsePipeline(from: start, input: expr))
+    }
+
     /// `try cmd …` or `try! cmd …`, or nil (having looked ahead) when what
     /// follows the `try` is an expression, as in `try? $(cmd)`.
     mutating func parseThrowingCommand() throws(SyntaxError) -> PipelineNode? {
@@ -128,8 +211,8 @@ extension Parser {
         skipSpaces()
         if peek() == "$" && peek(1) == "(" {
             guard let substitution = try parseDollar()?.substitutionParts,
-                  substitution.program.statements.count == 1, case .chain(let chain) = substitution.program.statements[0],
-                  chain.links.isEmpty, let pipeline = chain.first.pipelineNode else {
+                  substitution.program.statements.count == 1, case .expression(let commands) = substitution.program.statements[0],
+                  let pipeline = commands.pipelineNode else {
                 throw SyntaxError("async $(…) runs one pipeline of commands")
             }
             return .async(.capture(pipeline))

@@ -81,8 +81,8 @@ private func desugared(_ source: String, in shell: Shell = Shell()) throws -> St
     #expect(try desugared("let y = try? $(false)") == "let y = try? capture(throwing: true) { false }")
     #expect(try desugared("let j = async sleep 1") == #"let j = Command("sleep", "1").start()"#)
     #expect(try desugared("let k = async $(echo hi)") == #"let k = Command("echo", "hi").startCapturing()"#)
-    // A chain with a Swift expression in it stays a chain, each command its status.
-    #expect(try desugared("true && echo yes") == #"true && Command("echo", "yes").runQuietly()"#)
+    // A Swift expression among commands is its exit status.
+    #expect(try desugared("true && echo yes") == #"exitStatus(of: true).and { Command("echo", "yes").runQuietly() }"#)
 }
 
 @Test func nothingOfTheShellsIsLeftAfterTheRewrite() throws {

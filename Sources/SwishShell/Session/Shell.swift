@@ -68,6 +68,7 @@ public final class Shell {
         interpreter.installBuiltinFunctions(libraries: [.shell(for: self)])
         interpreter.installJSON()
         installJobs()
+        recordStatuses()
     }
 }
 
@@ -122,7 +123,7 @@ extension Shell {
         if interactive && interpreter.file == nil { _ = takeInterrupt() }
         do {
             // Only the prompt shows values; running code prints what it prints.
-            lastStatus = try interpreter.run(program, observing: atPrompt ? { [unowned interpreter] value, expression, discarded in
+            try interpreter.run(program, observing: atPrompt ? { [unowned interpreter] value, expression, discarded in
                 interpreter.present(value, from: expression, discarded: discarded)
             } : nil)
         } catch let interrupt as Interrupted {

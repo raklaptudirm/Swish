@@ -17,13 +17,15 @@ private func parse(_ source: String, bound: Set<String> = [], functions: Set<Str
 /// The kind of each top-level unit: "command", "expression", "if" or "loop".
 private func modes(_ source: String, bound: Set<String> = [], functions: Set<String> = []) throws -> [String] {
     try parse(source, bound: bound, functions: functions).statements.map { statement in
-        guard case .chain(let chain) = statement else { return "declaration" }
-        switch chain.first {
-        case .extended: return "command"
+        switch statement {
+        case .expression(.extended(let box)):
+            guard let chain = box.node as? CommandChainExpr, case .command = chain.first else { return "expression" }
+            return "command"
         case .expression: return "expression"
         case .ifStatement: return "if"
         case .forLoop, .whileLoop: return "loop"
         case .switchStatement: return "switch"
+        default: return "declaration"
         }
     }
 }
@@ -38,8 +40,8 @@ private func closureParameters(_ source: String) throws -> [String] {
 }
 
 private func words(_ source: String, bound: Set<String> = []) throws -> [[WordPart]] {
-    guard case .chain(let chain) = try parse(source, bound: bound).statements.first,
-          let pipeline = chain.first.pipelineNode else {
+    guard case .expression(let commands) = try parse(source, bound: bound).statements.first,
+          let pipeline = commands.pipelineNode else {
         Issue.record("not a command: \(source)")
         return []
     }
@@ -100,8 +102,10 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
     #expect(try modes("func greet() {}; greet Rak") == ["declaration", "command"])
 }
 
-@Test func loopsAreUnits() throws {
-    #expect(try modes("for x in [1] {}; while false {}; true && for x in [1] {}") == ["loop", "loop", "expression"])
+@Test func loopsAreStatements() throws {
+    #expect(try modes("for x in [1] {}; while false {}") == ["loop", "loop"])
+    // Not something `&&` joins, as in Swift.
+    #expect(syntaxError("true && for x in [1] {}") != nil)
 }
 
 // MARK: Functions and closures
@@ -175,8 +179,8 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
 }
 
 @Test func valuesCanFeedPipelines() throws {
-    guard case .chain(let chain) = try parse("[1, 2] | sorted | head -1").statements[0],
-          let pipeline = chain.first.pipelineNode else { Issue.record(); return }
+    guard case .expression(let commands) = try parse("[1, 2] | sorted | head -1").statements[0],
+          let pipeline = commands.pipelineNode else { Issue.record(); return }
     #expect(pipeline.input == .list([.literal(.int(1)), .literal(.int(2))]))
     #expect(pipeline.commands.map { $0.words.count } == [1, 2])
     #expect(pipeline.source == "[1, 2] | sorted | head -1")
@@ -187,11 +191,12 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
 @Test func logicalOperatorsBindTighterThanChains() throws {
     // All expressions: one expression, with && tighter than ||.
     let program = try parse("a || b && c", bound: ["a", "b", "c"])
-    #expect(program.statements == [.chain(Chain(first: .expression(
+    #expect(program.statements == [.expression(
         .binary(.or, .variable("a"), .binary(.and, .variable("b"), .variable("c")))
-    )))])
-    // A command operand makes it a chain of units instead.
-    guard case .chain(let chain) = try parse("a && echo hi", bound: ["a"]).statements[0] else { Issue.record(); return }
+    )])
+    // A command operand makes it a chain of commands instead.
+    guard case .expression(.extended(let box)) = try parse("a && echo hi", bound: ["a"]).statements[0],
+          let chain = box.node as? CommandChainExpr else { Issue.record(); return }
     #expect(chain.first == .expression(.variable("a")))
     #expect(chain.links.count == 1)
 }
@@ -204,8 +209,8 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
         RecordEntry(key: .literal(.string("name")), value: .literal(.string("x"))),
         RecordEntry(key: .literal(.string("size")), value: .literal(.fileSize(FileSize(bytes: 1500)))),
     ])))
-    #expect(program.statements[1] == .chain(Chain(first: .expression(.member(.variable("r"), "size")))))
-    #expect(program.statements[2] == .chain(Chain(first: .expression(.record([])))))
+    #expect(program.statements[1] == .expression(.member(.variable("r"), "size")))
+    #expect(program.statements[2] == .expression(.record([])))
     #expect(try parse("2.kib; 1...3").statements.count == 2) // ranges still work
     // Not a file size, so a command, which says why it isn't one if no program has the name.
     #expect(try command("1.parsecs")?.notAnExpression == "unknown unit 'parsecs'; file sizes use b, kb, mb, gb, tb, or kib, mib, gib, tib")
@@ -213,17 +218,16 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
 }
 
 @Test func closuresAsCommandArguments() throws {
-    guard case .chain(let chain) = try parse("ls | filter { $0.size > 1.mb }").statements[0],
-          let pipeline = chain.first.pipelineNode,
+    guard case .expression(let commands) = try parse("ls | filter { $0.size > 1.mb }").statements[0],
+          let pipeline = commands.pipelineNode,
           case .closure(let closure) = pipeline.commands[1].words[1] else { Issue.record(); return }
     #expect(closure.parameters.map(\.name) == ["$0"])
 }
 
 @Test func braceEndsACommandInAConditionOnly() throws {
-    guard case .chain(let chain) = try parse("if grep -q x f { echo yes }").statements[0],
-          case .ifStatement(let node) = chain.first,
-          case .chain(let conditionChain) = node.condition,
-          let condition = conditionChain.first.pipelineNode else { Issue.record(); return }
+    guard case .ifStatement(let node) = try parse("if grep -q x f { echo yes }").statements[0],
+          case .expression(let commands) = node.condition,
+          let condition = commands.pipelineNode else { Issue.record(); return }
     #expect(condition.commands[0].words.count == 4)
     #expect(node.then.statements.count == 1)
 }
@@ -276,15 +280,15 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
         .binary(.equal, .binary(.add, .literal(.int(1)), .binary(.multiply, .literal(.int(2)), .literal(.int(3)))), .literal(.int(7))),
         .unary(.not, .literal(.bool(false)))
     )
-    #expect(program.statements == [.chain(Chain(first: .expression(expected)))])
+    #expect(program.statements == [.expression(expected)])
     // Inside a declaration too.
     #expect(try parse("let x = 1 + 2 * 3 == 7 && !false").statements == [.declare(name: "x", mutable: false, value: expected)])
 }
 
 @Test func numbers() throws {
     #expect(try parse("1_000; 2.5").statements == [
-        .chain(Chain(first: .expression(.literal(.int(1000))))),
-        .chain(Chain(first: .expression(.literal(.double(2.5))))),
+        .expression(.literal(.int(1000))),
+        .expression(.literal(.double(2.5))),
     ])
 }
 
@@ -307,8 +311,8 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
 // MARK: Redirects and globs
 
 private func command(_ source: String) throws -> CommandNode? {
-    guard case .chain(let chain) = try parse(source).statements.first,
-          let pipeline = chain.first.pipelineNode else { return nil }
+    guard case .expression(let commands) = try parse(source).statements.first,
+          let pipeline = commands.pipelineNode else { return nil }
     return pipeline.commands.first
 }
 
@@ -401,8 +405,7 @@ private func command(_ source: String) throws -> CommandNode? {
     #expect(arguments.count == 2)
     #expect(arguments[1].label == nil)
     // After `if` and `for … in`, `{` is the body.
-    guard case .chain(let chain) = try parse("if f(1) { echo }", bound: ["f"]).statements[0],
-          case .ifStatement(let node) = chain.first else { Issue.record(); return }
+    guard case .ifStatement(let node) = try parse("if f(1) { echo }", bound: ["f"]).statements[0] else { Issue.record(); return }
     #expect(node.then.statements.count == 1)
 }
 
@@ -420,7 +423,7 @@ private func command(_ source: String) throws -> CommandNode? {
 
 @Test func ifLetBindsInItsBodyOnly() throws {
     let program = try parse("if let x = try? $(cmd) { x } else { x }")
-    guard case .chain(let chain) = program.statements[0], case .ifStatement(let node) = chain.first else {
+    guard case .ifStatement(let node) = program.statements[0] else {
         Issue.record()
         return
     }
@@ -429,8 +432,8 @@ private func command(_ source: String) throws -> CommandNode? {
         return
     }
     // In the body `x` is the variable; in the else branch it's a command.
-    guard case .chain(let then) = node.then.statements[0], case .expression = then.first,
-          case .chain(let otherwise) = node.otherwise!.statements[0], otherwise.first.pipelineNode != nil else {
+    guard case .expression(let then) = node.then.statements[0], then.pipelineNode == nil,
+          case .expression(let otherwise) = node.otherwise!.statements[0], otherwise.pipelineNode != nil else {
         Issue.record()
         return
     }
@@ -471,8 +474,7 @@ private func command(_ source: String) throws -> CommandNode? {
 @Test func tryDoesNotReachIntoClosures() throws {
     guard case .declare(_, _, .attempt(.call(_, let arguments), .optional)) = try parse("let r = try? f({ $(x) })", bound: ["f"]).statements[0],
           case .closure(let closure) = arguments[0].value,
-          case .chain(let chain) = closure.body.statements[0],
-          case .expression(let substitution) = chain.first,
+          case .expression(let substitution) = closure.body.statements[0],
           substitution.substitutionParts?.throwing == false else {
         Issue.record()
         return
@@ -494,12 +496,12 @@ private func command(_ source: String) throws -> CommandNode? {
 }
 
 @Test func tryBeforeACommand() throws {
-    guard case .chain(let chain) = try parse("try make -j4").statements[0],
-          let pipeline = chain.first.pipelineNode else { Issue.record(); return }
+    guard case .expression(let commands) = try parse("try make -j4").statements[0],
+          let pipeline = commands.pipelineNode else { Issue.record(); return }
     #expect(pipeline.throwing == .some(nil))
     #expect(pipeline.commands[0].words.count == 2)
-    guard case .chain(let forced) = try parse("try! false").statements[0],
-          let bang = forced.first.pipelineNode else { Issue.record(); return }
+    guard case .expression(let forced) = try parse("try! false").statements[0],
+          let bang = forced.pipelineNode else { Issue.record(); return }
     #expect(bang.throwing == .some(.forced))
     // An expression after `try` is still an expression.
     #expect(try modes("try $(x); try? false") == ["expression", "expression"])
@@ -511,9 +513,9 @@ private func command(_ source: String) throws -> CommandNode? {
     let program = try parse("let j = async make -j4 | tee log; let p = async $(curl x); await j; await; try await p")
     guard case .declare(_, _, let started) = program.statements[0], case .command(let command)? = started.asyncTarget,
           case .declare(_, _, let captured) = program.statements[1], case .capture(let capture)? = captured.asyncTarget,
-          case .chain(let a) = program.statements[2], case .expression(.await(.variable("j"), throwing: false)) = a.first,
-          case .chain(let b) = program.statements[3], case .expression(.await(nil, throwing: false)) = b.first,
-          case .chain(let c) = program.statements[4], case .expression(.attempt(.await(.variable("p"), throwing: true), .plain)) = c.first else {
+          case .expression(.await(.variable("j"), throwing: false)) = program.statements[2],
+          case .expression(.await(nil, throwing: false)) = program.statements[3],
+          case .expression(.attempt(.await(.variable("p"), throwing: true), .plain)) = program.statements[4] else {
         Issue.record("\(program.statements)")
         return
     }
@@ -542,7 +544,7 @@ private func command(_ source: String) throws -> CommandNode? {
 
 @Test func switchAndPatterns() throws {
     let program = try parse("switch x { case .a(let n), .b(let n, _) where n > 1: y\ncase let .c(m): z\ncase 1...9: w\ndefault: break }", bound: ["x", "y", "z", "w"])
-    guard case .chain(let chain) = program.statements[0], case .switchStatement(let node) = chain.first else {
+    guard case .switchStatement(let node) = program.statements[0] else {
         Issue.record()
         return
     }

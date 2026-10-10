@@ -11,8 +11,7 @@ import SwishKit
 final class Desugarer {
     private lazy var rewriter = TreeRewriter(
         expr: { [unowned self] in expression($0) },
-        statement: { [unowned self] in statement($0) },
-        chain: { [unowned self] in chain($0, $1) }
+        statement: { [unowned self] in statement($0) }
     )
 
     func program(_ program: Program) -> Program {
@@ -28,6 +27,8 @@ final class Desugarer {
             return dollar(node)
         case let node as SubstitutionExpr:
             return substitution(node)
+        case let node as CommandChainExpr:
+            return commands(node)
         case let node as AsyncExpr:
             // `async cmd` starts it; `async $(cmd)` keeps its output too.
             switch node.target {
@@ -60,41 +61,42 @@ final class Desugarer {
     /// `import Tools from "./Tools"` is `importPlugin("Tools", from: "./Tools")`.
     private func statement(_ statement: Statement) -> Statement {
         guard case .extended(let box) = statement, let node = box.node as? ImportPluginStatement else { return statement }
-        return .chain(Chain(first: .expression(.call(.variable("importPlugin"), [
+        return .expression(.call(.variable("importPlugin"), [
             Argument(label: nil, value: .literal(.string(node.name))),
             Argument(label: "from", value: rewriter.expression(node.path)),
-        ]))))
+        ]))
     }
 
     // MARK: Command statements, chains and conditions
 
-    /// Each command in a chain, as the Swift it means. A command statement is
-    /// the `Status` of `run()`; in a chain or a condition, of `runQuietly()`,
-    /// where a function used as a command shows nothing; under `try`, of
-    /// `check()`, which throws. A chain of commands is `a.and { b }.or { c }`
-    /// over their statuses, and a condition asks whether that `succeeded`. A
-    /// chain with a Swift expression in it stays the core's chain.
-    private func chain(_ chain: Chain, _ position: TreeRewriter.Position) -> Chain {
-        let display = position == .statement && chain.links.isEmpty
-        func command(_ unit: Unit) -> Expr? {
-            guard let node = unit.pipelineNode else { return nil }
-            if case .some(let kind) = node.throwing { return .attempt(call(pipeline(node), "check"), kind ?? .plain) }
-            return call(pipeline(node), display ? "run" : "runQuietly")
+    /// Commands, as the Swift they mean. A command statement is the `Status`
+    /// of `run()`; in a chain or a condition, of `runQuietly()`, where a
+    /// function used as a command shows nothing; under `try`, of `check()`,
+    /// which throws. Joined, `a && b || c` is `a.and { b }.or { c }` over
+    /// their statuses, a Swift expression among them its `exitStatus(of:)`; a
+    /// condition asks whether that `succeeded`.
+    private func commands(_ node: CommandChainExpr) -> Expr {
+        let display = !node.isCondition && node.links.isEmpty
+        func status(_ operand: CommandChainExpr.Operand) -> Expr {
+            switch operand {
+            case .command(let pipeline):
+                if case .some(let kind) = pipeline.throwing { return .attempt(call(self.pipeline(pipeline), "check"), kind ?? .plain) }
+                return call(self.pipeline(pipeline), display ? "run" : "runQuietly")
+            case .expression(let expr):
+                let expr = rewriter.expression(expr)
+                // `try? build() && …`: whether it caught an error.
+                let value = if case .attempt(_, .optional) = expr { Expr.binary(.notEqual, expr, .literal(.nothing)) } else { expr }
+                return .call(.variable("exitStatus"), [Argument(label: "of", value: value)])
+            }
         }
-        let first = command(chain.first)
-        let links = chain.links.map { (op: $0.op, unit: $0.unit, command: command($0.unit)) }
-        guard var status = first, links.allSatisfy({ $0.command != nil }) else {
-            // Commands among Swift expressions: each command is its status.
-            return Chain(first: first.map(Unit.expression) ?? chain.first,
-                         links: links.map { Link(op: $0.op, unit: $0.command.map(Unit.expression) ?? $0.unit) })
-        }
-        for link in links {
-            let body = Program(statements: [.chain(Chain(first: .expression(link.command!)))])
-            status = .call(.member(status, link.op == .and ? "and" : "or"), [
+        var result = status(node.first)
+        for link in node.links {
+            let body = Program(statements: [.expression(status(link.operand))])
+            result = .call(.member(result, link.isAnd ? "and" : "or"), [
                 Argument(label: nil, value: .closure(ClosureLiteral(parameters: [], body: body))),
             ])
         }
-        return Chain(first: .expression(position == .condition ? .member(status, "succeeded") : status))
+        return node.isCondition ? .member(result, "succeeded") : result
     }
 
     private func call(_ target: Expr, _ method: String) -> Expr {

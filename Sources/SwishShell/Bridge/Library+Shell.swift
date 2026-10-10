@@ -16,6 +16,7 @@ extension Library {
                 "members": (shell.interpreter.members().body, nil),
                 "Sequence.select": selectBody,
                 "capture": (shell.captureBody, nil),
+                "exitStatus": (.native { [unowned shell] _, arguments in shell.statusValue(shell.status(of: arguments["value"] ?? .nothing)) }, nil),
                 "importPlugin": (.native { interpreter, arguments in
                     guard case .string(let name)? = arguments["name"], case .string(let path)? = arguments["path"] else { return .nothing }
                     try interpreter.importPlugin(name, from: path)
@@ -199,6 +200,11 @@ extension Library {
         let path: Any?
         let other: Int
     }
+
+    /// A value as a status, as it is where commands join it with `&&` and
+    /// `||`: a Bool succeeds when true, an `Output` as its command did, a
+    /// `Status` is itself, and anything else succeeds.
+    func exitStatus(of value: Any) -> Status
 
     /// `import Tools from "./Tools"`: builds the Swift package at `path` and
     /// loads the functions it exports, as `Tools`.

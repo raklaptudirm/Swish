@@ -236,11 +236,20 @@ compile the printed Swift with `swiftc` and compare it with the interpreter.
   call takes, and why a word wasn't an expression. A pipeline written by hand
   has no hint, and the shell looks: a method of the sequence, then a Swift
   member of the items collected, then a function or program.
-- **Chains:** a chain of commands is `a.runQuietly().and { … }.or { … }` over
-  `Status`; one with a Swift expression in it (`x > 1 && echo big`) stays the
-  core's chain, each command its `Status`. A statement's value being a
-  `Status` sets the shell's status, at the prompt and in scripts, and a
-  per-item error (`ls` of a missing path) makes it a failure either way.
+- **Chains, and flattened statements (step 8):** the core has no chains: a
+  statement is an expression, an `if`, a loop or a `switch`, and a condition
+  is a Bool. `&&` and `||` joining commands are the shell's: its plug-in
+  reads them (`CommandChainExpr`), and they are `a.runQuietly().and { … }.or
+  { … }` over `Status`, a Swift expression among them its
+  `exitStatus(of:)` (`x > 1 && echo big`, so `false || sh -c 'exit 3'` ends
+  with 3, as in a shell). A condition asks whether that `succeeded`; `if try?
+  build()` asks whether the `try?` caught nothing.
+- **Status:** statements don't give one. The interpreter tells the host each
+  statement as it finishes (`statementFinished`), and the shell keeps its
+  status from that: an expression statement's value (`false` fails, a
+  command's `Status` is how it ended), a per-item error (`ls` of a missing
+  path) making it a failure, anything else succeeding. An `if`, a loop, a
+  `switch` or a `do` is what last ran in it, and succeeds if nothing did.
 - **Printed:** `SwiftPrinter` shows the rewrite, as `DesugarTests` pins:
   `Pipeline(Command("ls"), Command("sorted").calling((by: \.size))…).run()`.
 
@@ -249,8 +258,6 @@ Left:
 - **Stages as direct Swift calls** where types are known (`xs.max()`,
   `names.map { $0.uppercased() }`), which the hint makes possible stage kind by
   stage kind, keeping streaming between programs.
-- **Flattening statements** (step 8): `Chain` and `Unit` hoisted into
-  `Statement`, and statements not returning an exit status.
 - **Effects** (`await` insertion) wait for the async interpreter: nothing
   awaits yet, so there is nothing to insert.
 

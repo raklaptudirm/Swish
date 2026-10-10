@@ -85,8 +85,12 @@ extension Shell {
             guard case .function(let body as Function)? = arguments["body"], case .swish(let program) = body.body else {
                 throw RuntimeError("capture needs a block")
             }
-            var status: Int32 = 0
-            let text = try capturing { status = try interpreter.runBlock(program) }
+            // What runs in it leaves the status it ends with.
+            let before = interpreter.lastStatus
+            interpreter.lastStatus = 0
+            let text = try capturing { try interpreter.runBlock(program) }
+            let status = interpreter.lastStatus
+            interpreter.lastStatus = before
             let output = output(text, status: status)
             // Without `try`, failing is just what `.status` says.
             if arguments["throwing"] == .bool(true) && status != 0 {
@@ -124,6 +128,37 @@ extension Shell {
         while text.last == "\n" { text.removeLast() }
         let (code, signal) = interpreter.exitCode(status)
         return Output(text: text, code: code, signal: signal)
+    }
+
+    /// The exit status a value gives: a Bool's truth, a `Status` or an
+    /// `Output` how its command ended; anything else succeeded.
+    func status(of value: Value) -> Int32 {
+        if case .bool(let truth) = value { return truth ? 0 : 1 }
+        if case .record(let record) = value, record.typeName == "Status", case .bool(let succeeded)? = record["succeeded"] {
+            if succeeded { return 0 }
+            if case .int(let code)? = record["code"] { return Int32(code) }
+            if case .int(let signal)? = record["signal"] { return 128 + Int32(signal) }
+            return 1
+        }
+        // `await build && echo ok`: an Output's status is its command's.
+        if let output = value.commandOutput, !output.succeeded {
+            return output.code.map(Int32.init) ?? 128 + Int32(output.signal ?? 0)
+        }
+        return 0
+    }
+
+    /// Keeps the exit status as statements run: an expression statement's
+    /// value says it (`false` fails, a command's `Status` is how it ended),
+    /// a per-item error reported makes it a failure, and anything else, as a
+    /// `let`, succeeds. An `if` or a loop is what ran in it last.
+    func recordStatuses() {
+        interpreter.statementFinished = { [unowned self] statement, value, itemErrors in
+            var status = value.map(status(of:)) ?? 0
+            // A `try?` that caught an error failed; other nils, like a
+            // function that returns nothing, didn't.
+            if case .expression(.attempt(_, .optional)) = statement, value == .nothing { status = 1 }
+            interpreter.lastStatus = itemErrors && status == 0 ? 1 : status
+        }
     }
 
     /// A command statement's value: how it ended.

@@ -6,7 +6,7 @@ import SwishKit
 // itself, held in the tree as an extension (Language/Syntax/SyntaxExtension.swift),
 // so the checker never names them; then `Desugarer` rewrites each into the
 // Swift it means, which is what runs. The factory functions
-// keep the parser's spelling, `.pipeline(node)`, `.substitution(program)`.
+// keep the parser's spelling, `.commands(chain)`, `.substitution(program)`.
 
 // MARK: Expressions
 
@@ -64,19 +64,60 @@ struct AsyncExpr: ExprExtension, Equatable {
 
 }
 
-// MARK: Units
+// MARK: Commands
 
-/// A command, or commands piped together.
-struct PipelineUnit: UnitExtension, Equatable {
-    var node: PipelineNode
+/// Commands joined by `&&` and `||` (or one alone), with Swift between them
+/// as in `x > 1 && echo big`: run left to right by exit status. A command is
+/// a pipeline of them, `ls | sorted`, and may be fed a value, `xs | sorted`.
+struct CommandChainExpr: ExprExtension, Equatable {
+    enum Operand: Equatable, Sendable {
+        case command(PipelineNode)
+        case expression(Expr)
+    }
 
-    mutating func check(in checker: TypeChecker) throws {
-        try checker.checkPipeline(&node)
+    struct Link: Equatable, Sendable {
+        var isAnd: Bool
+        var operand: Operand
+    }
+
+    var first: Operand
+    var links: [Link] = []
+    /// An `if`, `guard` or `while` condition, which asks whether it held.
+    var isCondition = false
+
+    var operands: [Operand] { [first] + links.map(\.operand) }
+
+    mutating func check(in checker: TypeChecker, expecting expected: TypeAnnotation?) throws -> TypeAnnotation {
+        // An expression joined with commands is asked whether it held.
+        let joined = !links.isEmpty || isCondition
+        func check(_ operand: inout Operand) throws {
+            switch operand {
+            case .command(var node):
+                try checker.checkPipeline(&node)
+                operand = .command(node)
+            case .expression(var expr):
+                let type = try checker.typeOf(&expr)
+                if joined {
+                    // `try? build() && …`: whether it succeeded.
+                    let attempted = if case .attempt(_, .optional) = expr { true } else { false }
+                    switch type {
+                    case .bool, .output, .unknown, .named("Status"): break
+                    case .optional where attempted: break
+                    default: throw TypeError("a condition must be a Bool, not \(type)")
+                    }
+                }
+                operand = .expression(expr)
+            }
+        }
+        try check(&first)
+        for index in links.indices { try check(&links[index].operand) }
+        return isCondition ? .bool : .named("Status")
     }
 
     /// `exit 1` ends the interpreter.
     var leavesProgram: Bool {
-        guard node.commands.count == 1, case .text(let parts)? = node.commands[0].words.first else { return false }
+        guard links.isEmpty, case .command(let node) = first, node.commands.count == 1,
+              case .text(let parts)? = node.commands[0].words.first else { return false }
         return parts == [.literal("exit")]
     }
 }
@@ -116,17 +157,16 @@ extension Expr {
     }
     var asyncTarget: AsyncExpr.Target? { (extensionNode as? AsyncExpr)?.target }
 
+    static func commands(_ chain: CommandChainExpr) -> Expr { .extended(ExprExtensionBox(chain)) }
+
+    /// The one pipeline of commands this is, alone, if it is one.
+    var pipelineNode: PipelineNode? {
+        guard let chain = extensionNode as? CommandChainExpr, chain.links.isEmpty, case .command(let node) = chain.first else { return nil }
+        return node
+    }
+
     private var extensionNode: (any ExprExtension)? {
         if case .extended(let box) = self { box.node } else { nil }
-    }
-}
-
-extension Unit {
-    static func pipeline(_ node: PipelineNode) -> Unit { .extended(UnitExtensionBox(PipelineUnit(node: node))) }
-
-    /// The command or pipeline this unit is, if it is one.
-    var pipelineNode: PipelineNode? {
-        if case .extended(let box) = self { (box.node as? PipelineUnit)?.node } else { nil }
     }
 }
 
@@ -140,6 +180,3 @@ extension Interpreter {
     /// The shell this interpreter belongs to.
     var shell: Shell { owner as! Shell }
 }
-
-// Foundation has a `Unit` too; the language's is the one the shell means.
-typealias Unit = Swiit.Unit
