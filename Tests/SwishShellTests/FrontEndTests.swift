@@ -75,3 +75,9 @@ private func painted(_ spans: [Span], length: Int) -> [SpanKind?] {
     print("programs both read: \(same + differ.count); colored the same \(same); differ \(differ.count)")
     #expect(differ.isEmpty)
 }
+
+@Test func aCommentAfterACommandIsNotOne() throws {
+    let bound = Shell().interpreter.globalNames()
+    let source = "try! swift build\n// a comment\nlet x = 1\nx"
+    #expect(try SwiftSyntaxFrontEnd().parse(source, bound: bound, plugin: ShellSyntax()) == Parser.parse(source, bound: bound, plugin: ShellSyntax()))
+}
