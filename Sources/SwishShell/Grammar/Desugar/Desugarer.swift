@@ -118,29 +118,73 @@ final class Desugarer {
 
     // MARK: Commands and pipelines
 
-    /// A pipeline fed a value whose stages are each a Swift member of what it
-    /// is fed, collected (`xs | sorted | prefix(2)`) or the one value (`"a b"
-    /// | split(separator: " ")`), with Swift's arguments or none: the calls
-    /// themselves, `xs.sorted().prefix(2)`. Nil for any other, which runs
-    /// through `Pipeline`: a stage that works item by item, a method of the
-    /// prelude's, a function, a program, or words to convert.
+    /// A pipeline fed a value whose stages are each Swift's own call, with
+    /// Swift's arguments or none: the calls themselves. A member of the items
+    /// collected or of the one value is called on it (`xs.sorted()`); one that
+    /// works on items as they come is a `Flow`'s (`Flow(xs).filter { … }`),
+    /// which reads an item through every stage before the next, as the
+    /// pipeline does; a member or method of each item is `compactMap { … }` on
+    /// that `Flow`, dropping what gives nothing, as a stage does. Nil for any
+    /// other, which runs through `Pipeline`: an Array member after items
+    /// flow, a method of the prelude's, a function, a program, or words to
+    /// convert (`sorted --by size`).
     private func calls(_ node: PipelineNode) -> Expr? {
         guard var expr = node.input.map(rewriter.expression), node.throwing == nil else { return nil }
-        // What the next stage gets: a list (an Array of the items), or one value.
-        var isList = node.inputIsList
+        /// What the next stage gets: an Array of the items, a `Flow` of them, or one value.
+        enum Flowing { case list, flow, value }
+        var flowing: Flowing = node.inputIsList ? .list : .value
+        // Items as they come: a `Flow` of the list, made once.
+        func asFlow() -> Bool {
+            if flowing == .flow { return true }
+            guard flowing == .list, let initializer = Bridge.flowInitializer else { return false }
+            expr = .bridged(type: "Flow", member: initializer, receiver: nil, arguments: [Argument(label: nil, value: expr)])
+            flowing = .flow
+            return true
+        }
+        // `{ $0.… }`, dropping what gives nothing.
+        func compactMap(_ call: Expr) -> Bool {
+            guard asFlow(), let member = Bridge.stageMembers("Flow", "compactMap").first else { return false }
+            let item = Parameter(name: "$0")
+            let transform = ClosureLiteral(parameters: [item], body: Program(statements: [.expression(call)]))
+            expr = .bridged(type: "Flow", member: member.index, receiver: expr, arguments: [Argument(label: nil, value: .closure(transform))])
+            return true
+        }
         for (index, command) in node.commands.enumerated() {
-            guard !command.external, command.redirects.isEmpty, command.environment.isEmpty, command.words.count == 1,
-                  case .text(let parts) = command.words[0], parts.count == 1, case .literal(let name) = parts[0],
-                  case .bridged(let type, let receiver, _)? = command.resolution,
-                  receiver == .collected && isList || receiver == .value && index == 0 else { return nil }
-            var members = Bridge.stageMembers(type, name)
-            // With no arguments, it is the member that needs none.
-            if command.call == nil { members = members.filter { $0.member.parameters.allSatisfy(\.hasDefault) } }
-            guard let member = command.overload.map({ Bridge.stageMembers(type, name)[$0] }) ?? (members.count == 1 ? members[0] : nil) else {
+            guard !command.external, command.redirects.isEmpty, command.environment.isEmpty,
+                  case .text(let parts)? = command.words.first, parts.count == 1, case .literal(let name) = parts[0] else { return nil }
+            // A closure word (`filter { … }`) is a trailing closure; any other word converts as a command line's.
+            var closures: [Argument] = []
+            for word in command.words.dropFirst() {
+                guard case .closure(let closure) = word else { return nil }
+                closures.append(Argument(label: nil, value: .closure(rewriter.closure(closure))))
+            }
+            let arguments = (command.call.map(rewriter.arguments) ?? []) + closures
+            switch command.resolution {
+            case .bridged(let type, let receiver, _)?:
+                var members = Bridge.stageMembers(type, name)
+                // With no arguments, it is the member that needs none.
+                if arguments.isEmpty { members = members.filter { $0.member.parameters.allSatisfy(\.hasDefault) } }
+                guard let member = command.overload.map({ Bridge.stageMembers(type, name)[$0] }) ?? (members.count == 1 ? members[0] : nil) else {
+                    return nil
+                }
+                switch receiver {
+                case .collected where flowing == .list, .value where index == 0:
+                    expr = .bridged(type: type, member: member.index, receiver: expr, arguments: arguments)
+                    if case .list = member.member.returns { flowing = .list } else { flowing = .value }
+                case .flow:
+                    guard asFlow() else { return nil }
+                    expr = .bridged(type: type, member: member.index, receiver: expr, arguments: arguments)
+                case .each:
+                    guard compactMap(.bridged(type: type, member: member.index, receiver: .variable("$0"), arguments: arguments)) else { return nil }
+                default:
+                    return nil
+                }
+            // `points | describe`: the method of each item.
+            case .itemMethod?:
+                guard compactMap(.call(.member(.variable("$0"), name), arguments)) else { return nil }
+            default:
                 return nil
             }
-            expr = .bridged(type: type, member: member.index, receiver: expr, arguments: command.call.map(rewriter.arguments) ?? [])
-            if case .list = member.member.returns { isList = true } else { isList = false }
         }
         return expr
     }

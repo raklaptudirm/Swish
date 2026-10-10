@@ -17,7 +17,7 @@ extension Library {
                 "Sequence.select": selectBody,
                 "capture": (shell.captureBody, nil),
                 "displayItems": (.native { [unowned shell] _, arguments in
-                    shell.displayItems(arguments["value"] ?? .nothing)
+                    try shell.displayItems(arguments["value"] ?? .nothing)
                     return .nothing
                 }, nil),
                 "exitStatus": (.native { [unowned shell] _, arguments in shell.statusValue(shell.status(of: arguments["value"] ?? .nothing)) }, nil),

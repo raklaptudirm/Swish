@@ -113,8 +113,12 @@ private func desugared(_ source: String, in shell: Shell = Shell()) throws -> St
     #expect(try desugared("[3, 1, 2] | sorted") == "displayItems([3, 1, 2].sorted())")
     #expect(try desugared(#""a b" | split(separator: " ")"#) == #"displayItems("a b".split(separator: " "))"#)
     #expect(try desugared(#"["b", "a"] | sorted | joined(separator: ",")"#) == #"displayItems(["b", "a"].sorted().joined(separator: ","))"#)
-    // Item by item, or with words to convert, it stays a pipeline.
-    #expect(try desugared("[1, 2] | map { $0 * 2 }").hasPrefix("Pipeline("))
+    // Items as they come are a Flow's, read an item through every stage before the next.
+    #expect(try desugared("[3, 1, 2] | filter { $0 > 1 } | prefix(1)") == "displayItems(Flow([3, 1, 2]).filter { $0 > 1 }.prefix(1))")
+    #expect(try desugared(#"["a", "b"] | uppercased"#) == #"displayItems(Flow(["a", "b"]).compactMap { $0.uppercased() })"#)
+    // A collected stage after items flow, words to convert, or a program: still a pipeline.
+    #expect(try desugared("[1, 2] | map { $0 } | sorted").hasPrefix("Pipeline("))
+    #expect(try desugared("[1, 2] | prefix 1").hasPrefix("Pipeline("))
     #expect(try desugared("[3, 1] | sorted | cat").hasPrefix("Pipeline("))
 }
 
@@ -123,6 +127,11 @@ private func desugared(_ source: String, in shell: Shell = Shell()) throws -> St
         "[3, 1, 2] | sorted", "[3, 1, 2] | max", "[Int]() | max", "[1, 2] | count", #""a b" | split(separator: " ")"#,
         #"["b", "a"] | sorted | joined(separator: ",")"#, "[3, 1, 2] | sorted | reversed", #"[["a": 1], ["a": 2]] | reversed"#,
         "[1, 2, 2] | contains(2)", #""hello" | uppercased"#, "[3, 1] | sorted | first",
+        "[3, 1, 2] | filter { $0 > 1 } | prefix(1)", "[1, 2] | map { $0 * 2 }", #"["a", "b"] | uppercased"#,
+        "[3, 1, 2] | sorted | map { $0 + 1 } | compactMap { $0 > 2 ? $0 : nil }",
+        // When each stage runs, item by item: a stage's prints show it.
+        #"[1, 2, 3] | map { print("m\($0)"); return $0 } | filter { print("f\($0)"); return $0 > 1 } | prefix(1)"#,
+        #"struct P { var x: Int; func d() -> String? { print("d\(x)"); return x > 1 ? "p" : nil } }; [P(x: 1), P(x: 2)] | d"#,
     ]
     for source in sources {
         func run(direct: Bool) throws -> (String, Int32) {
@@ -134,4 +143,11 @@ private func desugared(_ source: String, in shell: Shell = Shell()) throws -> St
         let direct = try run(direct: true), pipeline = try run(direct: false)
         #expect(direct.0 == pipeline.0 && direct.1 == pipeline.1, "\(source): \(direct) and \(pipeline)")
     }
+}
+
+@Test func aClosureGivingAnOptionalRunsOncePerItem() throws {
+    // The bridge made a closure's optional result once to test it and again to convert it.
+    let shell = Shell()
+    let output = try onLargeStack { try shell.capturing { shell.execute(#"print([1, 2].compactMap { print("c\($0)"); return $0 > 1 ? $0 : nil })"#) } }
+    #expect(output == "c1\nc2\n[2]\n")
 }

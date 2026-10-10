@@ -255,18 +255,28 @@ compile the printed Swift with `swiftc` and compare it with the interpreter.
 
 Left:
 
-- **More stages as direct Swift calls.** Done for the kind that is exactly
-  a call: a statement's pipeline fed a value, each stage a Swift member of the
-  collected items or of the one value, with Swift's arguments or none.
-  `[3, 1, 2] | sorted | prefix(2)`… is `displayItems([3, 1, 2].sorted())`, and
-  `"a b" | split(separator: " ")` is `displayItems("a b".split(separator: " "))`:
-  `displayItems` is the statement's sink, which shows items one a line or as a
-  table, as a pipeline's end does. A test runs pipelines both ways and
-  compares what they show. Left as `Pipeline`: stages that work item by item
-  (`map`, `filter`, `prefix` on a `Flow`, a method of each item), which
-  stream, so a direct call would change when side effects happen; the
-  prelude's methods; functions and programs; and words to convert
-  (`sorted --by size`), which bind as a command line does.
+- **Stages as direct Swift calls.** A statement's pipeline fed a value,
+  whose stages are each Swift's own call (with Swift's arguments, a closure
+  word, or none), is those calls, shown by `displayItems`, the statement's
+  sink, which shows items one a line or as a table as a pipeline's end does:
+  - a member of the items collected, or of the one value, is called on it:
+    `[3, 1, 2] | sorted` is `displayItems([3, 1, 2].sorted())`;
+  - one that works on items as they come is a `Flow`'s, which reads an item
+    through every stage before the next, as the pipeline does:
+    `xs | filter { $0 > 1 } | prefix(1)` is
+    `displayItems(Flow(xs).filter { $0 > 1 }.prefix(1))`;
+  - a member or method of each item is `compactMap` on that `Flow`, which
+    drops what gives nothing, as a stage does: `names | uppercased` is
+    `Flow(names).compactMap { $0.uppercased() }`.
+
+  A test runs pipelines both ways, with prints in their stages, and compares
+  what they show and their status. (It found the bridge calling a closure
+  twice for an optional result, in every `compactMap`; fixed.) Left as
+  `Pipeline`: an Array member after items flow, which would need them
+  collected; the prelude's methods; functions and programs, whose items come
+  from a process; and words to convert (`sorted --by size`), which bind as a
+  command line does. Programs' streams are where `AsyncSequence` comes in,
+  with the async interpreter.
 - **Effects** (`await` insertion) wait for the async interpreter: nothing
   awaits yet, so there is nothing to insert.
 

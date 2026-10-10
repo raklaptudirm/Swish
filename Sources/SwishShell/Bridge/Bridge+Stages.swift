@@ -13,6 +13,11 @@ extension Bridge {
         }.map { (index: $0.offset, member: $0.element) }
     }
 
+    /// `Flow(items)`: the initializer that makes a `Flow` of a sequence's items.
+    static let flowInitializer: Int? = (types["Flow"]?.members ?? []).firstIndex { member in
+        member.kind == .initializer && member.parameters.map(\.name) == ["items"]
+    }
+
     /// Of a stage's members, those a `Flow` passes on as another: the ones
     /// that work on items as they come.
     static func flowMembers(_ name: String) -> [(index: Int, member: BridgedMember)] {

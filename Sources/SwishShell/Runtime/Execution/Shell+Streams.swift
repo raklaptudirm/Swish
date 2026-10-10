@@ -81,8 +81,8 @@ extension Shell {
     }
 
     /// A value's items, shown as the end of a pipeline shows them.
-    func displayItems(_ value: Value) {
-        try? display(.elements(of: value), to: stdoutFD, toExternal: false)
+    func displayItems(_ value: Value) throws {
+        try display(.elements(of: value), to: stdoutFD, toExternal: false)
     }
 
     /// Writes items as text: for a person, formatted, or for a program, as rows.
