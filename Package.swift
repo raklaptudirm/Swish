@@ -35,6 +35,7 @@ let package = Package(
             name: "SwishShell",
             dependencies: [
                 .product(name: "Swiit", package: "Swiit"),
+                .product(name: "SwiitSwiftSyntax", package: "Swiit"),
                 "SwishShellLibrary",
                 .product(name: "SwishKit", package: "SwishKit"),
                 .product(name: "SystemPackage", package: "swift-system"),

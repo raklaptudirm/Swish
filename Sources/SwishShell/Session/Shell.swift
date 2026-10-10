@@ -1,4 +1,5 @@
 @_spi(Shell) import Swiit
+@_spi(Shell) import SwiitSwiftSyntax
 import Foundation
 import SwishKit
 
@@ -57,6 +58,7 @@ public final class Shell {
         signal(SIGPIPE, SIG_IGN)
         interpreter = Interpreter(host: SwishHost(), shellLayer: nil)
         interpreter.syntax = ShellSyntax()
+        interpreter.frontEnd = SwiftSyntaxFrontEnd()
         interpreter.host = SwishHost(process: self)
         interpreter.shellLayer = ShellLayer(process: self)
         interpreter.owner = self

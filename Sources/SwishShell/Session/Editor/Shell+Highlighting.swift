@@ -12,7 +12,7 @@ extension Shell {
         var styles = [String?](repeating: nil, count: characters.count)
         // Longer spans first, so what's inside them (an interpolation in a
         // string) is painted over them.
-        for span in Parser.highlight(text, bound: interpreter.globalNames(), plugin: interpreter.syntax).sorted(by: { $0.range.count > $1.range.count }) {
+        for span in interpreter.frontEnd.highlight(text, bound: interpreter.globalNames(), plugin: interpreter.syntax).sorted(by: { $0.range.count > $1.range.count }) {
             let range = span.range.clamped(to: 0..<characters.count)
             let style: String? = switch span.kind {
             case .keyword, .punctuation: DisplayStyle.keyword.escape

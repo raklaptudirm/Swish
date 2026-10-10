@@ -72,7 +72,7 @@ private func shellWithRecorder() -> (Shell, Recorder) {
     #expect(shell.execute("let h = env.HOME; h ?? \"none\"") != 0)
     #expect(shell.execute(#"env.X = "1""#) != 0)
     #expect(recorder.written == [
-        "err: swish: syntax error: no variable named 'env'\n",
+        "err: swish: error: no variable named 'env'\n",
         "err: swish: env.X: command not found\n",
     ])
 }
