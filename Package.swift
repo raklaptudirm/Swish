@@ -42,7 +42,7 @@ let package = Package(
             exclude: ["Library"]
         ),
         .testTarget(name: "SwishShellTests", dependencies: [
-            "SwishShell", .product(name: "Swiit", package: "Swiit"),
+            "SwishShell", .product(name: "Swiit", package: "Swiit"), .product(name: "SwiitSwiftSyntax", package: "Swiit"),
         ]),
     ]
 )
