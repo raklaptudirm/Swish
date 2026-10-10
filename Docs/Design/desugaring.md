@@ -10,14 +10,13 @@ The rewrite and the library it targets belong to the shell layer, not the
 embeddable core ([embedding.md](embedding.md)): the core is Swift only, and
 reaches the outside only through its `SwishHost`.
 
-Little of this is built as a rewrite yet. Today the shell constructs are
-nodes the interpreter runs itself, about 2,000 lines (`Execution/`, command
-parsing, the pipeline checker). The standard library half of this already
-exists and is what the rewrite targets: `with(env:)`, `Output`, `Flow`,
-`Job`, `from`, `to`, `table`, `list`. **Built so far:** the pass itself
-(`Desugarer` in the shell, over `TreeRewriter` in Swiit), the printer that
-shows its result (`SwiftPrinter`, checked by reading what it prints back as
-the same tree), and the first rewrite, `$name`. See "Where it stands".
+Every shell construct is rewritten now: after checking, the shell's
+`Desugarer` turns each into calls to the library below, and the interpreter
+only runs Swift (meeting a layer's node, it stops with an error). What runs a
+command is still the shell's pipeline machinery, which the library's
+`Command` and `Pipeline` hand their words to. See "Where it stands" for what
+is left: stages as direct Swift calls where types are known, flattening
+statements, and effects.
 
 ## How the rewrite works
 
@@ -43,16 +42,21 @@ the same tree), and the first rewrite, `$name`. See "Where it stands".
 
 All Swift, in `SwishStandardLibrary`, callable by hand:
 
-| Type | What it is | Today |
-|---|---|---|
-| `Command` | A program or a Swift function with its words, redirects and environment; `run()`, `output()`, `stream()` | the interpreter's `Stage` and `CommandNode` |
-| `Output` | What a command gave: text, lines, `status`; `get()` throws on failure, like `Result.get()` | exists (SwishKit) |
-| `Pipeline` | Stages joined with `\|`; runs to a sink | the interpreter's `runSegment` |
-| `Flow` | Items read as they come | exists |
-| `Job` | A running command or Swish task; `value`, `lines()`, `cancel()` | exists, programs only |
-| `Words` | Expands a command word: `~`, `$name`, globs, spread lists | `expandWord`, `Glob.swift` |
-| `Environment` | Subscript over the process environment | `env`, `withEnvironment` |
-| `with(env:)` | Variables for a call | exists |
+| Type | What it is |
+|---|---|
+| `Command` | A program or a Swift function with its words: `Command("ls", "-la")`, then `external()`, `environment([…])`, `reading`/`writing`/`appending(fd, …)`, `sending(fd, to: other)`, `calling((…))`; run with `run()`, `runQuietly()`, `check()`, `output()`, `start()`, `startCapturing()` |
+| `Pipeline` | Commands joined with `\|`, fed a value or not: `Pipeline(from: xs, Command("sorted"))`, run the same ways |
+| `Glob`, `Spread` | A command word with an unquoted wildcard (`Glob("*.swift")`), and an unquoted value alone, a word per item (`Spread(files)`); `escapingWildcards(x)` keeps a value's own `*` literal in a pattern |
+| `capture { … }` | `$(…)`: the block run with its output gathered, an `Output`; `capture(throwing: true)` under `try` |
+| `Status` | What `run()` gives: `code`, `signal`, `succeeded`, and `and`/`or` for chains |
+| `Output`, `Job`, `Flow` | What a command gave, a job in the background, items as they come |
+| `with(env:)`, `env` | Variables for a block, and the process's environment |
+| `importPlugin(name, from:)` | `import Name from path` |
+
+`Command`, `Pipeline`, `Glob`, `Spread` and `Status` are Swift structs in the
+shell's prelude (`Library+Shell.swift`); the methods that run them have
+Swift bodies, and run where they are called from, so a command finds the
+functions in scope there.
 
 ## The constructs
 
@@ -220,49 +224,35 @@ compile the printed Swift with `swiftc` and compare it with the interpreter.
 
 ## Where it stands
 
-- **Done:** `SwiftPrinter` prints the core's tree as Swift, and 33 programs
-  read back from it as the same tree. `TreeRewriter` rewrites a tree bottom-up.
-  The shell's `Desugarer` runs after the checker, in `Shell.typeCheck`, so every
-  entry, script and config goes through it, and goes inside commands (words,
-  redirects, environment assignments, closure words, `$(…)`, `async`).
-- **`$name`:** a variable in scope (the checker records which) is that
-  variable; otherwise `env["name"]!`. An unset name now stops with
-  `env["name"] is nil, but '!' needs a value` instead of its own message.
-- **The status design, and `Command` as hand-written host objects (option 1).**
-  A command statement is a `Status` value: `Command("git", "status").run()`
-  gives `Status { code, signal, succeeded }`, and a statement whose value is a
-  `Status` has that status (the prompt records it and shows nothing).
-  `a && b || c` is `a.and { b }.or { c }`, methods of `Status` written in Swish
-  in the shell's prelude; for all 27 combinations of three programs it gives the
-  statuses the shell's own `&&` and `||` do. `output()` is `$(…)`. `Command` is
-  a `SwishObject` the shell registers (like `Job`), which runs the same
-  pipeline machinery, so the rewrite changes nothing about how a command runs.
-- **Rewritten now,** for a command of plain words (one command, literal
-  words, no redirect, `^`, closure or call, and not `exit`):
-  - a statement is `Command(…).run()`;
-  - `X=1 cmd` is `with(env: ["X": "1"]) { Command("cmd").run() }`;
-  - `try cmd` is `try Command(…).check()` (`try!` the same), which throws a
-    `CommandFailure`;
-  - `a && b || c` is `a.runQuietly().and { b.runQuietly() }.or { c.runQuietly() }`
-    (`runQuietly` is `run` where a function used as a command shows nothing it
-    gives, as in a chain or a condition);
-  - a condition (`if`, `while`, `guard`) asks whether that `succeeded`.
+- **Every construct is rewritten.** `$name`, words (`Glob`, `Spread`,
+  interpolations, `~` as `env["HOME"]!`), redirects, `X=1`, `^name`,
+  pipelines, `$(…)` (`capture`), `try` on commands (`check()`), `async`
+  (`start()`, `startCapturing()`), `exit` (a builtin run as a command),
+  `import`, chains and conditions. The shell's nodes only check themselves;
+  `Desugarer` replaces each, and the interpreter has no way left to run one.
+- **What the checker decided travels with the stage:** `checked(StageHint(…))`
+  says what a stage's name is given what flows in (a method of the sequence,
+  of each item, a Swift member, or a function or program), which overload a
+  call takes, and why a word wasn't an expression. A pipeline written by hand
+  has no hint, and the shell looks: a method of the sequence, then a Swift
+  member of the items collected, then a function or program.
+- **Chains:** a chain of commands is `a.runQuietly().and { … }.or { … }` over
+  `Status`; one with a Swift expression in it (`x > 1 && echo big`) stays the
+  core's chain, each command its `Status`. A statement's value being a
+  `Status` sets the shell's status, at the prompt and in scripts, and a
+  per-item error (`ls` of a missing path) makes it a failure either way.
+- **Printed:** `SwiftPrinter` shows the rewrite, as `DesugarTests` pins:
+  `Pipeline(Command("ls"), Command("sorted").calling((by: \.size))…).run()`.
 
-  A chain with anything that isn't such a command in it is left as it is.
-  Still nodes of their own, printed as comments: words with `~`, `$name` or
-  globs (`Words`), redirects, pipelines, `^name`, `exit`, `$(…)` and `async`.
+Left:
 
-What building it showed: **every command-shaped construct depends on how a
-statement's exit status is carried.** `X=1 cmd` as `with(env:) { cmd }` loses
-`cmd`'s status, since a closure gives its last expression's value and a
-command's status isn't one; `a && b || c`, `try cmd`, `if cmd { }` and the
-statement sink all ask what a command statement evaluates to. So the order of
-work below changes: step 8's status design (what a statement gives, where the
-shell records it per task) comes before the constructs that need it, and the
-first of those, `Command.run()` returning a status value and `Status.and/or`,
-now exists, and `X=1 cmd`, `try cmd`, `&&`/`||` and conditions over plain
-commands are rewritten with it. What is left is `Words`, redirects and
-pipelines, and then flattening the statement itself.
+- **Stages as direct Swift calls** where types are known (`xs.max()`,
+  `names.map { $0.uppercased() }`), which the hint makes possible stage kind by
+  stage kind, keeping streaming between programs.
+- **Flattening statements** (step 8): `Chain` and `Unit` hoisted into
+  `Statement`, and statements not returning an exit status.
+- **Effects** (`await` insertion) wait for the async interpreter: nothing
+  awaits yet, so there is nothing to insert.
 
 ## Open questions
 

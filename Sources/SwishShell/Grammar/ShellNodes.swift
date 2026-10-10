@@ -2,9 +2,10 @@
 import Foundation
 import SwishKit
 
-// The shell's syntax in the core's tree: each form is a node that checks and
-// runs itself, held in the tree as an extension (Language/Syntax/SyntaxExtension.swift),
-// so the checker and the interpreter never name them. The factory functions
+// The shell's syntax in the core's tree: each form is a node that checks
+// itself, held in the tree as an extension (Language/Syntax/SyntaxExtension.swift),
+// so the checker never names them; then `Desugarer` rewrites each into the
+// Swift it means, which is what runs. The factory functions
 // keep the parser's spelling, `.pipeline(node)`, `.substitution(program)`.
 
 // MARK: Expressions
@@ -23,12 +24,6 @@ struct DollarExpr: ExprExtension, Equatable {
         return .string
     }
 
-    func evaluate(in interpreter: Interpreter) throws -> Value {
-        if let binding = interpreter.lookup(name) { return binding.value }
-        if case .object(let environment as DynamicObject)? = interpreter.lookup("env")?.value,
-           case .string(let value) = try environment.read(name) { return .string(value) }
-        throw RuntimeError("no variable or environment variable named '\(name)'")
-    }
 }
 
 /// `$(…)`: the command's Output, whatever its status. Under `try`
@@ -43,18 +38,6 @@ struct SubstitutionExpr: ExprExtension, Equatable {
         return .output
     }
 
-    func evaluate(in interpreter: Interpreter) throws -> Value {
-        var status: Int32 = 0
-        var text = try interpreter.shell.capturing { status = try interpreter.runBlock(program) }
-        while text.last == "\n" { text.removeLast() }
-        let (code, signal) = interpreter.exitCode(status)
-        let output = Output(text: text, code: code, signal: signal)
-        // Without `try`, failing is just what `.status` says.
-        if throwing && status != 0 {
-            throw RuntimeError.commandFailure("$(…) failed with status \(status)", status: status, output: output)
-        }
-        return .output(output)
-    }
 }
 
 /// `async swift build` or `async $(curl …)`: starts it in the background.
@@ -79,12 +62,6 @@ struct AsyncExpr: ExprExtension, Equatable {
         return .named("Job")
     }
 
-    func evaluate(in interpreter: Interpreter) throws -> Value {
-        switch target {
-        case .command(let node): try interpreter.shell.start(node, capture: false)
-        case .capture(let node): try interpreter.shell.start(node, capture: true)
-        }
-    }
 }
 
 // MARK: Units
@@ -95,18 +72,6 @@ struct PipelineUnit: UnitExtension, Equatable {
 
     mutating func check(in checker: TypeChecker) throws {
         try checker.checkPipeline(&node)
-    }
-
-    func run(in interpreter: Interpreter, context: UnitContext) throws -> Int32 {
-        let status = try interpreter.shell.run(node, display: context == .statement)
-        // `try make`: failing throws, with the status in the error.
-        if case .some(let kind) = node.throwing, status != 0 {
-            let (code, signal) = interpreter.exitCode(status)
-            let error = RuntimeError.commandFailure("\(node.source) failed with status \(status)", status: status,
-                                                    output: Output(text: "", code: code, signal: signal))
-            throw kind == .forced ? FatalError(error: error) : error
-        }
-        return status
     }
 
     /// `exit 1` ends the interpreter.
@@ -130,14 +95,6 @@ struct ImportPluginStatement: StatementExtension, Equatable {
         checker.afterImport = true
     }
 
-    func run(in interpreter: Interpreter) throws -> Int32 {
-        let value = try interpreter.evaluate(path)
-        guard case .string(let text) = value else {
-            throw RuntimeError("import \(name): the path must be a String, not \(value.typeName)")
-        }
-        try interpreter.importPlugin(name, from: text)
-        return 0
-    }
 }
 
 // MARK: The parser's spelling, and reading them back
@@ -176,19 +133,6 @@ extension Unit {
 extension Statement {
     static func importPlugin(name: String, path: Expr) -> Statement {
         .extended(StatementExtensionBox(ImportPluginStatement(name: name, path: path)))
-    }
-}
-
-extension Shell {
-    /// Runs a pipeline of commands, showing its result when asked, and gives
-    /// the exit status.
-    func run(_ node: PipelineNode, display: Bool) throws -> Int32 {
-        try runPipeline(try stages(for: node), source: node.source, display: display)
-    }
-
-    /// Starts a pipeline in the background, giving the job.
-    func start(_ node: PipelineNode, capture: Bool) throws -> Value {
-        .object(try startJob(try stages(for: node), source: node.source, capture: capture))
     }
 }
 

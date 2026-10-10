@@ -2,36 +2,39 @@
 import Foundation
 import SwishKit
 
+/// A command as it runs: its words expanded, its redirects resolved, and
+/// what the checker decided about it.
+struct CommandSpec {
+    /// The name, then its arguments.
+    var arguments: [CommandArgument]
+    var external = false
+    var redirects: [ResolvedRedirect] = []
+    var environment: [(String, String)] = []
+    /// Arguments written as a call, `sorted(by: "size")`; a `.case` waits for its parameter's type.
+    var call: [Argument]? = nil
+    var resolution: StageResolution? = nil
+    var overload: Int? = nil
+    var notAnExpression: String? = nil
+}
+
 extension Shell {
-    /// A pipeline's stages, with words expanded and redirects resolved.
-    func stages(for node: PipelineNode) throws -> [Stage] {
+    /// The stages of commands fed `input`, if any.
+    func stages(input: Value?, commands: [CommandSpec]) throws -> [Stage] {
         var stages: [Stage] = []
-        if let input = node.input {
-            stages.append(.value(try interpreter.evaluate(input)))
-        }
-        for (index, command) in node.commands.enumerated() {
+        if let input { stages.append(.value(input)) }
+        for (index, command) in commands.enumerated() {
             // After a `|`, a name can be a method of what's piped in.
-            let piped = index > 0 || node.input != nil
-            var arguments: [CommandArgument] = []
-            for word in command.words {
-                switch word {
-                case .text(let parts): arguments += try interpreter.expandWord(parts).map(CommandArgument.text)
-                case .closure(let literal): arguments.append(.value(try interpreter.evaluate(.closure(literal))))
-                }
-            }
-            guard case .text(let name) = arguments[0] else {
+            let piped = index > 0 || input != nil
+            var arguments = command.arguments
+            guard case .text(let name)? = arguments.first else {
                 throw RuntimeError("a closure can't be a command name")
             }
             if let call = command.call {
                 guard !command.external else { throw RuntimeError("a program can't be called with (…)") }
-                // `.case` arguments wait for their parameter's type.
-                arguments += try call.map { argument in
-                    if case .caseLiteral = argument.value { return .call(argument) }
-                    return .call(Argument(label: argument.label, value: .literal(try interpreter.evaluate(argument.value))))
-                }
+                arguments += call.map(CommandArgument.call)
             }
-            let redirects = try command.redirects.map(interpreter.resolve)
-            let environment = try command.environment.map { ($0.name, try interpreter.join($0.value)) }
+            let redirects = command.redirects
+            let environment = command.environment
             let rest = Array(arguments.dropFirst())
             // Methods of the input first (the sequence's, then its items'),
             // then functions, then programs; `foreign` skips to programs.
@@ -42,8 +45,14 @@ extension Shell {
                let members = bridgedStage(type, name, receiver: receiver, bindings: bindings) {
                 // `xs | max`: a Swift member, as the checker found it.
                 stages.append(.function(narrowed(members, command.overload), rest, redirects: redirects, environment: environment))
-            } else if !command.external, piped, resolution == .sequenceMethod, let methods = interpreter.sequenceMethods[name] {
+            } else if !command.external, piped, resolution == .sequenceMethod || resolution == nil,
+                      let methods = interpreter.sequenceMethods[name] {
+                // A stage written by hand, with no checker to decide, is a
+                // method of the sequence when there is one.
                 stages.append(.function(narrowed(methods, command.overload), rest, redirects: redirects, environment: environment))
+            } else if !command.external, piped, resolution == nil, let members = bridgedStage("Array", name, receiver: .collected) {
+                // By hand, too: a Swift member of the items collected, `xs | sorted`.
+                stages.append(.function(narrowed(members, command.overload), rest, redirects: redirects, environment: environment))
             } else if !command.external, piped, resolution == .itemMethod {
                 stages.append(.method(name, rest, redirects: redirects, environment: environment))
             } else if !command.external, let functions = interpreter.commandFunctions(named: name) {

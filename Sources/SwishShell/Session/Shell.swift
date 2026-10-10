@@ -68,7 +68,6 @@ public final class Shell {
         interpreter.installBuiltinFunctions(libraries: [.shell(for: self)])
         interpreter.installJSON()
         installJobs()
-        installCommand()
     }
 }
 

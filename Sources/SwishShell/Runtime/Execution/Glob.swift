@@ -86,7 +86,7 @@ enum Glob {
         base.isEmpty ? name : base.hasSuffix("/") ? base + name : base + "/" + name
     }
 
-    private static func unescape(_ text: String) -> String {
+    static func unescape(_ text: String) -> String {
         var result = ""
         var escaped = false
         for character in text {

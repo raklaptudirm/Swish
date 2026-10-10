@@ -2,115 +2,224 @@
 import Foundation
 import SwishKit
 
-/// `Command("git", "status")`: a program or function with its words, as a value
-/// to run by hand: `run()` runs it as a statement would and gives the
-/// `Status`, `output()` runs it as `$(…)` would and gives the `Output`. The
-/// words are taken as they are: no `~`, `$name` or globs, which is what
-/// `Words` will be for. This is what a command statement means in Swift
-/// (Docs/Design/desugaring.md).
-final class CommandObject: CheckedObject, @unchecked Sendable {
-    let words: [String]
-    unowned let shell: Shell
+// What a command and a pipeline are in Swift: the prelude's `Command` and
+// `Pipeline` (Library+Shell.swift), built by hand or by the rewrite of the
+// shell's constructs (Docs/Design/desugaring.md).
+//
+//     Command("ls", "-la", Glob("*.swift")).writing(1, to: "out").run()
+//     Pipeline(from: xs, Command("sorted"), Command("prefix", "3")).output()
+//
+// Here is how they run: through the same machinery as a command typed at the
+// prompt.
 
-    init(words: [String], shell: Shell) {
-        self.words = words
-        self.shell = shell
+/// What the checker decided about a stage, which a stage written by hand
+/// leaves to the shell: what its name is, given what flows into it, which
+/// overload a call to it takes, and why it isn't an expression.
+final class StageHint: SwishObject, @unchecked Sendable {
+    let resolution: StageResolution?
+    let overload: Int?
+    let notAnExpression: String?
+
+    init(resolution: StageResolution? = nil, overload: Int? = nil, notAnExpression: String? = nil) {
+        self.resolution = resolution
+        self.overload = overload
+        self.notAnExpression = notAnExpression
     }
 
-    var typeName: String { "Command" }
-    var checkedType: TypeAnnotation { .named("Command") }
+    var isEmpty: Bool { resolution == nil && overload == nil && notAnExpression == nil }
 
-    /// What the checker knows of its members.
-    static let memberTypes: [String: TypeAnnotation] = [
-        "words": .list(.string),
-        "run": .functionType([], .named("Status"), throws: false),
-        "runQuietly": .functionType([], .named("Status"), throws: false),
-        "check": .functionType([], .named("Status"), throws: true),
-        "output": .functionType([], .output, throws: false),
-    ]
+    var typeName: String { "StageHint" }
+    var memberNames: [String] { [] }
+    func member(_ name: String) -> Value? { nil }
+    var fields: Record? { nil }
 
-    var memberNames: [String] { Array(CommandObject.memberTypes.keys.sorted()) }
-    var description: String { "Command(" + words.map { "\"\($0)\"" }.joined(separator: ", ") + ")" }
+    var description: String {
+        var parts: [String] = []
+        switch resolution {
+        case .sequenceMethod?: parts.append(".sequenceMethod")
+        case .itemMethod?: parts.append(".itemMethod")
+        case .bridged(let type, let receiver, _)?: parts.append(".member(of: \"\(type)\", on: .\(receiver))")
+        case .other?: parts.append(".other")
+        case nil: break
+        }
+        if let overload { parts.append("overload: \(overload)") }
+        if let notAnExpression { parts.append("notAnExpression: \"\(notAnExpression)\"") }
+        return "StageHint(" + parts.joined(separator: ", ") + ")"
+    }
 
-    func member(_ name: String) -> Value? {
-        switch name {
-        case "words": .list(words.map(Value.string))
-        case "run": method("run") { try self.run(display: true) }
-        case "runQuietly": method("runQuietly") { try self.run(display: false) }
-        case "check": method("check", throwing: true) { try self.check() }
-        case "output": method("output") { try self.output() }
-        default: nil
+    var debugDescription: String { description }
+}
+
+extension Shell {
+    /// The Swift bodies of `Command`'s and `Pipeline`'s methods that run them.
+    var commandMethods: [String: (body: FunctionBody, input: Parameter?)] {
+        let methods: [String: ([Value], Value?) throws -> Value] = [
+            // As a statement: its output goes where the shell's does.
+            "run": { [unowned self] in statusValue(try run($0, from: $1, display: true)) },
+            // In a chain or a condition: a function used as a command shows nothing.
+            "runQuietly": { [unowned self] in statusValue(try run($0, from: $1, display: false)) },
+            "check": { [unowned self] in try check($0, from: $1) },
+            "output": { [unowned self] in .output(try output($0, from: $1)) },
+            "start": { [unowned self] in .object(try startJob(try stages($0, from: $1), source: source($0, from: $1), capture: false)) },
+            "startCapturing": { [unowned self] in
+                .object(try startJob(try stages($0, from: $1), source: source($0, from: $1), capture: true))
+            },
+        ]
+        var bodies: [String: (body: FunctionBody, input: Parameter?)] = [:]
+        for (name, method) in methods {
+            // A command alone, or a pipeline's commands and what it is fed.
+            bodies["Command." + name] = (.native { _, arguments in try method([arguments["self"] ?? .nothing], nil) }, nil)
+            bodies["Pipeline." + name] = (.native { _, arguments in
+                guard case .record(let pipeline)? = arguments["self"], case .list(let commands)? = pipeline["commands"] else {
+                    throw RuntimeError("not a Pipeline")
+                }
+                return try method(commands, pipeline["input"].flatMap { $0 == .nothing ? nil : $0 })
+            }, nil)
+        }
+        return bodies
+    }
+
+    /// `capture { … }`: the block, run with its output gathered.
+    var captureBody: FunctionBody {
+        .native { [unowned self] interpreter, arguments in
+            guard case .function(let body as Function)? = arguments["body"], case .swish(let program) = body.body else {
+                throw RuntimeError("capture needs a block")
+            }
+            var status: Int32 = 0
+            let text = try capturing { status = try interpreter.runBlock(program) }
+            let output = output(text, status: status)
+            // Without `try`, failing is just what `.status` says.
+            if arguments["throwing"] == .bool(true) && status != 0 {
+                throw RuntimeError.commandFailure("$(…) failed with status \(status)", status: status, output: output)
+            }
+            return .output(output)
         }
     }
 
-    private func method(_ name: String, throwing: Bool = false, _ body: @escaping () throws -> Value) -> Value {
-        .function(OverloadSet(name: name, candidates: [
-            Function(name: name, parameters: [], returnType: nil, body: .native { _, _ in try body() }, isThrowing: throwing),
-        ]))
-    }
-
-    // MARK: Running
-
-    private var node: PipelineNode {
-        PipelineNode(
-            commands: [CommandNode(words: words.map { .text([.literal($0)]) })],
-            source: words.joined(separator: " "), input: nil
-        )
-    }
-
-    /// As a statement: its output goes where the shell's does. (`runQuietly()`
-    /// is the same where a condition or a part of a chain has it: a function
-    /// used as a command shows nothing it gives there.)
-    func run(display: Bool) throws -> Value {
-        statusValue(of: try shell.run(node, display: display))
+    func run(_ commands: [Value], from input: Value?, display: Bool) throws -> Int32 {
+        try runPipeline(try stages(commands, from: input), source: source(commands, from: input), display: display)
     }
 
     /// As `try make`: failing throws a `CommandFailure`.
-    func check() throws -> Value {
-        let status = try shell.run(node, display: true)
+    func check(_ commands: [Value], from input: Value?) throws -> Value {
+        let status = try run(commands, from: input, display: true)
         if status != 0 {
-            let (code, signal) = shell.interpreter.exitCode(status)
-            throw RuntimeError.commandFailure("\(node.source) failed with status \(status)", status: status,
+            let (code, signal) = interpreter.exitCode(status)
+            throw RuntimeError.commandFailure("\(source(commands, from: input)) failed with status \(status)", status: status,
                                               output: Output(text: "", code: code, signal: signal))
         }
-        return statusValue(of: status)
+        return statusValue(status)
     }
 
     /// As `$(…)`: its output is gathered, whatever its status.
-    func output() throws -> Value {
+    func output(_ commands: [Value], from input: Value?) throws -> Output {
         var status: Int32 = 0
-        var text = try shell.capturing { status = try shell.run(node, display: false) }
-        while text.last == "\n" { text.removeLast() }
-        let (code, signal) = shell.interpreter.exitCode(status)
-        return .output(Output(text: text, code: code, signal: signal))
+        let text = try capturing { status = try run(commands, from: input, display: false) }
+        return output(text, status: status)
     }
 
-    private func statusValue(of status: Int32) -> Value {
-        let (code, signal) = shell.interpreter.exitCode(status)
+    /// The Output of a command's text and status, as `$(…)` gives it.
+    func output(_ text: String, status: Int32) -> Output {
+        var text = text
+        while text.last == "\n" { text.removeLast() }
+        let (code, signal) = interpreter.exitCode(status)
+        return Output(text: text, code: code, signal: signal)
+    }
+
+    /// A command statement's value: how it ended.
+    func statusValue(_ status: Int32) -> Value {
+        let (code, signal) = interpreter.exitCode(status)
         return .record(Record([
             "code": code.map(Value.int) ?? .nothing,
             "signal": signal.map(Value.int) ?? .nothing,
             "succeeded": .bool(status == 0),
         ], typeName: "Status"))
     }
-}
 
-extension Shell {
-    /// `Command(…)`, and the members the checker types it by.
-    func installCommand() {
-        interpreter.objectMembers["Command"] = CommandObject.memberTypes
-        nonisolated(unsafe) let shell = self
-        let function = interpreter.hostFunction(ExportedFunction(
-            name: "Command", summary: "A program or function with its words, to run by hand: `run()` or `output()`.",
-            parameters: [ExportedParameter(label: nil, name: "words", type: .string, variadic: true)],
-            returnType: .named("Command"),
-            call: { arguments in
-                guard case .list(let items)? = arguments["words"], !items.isEmpty else {
-                    throw RuntimeError("Command needs a name to run")
-                }
-                return .object(CommandObject(words: items.map(\.description), shell: shell))
+    func stages(_ commands: [Value], from input: Value?) throws -> [Stage] {
+        try stages(input: input, commands: try commands.map(spec))
+    }
+
+    /// The commands as a person would type them, for messages and `jobs`.
+    func source(_ commands: [Value], from input: Value?) -> String {
+        let typed = commands.map { command -> String in
+            guard case .record(let record) = command, case .list(let words)? = record["words"] else { return command.description }
+            return (record["isExternal"] == .bool(true) ? "^" : "") + words.map(Shell.shellWord).joined(separator: " ")
+        }
+        return ((input.map { [$0.debugDescription] } ?? []) + typed).joined(separator: " | ")
+    }
+
+    /// A word as a shell would show it: quoted when it has spaces or quotes.
+    private static func shellWord(_ value: Value) -> String {
+        if case .record(let record) = value, record.typeName == "Glob", case .string(let pattern)? = record["pattern"] {
+            return Glob.unescape(pattern)
+        }
+        guard case .string(let text) = value else { return value.description }
+        guard !text.isEmpty, !text.contains(where: { " \t\n'\"\\$|&;<>(){}".contains($0) }) else {
+            return "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'"
+        }
+        return text
+    }
+
+    /// A `Command` as it runs: its words expanded, its redirects resolved.
+    func spec(_ command: Value) throws -> CommandSpec {
+        guard case .record(let record) = command, case .list(let words)? = record["words"] else {
+            throw RuntimeError("\(command.typeName) isn't a Command")
+        }
+        var spec = CommandSpec(arguments: try words.flatMap(arguments))
+        spec.external = record["isExternal"] == .bool(true)
+        if case .list(let redirections)? = record["redirections"] {
+            spec.redirects = try redirections.map(redirect)
+        }
+        if case .dictionary(let variables)? = record["variables"] {
+            spec.environment = variables.dictionary.map { ($0.key.description, $0.value.description) }.sorted { $0.0 < $1.0 }
+        }
+        // `(by: "size")`: the tuple's elements, as arguments; a position is no label.
+        if case .record(let tuple)? = record["arguments"] {
+            spec.call = tuple.keys.map { key in
+                Argument(label: Int(key) == nil ? key : nil, value: .literal(tuple[key] ?? .nothing))
             }
-        ))
-        interpreter.scopes[0].declare(function, named: "Command")
+        }
+        if case .object(let hint as StageHint)? = record["hint"] {
+            spec.resolution = hint.resolution
+            spec.overload = hint.overload
+            spec.notAnExpression = hint.notAnExpression
+        }
+        return spec
+    }
+
+    private func redirect(_ value: Value) throws -> ResolvedRedirect {
+        guard case .record(let record) = value, case .int(let fd)? = record["fd"], case .string(let mode)? = record["mode"] else {
+            throw RuntimeError("\(value.typeName) isn't a Redirection")
+        }
+        let modes: [String: Redirect.Mode] = ["read": .read, "write": .write, "append": .append]
+        guard let open = modes[mode] else {
+            guard mode == "send", case .int(let other)? = record["other"] else { throw RuntimeError("no redirection '\(mode)'") }
+            return ResolvedRedirect(fd: Int32(fd), action: .duplicate(Int32(other)))
+        }
+        let paths = try arguments(record["path"] ?? .nothing)
+        guard paths.count == 1, case .text(let path) = paths[0] else {
+            throw RuntimeError("ambiguous redirect: \(paths.count) files match")
+        }
+        return ResolvedRedirect(fd: Int32(fd), action: .open(path, open))
+    }
+
+    /// The arguments a word gives: a String is itself, a `Glob` the paths it
+    /// matches, a `Spread` its items, a closure itself.
+    func arguments(_ word: Value) throws -> [CommandArgument] {
+        switch word {
+        case .string(let text):
+            return [.text(text)]
+        case .function:
+            return [.value(word)]
+        case .record(let record) where record.typeName == "Glob":
+            guard case .string(let pattern)? = record["pattern"] else { return [] }
+            return try interpreter.expand(pattern).map(CommandArgument.text)
+        case .record(let record) where record.typeName == "Spread":
+            guard case .list(let items)? = record["value"] else { return [.text(record["value"]?.description ?? "")] }
+            return items.map { .text($0.description) }
+        default:
+            return [.text(word.description)]
+        }
     }
 }
