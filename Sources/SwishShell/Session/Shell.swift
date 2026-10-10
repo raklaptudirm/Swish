@@ -7,6 +7,10 @@ import SwishKit
 /// `Interpreter` that knows none of that. It supplies the interpreter's host
 /// (the process) and the shell constructs the core still depends on.
 public final class Shell {
+    /// Whether a pipeline of Swift's own calls runs as those calls (see
+    /// `Desugarer`); tests turn it off to compare.
+    var directCalls = true
+
     /// The language.
     let interpreter: Interpreter
 
@@ -107,7 +111,7 @@ extension Shell {
             let checked = try checker.check(program)
             interpreter.staticTypes.merge(checker.declaredGlobals) { $1 }
             // Now what the checker knows is written in: the shell's constructs become Swift.
-            return Desugarer().program(checked)
+            return Desugarer(directCalls: directCalls).program(checked)
         } catch {
             let place = file.map { "\($0):\(error.line.map(String.init) ?? "")" + (error.line == nil ? "" : ":") + " " } ?? ""
             interpreter.report("\(place)error: \(error.message)")

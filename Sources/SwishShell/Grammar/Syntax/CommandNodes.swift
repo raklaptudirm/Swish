@@ -11,6 +11,9 @@ struct PipelineNode: Equatable, Sendable {
     /// `try make` (`.some(nil)`) or `try! make`: failing throws, rather than
     /// only setting the status.
     var throwing: TryKind?? = nil
+    /// What the checker found: the value fed in is a list, so a stage that
+    /// collects the items gets that list as it is.
+    var inputIsList = false
 }
 
 struct CommandNode: Equatable, Sendable {

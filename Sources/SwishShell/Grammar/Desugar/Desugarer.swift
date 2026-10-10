@@ -9,6 +9,14 @@ import SwishKit
 /// is the core's own tree, with no shell node in it, which the Swift printer
 /// can print.
 final class Desugarer {
+    /// Whether a pipeline of Swift's own calls is those calls (`xs.sorted()`)
+    /// rather than a `Pipeline`; off, to compare the two.
+    private let directCalls: Bool
+
+    init(directCalls: Bool = true) {
+        self.directCalls = directCalls
+    }
+
     private lazy var rewriter = TreeRewriter(
         expr: { [unowned self] in expression($0) },
         statement: { [unowned self] in statement($0) }
@@ -77,6 +85,11 @@ final class Desugarer {
     /// condition asks whether that `succeeded`.
     private func commands(_ node: CommandChainExpr) -> Expr {
         let display = !node.isCondition && node.links.isEmpty
+        // `xs | sorted` alone, when it is Swift's own calls: shown as a
+        // pipeline at the end of a statement shows what it gives.
+        if display, directCalls, case .command(let pipeline) = node.first, let calls = self.calls(pipeline) {
+            return .call(.variable("displayItems"), [Argument(label: nil, value: calls)])
+        }
         func status(_ operand: CommandChainExpr.Operand) -> Expr {
             switch operand {
             case .command(let pipeline):
@@ -104,6 +117,33 @@ final class Desugarer {
     }
 
     // MARK: Commands and pipelines
+
+    /// A pipeline fed a value whose stages are each a Swift member of what it
+    /// is fed, collected (`xs | sorted | prefix(2)`) or the one value (`"a b"
+    /// | split(separator: " ")`), with Swift's arguments or none: the calls
+    /// themselves, `xs.sorted().prefix(2)`. Nil for any other, which runs
+    /// through `Pipeline`: a stage that works item by item, a method of the
+    /// prelude's, a function, a program, or words to convert.
+    private func calls(_ node: PipelineNode) -> Expr? {
+        guard var expr = node.input.map(rewriter.expression), node.throwing == nil else { return nil }
+        // What the next stage gets: a list (an Array of the items), or one value.
+        var isList = node.inputIsList
+        for (index, command) in node.commands.enumerated() {
+            guard !command.external, command.redirects.isEmpty, command.environment.isEmpty, command.words.count == 1,
+                  case .text(let parts) = command.words[0], parts.count == 1, case .literal(let name) = parts[0],
+                  case .bridged(let type, let receiver, _)? = command.resolution,
+                  receiver == .collected && isList || receiver == .value && index == 0 else { return nil }
+            var members = Bridge.stageMembers(type, name)
+            // With no arguments, it is the member that needs none.
+            if command.call == nil { members = members.filter { $0.member.parameters.allSatisfy(\.hasDefault) } }
+            guard let member = command.overload.map({ Bridge.stageMembers(type, name)[$0] }) ?? (members.count == 1 ? members[0] : nil) else {
+                return nil
+            }
+            expr = .bridged(type: type, member: member.index, receiver: expr, arguments: command.call.map(rewriter.arguments) ?? [])
+            if case .list = member.member.returns { isList = true } else { isList = false }
+        }
+        return expr
+    }
 
     /// `Command(…)` alone, or `Pipeline(from: input, …)` for more than one or
     /// a value fed in.

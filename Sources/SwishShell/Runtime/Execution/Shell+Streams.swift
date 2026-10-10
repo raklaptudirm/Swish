@@ -77,6 +77,16 @@ extension Shell {
         }
 
         guard let stream else { return }
+        try display(stream, to: output, toExternal: toExternal)
+    }
+
+    /// A value's items, shown as the end of a pipeline shows them.
+    func displayItems(_ value: Value) {
+        try? display(.elements(of: value), to: stdoutFD, toExternal: false)
+    }
+
+    /// Writes items as text: for a person, formatted, or for a program, as rows.
+    private func display(_ stream: ValueStream, to output: Int32, toExternal: Bool) throws {
         do {
             if toExternal {
                 // Records as the rows they'd display as, so `ls | grep x` works.

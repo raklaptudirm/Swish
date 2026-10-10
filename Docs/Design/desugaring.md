@@ -255,9 +255,18 @@ compile the printed Swift with `swiftc` and compare it with the interpreter.
 
 Left:
 
-- **Stages as direct Swift calls** where types are known (`xs.max()`,
-  `names.map { $0.uppercased() }`), which the hint makes possible stage kind by
-  stage kind, keeping streaming between programs.
+- **More stages as direct Swift calls.** Done for the kind that is exactly
+  a call: a statement's pipeline fed a value, each stage a Swift member of the
+  collected items or of the one value, with Swift's arguments or none.
+  `[3, 1, 2] | sorted | prefix(2)`… is `displayItems([3, 1, 2].sorted())`, and
+  `"a b" | split(separator: " ")` is `displayItems("a b".split(separator: " "))`:
+  `displayItems` is the statement's sink, which shows items one a line or as a
+  table, as a pipeline's end does. A test runs pipelines both ways and
+  compares what they show. Left as `Pipeline`: stages that work item by item
+  (`map`, `filter`, `prefix` on a `Flow`, a method of each item), which
+  stream, so a direct call would change when side effects happen; the
+  prelude's methods; functions and programs; and words to convert
+  (`sorted --by size`), which bind as a command line does.
 - **Effects** (`await` insertion) wait for the async interpreter: nothing
   awaits yet, so there is nothing to insert.
 

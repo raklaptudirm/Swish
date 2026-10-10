@@ -71,8 +71,9 @@ private func desugared(_ source: String, in shell: Shell = Shell()) throws -> St
 
 @Test func pipelinesCarryWhatTheCheckerDecided() throws {
     #expect(try desugared("echo a | cat") == #"Pipeline(Command("echo", "a"), Command("cat").checked(StageHint(.other))).run()"#)
-    #expect(try desugared("[3, 1] | sorted")
-        == #"Pipeline(from: [3, 1], Command("sorted").checked(StageHint(.member(of: "Array", on: .collected)))).run()"#)
+    // With a program after it, a Swift member is a stage too.
+    #expect(try desugared("[3, 1] | sorted | cat")
+        == #"Pipeline(from: [3, 1], Command("sorted").checked(StageHint(.member(of: "Array", on: .collected))), Command("cat").checked(StageHint(.other))).run()"#)
     #expect(try desugared(#"ls | sorted(by: \.size)"#).contains(#"Command("sorted").calling((by: \.size))"#))
 }
 
@@ -106,4 +107,31 @@ private func desugared(_ source: String, in shell: Shell = Shell()) throws -> St
     // `e>o > /dev/null`: errors go where the output went before it was sent away.
     #expect(try run(#"Command("sh", "-c", "echo err >&2").sending(2, to: 1).writing(1, to: "/dev/null").run()"#) == "err\n")
     #expect(try run(#"do { try Command("false").check() } catch { print(error.localizedDescription) }"#) == "false failed with status 1\n")
+}
+
+@Test func aPipelineOfSwiftsOwnCallsIsThoseCalls() throws {
+    #expect(try desugared("[3, 1, 2] | sorted") == "displayItems([3, 1, 2].sorted())")
+    #expect(try desugared(#""a b" | split(separator: " ")"#) == #"displayItems("a b".split(separator: " "))"#)
+    #expect(try desugared(#"["b", "a"] | sorted | joined(separator: ",")"#) == #"displayItems(["b", "a"].sorted().joined(separator: ","))"#)
+    // Item by item, or with words to convert, it stays a pipeline.
+    #expect(try desugared("[1, 2] | map { $0 * 2 }").hasPrefix("Pipeline("))
+    #expect(try desugared("[3, 1] | sorted | cat").hasPrefix("Pipeline("))
+}
+
+@Test func swiftsOwnCallsShowWhatThePipelineShows() throws {
+    let sources = [
+        "[3, 1, 2] | sorted", "[3, 1, 2] | max", "[Int]() | max", "[1, 2] | count", #""a b" | split(separator: " ")"#,
+        #"["b", "a"] | sorted | joined(separator: ",")"#, "[3, 1, 2] | sorted | reversed", #"[["a": 1], ["a": 2]] | reversed"#,
+        "[1, 2, 2] | contains(2)", #""hello" | uppercased"#, "[3, 1] | sorted | first",
+    ]
+    for source in sources {
+        func run(direct: Bool) throws -> (String, Int32) {
+            let shell = Shell()
+            shell.directCalls = direct
+            let output = try onLargeStack { try shell.capturing { shell.enter(source) } }
+            return (output, shell.lastStatus)
+        }
+        let direct = try run(direct: true), pipeline = try run(direct: false)
+        #expect(direct.0 == pipeline.0 && direct.1 == pipeline.1, "\(source): \(direct) and \(pipeline)")
+    }
 }

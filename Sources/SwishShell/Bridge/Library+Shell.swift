@@ -16,6 +16,10 @@ extension Library {
                 "members": (shell.interpreter.members().body, nil),
                 "Sequence.select": selectBody,
                 "capture": (shell.captureBody, nil),
+                "displayItems": (.native { [unowned shell] _, arguments in
+                    shell.displayItems(arguments["value"] ?? .nothing)
+                    return .nothing
+                }, nil),
                 "exitStatus": (.native { [unowned shell] _, arguments in shell.statusValue(shell.status(of: arguments["value"] ?? .nothing)) }, nil),
                 "importPlugin": (.native { interpreter, arguments in
                     guard case .string(let name)? = arguments["name"], case .string(let path)? = arguments["path"] else { return .nothing }
@@ -205,6 +209,10 @@ extension Library {
     /// `||`: a Bool succeeds when true, an `Output` as its command did, a
     /// `Status` is itself, and anything else succeeds.
     func exitStatus(of value: Any) -> Status
+
+    /// Shows a value as a pipeline at the end of a statement does: its items,
+    /// one a line, or as a table when they are records.
+    func displayItems(_ value: Any)
 
     /// `import Tools from "./Tools"`: builds the Swift package at `path` and
     /// loads the functions it exports, as `Tools`.

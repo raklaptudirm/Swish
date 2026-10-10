@@ -24,6 +24,7 @@ extension TypeChecker {
         if pipeline.input != nil {
             // Stages type what flows, so an empty `[]` needs no type.
             let type = try typeOf(&pipeline.input!, expecting: .unknown)
+            if case .list = type { pipeline.inputIsList = true }
             flowing = streamElement(type)
             if flowing == type && type != .unknown && type != .any { single = type }
         }
