@@ -86,6 +86,19 @@ expect {
   timeout { puts "FAIL its terminal modes come back with it (no prompt)"; incr failures }
 }
 
+# A task in the background reads the input only once it's awaited; the
+# prompt keeps it until then.
+send "let reader = async { readLine() ?? \"none\" }\r"
+expect -re $prompt
+send "\"prompt\" + \"still\"\r"
+step "the prompt keeps the input from a background task" {promptstill}
+expect -re $prompt
+send "await reader\r"
+after 300
+send "for the task\r"
+step "an awaited task reads the input" {"for the task"}
+expect -re $prompt
+
 # fg and bg name their replacements; exiting with jobs asks first.
 send "fg\r"
 step "fg names await" "await. brings back the most recent job"

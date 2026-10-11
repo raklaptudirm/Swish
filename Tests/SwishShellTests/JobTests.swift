@@ -162,3 +162,22 @@ private func run(_ source: String) throws -> String {
     _ = try onLargeStack { try shell.capturing { shell.execute("let t = async { $(sleep 0.2); return 5 }") } }
     #expect(try onLargeStack { try shell.capturing { shell.execute("print(await t)") } } == "5\n")
 }
+
+// A task in the background reads the input only once it's awaited, and its
+// reads let other tasks run (Docs/Design/async.md, step 6).
+
+@Test func aBackgroundTaskReadsTheInputWhenAwaited() throws {
+    let saved = dup(STDIN_FILENO)
+    let pipe = makePipe()!
+    dup2(pipe.read, STDIN_FILENO)
+    close(pipe.read)
+    defer {
+        dup2(saved, STDIN_FILENO)
+        close(saved)
+    }
+    _ = "hello\n".withCString { write(pipe.write, $0, 6) }
+    close(pipe.write)
+    let source = "var read = false; let t = async { let line = readLine(); read = true; return line }; "
+        + "$(sleep 0.2); print(read); print(await t ?? \"none\"); print(read)"
+    #expect(try run(source) == "false\nhello\ntrue\n")
+}

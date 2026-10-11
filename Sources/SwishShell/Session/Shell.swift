@@ -100,6 +100,18 @@ public final class Shell {
         interpreter.installJSON()
         installJobs()
         recordStatuses()
+        // A task in the background reads the input only once it's awaited
+        // from the foreground; reading sooner would take the prompt's.
+        interpreter.inputTurn = { [unowned self] read in
+            let state = task
+            if !state.inForeground {
+                let cancellation = interpreter.task.cancellation
+                guard interpreter.suspend(wake: { state.poke() }, { state.waitForForeground(unless: cancellation) }) else {
+                    return
+                }
+            }
+            interpreter.suspend { read() }
+        }
     }
 }
 
@@ -212,6 +224,38 @@ final class ShellTask {
     /// The status the last signal-killed command gave, to tell 130 from ^C
     /// apart from a command that exited with 130.
     var lastSignalStatus: Int32?
-    /// Whether it's the task in the foreground, whose programs get the terminal.
-    var inForeground = true
+    /// Whether it's the task in the foreground, whose programs get the
+    /// terminal and which reads the input: the prompt's, or a task while it's
+    /// awaited from there. Set from the task awaiting it, on another thread.
+    var inForeground: Bool {
+        get {
+            turn.lock()
+            defer { turn.unlock() }
+            return foreground
+        }
+        set {
+            turn.lock()
+            foreground = newValue
+            turn.broadcast()
+            turn.unlock()
+        }
+    }
+    private var foreground = true
+    private let turn = NSCondition()
+
+    /// Blocks until it's in the foreground, or `cancellation` is asked
+    /// (false). (Through `suspend`, so the lock is let go.)
+    func waitForForeground(unless cancellation: Cancellation) -> Bool {
+        turn.lock()
+        defer { turn.unlock() }
+        while !foreground && !cancellation.isSet { turn.wait() }
+        return foreground
+    }
+
+    /// Wakes a wait for the foreground, to look again.
+    func poke() {
+        turn.lock()
+        turn.broadcast()
+        turn.unlock()
+    }
 }

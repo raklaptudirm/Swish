@@ -1,8 +1,15 @@
 import Foundation
+import SwishKit
 
 /// A line of standard input, or nil at its end.
 /// - Parameter strippingNewline: leave the line's newline off
 public func readLine(strippingNewline: Bool = true) -> String? {
+    // A wait: other tasks run meanwhile, and a task in the background waits
+    // for its turn at the input.
+    Waiting.forInput { readLineNow(strippingNewline: strippingNewline) }
+}
+
+private func readLineNow(strippingNewline: Bool) -> String? {
     // A byte at a time, so nothing past the line is taken from programs
     // that read the rest.
     var bytes: [UInt8] = []
