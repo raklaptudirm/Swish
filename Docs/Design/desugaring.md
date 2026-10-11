@@ -8,7 +8,7 @@ not here is Swift.
 
 The rewrite and the library it targets belong to the shell layer, not the
 embeddable core ([embedding.md](embedding.md)): the core is Swift only, and
-reaches the outside only through its `SwishHost`.
+reaches the outside only through its `SwiitHost`.
 
 Every shell construct is rewritten now: after checking, the shell's
 `Desugarer` turns each into calls to the library below, and the interpreter
