@@ -269,7 +269,7 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
 | `Packages/Swiit` | The interpreter (Swiit), a package of its own that knows nothing of the shell; the shell is a client of it. Its `Sources/Swiit`: |
 | `…/Language` | The language: `Syntax` (the tree and the parser, with a plug-in for syntax a host adds), `Checking` (the type checker, which runs before anything else), `Interpreter` (statements, expressions, calls, structs and enums), `Prelude` (the builtins' declarations) and `Reflection` (a type's members, for `help` and `members`). |
 | `…/Bridge` | Swift's types and members, generated into `Bridge/Generated` from symbol graphs. |
-| `…/Host` | What a host plugs in: `SwishHost`, dynamic objects, library registration, and `Embedding` (`Interpreter(host:limits:)`, `eval`, `register`, `set`, `Diagnostic`). |
+| `…/Host` | What a host plugs in: `SwiitHost`, dynamic objects, library registration, and `Embedding` (`Interpreter(host:limits:)`, `eval`, `register`, `set`, `Diagnostic`). |
 | `…/Library` | `SwiitStandardLibrary`, a module of its own so the generator can read it. |
 | `Sources/SwishShell` | The shell (Swish), a client of Swiit: |
 | `…/Grammar` | The shell's syntax: `Syntax` (commands, pipelines, `$(…)`, redirects), `Checking` (types a pipeline's stages), `CommandLine` (binds `--flag` words to parameters) and the nodes they make. |
