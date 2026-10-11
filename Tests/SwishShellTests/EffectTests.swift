@@ -3,8 +3,9 @@
 import SwishKit
 import Testing
 
-// What waits only through the shell's constructs is implicitly async: it is
-// called with no `await`, by name or through a value (Docs/Design/async.md).
+// The shell's waits (`$(…)`, commands, `await job`) are blocking calls, not
+// effects: a function that runs commands is an ordinary function, and only
+// Swift's own `async` needs `await` (Docs/Design/async.md).
 
 private func effect(of name: String, after source: String) throws -> Effect? {
     let shell = Shell()
@@ -18,22 +19,15 @@ private func run(_ source: String, in shell: Shell = Shell()) throws -> (output:
     return (output, shell.lastStatus)
 }
 
-@Test func whatWaitsOnTheShellIsImplicitlyAsync() throws {
-    #expect(try effect(of: "build", after: "func build() { echo hi }") == .implicitAsync)
-    #expect(try effect(of: "text", after: "func text() -> String { $(echo hi).text }") == .implicitAsync)
-    #expect(try effect(of: "pure", after: "func pure() -> Int { 1 }") == .sync)
+@Test func theShellsWaitsAreBlockingCalls() throws {
+    #expect(try effect(of: "build", after: "func build() { echo hi }") == .sync)
+    #expect(try effect(of: "text", after: "func text() -> String { $(echo hi).text }") == .sync)
     #expect(try effect(of: "f", after: "func f() async -> Int { 1 }") == .async)
-    // And what calls it, even declared before it.
-    #expect(try effect(of: "outer", after: "func outer() { build() }; func build() { echo hi }") == .implicitAsync)
-}
-
-@Test func anImplicitlyAsyncFunctionIsCalledWithNoAwait() throws {
+    // Called by name or through a value, with no `await`; passed to Swift as any closure is.
     #expect(try run("func build() { echo hi }; build(); let f = build; f()").output == "hi\nhi\n")
-    // A closure that waits on the shell is implicitly async too.
-    let shell = Shell()
-    _ = try run("let c = { $(echo hi) }", in: shell)
-    guard case .functionType(_, _, _, let effect)? = shell.interpreter.staticTypes["c"] else { Issue.record("not a function"); return }
-    #expect(effect == .implicitAsync)
+    #expect(try run(#"print(["a", "b"].map { x in $(echo \(x)).text })"#).output == "[a, b]\n")
+    // `async $(…)` is what runs it in the background; `await` joins it.
+    #expect(try run("let j = async $(echo hi); print((await j).text)").output == "hi\n")
 }
 
 @Test func becomingAsyncIsRefusedWhileCallersDontAwait() throws {

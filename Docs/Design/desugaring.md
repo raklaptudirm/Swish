@@ -36,7 +36,7 @@ statements, and effects.
    construct it came from, and each library call that can fail carries the
    construct's text (`PipelineNode.source` today), so an error reads in terms
    of what was typed.
-5. **Effects are inserted here** (see "Effects").
+5. **No effects are inserted:** the shell's waits are blocking calls (see "Effects").
 
 ## The library the rewrite targets
 
@@ -141,13 +141,12 @@ decision, not an accident.
 
 ## What needs types
 
-Four things, all answered by the checker the interpreter already uses:
+Three things, all answered by the checker the interpreter already uses:
 
 1. **A function's declaration**, to turn words into typed arguments
    (`ls --all` to `ls(all: true)`), including defaults, flags and labels.
 2. **What flows into a stage**, to choose among the stage kinds above.
-3. **A closure's effect**, for the overloads that take it (see "Effects").
-4. **Whether a name is a variable**, for `$name`.
+3. **Whether a name is a variable**, for `$name`.
 
 Anything the checker can't tell becomes the dynamic form, which does today's
 run-time lookup. It means a fully untyped script still works, and a typed one
@@ -155,19 +154,13 @@ rewrites to direct calls.
 
 ## Effects
 
-Only shell constructs bring implicit effects, and only an `await`:
-
-- **Sources:** a command, a pipeline, `$(…)`, and a call to an implicit-async
-  function. Each waits on a process or a stream.
-- **The rewrite** computes, over the call graph, which functions and closures
-  contain a source outside their nested closures, makes those `async`, and
-  inserts `await` at calls to them. After it, only plain Swift effect rules
-  remain: nothing else in the checker or the interpreter knows about "implicit".
-- **A function with an explicit `await`, `try` or `throw`** is declared as in
-  Swift; it can also contain sources, which add nothing to it.
-- **Closures** get their effect the same way, so a closure containing `$(…)`
-  is an async closure, and passing it to `map` selects the async overload.
-- **`throws` is never inferred:** `$(…)` doesn't throw, and `try` is written.
+The shell's constructs bring no effects. `$(…)`, a command and `await job`
+are blocking calls: they wait for their programs or job, blocking only their
+own task (the interpreter lock is released while they wait, async.md), and a
+function made of them is an ordinary sync function. So the rewrite inserts no
+`await` and makes nothing `async`; only Swift's own `async` is an effect, and
+the checker applies Swift's rules to it. Running in the background is chosen
+with `async`: `async $(…)` and `async cmd` give a `Job`, which `await` joins.
 
 ## What is not sugar
 
@@ -209,8 +202,8 @@ the net: the behavior doesn't change. (Steps 2 and part of 3 are done; see
    largest step, since this is where `async` appears.
 6. **Pipelines,** the type-directed stages and their dynamic form.
 7. **Jobs and `async`/`await`,** together with the async plan
-   ([async.md](async.md)); its step 3, effects in the checker, is this
-   document's "Effects".
+   ([async.md](async.md)); the shell's waits are blocking calls there, so
+   this document's "Effects" has nothing to insert.
 8. **Flatten statements.** Today every expression statement is a `Chain` of
    `Unit`s joined by `&&`/`||` with an exit status, because a statement was a
    command first. With command chains now library calls, `Unit`'s cases hoist
@@ -277,14 +270,11 @@ Left:
   from a process; and words to convert (`sorted --by size`), which bind as a
   command line does. Programs' streams are where `AsyncSequence` comes in,
   with the async interpreter.
-- **Effects** (`await` insertion) wait for the async interpreter: nothing
-  awaits yet, so there is nothing to insert.
 
 ## Open questions
 
-- ~~Function values and implicit effects~~ *Decided:* the type carries an
-  "implicit" mark (`Effect.implicitAsync`), so `let f = build; f()` needs no
-  `await`, as `build()` doesn't.
+- ~~Function values and implicit effects~~ *Moot:* the shell's waits aren't
+  effects, so a function made of them is sync, by name or as a value.
 - ~~Redefinition at the prompt~~ *Decided:* a function becoming `async` while
   functions declared earlier call it without `await` is an error naming them.
 - **Where `Shell.status` lives** once tasks are concurrent: per task, which
