@@ -11,15 +11,20 @@ let interpreter = Thread {
     switch arguments.first {
     case nil:
         exit(shell.runInteractive())
+    // A script's top level is a scope: its tasks are cancelled and waited for at its end.
     case "-c" where arguments.count == 2:
-        exit(shell.execute(arguments[1]))
+        let status = shell.execute(arguments[1])
+        shell.finishTasks()
+        exit(status)
     // What `run` starts: a task file, and the task to run from it.
     case "--tasks" where arguments.count >= 2:
         let status = shell.runTasks(at: arguments[1], task: arguments.dropFirst(2).first, arguments: Array(arguments.dropFirst(3)))
+        shell.finishTasks()
         shell.endBySignal()
         exit(status)
     case let path? where !path.hasPrefix("-"):
         let status = shell.runScript(at: path, arguments: Array(arguments.dropFirst()))
+        shell.finishTasks()
         shell.endBySignal()
         exit(status)
     default:

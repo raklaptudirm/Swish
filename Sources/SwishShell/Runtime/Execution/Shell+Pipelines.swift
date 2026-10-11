@@ -194,7 +194,8 @@ extension Shell {
 
         while let pid = job.running.first {
             var raw: Int32 = 0
-            guard interpreter.suspend({ waitpid(pid, &raw, WUNTRACED) }) == pid else {
+            // Cancelling the task stops its programs, which ends the wait.
+            guard interpreter.suspend(wake: { job.send(SIGTERM) }, { waitpid(pid, &raw, WUNTRACED) }) == pid else {
                 if errno == EINTR { continue }
                 job.running.removeFirst()
                 continue

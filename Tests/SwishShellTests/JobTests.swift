@@ -138,3 +138,27 @@ private func run(_ source: String) throws -> String {
     // Done, what it has left is its output's lines, and the Output is whole.
     #expect(try output(#"let k = async $(sh -c 'echo a; echo b'); await k; k.lines() | map { $0 + "!" }"#).hasSuffix("a!\nb!\n"))
 }
+
+// Cancellation wakes a wait, and a task ends with the scope that started it
+// (Docs/Design/async.md, step 5).
+
+@Test func cancellingATaskEndsWhatItWaitsFor() throws {
+    let start = Date()
+    #expect(try run("let t = async { $(sleep 100) }; t.cancel(); let r = try? await t; print(t.state)") == "cancelled\n")
+    // A task awaiting another is woken too, and the other carries on.
+    #expect(try run("let a = async { $(sleep 0.3); return 1 }; let b = async { await a }; b.cancel(); let r = try? await b; print(b.state, await a)") == "cancelled 1\n")
+    #expect(Date().timeIntervalSince(start) < 5)
+}
+
+@Test func aTaskEndsWithTheScopeThatStartedIt() throws {
+    let start = Date()
+    // A function returning cancels and waits for what it started.
+    #expect(try run("var done = false; func g() { let t = async { $(sleep 100); done = true } }; g(); print(done)") == "false\n")
+    // So does a task's body, for its own tasks.
+    #expect(try run("let outer = async { let inner = async { $(sleep 100) }; return 1 }; print(await outer)") == "1\n")
+    #expect(Date().timeIntervalSince(start) < 5)
+    // The prompt is one scope: a task started there outlives the line.
+    let shell = Shell()
+    _ = try onLargeStack { try shell.capturing { shell.execute("let t = async { $(sleep 0.2); return 5 }") } }
+    #expect(try onLargeStack { try shell.capturing { shell.execute("print(await t)") } } == "5\n")
+}

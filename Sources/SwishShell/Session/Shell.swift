@@ -14,8 +14,11 @@ public final class Shell {
     /// The language.
     let interpreter: Interpreter
 
-    /// What the shell keeps for the task running now (`ShellTask`).
-    var task: ShellTask { interpreter.task.host as! ShellTask }
+    /// What the shell keeps for the task running now (`ShellTask`): the one
+    /// holding the lock, or for code that doesn't hold it, the main task's.
+    var task: ShellTask {
+        (interpreter.lock.isHeldByCurrentThread ? interpreter.task : interpreter.mainTask).host as! ShellTask
+    }
 
     /// The status the current task's last statement gave.
     public internal(set) var lastStatus: Int32 {
@@ -72,9 +75,7 @@ public final class Shell {
     /// Tasks still running end with the shell: they're cancelled, and waited
     /// for, as the scope that starts a task closes it (Docs/Design/async.md).
     deinit {
-        let tasks = jobs.compactMap(\.task)
-        tasks.forEach { $0.cancel() }
-        for task in tasks { _ = try? interpreter.join(task) }
+        finishTasks()
     }
 
     public init() {
@@ -119,8 +120,7 @@ extension Shell {
 
     private func run(_ source: String, atPrompt: Bool) -> Int32 {
         // The shell touches the interpreter holding its lock, as tasks do.
-        interpreter.lock.acquire()
-        defer { interpreter.lock.release() }
+        interpreter.withMainTask {
         switch interpreter.parse(source) {
         case .failure(let error):
             interpreter.report("syntax error: \(error)")
@@ -129,6 +129,13 @@ extension Shell {
             if let program = typeCheck(program) { runReportingErrors(program, atPrompt: atPrompt) }
         }
         return lastStatus
+        }
+    }
+
+    /// Closes the top level as a scope: the tasks started there are cancelled
+    /// and waited for, as at the end of a script or `swish -c`.
+    public func finishTasks() {
+        interpreter.withMainTask { interpreter.closeTasks(above: -1) }
     }
 
     /// Checks types before anything runs, reporting what's wrong (with the
