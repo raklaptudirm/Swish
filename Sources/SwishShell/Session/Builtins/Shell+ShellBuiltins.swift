@@ -1,4 +1,4 @@
-@_spi(Host) @_spi(Internals) import Swiit
+@_spi(Host) import Swiit
 import Foundation
 import SwishKit
 

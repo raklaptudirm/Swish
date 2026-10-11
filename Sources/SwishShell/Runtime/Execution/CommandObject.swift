@@ -1,4 +1,4 @@
-@_spi(Host) @_spi(Layer) @_spi(Internals) import Swiit
+@_spi(Host) @_spi(Layer) import Swiit
 import Foundation
 import SwishKit
 
@@ -88,6 +88,7 @@ extension Shell {
             // What runs in it leaves the status it ends with.
             let before = lastStatus
             lastStatus = 0
+            // Its statements run as statements, which say how they went.
             let text = try capturing { try interpreter.runBlock(program) }
             let status = lastStatus
             lastStatus = before

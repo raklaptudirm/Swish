@@ -1,4 +1,4 @@
-@_spi(Host) @_spi(Layer) @_spi(Internals) import Swiit
+@_spi(Host) @_spi(Layer) import Swiit
 import Foundation
 import SwishKit
 import SwishStandardLibrary
@@ -200,30 +200,24 @@ extension Shell {
     }
 
     private func callItemMethod(_ name: String, _ args: [CommandArgument], on item: Value) throws -> Value {
-        switch item {
-        case .record(let record):
-            if let type = interpreter.structType(of: record), let methods = type.methods[name] {
-                let (method, bindings) = try interpreter.resolve(methods) { try self.bind(commandLine: args, to: $0, excludingInput: false) }
-                guard !method.isMutating else {
-                    throw RuntimeError("\(type.name).\(name) is mutating, and a piped value can't change: call it on a variable")
-                }
-                return try interpreter.invoke(method, with: bindings, receiver: Receiver(item, mutable: false))
-            }
-        case .object(let object):
-            let callable: OverloadSet? = switch object.member(name) {
-            case .function(let set as OverloadSet)?: set
-            case .function(let native as NativeFunction)?: OverloadSet(name: name, candidates: [interpreter.hostFunction(native.function)])
-            default: nil
-            }
-            if let callable {
-                let (method, bindings) = try interpreter.resolve(callable) { try self.bind(commandLine: args, to: $0, excludingInput: false) }
-                return try interpreter.invoke(method, with: bindings)
-            }
-        default:
-            break
-        }
         let type = if case .record(let record) = item { record.typeName ?? "Record" } else { item.typeName }
-        throw RuntimeError("\(name): not a method of \(type), nor a function or program")
+        // The method as a value, with the item as `self`, as `item.name` reads it.
+        let member: Value? = switch item {
+        case .record(let record) where record.typeName != nil: try? interpreter.member(name, of: item)
+        case .object(let object): object.member(name)
+        default: nil
+        }
+        let callable: OverloadSet? = switch member {
+        case .function(let set as OverloadSet)?: set
+        case .function(let native as NativeFunction)?: OverloadSet(name: name, candidates: [interpreter.hostFunction(native.function)])
+        default: nil
+        }
+        guard let callable else { throw RuntimeError("\(name): not a method of \(type), nor a function or program") }
+        let (method, bindings) = try interpreter.resolve(callable) { try self.bind(commandLine: args, to: $0, excludingInput: false) }
+        guard !method.isMutating else {
+            throw RuntimeError("\(type).\(name) is mutating, and a piped value can't change: call it on a variable")
+        }
+        return try interpreter.invoke(method, with: bindings)
     }
 
     /// Input items as the parameter's type. Lines from external programs

@@ -1,5 +1,5 @@
 @_spi(Layer) import Swiit
-@_spi(Shell) @_spi(Host) @_spi(Layer) @_spi(Internals) @testable import SwishShell
+@_spi(Shell) @_spi(Host) @_spi(Layer) @testable import SwishShell
 import Testing
 
 // MARK: History

@@ -1,4 +1,4 @@
-@_spi(Host) @_spi(Layer) @_spi(Internals) import Swiit
+@_spi(Host) @_spi(Layer) import Swiit
 import Foundation
 import SwishKit
 

@@ -1,5 +1,5 @@
 import Swiit
-@_spi(Shell) @_spi(Host) @_spi(Layer) @_spi(Internals) @testable import SwishShell
+@_spi(Shell) @_spi(Host) @_spi(Layer) @testable import SwishShell
 import Foundation
 
 // What the tests need to know about the process they run in. In a file of
