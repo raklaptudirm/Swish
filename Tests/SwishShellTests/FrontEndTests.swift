@@ -114,3 +114,62 @@ private func painted(_ spans: [Span], length: Int) -> [SpanKind?] {
         Issue.record("the prelude differs at \(String(reflecting: expected).prefix(200)) vs \(String(reflecting: actual).prefix(200))")
     }
 }
+
+// MARK: What the hand-written parser read, kept
+
+private func letter(_ kind: SpanKind?) -> Character {
+    switch kind {
+    case nil: "."
+    case .keyword?: "k"
+    case .command?: "c"
+    case .flag?: "f"
+    case .string?: "s"
+    case .number?: "n"
+    case .constant?: "C"
+    case .variable?: "v"
+    case .comment?: "m"
+    case .type?: "t"
+    case .punctuation?: "p"
+    }
+}
+
+private func goldenURL() -> URL {
+    URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("Goldens/shell.txt")
+}
+
+/// The shell's syntax is held to what the hand-written parser read with the
+/// same plug-in (Goldens/shell.txt, made from it before it was deleted): each
+/// harvested program's tree, printed back as Swift, and its colors, a letter a
+/// character. A change is a decision, not an accident; `UPDATE_GOLDENS=1`
+/// writes the file again from the front end as it is.
+@Test func theShellsSyntaxReadsAsTheHandWrittenParserDid() throws {
+    let shell = Shell()
+    let bound = shell.interpreter.globalNames()
+    let programs = try harvested()
+    if ProcessInfo.processInfo.environment["UPDATE_GOLDENS"] != nil {
+        var records: [String] = []
+        for (index, source) in programs.enumerated() {
+            guard let oracle = try? Parser.parse(source, bound: bound, plugin: ShellSyntax()) else { continue }
+            let colors = painted(HandWrittenFrontEnd().highlight(source, bound: bound, plugin: ShellSyntax()), length: source.count)
+            records.append("\(index)\u{1F}\(SwiftPrinter().source(oracle))\u{1F}\(String(colors.map(letter)))")
+        }
+        try records.joined(separator: "\u{1E}").write(to: goldenURL(), atomically: true, encoding: .utf8)
+    }
+    let golden = try String(contentsOf: goldenURL(), encoding: .utf8).split(separator: "\u{1E}", omittingEmptySubsequences: true)
+    #expect(golden.count > 500)
+    var wrongTree: [String] = [], wrongColors: [String] = []
+    for record in golden {
+        let parts = record.split(separator: "\u{1F}", maxSplits: 2, omittingEmptySubsequences: false)
+        let index = try #require(Int(parts[0]))
+        let source = programs[index]
+        guard let lowered = try? SwiftSyntaxFrontEnd().parse(source, bound: bound, plugin: ShellSyntax()) else {
+            wrongTree.append("#\(index) not read:\n\(source.prefix(120))")
+            continue
+        }
+        if SwiftPrinter().source(lowered) != String(parts[1]) { wrongTree.append("#\(index):\n\(source.prefix(120))") }
+        let colors = painted(SwiftSyntaxFrontEnd().highlight(source, bound: bound, plugin: ShellSyntax()), length: source.count)
+        if String(colors.map(letter)) != String(parts[2]) { wrongColors.append("#\(index):\n\(source.prefix(120))") }
+    }
+    #expect(wrongTree.isEmpty, "\(wrongTree.count) trees differ:\n\(wrongTree.prefix(5).joined(separator: "\n---\n"))")
+    #expect(wrongColors.isEmpty, "\(wrongColors.count) colorings differ:\n\(wrongColors.prefix(5).joined(separator: "\n---\n"))")
+}

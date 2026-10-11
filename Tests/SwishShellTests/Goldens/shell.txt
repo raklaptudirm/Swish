@@ -1,0 +1,2213 @@
+0/* a construct from a layer over the core */ccccccccc2enum Level: Int, Comparable {
+    case low
+    case mid
+    case high
+}
+Level.low < .high
+Level.high <= .mid
+/* a construct from a layer over the core */kkkk.ttttt..ttt..tttttttttt...kkkk.CCC..CCC..CCCC....vvvvv.......CCCCC..vvvvv.........CCCC...vvvvv.......CCCC....cccccc3do {
+    1 / 0
+} catch let e {
+    print(e.localizedDescription)
+}kk...n...n...kkkkk.kkk.v...vvvvv.v........................4/* a construct from a layer over the core */
+/* a construct from a layer over the core */.n..n..n....ccc...vv...n...vv...CCC.....ccccc...n..n..n....cccccccccc...vv...n...vv...CCC.....ccccc5let d = ["b": 2, "a": 1]
+d
+d.filter { $0.value > 1 }
+d.mapValues { $0 * 10 }kkk.v....sss..n..sss..n...v..v..........vv.........n....v.............vv...nn..6/* a construct from a layer over the core */ccccc....ccccc....ccccc7let c = if true {
+    TextStyle.green
+} else {
+    .red
+}
+"y".styled(c) + "!".kkk.v...CCCC...vvvvvvvvv.........CCCC..sss........v....sss8let d = ["b": 2, "a": 1]
+d.map { $0.key }.sorted()
+d.keys.sorted()
+d.values.sorted()kkk.v....sss..n..sss..n...v.......vv.................v................v................9/* a construct from a layer over the core */
+/* a construct from a layer over the core */ccccccccccc.........ccccc......10let b = /* a construct from a layer over the core */
+b == "main"
+"on \(b)"
+/* a construct from a layer over the core */kkk.v...ppcccc.....p..v....ssssss..ssssppvps..cccc.ppcccc...p......11do {
+    /* a construct from a layer over the core */
+} catch {
+    /* a construct from a layer over the core */
+}kk...cccc........kkkkk...cccc........12/* a construct from a layer over the core */ccc...ccc...vv...sss.....cccccc..13Command("true").run().and { Command("true").run() }.or { Command("true").run() }vvvvvvv.ssssss..............vvvvvvv.ssssss...............vvvvvvv.ssssss.........14/* a construct from a layer over the core */cccccc.ff15let d = ["b": 2, "a": 1]
+d.count
+d.isEmpty
+d.sorted { $0.key < $1.key }.map { $0.value }
+d.first!.key == d.keys.first!kkk.v....sss..n..sss..n...v........v..........v..........vv.......vv.............vv..........v...............v............16/* a construct from a layer over the core */cccccc17do {
+    let x = 1
+    print(x)
+}kk...kkk.v...n..vvvvv.v...18/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */.n..n..n....cccccc...n..n..n....cccccc...vv...vv.....n..n..n....cccccc...cccccccc19/* a construct from a layer over the core */ccccc....ccccc....cccccc20do {
+    1 / 0
+}kk...n...n..21func greet(_ name: String, times: Int = 1, loud: Bool = false) {
+    var word = "hi"
+    if loud {
+        word = "HI"
+    }
+    for _ in 1 ... times {
+        /* a construct from a layer over the core */
+    }
+}
+/* a construct from a layer over the core */kkkk.ccccc.........tttttt.........ttt...n........tttt...CCCCC....kkk.vvvv...ssss..kk.vvvv...vvvv...ssss....kkk.v.kk.n...vvvvv...cccc.sppvvvvpsppvvvvps.....ccccc.....fffffff.....cc........22[10: "x", 2: "y"]
+/* a construct from a layer over the core */.nn..sss..n..sss....sss..n..sss..n....cc.....23let greeting = "hi"
+func _helper() -> String {
+    greeting
+}
+func hello(name: String = "you", loud: Bool = false) {
+    var shown = name
+    if loud {
+        shown = name.uppercased()
+    }
+    /* a construct from a layer over the core */
+}
+func broken() {
+    /* a construct from a layer over the core */
+    /* a construct from a layer over the core */
+}kkk.vvvvvvvv...ssss.kkkk.ccccccc......tttttt...vvvvvvvv...mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm.kkkk.ccccc.......tttttt...sssss........tttt...CCCCC........kkk.vvvvv...vvvv.....kk.vvvv...vvvvv...vvvv....................cccc.sppvvvvvvvsspsppvvvvvpsppvvvvssssssps...mmmmmmmmmm.kkkk.cccccc.........kkkk.ccccc.....cccc........24func up(_ s: String) -> String {
+    s
+}
+up(/* a construct from a layer over the core */)kkkk.cc......tttttt.....tttttt...v....vv.ppcccc...p.25func size(_ n: Int) -> String {
+    switch n {
+    case 0:
+        return "none"
+    case 1 ... 5:
+        return "few"
+    case 6 ..< 100, 100:
+        return "many"
+    case let big where big > 1000:
+        return "huge \(big)"
+    default:
+        return "lots"
+    }
+}
+size(0)
+size(3)
+size(100)
+size(5000)
+size(500)kkkk.cccc......ttt.....tttttt.......kkkkkk.v.......kkkk.n..kkkkkk.ssssss.....kkkk.n...n..kkkkkk.sssss.....kkkk.n...nnn..nnn..kkkkkk.ssssss.....kkkk.kkk.vvv.kkkkk.vvv...nnnn..kkkkkk.ssssssppvvvps.....kkkkkkk..kkkkkk.ssssss.........vvvv.n...vvvv.n...vvvv.nnn...vvvv.nnnn...vvvv.nnn.26/* a construct from a layer over the core */.....n.......n.....cccccc.ffff.....ccc..27let v = /* a construct from a layer over the core */kkk.v...vvvvvvvvvvvvvvvvvvvvvvvv28Command("true").run().and { Command("true").run() }.or { Command("false").run() }vvvvvvv.ssssss..............vvvvvvv.ssssss...............vvvvvvv.sssssss.........29switch "b" {
+case "a":
+    /* a construct from a layer over the core */
+case "b", "c":
+    /* a construct from a layer over the core */
+default:
+    break
+}kkkkkk.sss...kkkk.sss..cccc...kkkk.sss..sss..cccc....kkkkkkk..kkkkk..30Dictionary(uniqueKeysWithValues: [("x", 1), ("y", 2)])vvvvvvvvvv.........................sss..n....sss..n...31let prefixVariable = 1kkk.vvvvvvvvvvvvvv...n32/* a construct from a layer over the core */.text + "y"ppcccc..p........sss33let o: Int? = 4
+o.map { $0 + 1 }
+let n: Int? = nil
+n.map { $0 + 1 } ?? 0kkk.v..ttt....n..v.......vv...n....kkk.v..ttt....CCC..v.......vv...n......n34func f() {
+    42
+    /* a construct from a layer over the core */
+}
+f()kkkk.c.....nn..cccc.........v..35func greet(_ name: String, times: Int = 1, loud: Bool = false) {
+    var word = "hi"
+    if loud {
+        word = "HI"
+    }
+    for _ in 1 ... times {
+        /* a construct from a layer over the core */
+    }
+}
+let s = /* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkk.ccccc.........tttttt.........ttt...n........tttt...CCCCC....kkk.vvvv...ssss..kk.vvvv...vvvv...ssss....kkk.v.kk.n...vvvvv...cccc.sppvvvvpsppvvvvps.....kkk.v...ppccccc.....ffffffp..cccc.ssppvpss36/* a construct from a layer over the core */ccccc....ccccc....cc.ff.ssssssss37func f(_ x: Int) -> String {
+    "int"
+}
+func f(_ x: String) -> String {
+    "string"
+}
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+f(5)
+f("a")kkkk.c......ttt.....tttttt...sssss....kkkk.c......tttttt.....tttttt...ssssssss...c....c......v.n...v.sss.38"abc".reversed()
+"abc".sorted()sssss.............sssss.........39/* a construct from a layer over the core */.description == /* a construct from a layer over the core */.text
+1.5 KB.description
+["a": 1].descriptionppcccc..p................ppcccc..p.......nnnnnn...............sss..n.............40let x: Int? = nil
+x ?? 3
+let s: String? = "ab"
+s?.count
+s!.countkkk.v..ttt....CCC..v....n..kkk.v..tttttt....ssss..v.........v.......41Set([1, 2]).union([9]).sorted()
+(1 ... 5).contains(3)vvv..n..n..........n..............n...n...........n.42func f(a: Int) -> String {
+    "a"
+}
+func f(b: Int) -> String {
+    "b"
+}
+/* a construct from a layer over the core */
+f(a: 2)kkkk.c....ttt.....tttttt...sss....kkkk.c....ttt.....tttttt...sss...c.fff....v....n.43Command("true").run().and { Command("true").run() }.or { Command("sh", "-c", "exit 3").run() }vvvvvvv.ssssss..............vvvvvvv.ssssss...............vvvvvvv.ssss..ssss..ssssssss.........44func greet(_ name: String, times: Int = 1, loud: Bool = false) {
+    var word = "hi"
+    if loud {
+        word = "HI"
+    }
+    for _ in 1 ... times {
+        /* a construct from a layer over the core */
+    }
+}
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkk.ccccc.........tttttt.........ttt...n........tttt...CCCCC....kkk.vvvv...ssss..kk.vvvv...vvvv...ssss....kkk.v.kk.n...vvvvv...cccc.sppvvvvpsppvvvvps.....cccccc......kkkkkkk.ccccc....45(description: "mine", n: 1).description..............ssssss.....n.............46"abc".contains("bc")
+"abc".contains("b")
+/* a construct from a layer over the core */sssss..........ssss...sssss..........sss...sssssss...cccccccc.sssss47func f(_ x: Double) -> String {
+    "double"
+}
+func f(_ x: Int) -> String {
+    "int"
+}
+f(5)
+f(5.5)kkkk.c......tttttt.....tttttt...ssssssss....kkkk.c......ttt.....tttttt...sssss....v.n...v.nnn.48func d(_ x: Int) -> Int {
+    x * 2
+}
+/* a construct from a layer over the core */mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm.kkkk.c......ttt.....ttt...v...n...cccc.....cccccc..49/* a construct from a layer over the core */ + "y"ppcccc..p...sss50/* a construct from a layer over the core */ccccc....................................................................51[1, 2, 3, 4].dropFirst()
+[1, 2, 3].split(separator: 2)
+Array([1, 2, 3].suffix(2)).n..n..n..n................n..n..n...................n...vvvvv..n..n..n.........n..52/* a construct from a layer over the core */ccccc....cccccc....ccccc53enum K {
+    case a
+    case b
+    case c
+}
+switch K.a {
+case .a:
+    /* a construct from a layer over the core */
+    fallthrough
+case .b:
+    /* a construct from a layer over the core */
+case .c:
+    /* a construct from a layer over the core */
+}kkkk.t...kkkk.C..C..C....kkkkkk.v.....kkkk.CC..cccc....kkkkkkkkkkk.kkkk.CC..cccc...kkkk.CC..cccc....54/* a construct from a layer over the core */ppcccccc.sssssssssp...cccccc55/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+[1, 2].last..n..n....n.....ccc.vvvvvvv....ssss....ccc.vvvvvvvvv....n..n......56let x: Int? = nil
+x!kkk.v..ttt....CCC..v.57let o = Command("echo", "hi").output()
+print(o.text)
+print(o.status.succeeded)kkk.v...vvvvvvv.ssssss..ssss............vvvvv.v........vvvvv.v..................58[[1, 2], [3]].flatMap { $0 }
+[1, 2].elementsEqual([1, 2])..n..n....n.............vv.....n..n.................n..n..59let n = 3
+let m = /* a construct from a layer over the core */kkk.v...n..kkk.v...vv60let r = /* a construct from a layer over the core */
+rkkk.v...ppcccc......p..v61for i in 1 ... 3 {
+    switch i {
+    case 2:
+        break
+    default:
+        /* a construct from a layer over the core */
+    }
+}kkk.v.kk.n...n...kkkkkk.v...kkkk.n..kkkkk.kkkkkkk..cccc.ppvp....62let xs = ["-n", "a b"]
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkk.vv....ssss..sssss...cccccc.sssss.vvv..cccc63let h = /* a construct from a layer over the core */kkk.v...vvvvv64Command("true").run().and { Command("false").run() }.or { Command("true").run() }vvvvvvv.ssssss..............vvvvvvv.sssssss...............vvvvvvv.ssssss.........65let o = Command("sh", "-c", "echo partial; exit 2").output()
+print(o.text)
+print(o.status.code)kkk.v...vvvvvvv.ssss..ssss..ssssssssssssssssssssss............vvvvv.v........vvvvv.v.............66/* a construct from a layer over the core */ccccc......67enum Level: Int {
+    case low = 1
+    case mid
+    case high = 10
+}
+Level.mid.rawValue
+Level(rawValue: 10)
+Level(rawValue: 5) == nilkkkk.ttttt..ttt...kkkk.CCC...n..CCC..CCCC...nn....vvvvv...............vvvvv...........nn...vvvvv...........n.....CCC68"tab\there"
+let xs: [Any] = [1, "x", nil]
+xs
+["k": "v"].debugDescriptionsssssssssss..kkk.vv...ttt.....n..sss..CCC...vv...sss..sss..................69let j = /* a construct from a layer over the core */
+j.state == .running
+await j
+j.state
+j.state == JobState.donekkk.v...kkkkk.ccccc......v..........CCCCCCCC..kkkkk.v..v........v..........vvvvvvvv.....70enum Code: String {
+    case ok
+    case bad = "BAD"
+}
+Code.ok.rawValue
+Code.bad.rawValuekkkk.tttt..tttttt...kkkk.CC..CCC...sssss....vvvv..............vvvv.............71/* a construct from a layer over the core */cccccc....72let xs = ["-n", "a b"]
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkk.vv....ssss..sssss...cccccc.sssss.ppvvp..cccc73enum E {
+    case a
+    case b(code: Int, String)
+}
+E.b(code: 2, "no")
+"\(E.b(code: 2, "no"))"kkkk.t...kkkk.C..C.......ttt..tttttt.....v.........n..ssss...sppvsssssssssnsssssssps74/* a construct from a layer over the core */ccccc....cccccc....cccccc75/* a construct from a layer over the core */cccc76enum L: Int {
+    case a = 1
+    case b = 1
+}kkkk.t..ttt...kkkk.C...n..C...n..77let r = /* a construct from a layer over the core */
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkk.v...ppcccc......p..cccc.vv.sppvps...sss..sss....cccccc..78/* a construct from a layer over the core */cccc..79enum L {
+    case a = 1
+}kkkk.t...kkkk.C...n..80let xs = ["-n", "a b"]
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkk.vv....ssss..sssss...cccccc.sssss.svvvs..cccc81/* a construct from a layer over the core */cccc......82enum K {
+    case a
+}
+K.a.rawValuekkkk.t...kkkk.C....v...........83Command("true").run().and { Command("false").run() }.or { Command("false").run() }vvvvvvv.ssssss..............vvvvvvv.sssssss...............vvvvvvv.sssssss.........84let j = /* a construct from a layer over the core */
+await jkkk.v...kkkkk.cccc..kkkkk.v85/* a construct from a layer over the core */ccc.ff86var n = 0
+while true {
+    n += 1
+}kkk.v...n..kkkkk.CCCC...v.pp.n..87func isBig(_ n: Int) -> Bool {
+    n > 10
+}
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkk.ccccc......ttt.....tttt...v...nn...ccccc.......cccc......ccccc......cccc......88let xs = ["-n", "a b"]
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkk.vv....ssss..sssss...cccccc.sssss..vvv..cccc89struct Point {
+    var x: Int
+    func describe() -> String {
+        "p\(self.x)"
+    }
+    func scaled(by k: Int) -> Point {
+        Point(x: self.x * k)
+    }
+    mutating func bump() {
+        self.x += 1
+    }
+}
+/* a construct from a layer over the core */kkkkkk.ttttt...kkk.v..ttt..kkkk.cccccccc......tttttt...ssppvps....kkkk.cccccc.......ttt.....ttttt...vvvvv....v...v.....kkkkkkkk.kkkk.cccc.....v.pp.n.......vvvvv....n...vvvvv....n.....cccccccc90let s = /* a construct from a layer over the core */
+s == skkk.v...ppcccc.ff....................cc.ssss..p..v....v91/* a construct from a layer over the core */ccccc..92/* a construct from a layer over the core */ccccc....cccccc....cc.ff.ssssssss93struct Point {
+    var x: Int
+    func describe() -> String {
+        "p\(self.x)"
+    }
+    func scaled(by k: Int) -> Point {
+        Point(x: self.x * k)
+    }
+    mutating func bump() {
+        self.x += 1
+    }
+}
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkkkk.ttttt...kkk.v..ttt..kkkk.cccccccc......tttttt...ssppvps....kkkk.cccccc.......ttt.....ttttt...vvvvv....v...v.....kkkkkkkk.kkkk.cccc.....v.pp.n......vvvvv....n....cccccc.ffff.....cccccccc..vvvvv....n....cccccc.....n....cccccccc94let none: [String] = []
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkk.vvvv...tttttt........cccccc.sssss...vvvvv....cccc95/* a construct from a layer over the core */ccccc.............96/* a construct from a layer over the core */sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss...cc......p..........................................................................97struct Point {
+    var x: Int
+    func describe() -> String {
+        "p\(self.x)"
+    }
+    func scaled(by k: Int) -> Point {
+        Point(x: self.x * k)
+    }
+    mutating func bump() {
+        self.x += 1
+    }
+}
+/* a construct from a layer over the core */kkkkkk.ttttt...kkk.v..ttt..kkkk.cccccccc......tttttt...ssppvps....kkkk.cccccc.......ttt.....ttttt...vvvvv....v...v.....kkkkkkkk.kkkk.cccc.....v.pp.n......vvvvv....n....cccc98/* a construct from a layer over the core */cccccc..............................................................................99let greeting = "hi"
+func hello(_ n: String) {
+    /* a construct from a layer over the core */
+}kkk.vvvvvvvv...ssss.kkkk.ccccc......tttttt....cccc.sppvvvvvvvvpsppvpsppvvvvps....100func read() {
+    /* a construct from a layer over the core */
+}
+/* a construct from a layer over the core */kkkk.cccc.....cccc.........cccc101/* a construct from a layer over the core */
+/* a construct from a layer over the core */ccccc.ff..........................................................................ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss.........................................................................ccccc.......................................................................................................................................................................................................................................................................................................................................................................................................................................................ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss................................................................................102/* a construct from a layer over the core */
+args
+#filePathccccc......vvvv..kkkkkkkkk103func two(_ a: String, _ b: String) {
+    /* a construct from a layer over the core */
+}
+let ab = ["p", "q"]
+/* a construct from a layer over the core */kkkk.ccc......tttttt.......tttttt....cccc.sppvpsppvps....kkk.vv....sss..sss...ccc.vvv104/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+let j = jobs.first
+await j!
+j!.statekkkkk.ccccc....vvvv...cccccc..kkk.v...vvvv........kkkkk.v...v.......105/* a construct from a layer over the core */cccccc..............................................................................106func f(_ i: Int) -> () -> Int {
+    let g = { i + 1 }
+    let unused = [1, 2]
+    return g
+}
+let h = f(1)
+h()kkkk.c......ttt...........ttt...kkk.v.....v...n....kkk.vvvvvv....n..n...kkkkkk.v....kkk.v...v.n...v..107func f(_ x: Int, five: Bool = false) -> String {
+    "\(x) \(five)"
+}
+/* a construct from a layer over the core */kkkk.c......ttt..kkkkk.sss........tttt...CCCCC.....tttttt...sppvpsppvvvvps....c.ff.ff108let p: FilePath = "/usr/local/bin/swish.tar.gz"
+p.lastComponent!
+p.extension
+p.stem
+p.removingLastComponent()
+p.appending("x")
+p.isAbsolutekkk.v..tttttttt...sssssssssssssssssssssssssssss..v.................v............v.......v..........................v...........sss...v...........109func g(_ x: Int, _ y: Int) {}
+func g(_ s: String) {}
+/* a construct from a layer over the core */kkkk.c......ttt.......ttt......kkkk.c......tttttt......c......110Command("true").run().and { Command("false").run() }.or { Command("sh", "-c", "exit 3").run() }vvvvvvv.ssssss..............vvvvvvv.sssssss...............vvvvvvv.ssss..ssss..ssssssss.........111/* a construct from a layer over the core */cccc.ssssssssssssssssssssssssssssssssssssssssssssssssssssssss...cccc........cc.....112func greet() {
+    /* a construct from a layer over the core */
+}
+func double(_ n: Int) -> Int {
+    n * 2
+}
+func boom() -> Int {
+    1 / 0
+}
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkk.ccccc.....cccc.......kkkk.cccccc.kkkkkk......ttt.....ttt...v...n....kkkk.cccc......ttt...n...n...ccccc.p....................................................................ccc..................................................................113let n = 3
+(n * 2) + 1kkk.v...n..v...n...n114func g(a: Int) {}
+func g(b: Int) {}
+g(c: 1)kkkk.c....ttt......kkkk.c....ttt......v....n.115let c: FilePath.Component = "a.b"
+c.extension
+c.stemkkk.v..tttttttt.ttttttttt...sssss..v............v.....116/* a construct from a layer over the core */cccccc.ssssss.ssssssssss.sssssss.ssssssssss.sssssssssssssssssssss.ssssssssssss.p................................................................117func g(_ x: Int, y: Int = 0) -> Int {
+    1
+}
+func g(_ x: Int, z: Int = 0) -> Int {
+    2
+}
+g(1)kkkk.c......ttt.....ttt...n.....ttt...n....kkkk.c......ttt.....ttt...n.....ttt...n....v.n.118let n = 4kkk.v...n1197 / 2
+7 % 2
+7.0 / 2
+/* a construct from a layer over the core */n...n..n...n..nnn...n..cc120/* a construct from a layer over the core */cccc.ssssssssssssssssssssss...cccc........ccc..121func greet() {
+    /* a construct from a layer over the core */
+}
+func double(_ n: Int) -> Int {
+    n * 2
+}
+func boom() -> Int {
+    1 / 0
+}
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkk.ccccc.....cccc.......kkkk.cccccc.kkkkkk......ttt.....ttt...v...n....kkkk.cccc......ttt...n...n...ccc...p....................................................................cccccc.p..................................................................122var n = 0
+while n < 3 {
+    n = n + 1
+}
+nkkk.v...n..kkkkk.v...n...v...v...n....v123/* a construct from a layer over the core */
+false
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */cccc.....CCCCC.cccc.....kkkk.cc.ff.ssssssss.cccc.......124let p: FilePath = "/usr/local/bin/swish.tar.gz"
+p.components.count
+/* a construct from a layer over the core */
+for c in p.components {
+    /* a construct from a layer over the core */
+}kkk.v..tttttttt...sssssssssssssssssssssssssssss..v...................v..............ccc...vv.........kkk.v.kk.v..............cccc.vv..125"a" + "b"
+[1, 2] + [3]sss...sss...n..n.....n.126var n = 0
+while /* a construct from a layer over the core */ {
+    n = n + 1
+}
+nkkk.v...n..kkkkk.cccc.vv.fff.....v...v...n....v1271 < 2
+1 == 1.0
+[1, 2][1]n...n..n....nnn...n..n..n.128/* a construct from a layer over the core */cccc.sssssssss...cccc.....129func greet() {
+    /* a construct from a layer over the core */
+}
+func double(_ n: Int) -> Int {
+    n * 2
+}
+func boom() -> Int {
+    1 / 0
+}
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkk.ccccc.....cccc.......kkkk.cccccc.kkkkkk......ttt.....ttt...v...n....kkkk.cccc......ttt...n...n...ccc.....cccccc.p....................................................................ccc..................................................................130/* a construct from a layer over the core */cc.ff.ssssssssssssssssssssssss.ppp.p..........131/* a construct from a layer over the core */ccccc....cc.ff.ssssssss....ccccc132let p: FilePath = "/usr/local/bin/swish.tar.gz"
+/* a construct from a layer over the core */
+"\(p.lastComponent!)"kkk.v..tttttttt...sssssssssssssssssssssssssssss..cccc.vv..sppvsssssssssssssssps133let xs = [(n: 2, s: "b"), (n: 1, s: "a")]
+xs.sorted(by: \.n).map(\.s)
+xs.map(\.n)kkk.vv........n.....sss.......n.....sss....vv............vvv......vvv...vv.....vvv.134/* a construct from a layer over the core */
+/* a construct from a layer over the core */ccc.p....................................................................ccc..................................................................135let p: FilePath = "/usr/local/bin/swish.tar.gz"
+p == FilePath("/usr/local/bin/swish.tar.gz")
+p.starts(with: "/usr")kkk.v..tttttttt...sssssssssssssssssssssssssssss..v....vvvvvvvv.sssssssssssssssssssssssssssss...v..............ssssss.136let x = try? /* a construct from a layer over the core */
+x == nilkkk.v...kkkk.ppCCCCCp..v....CCC137struct Point {
+    var x: Int
+    var y: Int = 0
+    var lengthSquared: Int {
+        (self.x * self.x) + (self.y * self.y)
+    }
+    func describe() -> String {
+        "(\(self.x), \(self.y))"
+    }
+    mutating func move(by d: Int) {
+        self.x += d
+        self.y += d
+    }
+    mutating func reset() {
+        self.move(by: -self.x)
+        self.y = 0
+    }
+}
+var p = Point(x: 3, y: 4)
+p.move(by: 1)
+p
+p.reset()
+pkkkkkk.ttttt.......kkk.v..ttt.....kkk.v..ttt...n.....kkk.vvvvvvvvvvvvv..ttt...v...v...v...v.......kkkk.cccccccc......tttttt...ssppvpssppvpss.......kkkkkkkk.kkkk.cccc.......ttt............v.pp.v.........vvvv...pp.v...........kkkkkkkk.kkkk.ccccc.....vvvv......v...v...n.....kkk.v...vvvvv....n.....n...v..........n...v..v..........v138/* a construct from a layer over the core */
+/* a construct from a layer over the core */cc.......................................................................p....................................................................cccc.ff..................................................................139/* a construct from a layer over the core */cc.ff.ssssssssss.ppp.pp..........140(try? /* a construct from a layer over the core */) ?? "fallback".kkkk.ppCCCCCp.....ssssssssss141String("x")
+let c: Character = "z"
+String(c)vvvvvv.sss...kkk.v..ttttttttt...sss..vvvvvv.v.142let p: FilePath = "/usr/local/bin/swish.tar.gz"
+[p]
+/* a construct from a layer over the core */kkk.v..tttttttt...sssssssssssssssssssssssssssss...v....v....cc.....143/* a construct from a layer over the core */kkkk.ppcccc.ff...............p....CCC....cccc........144struct Point {
+    var x: Int
+    var y: Int = 0
+    var lengthSquared: Int {
+        (self.x * self.x) + (self.y * self.y)
+    }
+    func describe() -> String {
+        "(\(self.x), \(self.y))"
+    }
+    mutating func move(by d: Int) {
+        self.x += d
+        self.y += d
+    }
+    mutating func reset() {
+        self.move(by: -self.x)
+        self.y = 0
+    }
+}
+struct Line {
+    var start: Point
+    var end: Point
+}
+var l = Line(start: Point(x: 0), end: Point(x: 5))
+l.end.move(by: 2)
+l.endkkkkkk.ttttt.......kkk.v..ttt.....kkk.v..ttt...n.....kkk.vvvvvvvvvvvvv..ttt...v...v...v...v.......kkkk.cccccccc......tttttt...ssppvpssppvpss.......kkkkkkkk.kkkk.cccc.......ttt............v.pp.v.........vvvv...pp.v...........kkkkkkkk.kkkk.ccccc.....vvvv......v...v...n.....kkkkkk.tttt...kkk.vvvvv..ttttt..kkk.vvv..ttttt...kkk.v...vvvv........vvvvv....n........vvvvv....n....v..............n...v....145Command("true").run().and { Command("sh", "-c", "exit 3").run() }.or { Command("true").run() }vvvvvvv.ssssss..............vvvvvvv.ssss..ssss..ssssssss...............vvvvvvv.ssssss.........146/* a construct from a layer over the core */
+/* a construct from a layer over the core */ccccc.sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss..ccccc..............................................................................................................................................147func greet() {
+    /* a construct from a layer over the core */
+}
+func double(_ n: Int) -> Int {
+    n * 2
+}
+func boom() -> Int {
+    1 / 0
+}
+/* a construct from a layer over the core */kkkk.ccccc.....cccc.......kkkk.cccccc.kkkkkk......ttt.....ttt...v...n....kkkk.cccc......ttt...n...n...cccc.pp....................................................................148pwd().isAbsolute
+ls().first!.path.isAbsolutevvv...............vv.........................149struct Point {
+    var x: Int
+    var y: Int = 0
+    var lengthSquared: Int {
+        (self.x * self.x) + (self.y * self.y)
+    }
+    func describe() -> String {
+        "(\(self.x), \(self.y))"
+    }
+    mutating func move(by d: Int) {
+        self.x += d
+        self.y += d
+    }
+    mutating func reset() {
+        self.move(by: -self.x)
+        self.y = 0
+    }
+}
+let q = Point(x: 1)
+q.move(by: 1)kkkkkk.ttttt.......kkk.v..ttt.....kkk.v..ttt...n.....kkk.vvvvvvvvvvvvv..ttt...v...v...v...v.......kkkk.cccccccc......tttttt...ssppvpssppvpss.......kkkkkkkk.kkkk.cccc.......ttt............v.pp.v.........vvvv...pp.v...........kkkkkkkk.kkkk.ccccc.....vvvv......v...v...n.....kkk.v...vvvvv....n...v..........n.150/* a construct from a layer over the core */ccc....................................................................151if let h = try? /* a construct from a layer over the core */ {
+    /* a construct from a layer over the core */
+} else {
+    /* a construct from a layer over the core */
+}kk.kkk.v...kkkk.ppcccc...p...cccc.sssssppvps...kkkk...cccc.......152func zzgreet() {}mmmmmmmmmmm.kkkk.ccccccc.....153struct C {
+    var n: Int
+    func bump() {
+        self.n += 1
+    }
+}
+var c = C(n: 1)
+c.bump()kkkkkk.t...kkk.v..ttt..kkkk.cccc.....v.pp.n......kkk.v...v....n...v.......154let d = pwd().removingLastComponent()
+ls(d).first!.path.starts(with: d)
+ls("/").count > 0kkk.v...vvv............................vv.v...........................v...vv.sss..........n155/* a construct from a layer over the core */ccc........ff156if let h = try? /* a construct from a layer over the core */ {
+    print(h)
+} else if let g = try? /* a construct from a layer over the core */ {
+    print(g)
+}kk.kkk.v...kkkk.ppCCCCCp...vvvvv.v....kkkk.kk.kkk.v...kkkk.ppcccc.......p...vvvvv.v...157Command("echo", "*.swift", "$HOME", "~").run()
+print(Command("echo", "a b").words.count)vvvvvvv.ssssss..sssssssss..sssssss..sss.........vvvvv.vvvvvvv.ssssss..sssss..............158/* a construct from a layer over the core */
+/* a construct from a layer over the core */cccc.sssss..cc159/* a construct from a layer over the core */
+/* a construct from a layer over the core */ccccc.ff..........................................................................ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss.........................................................................ccccc.......................................................................................................................................................................................................................................................................................................................................................................................................................................................ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss................................................................................160/* a construct from a layer over the core */ccccc....cc.ff.ssssssss....cccccc161if true {
+    /* a construct from a layer over the core */
+}kk.CCCC...cccc.....162if let h = try? /* a construct from a layer over the core */ {}
+/* a construct from a layer over the core */kk.kkk.v...kkkk.ppCCCCCp......c163let x = /* a construct from a layer over the core */
+x.status.code
+x.text
+/* a construct from a layer over the core */kkk.v...ppcc.ff.ssssssssssssssssssssssp..v..............v.......cccc......164func f(times: Int = 1, verbose: Bool = false, quiet: Bool = false) -> String {
+    "\(times) \(verbose) \(quiet)"
+}
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkk.c.kkkkk.sss.........ttt...n..kkkkk.sss...........tttt...CCCCC..kkkkk.sss.........tttt...CCCCC.....tttttt...sppvvvvvpsppvvvvvvvpsppvvvvvps...c.ff....c.fff.fff..c.fff.fffffffff165try? [1][5] == nil
+try? (1 / 0) == nilkkkk..n..n.....CCC..kkkk.n...n....CCC166/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */cccc.....p....................................................................cccc.....pp....................................................................ccc.p..................................................................167func f(times: Int = 1, verbose: Bool = false, quiet: Bool = false) -> String {
+    "\(times) \(verbose) \(quiet)"
+}
+/* a construct from a layer over the core */kkkk.c.kkkkk.sss.........ttt...n..kkkkk.sss...........tttt...CCCCC..kkkkk.sss.........tttt...CCCCC.....tttttt...sppvvvvvpsppvvvvvvvpsppvvvvvps...c.ff168func double(_ n: Int) -> Int {
+    n * 2
+}
+func total(_ xs: [Int]) -> Int {
+    var t = 0
+    for x in xs {
+        t = t + x
+    }
+    return t
+}
+func evens(_ n: Int) -> Int? {
+    if (n % 2) == 0 {
+        return n
+    }
+    return nil
+}
+var calls = 0
+func counted(_ n: Int) -> Int {
+    calls = calls + 1
+    return n
+}
+/* a construct from a layer over the core */kkkk.cccccc.kkkkkk......ttt.....ttt...v...n...kkkk.ccccc.kkkkkk........ttt......ttt...kkk.v...n..kkk.v.kk.vv...v...v...v....kkkkkk.v...kkkk.ccccc.kkkkkk......ttt.....ttt....kk.v...n....n...kkkkkk.v....kkkkkk.CCC...kkk.vvvvv...n.kkkk.ccccccc.kkkkkk......ttt.....ttt...vvvvv...vvvvv...n..kkkkkk.v...ccc.....cccccc169(try? [1][5]) == nil
+(try? 1 / 0) == nil.kkkk..n..n......CCC...kkkk.n...n.....CCC170func f(times: Int = 1, verbose: Bool = false, quiet: Bool = false) -> String {
+    "\(times) \(verbose) \(quiet)"
+}
+/* a construct from a layer over the core */kkkk.c.kkkkk.sss.........ttt...n..kkkkk.sss...........tttt...CCCCC..kkkkk.sss.........tttt...CCCCC.....tttttt...sppvvvvvpsppvvvvvvvpsppvvvvvps...c.fff171func f() -> Int {
+    [1][9]
+}
+(try? f()) ?? 0kkkk.c......ttt....n..n......kkkk.v.......n172func double(_ n: Int) -> Int {
+    n * 2
+}
+func total(_ xs: [Int]) -> Int {
+    var t = 0
+    for x in xs {
+        t = t + x
+    }
+    return t
+}
+func evens(_ n: Int) -> Int? {
+    if (n % 2) == 0 {
+        return n
+    }
+    return nil
+}
+var calls = 0
+func counted(_ n: Int) -> Int {
+    calls = calls + 1
+    return n
+}
+/* a construct from a layer over the core */kkkk.cccccc.kkkkkk......ttt.....ttt...v...n...kkkk.ccccc.kkkkkk........ttt......ttt...kkk.v...n..kkk.v.kk.vv...v...v...v....kkkkkk.v...kkkk.ccccc.kkkkkk......ttt.....ttt....kk.v...n....n...kkkkkk.v....kkkkkk.CCC...kkk.vvvvv...n.kkkk.ccccccc.kkkkkk......ttt.....ttt...vvvvv...vvvvv...n..kkkkkk.v...ccc.....ccccc...cccccc173/* a construct from a layer over the core */
+/* a construct from a layer over the core */cccc.......p....................................................................ccc..................................................................174/* a construct from a layer over the core */cccc..175env.SWISH_TEST_645381 == nil
+env.SWISH_TEST_645381 = "one two"
+/* a construct from a layer over the core */
+env["SWISH_TEST_645381"]
+env.SWISH_TEST_645381 = nil
+env.SWISH_TEST_645381 == nilvvv......................CCC..vvv.....................sssssssss..cccc.vvvvvvvvvvvvvvvvvv..vvv.sssssssssssssssssss...vvv.....................CCC..vvv......................CCC176func show(_ path: FilePath, to other: FilePath = "/tmp") {
+    /* a construct from a layer over the core */
+}kkkk.cccc.........tttttttt............tttttttt...ssssss....cccc.sppvvvvssssssssssssssspsppvvvvvps..177Command("true").run().and { Command("sh", "-c", "exit 3").run() }.or { Command("false").run() }vvvvvvv.ssssss..............vvvvvvv.ssss..ssss..ssssssss...............vvvvvvv.sssssss.........178/* a construct from a layer over the core */
+/* a construct from a layer over the core */cccc..........cccc.........ffff...179/* a construct from a layer over the core */cccc.ppCCCCCp..180/* a construct from a layer over the core */cccc.vvvvv181func double(_ n: Int) -> Int {
+    n * 2
+}
+func total(_ xs: [Int]) -> Int {
+    var t = 0
+    for x in xs {
+        t = t + x
+    }
+    return t
+}
+func evens(_ n: Int) -> Int? {
+    if (n % 2) == 0 {
+        return n
+    }
+    return nil
+}
+var calls = 0
+func counted(_ n: Int) -> Int {
+    calls = calls + 1
+    return n
+}
+/* a construct from a layer over the core */kkkk.cccccc.kkkkkk......ttt.....ttt...v...n...kkkk.ccccc.kkkkkk........ttt......ttt...kkk.v...n..kkk.v.kk.vv...v...v...v....kkkkkk.v...kkkk.ccccc.kkkkkk......ttt.....ttt....kk.v...n....n...kkkkkk.v....kkkkkk.CCC...kkk.vvvvv...n.kkkk.ccccccc.kkkkkk......ttt.....ttt...vvvvv...vvvvv...n..kkkkkk.v....n..n..n....cccccc182/* a construct from a layer over the core */cc........183/* a construct from a layer over the core */cccc....p..........184let r = 1 ... 5
+r
+r.count
+r.contains(3)
+r.map { $0 * 2 }
+r.filter { ($0 % 2) == 0 }kkk.v...n...n..v..v........v..........n...v.......vv...n....v..........vv...n....n..185let x = /* a construct from a layer over the core */
+xkkk.v...ppcccc.....p..v186/* a construct from a layer over the core */cc...cccccc...vv........nnnnn.....ccccc187env.HOME == "/Users/raklaptudirm"vvv.........sssssssssssssssssssss188/* a construct from a layer over the core */cccc.ffffff189/* a construct from a layer over the core */cccc.....ccc190/* a construct from a layer over the core */cccccc.ff1910 ..< 3
+(0 ..< 3).lowerBound
+Array(0 ..< 3)
+/* a construct from a layer over the core */n...n...n...n..............vvvvv.n...n....n...n....ccc...vv...nn..192/* a construct from a layer over the core */cccccc.ff.ff........193/* a construct from a layer over the core */ccccc...194env.count == nilvvv..........CCC195/* a construct from a layer over the core */cccccc.ff196func counter() -> (Int) -> Int {
+    var c = 0
+    return {
+    c = c + $0
+    return c
+}
+}
+let next = counter()
+next(1)
+next(5)kkkk.ccccccc.......ttt.....ttt...kkk.v...n..kkkkkk...v...v...vv..kkkkkk.v......kkk.vvvv...vvvvvvv....vvvv.n...vvvv.n.197/* a construct from a layer over the core */cccc198for i in 0 ..< 2 {
+    print(i)
+}
+let r = 5 ... 6
+for i in r {
+    print(i)
+}kkk.v.kk.n...n...vvvvv.v.....kkk.v...n...n..kkk.v.kk.v...vvvvv.v...199/* a construct from a layer over the core */cccccc.ff200var fs: [() -> Int] = []
+for i in 1 ... 3 {
+    fs = fs + [{ i * 10 }]
+}
+fs[0]()
+fs[2]()kkk.vv.........ttt........kkk.v.kk.n...n...vv...vv......v...nn.......vv.n.....vv.n...201/* a construct from a layer over the core */cccc....cccc202(1.0 ... 2.0).contains(1.5)
+("a" ... "f").contains("c").nnn...nnn...........nnn....sss...sss...........sss.203/* a construct from a layer over the core */
+/* a construct from a layer over the core */ccccc.ff..........................................................................ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss.........................................................................ccccc.......................................................................................................................................................................................................................................................................................................................................................................................................................................................ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss................................................................................204/* a construct from a layer over the core */cccccc.ff.....205/* a construct from a layer over the core */ccccc....cc.ff.ssssssss....cc.ff.ssssssss206let r = (name: "x", size: 2.0 MB)
+r.name
+r.size * 2
+r.1kkk.v..........sss........nnnn..v.......v........n..v..207let n = 3
+if n > 2 {
+    /* a construct from a layer over the core */
+} else {
+    /* a construct from a layer over the core */
+}kkk.v...n..kk.v...n...cccc.......kkkk...cccc........208let r = (name: "x", size: 2.0 MB)
+rkkk.v..........sss........nnnn..v209/* a construct from a layer over the core */
+/* a construct from a layer over the core */cccc...p...............................................................................cccc......210if false {
+    /* a construct from a layer over the core */
+} else if true {
+    /* a construct from a layer over the core */
+} else {
+    /* a construct from a layer over the core */
+}kk.CCCCC...cccc.....kkkk.kk.CCCC...cccc.....kkkk...cccc....211let r = 3 ... 1kkk.v...n...n212let r = (name: "x", size: 2.0 MB)
+r.nopekkk.v..........sss........nnnn..v.....213/* a construct from a layer over the core */cccc...p......................................................................214let j = /* a construct from a layer over the core */
+j.cancel()
+let r = await j
+r.status.signal
+j.statekkk.v...kkkkk.ccccc....v...........kkk.v...kkkkk.v..v................v......215if /* a construct from a layer over the core */ {
+    /* a construct from a layer over the core */
+} else {
+    /* a construct from a layer over the core */
+}kk.cccc.ff..................cccc.........kkkk...cccc.......216"a\nb".lines.count
+[1, 2].last
+"abc".countssssss...............n..n........sssss......217let xs: [Int]? = [1, 2]
+xs?[1]
+let none: [Int]? = nil
+none?[0] == nilkkk.vv...ttt......n..n...vv..n...kkk.vvvv...ttt.....CCC..vvvv..n.....CCC218/* a construct from a layer over the core */
+/* a construct from a layer over the core */ccccc.ff..........................................................................ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss.........................................................................ccccc.......................................................................................................................................................................................................................................................................................................................................................................................................................................................ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss................................................................................219/* a construct from a layer over the core */cccccc.ssssss.ssssssssss.ss.ssssssssssssssssss.p................................................................220if true && (1 < 2) {
+    /* a construct from a layer over the core */
+}kk.CCCC....n...n...cccc.......221func f() {
+    42
+}
+f()kkkk.c.....nn....v..222/* a construct from a layer over the core */ccc...cccccc...vv....sss.....ccc...vv...sss.....cccccc..223/* a construct from a layer over the core */
+let x: Int = "a"cccc......kkk.v..ttt...sss.224if true {
+    /* a construct from a layer over the core */
+    /* a construct from a layer over the core */
+} else {
+    /* a construct from a layer over the core */
+}kk.CCCC.....cccc.....cccc.....kkkk...cccc....225/* a construct from a layer over the core */cccc......................................................................226/* a construct from a layer over the core */cc...cccccc...vv........nnnnn.....ccc.....227func greet(_ name: String) {}
+/* a construct from a layer over the core */kkkk.ccccc.........tttttt......ccccc....................228Command("true").run().and { Command("sh", "-c", "exit 3").run() }.or { Command("sh", "-c", "exit 3").run() }vvvvvvv.ssssss..............vvvvvvv.ssss..ssss..ssssssss...............vvvvvvv.ssss..ssss..ssssssss.........229let dir = "/var/folders/61/rv_z22gd4yb8h_m81yr5pkd80000gn/T/tmp.HiqmPG9xcI/with space"
+/* a construct from a layer over the core */kkk.vvv...ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss..cccc.svvvvs......230/* a construct from a layer over the core */
+/* a construct from a layer over the core */.n..n....ccc...nn....vv...n.....cccc............231let s = Set([3, 1, 2, 3])
+s.count
+s.contains(2)
+s.sorted()
+s.union([9]).sorted()kkk.v...vvv..n..n..n..n....v........v..........n...v...........v........n...........232/* a construct from a layer over the core */.n..n..n..n....cccccc..........vv...n...233/* a construct from a layer over the core */ccccc.....................234let j = try from(.json, ["{\"server\": {\"port\": 8080}, \"tags\": [\"a\", \"b\"], \"on\": true}"])
+j.server?.port?.int ?? 1
+j.missing?.port?.int ?? 1
+j["tags"]?[1]?.string
+j.tags?.array?.count
+j.on?.boolkkk.v...kkk.vvvv.CCCCC...ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss....v......................n..v.......................n..v.ssssss...n...........v.....................v.........235/* a construct from a layer over the core */cccc.sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss236let s = Set([1, 2])
+s.isSubset(of: 1 ... 5)
+s.intersection(Set([2, 3]))
+Set("hello").countkkk.v...vvv..n..n....v..............n...n...v..............vvv..n..n.....vvv.sssssss.......237struct Counter: Equatable {
+    static let zero = Counter(n: 0)
+    static let step = 2
+    static var made = 0
+    static var next: Int {
+        Counter.step + Counter.made
+    }
+    var n: Int
+    static func make(_ n: Int) -> Counter {
+        Counter.made += 1
+        return Counter(n: n * Counter.step)
+    }
+    func bumped() -> Counter {
+        Counter(n: self.n + Counter.step)
+    }
+}
+Counter.zero
+Counter.step
+Counter.make(3)
+Counter.nextkkkkkk.ttttttt..ttttttttt.......kkk.v..ttt.....kkkkkk.kkk.vvvv...vvvvvvv....n......kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv..ttt...vvvv...vvvv.......kkkkkk.kkkk.cccc......ttt.....ttttttt...vvvv.pp.n..kkkkkk.vvvvvvv....v...vvvv........kkkk.cccccc......ttttttt...vvvvvvv....v...vvvvvvv...........vvvvvvv.......vvvvvvv.......vvvvvvv......n...vvvvvvv.....238func double(_ n: Int) -> Int {
+    n * 2
+}
+func total(_ xs: [Int]) -> Int {
+    var t = 0
+    for x in xs {
+        t = t + x
+    }
+    return t
+}
+func evens(_ n: Int) -> Int? {
+    if (n % 2) == 0 {
+        return n
+    }
+    return nil
+}
+var calls = 0
+func counted(_ n: Int) -> Int {
+    calls = calls + 1
+    return n
+}
+/* a construct from a layer over the core */kkkk.cccccc.kkkkkk......ttt.....ttt...v...n...kkkk.ccccc.kkkkkk........ttt......ttt...kkk.v...n..kkk.v.kk.vv...v...v...v....kkkkkk.v...kkkk.ccccc.kkkkkk......ttt.....ttt....kk.v...n....n...kkkkkk.v....kkkkkk.CCC...kkk.vvvvv...n.kkkk.ccccccc.kkkkkk......ttt.....ttt...vvvvv...vvvvv...n..kkkkkk.v...ccc.....cccccc...cccc.ff239let s: Set<String> = Set(["a"])
+s.contains("a")
+Set([1]) == Set([1])kkk.v..ttt.tttttt....vvv..sss....v..........sss...vvv..n......vvv..n..240let j = try from(.json, ["{\"server\": {\"port\": 8080}, \"tags\": [\"a\", \"b\"], \"on\": true}"])
+j.server?.port?.string == nil
+j.nothing?.isNullkkk.v...kkk.vvvv.CCCCC...ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss....v.........................CCC..v................241/* a construct from a layer over the core */cc........................................................................ccc.....242struct Counter: Equatable {
+    static let zero = Counter(n: 0)
+    static let step = 2
+    static var made = 0
+    static var next: Int {
+        Counter.step + Counter.made
+    }
+    var n: Int
+    static func make(_ n: Int) -> Counter {
+        Counter.made += 1
+        return Counter(n: n * Counter.step)
+    }
+    func bumped() -> Counter {
+        Counter(n: self.n + Counter.step)
+    }
+}
+Counter.zero.bumped()
+let f = Counter.make
+f(1)kkkkkk.ttttttt..ttttttttt.......kkk.v..ttt.....kkkkkk.kkk.vvvv...vvvvvvv....n......kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv..ttt...vvvv...vvvv.......kkkkkk.kkkk.cccc......ttt.....ttttttt...vvvv.pp.n..kkkkkk.vvvvvvv....v...vvvv........kkkk.cccccc......ttttttt...vvvvvvv....v...vvvvvvv...........vvvvvvv................kkk.v...vvvvvvv.......v.n.243/* a construct from a layer over the core */vvv..n..n.....cccccc244let s = "a  b"kkk.v...ssssss245/* a construct from a layer over the core */cccc..........cccc...247struct Counter: Equatable {
+    static let zero = Counter(n: 0)
+    static let step = 2
+    static var made = 0
+    static var next: Int {
+        Counter.step + Counter.made
+    }
+    var n: Int
+    static func make(_ n: Int) -> Counter {
+        Counter.made += 1
+        return Counter(n: n * Counter.step)
+    }
+    func bumped() -> Counter {
+        Counter(n: self.n + Counter.step)
+    }
+}
+Counter.made += 5
+Counter.made = Counter.made * 2
+Counter.madekkkkkk.ttttttt..ttttttttt.......kkk.v..ttt.....kkkkkk.kkk.vvvv...vvvvvvv....n......kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv..ttt...vvvv...vvvv.......kkkkkk.kkkk.cccc......ttt.....ttttttt...vvvv.pp.n..kkkkkk.vvvvvvv....v...vvvv........kkkk.cccccc......ttttttt...vvvvvvv....v...vvvvvvv...........vvvvvvv......pp.n..vvvvvvv........vvvvvvv........n..vvvvvvv.....248func double(_ n: Int) -> Int {
+    n * 2
+}
+func total(_ xs: [Int]) -> Int {
+    var t = 0
+    for x in xs {
+        t = t + x
+    }
+    return t
+}
+func evens(_ n: Int) -> Int? {
+    if (n % 2) == 0 {
+        return n
+    }
+    return nil
+}
+var calls = 0
+func counted(_ n: Int) -> Int {
+    calls = calls + 1
+    return n
+}
+for _ in 1 ... 1 {
+    /* a construct from a layer over the core */
+}
+calls < 100000kkkk.cccccc.kkkkkk......ttt.....ttt...v...n...kkkk.ccccc.kkkkkk........ttt......ttt...kkk.v...n..kkk.v.kk.vv...v...v...v....kkkkkk.v...kkkk.ccccc.kkkkkk......ttt.....ttt....kk.v...n....n...kkkkkk.v....kkkkkk.CCC...kkk.vvvvv...n.kkkk.ccccccc.kkkkkk......ttt.....ttt...vvvvv...vvvvv...n..kkkkkk.v...kkk.v.kk.n...n...ccc..........ccccccc...cccc.ff....vvvvv...nnnnnn249let j = /* a construct from a layer over the core */
+j.state
+j.id
+let r = await j
+j.state
+r.status.codekkk.v...kkkkk.ccccc......v........v.....kkk.v...kkkkk.v..v........v............250/* a construct from a layer over the core */cccc.......................................................................251struct Counter: Equatable {
+    static let zero = Counter(n: 0)
+    static let step = 2
+    static var made = 0
+    static var next: Int {
+        Counter.step + Counter.made
+    }
+    var n: Int
+    static func make(_ n: Int) -> Counter {
+        Counter.made += 1
+        return Counter(n: n * Counter.step)
+    }
+    func bumped() -> Counter {
+        Counter(n: self.n + Counter.step)
+    }
+}
+Counter.step = 3kkkkkk.ttttttt..ttttttttt.......kkk.v..ttt.....kkkkkk.kkk.vvvv...vvvvvvv....n......kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv..ttt...vvvv...vvvv.......kkkkkk.kkkk.cccc......ttt.....ttttttt...vvvv.pp.n..kkkkkk.vvvvvvv....v...vvvv........kkkk.cccccc......ttttttt...vvvvvvv....v...vvvvvvv...........vvvvvvv........n252/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */.n..n..n....ccc...n..n..n....ccc.....n..n....cccccccc.n....n..n..n....cccccc.n....vv...vv..253/* a construct from a layer over the core */cccccc....ccccc....ccccc2541
+2
+"a"n..n..sss255struct Counter: Equatable {
+    static let zero = Counter(n: 0)
+    static let step = 2
+    static var made = 0
+    static var next: Int {
+        Counter.step + Counter.made
+    }
+    var n: Int
+    static func make(_ n: Int) -> Counter {
+        Counter.made += 1
+        return Counter(n: n * Counter.step)
+    }
+    func bumped() -> Counter {
+        Counter(n: self.n + Counter.step)
+    }
+}
+Counter.made = "x"kkkkkk.ttttttt..ttttttttt.......kkk.v..ttt.....kkkkkk.kkk.vvvv...vvvvvvv....n......kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv..ttt...vvvv...vvvv.......kkkkkk.kkkk.cccc......ttt.....ttttttt...vvvv.pp.n..kkkkkk.vvvvvvv....v...vvvv........kkkk.cccccc......ttttttt...vvvvvvv....v...vvvvvvv...........vvvvvvv........sss256/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */.sss..sss....cccccc............sss....sss..sss....cccccc.fffffffffff.....n..n....ccccc257Command("false").run().and { Command("true").run() }.or { Command("true").run() }vvvvvvv.sssssss..............vvvvvvv.ssssss...............vvvvvvv.ssssss.........258for i in 1 ... 3 {
+    i
+}kkk.v.kk.n...n...v..259struct Counter: Equatable {
+    static let zero = Counter(n: 0)
+    static let step = 2
+    static var made = 0
+    static var next: Int {
+        Counter.step + Counter.made
+    }
+    var n: Int
+    static func make(_ n: Int) -> Counter {
+        Counter.made += 1
+        return Counter(n: n * Counter.step)
+    }
+    func bumped() -> Counter {
+        Counter(n: self.n + Counter.step)
+    }
+}
+Counter.nopekkkkkk.ttttttt..ttttttttt.......kkk.v..ttt.....kkkkkk.kkk.vvvv...vvvvvvv....n......kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv..ttt...vvvv...vvvv.......kkkkkk.kkkk.cccc......ttt.....ttttttt...vvvv.pp.n..kkkkkk.vvvvvvv....v...vvvv........kkkk.cccccc......ttttttt...vvvvvvv....v...vvvvvvv...........vvvvvvv.....260/* a construct from a layer over the core */cccccc.ssssss.ssssssssss.ssssssssssssssssss.ssssssssss.ssssssssssssssssssssssssssssssss.ssssssssssss.p................................................................261struct Counter: Equatable {
+    static let zero = Counter(n: 0)
+    static let step = 2
+    static var made = 0
+    static var next: Int {
+        Counter.step + Counter.made
+    }
+    var n: Int
+    static func make(_ n: Int) -> Counter {
+        Counter.made += 1
+        return Counter(n: n * Counter.step)
+    }
+    func bumped() -> Counter {
+        Counter(n: self.n + Counter.step)
+    }
+}
+Counter.next = 1kkkkkk.ttttttt..ttttttttt.......kkk.v..ttt.....kkkkkk.kkk.vvvv...vvvvvvv....n......kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv..ttt...vvvv...vvvv.......kkkkkk.kkkk.cccc......ttt.....ttttttt...vvvv.pp.n..kkkkkk.vvvvvvv....v...vvvv........kkkk.cccccc......ttttttt...vvvvvvv....v...vvvvvvv...........vvvvvvv........n262/* a construct from a layer over the core */
+/* a construct from a layer over the core */.n..n....cccccccc.....sss....cccccccc..263if true {
+    1
+} else {
+    2
+}kk.CCCC...n...kkkk...n..264/* a construct from a layer over the core */
+let a = /* a construct from a layer over the core */
+/* a construct from a layer over the core */
+let b = try! /* a construct from a layer over the core */
+/* a construct from a layer over the core */cccc.....kkk.v...ppCCCCCp.cccc.....kkk.v...kkkk.ppcc.ff.ssssssssp.cccc.......265/* a construct from a layer over the core */cccccc....ccccc....cccccc266var p: FilePath = "/a/b.txt"
+p.extension = "md"
+p
+p.extension = nil
+pkkk.v..tttttttt...ssssssssss..v.............ssss..v..v.............CCC..v267do {
+    1
+}
+2kk...n....n268/* a construct from a layer over the core */.n..n..n....ccccccccc...ccccc269let parts = "c,a,b".split(separator: ",")
+parts.sorted()
+parts.contains("a")kkk.vvvvv...sssssss..................sss...vvvvv...........vvvvv..........sss.270func f() -> Int {
+    1
+}
+f()kkkk.c......ttt...n....v..271/* a construct from a layer over the core */
+/* a construct from a layer over the core */.sssss..ssss....cccccccccc...sssss....ccccccccc.sss.272struct W {
+    var path: FilePath
+}
+var w = W(path: "/x/y.c")
+w.path.extension = "h"
+w.pathkkkkkk.t...kkk.vvvv..tttttttt....kkk.v...v.......ssssssss...v..................sss..v.....273Command("false").run().and { Command("true").run() }.or { Command("false").run() }vvvvvvv.sssssss..............vvvvvvv.ssssss...............vvvvvvv.sssssss.........274let s = Command("echo", "hi").run()
+print(s.succeeded)kkk.v...vvvvvvv.ssssss..ssss.........vvvvv.v...........275/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+let p: FilePath = "/a/b.txt"
+/* a construct from a layer over the core */sssssss...ccccc............sss....ccccc..sssss...ccccc..kkk.v..tttttttt...ssssssssss..v...ccccccccccccc276let j = /* a construct from a layer over the core */
+j.command
+j.pids.count
+j.output == nil
+await j
+j.output!.status.codekkk.v...kkkkk.ccccc......v..........v.............v...........CCC..kkkkk.v..v....................277let parts = "a,b,c".split(separator: ",")
+parts
+parts.count
+parts[0] == "a"
+String(parts[1])kkk.vvvvv...sssssss..................sss...vvvvv..vvvvv........vvvvv.n.....sss..vvvvvv.vvvvv.n..278/* a construct from a layer over the core */cccccc....ccccc....cc.ff.ssssssss279/* a construct from a layer over the core */
+/* a construct from a layer over the core */sssssss...ccccc.fffffffffff.sss...ccccc..sssss...ccccc.fffffffffff.f...ccccc280let s = Command("sh", "-c", "exit 3").run()
+print(s.code)
+print(s.succeeded)kkk.v...vvvvvvv.ssss..ssss..ssssssss.........vvvvv.v........vvvvv.v...........281let b = /* a construct from a layer over the core */
+bkkk.v...ppcccc......cc........p..v282"swish".first
+"swish".first?.isLetter
+"a b".contains(" ")sssssss........sssssss..................sssss..........sss.283/* a construct from a layer over the core */.sorted()ppcccccc.ssssssp.........284[1, 2, 3].filter { $0 > 1 }.map { $0 * 10 }.n..n..n...........vv...n.........vv...nn..285/* a construct from a layer over the core */cccc.ssppccccccsssssssspss286["a", "b"].joined(separator: "-").sss..sss....................sss.287/* a construct from a layer over the core */cccc288let s = Command("sh", "-c", "kill -TERM $$").run()
+print(s.signal)
+print(s.code == nil)kkk.v...vvvvvvv.ssss..ssss..sssssssssssssss.........vvvvv.v..........vvvvv.v.........CCC.289func sorted() -> String {
+    "mine"
+}
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkk.cccccc......tttttt...ssssss.....n..n....cccccc..cccccc290/* a construct from a layer over the core */kkkkkk.ttttt.kkkk.ssssssssssssssssssssssssssssssssssssssssssssssssssss291Command("false").run().and { Command("true").run() }.or { Command("sh", "-c", "exit 3").run() }vvvvvvv.sssssss..............vvvvvvv.ssssss...............vvvvvvv.ssss..ssss..ssssssss.........292/* a construct from a layer over the core */cccccc.ssssssss...kkkkkkk.cccc293/* a construct from a layer over the core */cccc...cccccc...vv.........ssss.....cccccc.....ccc.......295/* a construct from a layer over the core */
+/* a construct from a layer over the core */ccc.....cccccc...sss..sssss..ssss....ccccccc296/* a construct from a layer over the core */cccc...cccccc...vv.........ssss.....cccccc.....ccc.......297/* a construct from a layer over the core */cccccc301/* a construct from a layer over the core */
+/* a construct from a layer over the core */cccccccccccc.CCCC...ccccc304/* a construct from a layer over the core */cccc...cccccc...vv.........ssssssss.....cccccc.....ccc.......305/* a construct from a layer over the core */
+/* a construct from a layer over the core */ccccc.ffffff..ccccccc.ffffff306/* a construct from a layer over the core */cc...cccccccccccccc307do {
+    /* a construct from a layer over the core */
+} catch {
+    print(error.localizedDescription)
+}kk...kkkkkk.ttttt.kkkk.ssssss...kkkkk...vvvvv.vvvvv........................308/* a construct from a layer over the core */cccccc....cccccc....ccccc309/* a construct from a layer over the core */.....n.....sss.......n.....sss.....cccccc.....cccccc.ffff.....ccc..310func greet(_ name: String, times: Int = 1, loud: Bool = false) {}
+do {
+    /* a construct from a layer over the core */
+} catch {
+    print(error.localizedDescription)
+}kkkk.ccccc.........tttttt.........ttt...n........tttt...CCCCC......kk...kkkkkk.ttttt.kkkk.ssssssssssssssssssssssssssssssssssssssssssssssssssss...kkkkk...vvvvv.vvvvv........................311/* a construct from a layer over the core */cccc...cccccc...vv................sss......ccccc312do {
+    /* a construct from a layer over the core */
+} catch {
+    print(error.localizedDescription)
+}kk...kkkkkk.tttt.kkkk.ssssssssssssss...kkkkk...vvvvv.vvvvv........................313func makeCounter() -> () -> Int {
+    var n = 0
+    return {
+    n += 1
+    return n
+}
+}
+let c = makeCounter()
+c()
+c()kkkk.ccccccccccc............ttt...kkk.v...n..kkkkkk...v.pp.n..kkkkkk.v......kkk.v...vvvvvvvvvvv....v....v..314Command("false").run().and { Command("false").run() }.or { Command("true").run() }vvvvvvv.sssssss..............vvvvvvv.sssssss...............vvvvvvv.ssssss.........315func f() {
+    defer {
+        /* a construct from a layer over the core */
+    }
+    defer {
+        /* a construct from a layer over the core */
+    }
+    /* a construct from a layer over the core */
+}
+f()kkkk.c.....kkkkk...cccc........kkkkk...cccc........cccc.........v..316struct P: Equatable {
+    var x: Int
+}
+P(x: 1) == P(x: 1)kkkkkk.t..ttttttttt...kkk.v..ttt....v....n.....v....n.317func hi(_ name: String) {}
+/* a construct from a layer over the core */mmmmmmmmmmmm.kkkk.cc.........tttttt.....cccc...cccccc...vv...........sssssss.....ccc......318func f() -> Int {
+    var n = 0
+    let inc = { n += 1 }
+    inc()
+    inc()
+    return n
+}
+f()kkkk.c......ttt...kkk.v...n..kkk.vvv.....v.pp.n....vvv....vvv....kkkkkk.v....v..319let xs: [Int] = []kkk.vv...ttt......320func make() -> (Int) -> Int {
+    func fact(_ n: Int) -> Int {
+        if n <= 1 {
+            return 1
+        }
+        return n * fact(n - 1)
+    }
+    return fact
+}
+make()(5)kkkk.cccc.......ttt.....ttt...kkkk.cccc......ttt.....ttt...kk.v....n...kkkkkk.n....kkkkkk.v...vvvv.v...n.....kkkkkk.vvvv....vvvv...n.321/* a construct from a layer over the core */cccccc....cccccc....cccccc322func hi(_ name: String) {}
+/* a construct from a layer over the core */mmmmmmmmmmmm.kkkk.cc.........tttttt.....cccc...cccccc...vv.........ssss.....ccc........323func f(_ n: Int, name: String) {}
+/* a construct from a layer over the core */kkkk.c......ttt........tttttt.....c..324func f() -> Int {
+    defer {
+        /* a construct from a layer over the core */
+    }
+    return 1
+}
+f()kkkk.c......ttt...kkkkk...cccc............kkkkkk.n....v..325func f(_ n: Int, name: String) {}
+/* a construct from a layer over the core */kkkk.c......ttt........tttttt.....c.....ffffff..326let x: Any = 5
+x as? Int
+x as? String
+x is Int
+(x as! Int) + 1kkk.v..ttt...n..v.kkk.ttt..v.kkk.tttttt..v.kk.ttt...v.kkk.ttt....n327Command("false").run().and { Command("false").run() }.or { Command("false").run() }vvvvvvv.sssssss..............vvvvvvv.sssssss...............vvvvvvv.sssssss.........328func f(_ n: Int, name: String) {}
+/* a construct from a layer over the core */kkkk.c......ttt........tttttt.....c...ffffff...fffffff329func f() throws {
+    defer {
+        /* a construct from a layer over the core */
+    }
+    try /* a construct from a layer over the core */
+}
+do {
+    try f()
+} catch {
+    /* a construct from a layer over the core */
+}kkkk.c...kkkkkk...kkkkk...cccc............kkk.ppCCCCCp....kk...kkk.v.....kkkkk...cccc.........330/* a construct from a layer over the core */cccc...cccccc...vv.........ssssss.....ccccc331/* a construct from a layer over the core */cccccc....cccccc....cc.ff.ssssssss332func f(_ n: Int, name: String) {}
+/* a construct from a layer over the core */kkkk.c......ttt........tttttt.....c.....ffffff..333func f(_ a: Int) {}
+func f(_ a: String) {}
+/* a construct from a layer over the core */kkkk.c......ttt......kkkk.c......tttttt......cccc...cccccc...vv.........sss.....ccc......334func f(_ n: Int, name: String) {}
+/* a construct from a layer over the core */kkkk.c......ttt........tttttt.....c...ffffff335for i in 1 ... 2 {
+    defer {
+        /* a construct from a layer over the core */
+    }
+    /* a construct from a layer over the core */
+}kkk.v.kk.n...n...kkkkk...cccc.sssssppvps....cccc.sssssssppvps..336func f(_ n: Int, name: String) {}
+/* a construct from a layer over the core */kkkk.c......ttt........tttttt.....c...ffffff...ff337let a: Any = "s"
+a as! Intkkk.v..ttt...sss..v.kkk.ttt338/* a construct from a layer over the core */CCCCC....cccc.......cccc....339func tilde(_ path: String, _ home: String?) -> String {
+    guard let home = home else {
+        return path
+    }
+    guard path.hasPrefix(home) else {
+        return path
+    }
+    return "~" + String(path.dropFirst(home.count))
+}
+tilde("/u/me/src", "/u/me")
+tilde("/u/me/src", nil)
+tilde("/opt", "/u/me")
+enum R {
+    case ok(Int)
+    case failed
+}
+func doubled(_ r: R) -> Int {
+    guard case .ok(let n) = r else {
+        return -1
+    }
+    return n * 2
+}
+doubled(.ok(21))
+doubled(.failed)
+for x in [1, 2, 3, 4] {
+    guard (x % 2) == 0 else {
+        continue
+    }
+    /* a construct from a layer over the core */
+}
+guard /* a construct from a layer over the core */ else {
+    /* a construct from a layer over the core */
+}
+let maybe: Int? = 5
+guard let m = maybe else {
+    /* a construct from a layer over the core */
+}
+m + 1kkkk.ccccc.........tttttt..........tttttt......tttttt.......kkkkk.kkk.vvvv...vvvv.kkkk...kkkkkk.vvvv.......kkkkk.vvvv...........vvvv..kkkk...kkkkkk.vvvv.......kkkkkk.sss...vvvvvv.vvvv...........vvvv...........vvvvv.sssssssssss..sssssss...vvvvv.sssssssssss..CCC...vvvvv.ssssss..sssssss..kkkk.t...kkkk.CC.ttt...CCCCCC...kkkk.ccccccc......t.....ttt.......kkkkk.kkkk.CCC.kkk.v....v.kkkk...kkkkkk..n.......kkkkkk.v...n...vvvvvvv.CCC.nn....vvvvvvv.CCCCCCC..kkk.v.kk..n..n..n..n........kkkkk.v...n....n.kkkk...kkkkkkkk.......cccc.vv...kkkkk.cccc.ff...kkkk...cccc.....kkk.vvvvv..ttt....n.kkkkk.kkk.v...vvvvv.kkkk...cccc.....v...n340let a: Any = "s"
+(a as? Int) ?? 0kkk.v..ttt...sss..v.kkk.ttt....n341func square(_ x: Int) -> Int {
+    x * x
+}
+square(7)kkkk.cccccc......ttt.....ttt...v...v....vvvvvv.n.342func f(v: Bool) {
+    /* a construct from a layer over the core */
+}
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkk.c....tttt....cccc.sppvps....c.fff..c.fff........c.fff.......c343Command("false").run().and { Command("false").run() }.or { Command("sh", "-c", "exit 3").run() }vvvvvvv.sssssss..............vvvvvvv.sssssss...............vvvvvvv.ssss..ssss..ssssssss.........344/* a construct from a layer over the core */
+/* a construct from a layer over the core */CCCC....cccc....cccc..345func fib(_ n: Int) -> Int {
+    if n < 2 {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+fib(15)kkkk.ccc......ttt.....ttt...kk.v...n...kkkkkk.v....kkkkkk.vvv.v...n....vvv.v...n.....vvv.nn.346/* a construct from a layer over the core */n...n....cccc.........347for i in 1 ... 3 {
+    print(i)
+}kkk.v.kk.n...n...vvvvv.v...348func f(v: Bool = true) {
+    /* a construct from a layer over the core */
+}
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkk.c....tttt...CCCC....cccc.sppvps....c.ffffff..c.fffffffff..c349for i in 0 ..< 2 {
+    print(i)
+}
+for x in ["a", "b"] {
+    print(x)
+}kkk.v.kk.n...n...vvvvv.v.....kkk.v.kk..sss..sss....vvvvv.v...350a()
+func a() -> Int {
+    b() + 1
+}
+func b() -> Int {
+    41
+}
+/* a construct from a layer over the core */
+func hello(_ name: String) {
+    /* a construct from a layer over the core */
+}
+Point(x: 2).x
+struct Point {
+    let x: Int
+}
+Kind.b
+enum Kind {
+    case a
+    case b
+}v...kkkk.c......ttt...v.....n...kkkk.c......ttt...nn...ccccc.....kkkk.ccccc.........tttttt....cccc.ssssppvvvvps...vvvvv....n....kkkkkk.ttttt...kkk.v..ttt...vvvv...kkkk.tttt...kkkk.C..C..351do {
+    /* a construct from a layer over the core */
+} catch {
+    if let failure = error as? CommandFailure {
+        /* a construct from a layer over the core */
+    }
+}kk...kkk.cc.ff.ssssssss...kkkkk...kk.kkk.vvvvvvv...vvvvv.kkk.tttttttttttttt...cccc.sssssssssssssppvvvvvvvssssssssssssps....352for c in "héy" {
+    print(c)
+}kkk.v.kk.sssss...vvvvv.v...353/* a construct from a layer over the core */cccccc....cc.ff.ssssssss....ccccc354func outer() -> Int {
+    return inner() * 2
+    func inner() -> Int {
+        21
+    }
+}
+outer()kkkk.ccccc......ttt.......kkkkkk.vvvvv.....n.....kkkk.ccccc......ttt...nn.....vvvvv..355for line in /* a construct from a layer over the core */.lines {
+    /* a construct from a layer over the core */
+}kkk.vvvv.kk.ppcccccc.ssssssssp.........cccc.ssppvvvvpss..356let name = "Swish"kkk.vvvv...sssssss358/* a construct from a layer over the core */cccc.svvvvvs.vvvvv359/* a construct from a layer over the core */cccc.......360Command("false").run().and { Command("sh", "-c", "exit 3").run() }.or { Command("true").run() }vvvvvvv.sssssss..............vvvvvvv.ssss..ssss..ssssssss...............vvvvvvv.ssssss.........361let j = /* a construct from a layer over the core */
+/* a construct from a layer over the core */
+await jkkk.v...kkkkk.ccccc......v...ccccccc...ccc.......kkkkk.v362var i = 1
+i = i + 1
+ikkk.v...n..v...v...n..v363for line in "" {
+    /* a construct from a layer over the core */
+}kkk.vvvv.kk.ss...cccc........364let xs = [(n: 2, s: "b"), (n: 1, s: "a"), (n: 3, s: "c")]
+/* a construct from a layer over the core */kkk.vv........n.....sss.......n.....sss.......n.....sss....vv...cccccc.ffff.....ccc..365let x = 1
+if true {
+    let x = 2
+    print(x)
+}
+xkkk.v...n..kk.CCCC...kkk.v...n..vvvvv.v.....v366for _ in 1 ... 2 {
+    /* a construct from a layer over the core */
+}kkk.v.kk.n...n...cccc....367/* a construct from a layer over the core */cccccc....cc.ff.ssssssss....cccccc368/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkk.ccccc..cccc............369var x = 1
+if true {
+    x = 5
+}
+xkkk.v...n..kk.CCCC...v...n....v370let xs = [(n: 2, s: "b"), (n: 1, s: "a"), (n: 3, s: "c")]
+/* a construct from a layer over the core */kkk.vv........n.....sss.......n.....sss.......n.....sss....vv...cccccc.....vvv....cccccccc...cccccc.n....ccc..371func greet(_ name: String, times: Int = 1) -> String {
+    "\(name)x\(times)"
+}
+greet("a")
+greet("b", times: 2)kkkk.ccccc.........tttttt.........ttt...n.....tttttt...sppvvvvpsppvvvvvps....vvvvv.sss...vvvvv.sss.........n.372enum K: Comparable {
+    case b
+    case a
+}
+/* a construct from a layer over the core */kkkk.t..tttttttttt...kkkk.C..C.....v....v......cccccc373func build() throws {
+    try /* a construct from a layer over the core */
+}
+func fail() throws {
+    try /* a construct from a layer over the core */
+}
+(try? build()) != nil
+(try? fail()) != nil
+try? build()kkkk.ccccc...kkkkkk...kkk.ppCCCCp....kkkk.cccc...kkkkkk...kkk.ppCCCCCp.....kkkk.vvvvv.......CCC...kkkk.vvvv.......CCC..kkkk.vvvvv..374/* a construct from a layer over the core */kkk.cccc....cccc...375func half(_ x: Double) -> Double {
+    x / 2
+}
+half(3)kkkk.cccc......tttttt.....tttttt...v...n....vvvv.n.376Command("false").run().and { Command("sh", "-c", "exit 3").run() }.or { Command("false").run() }vvvvvvv.sssssss..............vvvvvvv.ssss..ssss..ssssssss...............vvvvvvv.sssssss.........377func build() throws {
+    try /* a construct from a layer over the core */
+}
+func fail() throws {
+    try /* a construct from a layer over the core */
+}
+if /* a construct from a layer over the core */ {
+    /* a construct from a layer over the core */
+}
+if /* a construct from a layer over the core */ {
+    /* a construct from a layer over the core */
+} else {
+    /* a construct from a layer over the core */
+}kkkk.ccccc...kkkkkk...kkk.ppCCCCp....kkkk.cccc...kkkkkk...kkk.ppCCCCCp....kk.kkkk.vvvvv.....cccc........kk.kkkk.vvvv.....cccc......kkkk...cccc.........378func sum(_ xs: Int...) -> Int {
+    var t = 0
+    for x in xs {
+        t = t + x
+    }
+    return t
+}
+sum()
+sum(1, 2, 3)kkkk.ccc.......ttt........ttt...kkk.v...n..kkk.v.kk.vv...v...v...v....kkkkkk.v....vvv....vvv.n..n..n.379let xs = [(n: 2, s: "b"), (n: 1, s: "a"), (n: 3, s: "c")]
+/* a construct from a layer over the core */kkk.vv........n.....sss.......n.....sss.......n.....sss....vv...cccccc...vv.....vv.......ccc..380enum K {
+    case b
+    case a
+}
+/* a construct from a layer over the core */kkkk.t...kkkk.C..C.....v....v......cccccc382"costs $5 and $HOME"ssssssssssssssssssss383/* a construct from a layer over the core */.n..n..n..n....cccccc...vv...n....n.....ccc...vv...nn..384enum L: Int {
+    case one = 1
+}
+enum R {
+    case failed(code: Int)
+}
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkk.t..ttt...kkkk.CCC...n....kkkk.t...kkkk.CCCCCC.......ttt.....v.......cc.......v..............n....cc........cc.ff.sssss385/* a construct from a layer over the core */cccccc....cc.ff.ssssssss....cc.ff.ssssssss386let a = /* a construct from a layer over the core */
+let b = /* a construct from a layer over the core */
+jobs
+jobs.count
+await
+jobs
+await
+jobs.countkkk.v...kkkkk.ccccc......kkk.v...kkkkk.ccccc......vvvv..vvvv........kkkkk..vvvv..kkkkk..vvvv......387/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */.n..n..n....ccccc...n..n..n....ccccc...vv...n.....n..n....cccccccc388/* a construct from a layer over the core */cccc.sssssssvvvvvs...ccc.fffff389/* a construct from a layer over the core */.....n.....sssss.......nn.....ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss.....ccc390func f(n: Int?) {
+    /* a construct from a layer over the core */
+}
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkk.c....ttt.....cccc.sppvssssnps....c.fff....c391var xs = [1, 2, 3]
+xs[1] = 20
+xs[0] += 5
+xskkk.vv....n..n..n...vv.n....nn..vv.n..pp.n..vv392/* a construct from a layer over the core */..sss..n.....cc........cc.ff.sssss393true
+false
+nilCCCC..CCCCC..CCC394func f(_ p: FilePath?) {
+    /* a construct from a layer over the core */
+}
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkk.c......tttttttt.....cccc.sppvssssCCCps....c..c...395var r = ["a": 1]
+r["b"] = 2
+r["a"] = 3
+var t = (a: 1, b: 2)
+t.a *= 3
+r
+tkkk.v....sss..n...v.sss....n..v.sss....n..kkk.v.......n.....n...v...pp.n..v..v396falseCCCCC397func f() {}
+/* a construct from a layer over the core */kkkk.c........v....ccc398trueCCCC399var n = 10
+n -= 3
+n /= 7
+nkkk.v...nn..v.pp.n..v.pp.n..v400Command("false").run().and { Command("sh", "-c", "exit 3").run() }.or { Command("sh", "-c", "exit 3").run() }vvvvvvv.sssssss..............vvvvvvv.ssss..ssss..ssssssss...............vvvvvvv.ssss..ssss..ssssssss.........401struct Point {
+    var x: Int
+    func describe() -> String {
+        "p\(self.x)"
+    }
+}
+/* a construct from a layer over the core */kkkkkk.ttttt...kkk.v..ttt..kkkk.cccccccc......tttttt...ssppvps.......vvvvv....n...vvvvv....n.....cccccccc402let p = /* a construct from a layer over the core */
+/* a construct from a layer over the core */
+(await p).textkkk.v...kkkkk.ppcc.ff.sssssssssssssssssssssssssp..cccc.............kkkkk.v......403struct Point {
+    var x: Int
+    var y: Int = 0
+    var lengthSquared: Int {
+        (self.x * self.x) + (self.y * self.y)
+    }
+    func describe() -> String {
+        "(\(self.x), \(self.y))"
+    }
+    mutating func move(by d: Int) {
+        self.x += d
+        self.y += d
+    }
+    mutating func reset() {
+        self.move(by: -self.x)
+        self.y = 0
+    }
+}
+var p = Point(x: 1)
+p.x = "a"kkkkkk.ttttt.......kkk.v..ttt.....kkk.v..ttt...n.....kkk.vvvvvvvvvvvvv..ttt...v...v...v...v.......kkkk.cccccccc......tttttt...ssppvpssppvpss.......kkkkkkkk.kkkk.cccc.......ttt............v.pp.v.........vvvv...pp.v...........kkkkkkkk.kkkk.ccccc.....vvvv......v...v...n.....kkk.v...vvvvv....n...v.....sss404func describe() {}kkkk.cccccccc.....405/* a construct from a layer over the core */
+/* a construct from a layer over the core */ccccc.ff..........................................................................ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss.........................................................................ccccc.......................................................................................................................................................................................................................................................................................................................................................................................................................................................ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss................................................................................406struct Point {
+    var x: Int
+    var y: Int = 0
+    var lengthSquared: Int {
+        (self.x * self.x) + (self.y * self.y)
+    }
+    func describe() -> String {
+        "(\(self.x), \(self.y))"
+    }
+    mutating func move(by d: Int) {
+        self.x += d
+        self.y += d
+    }
+    mutating func reset() {
+        self.move(by: -self.x)
+        self.y = 0
+    }
+}
+var p = Point(x: 1)
+p.lengthSquared = 1kkkkkk.ttttt.......kkk.v..ttt.....kkk.v..ttt...n.....kkk.vvvvvvvvvvvvv..ttt...v...v...v...v.......kkkk.cccccccc......tttttt...ssppvpssppvpss.......kkkkkkkk.kkkk.cccc.......ttt............v.pp.v.........vvvv...pp.v...........kkkkkkkk.kkkk.ccccc.....vvvv......v...v...n.....kkk.v...vvvvv....n...v.................n407var xs = [3, 1]
+xs.append(2)
+xs.append(contentsOf: [5])
+xs.insert(0, at: 0)
+xs.sort()
+xskkk.vv....n..n...vv........n...vv.....................n....vv........n......n...vv.........vv408let xs = [1]
+xs[0] = 2kkk.vv....n...vv.n....n409func g(_ x) -> String {
+    "any"
+}
+func g(_ x: Int) -> String {
+    "int"
+}
+let a: Any = 5
+g(a)
+g(5)kkkk.c......ttt.....tttttt...sssss....kkkk.c......ttt.....tttttt...sssss....kkk.v..ttt...n..v.v...v.n.410var xs = [3, 1, 2]
+xs.removeAll { $0 > 2 }
+let last = xs.removeLast()
+xs
+lastkkk.vv....n..n..n...vv.............vv...n....kkk.vvvv...vv...............vv..vvvv411/* a construct from a layer over the core */cc.ff.ssssssss....ccccc....ccccc412var xs = [1]
+xs[5] = 2kkk.vv....n...vv.n....n413func f(_ x: Int) -> String {
+    "int"
+}
+func f(_ x: Double) -> String {
+    "double"
+}
+f(5)
+f(5.5)kkkk.c......ttt.....tttttt...sssss....kkkk.c......tttttt.....tttttt...ssssssss....v.n...v.nnn.414var d = ["a": 1]
+d.updateValue(2, forKey: "b")
+d.removeValue(forKey: "a")
+dkkk.v....sss..n...v.............n..........sss...v.....................sss...v415func double(_ n: Int) -> Int {
+    n * 2
+}
+func total(_ xs: [Int]) -> Int {
+    var t = 0
+    for x in xs {
+        t = t + x
+    }
+    return t
+}
+func evens(_ n: Int) -> Int? {
+    if (n % 2) == 0 {
+        return n
+    }
+    return nil
+}
+var calls = 0
+func counted(_ n: Int) -> Int {
+    calls = calls + 1
+    return n
+}
+/* a construct from a layer over the core */kkkk.cccccc.kkkkkk......ttt.....ttt...v...n...kkkk.ccccc.kkkkkk........ttt......ttt...kkk.v...n..kkk.v.kk.vv...v...v...v....kkkkkk.v...kkkk.ccccc.kkkkkk......ttt.....ttt....kk.v...n....n...kkkkkk.v....kkkkkk.CCC...kkk.vvvvv...n.kkkk.ccccccc.kkkkkk......ttt.....ttt...vvvvv...vvvvv...n..kkkkkk.v...ccc.....cccccc...ccccc416var d = ["a": 1]
+d.merge(["b": 2]) { (a, b) in b }
+dkkk.v....sss..n...v........sss..n..........kk.v....v417let a = /* a construct from a layer over the core */
+let b = /* a construct from a layer over the core */kkk.v...kkkkk.ccccc......kkk.v...kkkkk.ccccc.......ccc418var s = Set([1])
+s.insert(2)
+s.remove(1)
+var t = "ab"
+t.append("c")
+s
+tkkk.v...vvv..n....v........n...v........n...kkk.v...ssss..v........sss...v..v419func double(_ n: Int) -> Int {
+    n * 2
+}
+func total(_ xs: [Int]) -> Int {
+    var t = 0
+    for x in xs {
+        t = t + x
+    }
+    return t
+}
+func evens(_ n: Int) -> Int? {
+    if (n % 2) == 0 {
+        return n
+    }
+    return nil
+}
+var calls = 0
+func counted(_ n: Int) -> Int {
+    calls = calls + 1
+    return n
+}
+/* a construct from a layer over the core */kkkk.cccccc.kkkkkk......ttt.....ttt...v...n...kkkk.ccccc.kkkkkk........ttt......ttt...kkk.v...n..kkk.v.kk.vv...v...v...v....kkkkkk.v...kkkk.ccccc.kkkkkk......ttt.....ttt....kk.v...n....n...kkkkkk.v....kkkkkk.CCC...kkk.vvvvv...n.kkkk.ccccccc.kkkkkk......ttt.....ttt...vvvvv...vvvvv...n..kkkkkk.v........ccccc420/* a construct from a layer over the core */kkkkk.ccccc....421/* a construct from a layer over the core */vvvv...cccccc...........422/* a construct from a layer over the core */vvvv...cccccc...vv...............n.....ccc...423/* a construct from a layer over the core */vvvv...cc.....424/* a construct from a layer over the core */vvvv...ccccc425struct S {
+    var xs: [Int]
+}
+var s = S(xs: [])
+s.xs.append(4)
+var m = [[1], [2]]
+m[0].append(9)
+s
+mkkkkkk.t...kkk.vv...ttt.....kkk.v...v..........v...........n...kkk.v.....n....n....v.n.........n...v..v426struct Point {
+    var x: Int
+    var y: Int = 0
+    var lengthSquared: Int {
+        (self.x * self.x) + (self.y * self.y)
+    }
+    func describe() -> String {
+        "(\(self.x), \(self.y))"
+    }
+    mutating func move(by d: Int) {
+        self.x += d
+        self.y += d
+    }
+    mutating func reset() {
+        self.move(by: -self.x)
+        self.y = 0
+    }
+}
+func far(_ p: Point) -> Int {
+    p.x
+}
+far(Point(x: 7))kkkkkk.ttttt.......kkk.v..ttt.....kkk.v..ttt...n.....kkk.vvvvvvvvvvvvv..ttt...v...v...v...v.......kkkk.cccccccc......tttttt...ssppvpssppvpss.......kkkkkkkk.kkkk.cccc.......ttt............v.pp.v.........vvvv...pp.v...........kkkkkkkk.kkkk.ccccc.....vvvv......v...v...n.....kkkk.ccc......ttttt.....ttt...v......vvv.vvvvv....n..427/* a construct from a layer over the core */c428FileTypevvvvvvvv430var xs = [1, 2, 3]
+xs.removeLast()
+xs.popLast()kkk.vv....n..n..n...vv...............vv..........431Command("sh", "-c", "exit 3").run().and { Command("true").run() }.or { Command("true").run() }vvvvvvv.ssss..ssss..ssssssss..............vvvvvvv.ssssss...............vvvvvvv.ssssss.........432struct Point {
+    var x: Int
+    var y: Int = 0
+    var lengthSquared: Int {
+        (self.x * self.x) + (self.y * self.y)
+    }
+    func describe() -> String {
+        "(\(self.x), \(self.y))"
+    }
+    mutating func move(by d: Int) {
+        self.x += d
+        self.y += d
+    }
+    mutating func reset() {
+        self.move(by: -self.x)
+        self.y = 0
+    }
+}
+func far(_ p: Point) -> Int {
+    p.x
+}
+far(["x": 1])kkkkkk.ttttt.......kkk.v..ttt.....kkk.v..ttt...n.....kkk.vvvvvvvvvvvvv..ttt...v...v...v...v.......kkkk.cccccccc......tttttt...ssppvpssppvpss.......kkkkkkkk.kkkk.cccc.......ttt............v.pp.v.........vvvv...pp.v...........kkkkkkkk.kkkk.ccccc.....vvvv......v...v...n.....kkkk.ccc......ttttt.....ttt...v......vvv..sss..n..433struct Point {
+    var x: Int
+    var y: Int = 0
+    var lengthSquared: Int {
+        (self.x * self.x) + (self.y * self.y)
+    }
+    func describe() -> String {
+        "(\(self.x), \(self.y))"
+    }
+    mutating func move(by d: Int) {
+        self.x += d
+        self.y += d
+    }
+    mutating func reset() {
+        self.move(by: -self.x)
+        self.y = 0
+    }
+}
+func origin() -> Point {
+    Point(x: 0)
+}
+origin()kkkkkk.ttttt.......kkk.v..ttt.....kkk.v..ttt...n.....kkk.vvvvvvvvvvvvv..ttt...v...v...v...v.......kkkk.cccccccc......tttttt...ssppvpssppvpss.......kkkkkkkk.kkkk.cccc.......ttt............v.pp.v.........vvvv...pp.v...........kkkkkkkk.kkkk.ccccc.....vvvv......v...v...n.....kkkk.cccccc......ttttt...vvvvv....n.....vvvvvv..4341 + 1
+1 / 0n...n..n...n435struct V {
+    let major = 1
+    var minor: Int
+}
+V(minor: 2)kkkkkk.t...kkk.vvvvv...n..kkk.vvvvv..ttt....v........n.436func f(xs: [Int]) {
+    /* a construct from a layer over the core */
+}
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkk.c......ttt.....cccc.sppvvps....c.ffff...ffff....c437struct S {
+    var a: Int
+}
+Skkkkkk.t...kkk.v..ttt....v438let t = (name: "x", 2)
+t.name
+t.1
+tkkk.v..........sss..n...v.......v....v439/* a construct from a layer over the core */cc.ff.ssssssss....ccccc....cccccc440func f(_ n: Int, _ rest: [String]) {
+    /* a construct from a layer over the core */
+}
+/* a construct from a layer over the core */kkkk.c......ttt...........tttttt.....cccc.sppvpsppvvvvps....c......441/* a construct from a layer over the core */.....n.....sss.......n.....sss.....cccccc.ffff.....ccc..442var d = ["a": 1]
+d["b"] = 2
+d["a"]
+d["a"]! + 1
+d.keys.sorted()kkk.v....sss..n...v.sss....n..v.sss...v.sss.....n..v..............443func f(s: Set<Int>) {
+    /* a construct from a layer over the core */
+}
+/* a construct from a layer over the core */kkkk.c....ttt.ttt.....cccc.sppvssssssps....c.fff...fff...fff..444func f(_ s: Set<String>) {
+    /* a construct from a layer over the core */
+}
+/* a construct from a layer over the core */kkkk.c......ttt.tttttt.....cccc.sppvssssssps....c......445/* a construct from a layer over the core */cccc.............................446Command("sh", "-c", "exit 3").run().and { Command("true").run() }.or { Command("false").run() }vvvvvvv.ssss..ssss..ssssssss..............vvvvvvv.ssssss...............vvvvvvv.sssssss.........447func add(_ a: Int, _ b: Int) -> Int {
+    a + b
+}
+/* a construct from a layer over the core */kkkk.ccc......ttt.......ttt.....ttt...v...v....ccc...ff448let xs = [(n: 2, s: "b"), (n: 1, s: "a"), (n: 3, s: "c")]
+xs.sorted(by: \.s).map { $0.n }kkk.vv........n.....sss.......n.....sss.......n.....sss....vv............vvv........vv....449func sum(_ xs: Double...) -> Double {
+    var t = 0.0
+    for x in xs {
+        t = t + x
+    }
+    return t
+}
+/* a construct from a layer over the core */kkkk.ccc.......tttttt........tttttt...kkk.v...nnn..kkk.v.kk.vv...v...v...v....kkkkkk.v....ccc......450[3, 1, 2].sorted()
+[3, 1, 2].sorted { $0 > $1 }
+[3, 1, 2].prefix(2).n..n..n.............n..n..n...........vv...vv.....n..n..n.........n.4511 + 2.5
+let d: Double = 1
+dn...nnn..kkk.v..tttttt...n..v452[1, 2, 3].count(where: { $0 > 1 })
+[1, 2, 3].count.n..n..n.................vv...n......n..n..n.......453/* a construct from a layer over the core */cc.ff.ssssssss....ccccc....cc.ff.ssssssss454func risky(_ fail: Bool) throws -> Int {
+    if fail {
+        try /* a construct from a layer over the core */
+    }
+    return 1
+}
+try risky(false)
+do {
+    try risky(true)
+} catch {
+    /* a construct from a layer over the core */
+}
+(try? risky(true)) ?? 0kkkk.ccccc.........tttt..kkkkkk....ttt...kk.vvvv...kkk.ppCCCCCp....kkkkkk.n...kkk.vvvvv.CCCCC...kk...kkk.vvvvv.CCCC....kkkkk...cccc............kkkk.vvvvv.CCCC......n455for i in 1 ... 9000000000000 {
+    if i == 2 {
+        break
+    }
+}
+/* a construct from a layer over the core */kkk.v.kk.n...nnnnnnnnnnnnnnnnn...kk.v....n...kkkkk......cccc.....457func f() throws {
+    defer {
+        try /* a construct from a layer over the core */
+    }
+}kkkk.c...kkkkkk...kkkkk...kkk.ppCCCCCp....458let d = "/tmp"
+/* a construct from a layer over the core */kkk.v...ssssss..cccc.vv.p.vv..459let r = 1 ... 9000000000000
+r.countkkk.v...n...nnnnnnnnnnnnnnnnn..v......460let xs = [(a: 1, b: "x"), (a: 22, b: "y")]
+/* a construct from a layer over the core */kkk.vv........n.....sss.......nn.....sss...vv...cc........cc........461for i in 3 ... 1 {}kkk.v.kk.n...n...462/* a construct from a layer over the core */ccccc463/* a construct from a layer over the core */
+/* a construct from a layer over the core */ccccc......ccccc464/* a construct from a layer over the core */ccccc......465let xs = [(a: 1, b: "x"), (a: 22, b: "y")]
+/* a construct from a layer over the core */kkk.vv........n.....sss.......nn.....sss...vv...cccc466/* a construct from a layer over the core */ccccc....467/* a construct from a layer over the core */cccc......cccc.ff......468/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */ccccc.....................................................................cccc.ff..................cc........................................................................................cccccc......cc..........................................................................................ccccc........................................................................469Command("sh", "-c", "exit 3").run().and { Command("true").run() }.or { Command("sh", "-c", "exit 3").run() }vvvvvvv.ssss..ssss..ssssssss..............vvvvvvv.ssssss...............vvvvvvv.ssss..ssss..ssssssss.........470/* a construct from a layer over the core */cccc......cccccc...vv................sssssss......ccccc471struct P {
+    var x: Int
+    func twice() -> Int {
+        self.x * 2
+    }
+}
+/* a construct from a layer over the core */kkkkkk.t...kkk.v..ttt..kkkk.ccccc......ttt...v...n.......v....n.....ccccccc...ccc.....472/* a construct from a layer over the core */sss...ccccccc...cccccc...vv.........ssssssssssss.....ccc.....473/* a construct from a layer over the core */cc...................................................................ccc.....474false
+/* a construct from a layer over the core */CCCCC..cccccc475/* a construct from a layer over the core */cc...................................................................cccccc...vv.........CCCCC.....cccccc..........476await 5kkkkk.n477/* a construct from a layer over the core */cccc.........478/* a construct from a layer over the core */cc...................................................................cccccc...vv.........vvvvvvvv..........ccc.....479func f() {}
+/* a construct from a layer over the core */kkkk.c.......kkkkk.c480/* a construct from a layer over the core */kkkkk.n...n481/* a construct from a layer over the core */cccc......482/* a construct from a layer over the core */cc.ff.ssssssss....cccccc....ccccc483/* a construct from a layer over the core */
+/* a construct from a layer over the core */cc.ff...................................................................ccccc..cc...................................................................ccccc484func f(help: Bool = false) -> Bool {
+    help
+}
+/* a construct from a layer over the core */kkkk.c.......tttt...CCCCC.....tttt...vvvv....c.ffffff485func f() {}
+/* a construct from a layer over the core */kkkk.c.......c.ff.ffffff486/* a construct from a layer over the core */cc...................................................................cccccc.....ccccccc...cccccc...vv.........ssssss.....ccc.....487enum Result {
+    case ok
+    case failed(code: Int, String)
+}
+func describe(_ r: Result) -> String {
+    switch r {
+    case .ok:
+        return "fine"
+    case .failed(let code, let why) where code > 1:
+        return "bad \(code): \(why)"
+    case .failed:
+        return "other"
+    }
+}
+describe(.ok)
+describe(.failed(code: 2, "boom"))
+describe(.failed(code: 1, "meh"))kkkk.tttttt...kkkk.CC..CCCCCC.......ttt..tttttt....kkkk.cccccccc......tttttt.....tttttt.......kkkkkk.v.......kkkk.CCC..kkkkkk.ssssss.....kkkk.CCCCCCC.kkk.vvvv..kkk.vvv..kkkkk.vvvv...n..kkkkkk.sssssppvvvvpssppvvvps.....kkkk.CCCCCCC..kkkkkk.sssssss.........vvvvvvvv.CCC...vvvvvvvv.CCCCCCC.......n..ssssss....vvvvvvvv.CCCCCCC.......n..sssss..488struct P {
+    var x: Int
+    func twice() -> Int {
+        self.x * 2
+    }
+}
+enum K {
+    case a
+    case b(n: Int)
+}kkkkkk.t...kkk.v..ttt..kkkk.ccccc......ttt...v...n......kkkk.t...kkkk.C..C....ttt...489for i in 0 ..< 10 {
+    if i == 1 {
+        continue
+    }
+    if i == 3 {
+        break
+    }
+    print(i)
+}kkk.v.kk.n...nn...kk.v....n...kkkkkkkk....kk.v....n...kkkkk....vvvvv.v...490/* a construct from a layer over the core */cccc..491/* a construct from a layer over the core */cccc..492let x = try /* a construct from a layer over the core */kkk.v...kkk.ppCCCCCp493/* a construct from a layer over the core */cc.............................................................................ccc.....494Command("sh", "-c", "exit 3").run().and { Command("false").run() }.or { Command("true").run() }vvvvvvv.ssss..ssss..ssssssss..............vvvvvvv.sssssss...............vvvvvvv.ssssss.........495struct Temp {
+    let celsius: Double
+    var fahrenheit: Double {
+        ((self.celsius * 9) / 5) + 32
+    }
+    init(fahrenheit f: Double) {
+        self.celsius = ((f - 32) * 5) / 9
+    }
+    init(celsius: Double) {
+        self.celsius = celsius
+    }
+}
+Temp(fahrenheit: 212)
+Temp(celsius: 20).fahrenheitkkkkkk.tttt.......kkk.vvvvvvv..tttttt.....kkk.vvvvvvvvvv..tttttt...vvvvvvv...n...n...nn.......kkkk...............tttttt....vvvvvvv....v...nn....n...n.......kkkk..........tttttt....vvvv...........vvvvvvv.....vvvv.............nnn...vvvv..........nn............496for i in 1 ... 2 {
+    for j in 1 ... 3 {
+        if j == 2 {
+            break
+        }
+        /* a construct from a layer over the core */
+    }
+}kkk.v.kk.n...n...kkk.v.kk.n...n...kk.v....n...kkkkk....cccc.ppvpppvp....497let x = try /* a construct from a layer over the core */
+/* a construct from a layer over the core */kkk.v...kkk.ppCCCCCp..cccc............498enum K {
+    case a
+    case b
+}
+func pick(kind: K = .a) -> K {
+    kind
+}
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkk.t...kkkk.C..C....kkkk.cccc.......t...CC.....t...vvvv...cccc.ffffff....cccc.ffffff.....cccc499let x = try /* a construct from a layer over the core */kkk.v...kkk.ppcc.ff.ssssssssp500let rows: [Any] = [(n: 5, s: "a"), (n: 100, t: "b")]
+rowskkk.vvvv...ttt.........n.....sss.......nnn.....sss....vvvv501enum K {
+    case a
+    case b
+}
+func pick(kind: K = .a) -> K {
+    kind
+}
+/* a construct from a layer over the core */kkkk.t...kkkk.C..C....kkkk.cccc.......t...CC.....t...vvvv...cccc.ffffff..503enum K {
+    case a
+    case b
+}
+func f(_ k: K) -> K {
+    k
+}
+f(.b)
+func g() -> K {
+    .a
+}
+g()
+func h(kind: K = .b) -> K {
+    kind
+}
+/* a construct from a layer over the core */kkkk.t...kkkk.C..C...kkkk.c......t.....t...v....v.CC...kkkk.c......t...CC....v....kkkk.c.......t...CC.....t...vvvv....c504/* a construct from a layer over the core */.....n.......nnn.....cccccc...vv.....nn..505struct S {
+    var a: Int
+    init() {}
+}
+S()kkkkkk.t...kkk.v..ttt..kkkk.........v..506enum K {
+    case a
+    case b
+}
+func pick(kind: K = .a) -> K {
+    kind
+}
+/* a construct from a layer over the core */kkkk.t...kkkk.C..C....kkkk.cccc.......t...CC.....t...vvvv...cccc.ffffff507enum K {
+    case a
+    case b
+}
+let x = .akkkk.t...kkkk.C..C...kkk.v...CC508struct Temp {
+    let celsius: Double
+    var fahrenheit: Double {
+        ((self.celsius * 9) / 5) + 32
+    }
+    init(fahrenheit f: Double) {
+        self.celsius = ((f - 32) * 5) / 9
+    }
+    init(celsius: Double) {
+        self.celsius = celsius
+    }
+}
+var t = Temp(celsius: 1)
+t.celsius = 2kkkkkk.tttt.......kkk.vvvvvvv..tttttt.....kkk.vvvvvvvvvv..tttttt...vvvvvvv...n...n...nn.......kkkk...............tttttt....vvvvvvv....v...nn....n...n.......kkkk..........tttttt....vvvv...........vvvvvvv.....kkk.v...vvvv..........n...v...........n509func double(_ n: Int) -> Int {
+    n * 2
+}
+func total(_ xs: [Int]) -> Int {
+    var t = 0
+    for x in xs {
+        t = t + x
+    }
+    return t
+}
+func evens(_ n: Int) -> Int? {
+    if (n % 2) == 0 {
+        return n
+    }
+    return nil
+}
+var calls = 0
+func counted(_ n: Int) -> Int {
+    calls = calls + 1
+    return n
+}
+/* a construct from a layer over the core */kkkk.cccccc.kkkkkk......ttt.....ttt...v...n...kkkk.ccccc.kkkkkk........ttt......ttt...kkk.v...n..kkk.v.kk.vv...v...v...v....kkkkkk.v...kkkk.ccccc.kkkkkk......ttt.....ttt....kk.v...n....n...kkkkkk.v....kkkkkk.CCC...kkk.vvvvv...n.kkkk.ccccccc.kkkkkk......ttt.....ttt...vvvvv...vvvvv...n..kkkkkk.v...cccccc.sssss...cccccc510func f(times: Int = 1, color: Bool = true) {}kkkk.c.kkkkk.sss.........ttt...n.........tttt...CCCC....511/* a construct from a layer over the core */cc.ff.ssssssss....cccccc....cccccc512/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkk.cccc.ppCCCCCp....cccc............513let c = 1
+c = 2
+/* a construct from a layer over the core */kkk.v...n..v...n..cccc............514func double(_ n: Int) -> Int {
+    n * 2
+}
+func total(_ xs: [Int]) -> Int {
+    var t = 0
+    for x in xs {
+        t = t + x
+    }
+    return t
+}
+func evens(_ n: Int) -> Int? {
+    if (n % 2) == 0 {
+        return n
+    }
+    return nil
+}
+var calls = 0
+func counted(_ n: Int) -> Int {
+    calls = calls + 1
+    return n
+}
+/* a construct from a layer over the core */kkkk.cccccc.kkkkkk......ttt.....ttt...v...n...kkkk.ccccc.kkkkkk........ttt......ttt...kkk.v...n..kkk.v.kk.vv...v...v...v....kkkkkk.v...kkkk.ccccc.kkkkkk......ttt.....ttt....kk.v...n....n...kkkkkk.v....kkkkkk.CCC...kkk.vvvvv...n.kkkk.ccccccc.kkkkkk......ttt.....ttt...vvvvv...vvvvv...n..kkkkkk.v...cccccc...ccc...cccccc515func f() -> Output {
+    /* a construct from a layer over the core */
+}
+let o = try f()
+o.status.codekkkk.c......tttttt...ppCCCCCp....kkk.v...kkk.v....v............516let c = 1
+c = 2kkk.v...n..v...n517let zzvalue = 1kkk.vvvvvvv...n518func f(_ x: Int) -> Int {
+    x
+}
+/* a construct from a layer over the core */kkkk.c.kkkkkk......ttt.....ttt...v....ccc.....c.p.............c519/* a construct from a layer over the core */cc520/* a construct from a layer over the core */
+env.SWISH_TEST_498334 == nilvvvvvvvvvvvvvvvvv.sssss.cc.ff.sssssssssssssssssssssssssss..vvv......................CCC5211 / 0n...n522func double(_ n: Int) -> Int {
+    n * 2
+}
+func total(_ xs: [Int]) -> Int {
+    var t = 0
+    for x in xs {
+        t = t + x
+    }
+    return t
+}
+func evens(_ n: Int) -> Int? {
+    if (n % 2) == 0 {
+        return n
+    }
+    return nil
+}
+var calls = 0
+func counted(_ n: Int) -> Int {
+    calls = calls + 1
+    return n
+}
+/* a construct from a layer over the core */kkkk.cccccc.kkkkkk......ttt.....ttt...v...n...kkkk.ccccc.kkkkkk........ttt......ttt...kkk.v...n..kkk.v.kk.vv...v...v...v....kkkkkk.v...kkkk.ccccc.kkkkkk......ttt.....ttt....kk.v...n....n...kkkkkk.v....kkkkkk.CCC...kkk.vvvvv...n.kkkk.ccccccc.kkkkkk......ttt.....ttt...vvvvv...vvvvv...n..kkkkkk.v...ccc.....cccccc...cc........523/* a construct from a layer over the core */cc524let j = /* a construct from a layer over the core */
+/* a construct from a layer over the core */
+j.cancel()kkk.v...kkkkk.ppcc.ff.ssssssssssssssssssssssssssssssssssssssssp..v...........cccccc....v.........525[1][5].n..n.526Command("sh", "-c", "exit 3").run().and { Command("false").run() }.or { Command("false").run() }vvvvvvv.ssss..ssss..ssssssss..............vvvvvvv.sssssss...............vvvvvvv.sssssss.........527enum Result {
+    case ok
+    case failed(code: Int, String)
+}
+Result.failed(code: 2, "boom")kkkk.tttttt...kkkk.CC..CCCCCC.......ttt..tttttt....vvvvvv..............n..ssssss.528/* a construct from a layer over the core */sssss...cc........530enum Result {
+    case ok
+    case failed(code: Int, String)
+}
+Result.failedkkkk.tttttt...kkkk.CC..CCCCCC.......ttt..tttttt....vvvvvv.......531func gen() -> [Int] {
+    [1, 2, 3]
+}
+/* a construct from a layer over the core */kkkk.ccc.......ttt.....n..n..n.....ccc...cccc.ff532enum Result {
+    case ok
+    case failed(code: Int, String)
+}
+Result.failed(2, "boom")kkkk.tttttt...kkkk.CC..CCCCCC.......ttt..tttttt....vvvvvv........n..ssssss.533let j = /* a construct from a layer over the core */
+/* a construct from a layer over the core */
+for line in j.lines() {
+    /* a construct from a layer over the core */
+    break
+}
+j.cancel()kkk.v...kkkkk.ppcc.ff.ssssssssssssssssssssssssssssssssssssssssp..v...........cccccc....kkk.vvvv.kk.v...........cccc.sssssppvvvvps..kkkkk....v.........534func show() {
+    /* a construct from a layer over the core */
+}
+/* a construct from a layer over the core */kkkk.cccc.....cc.ff.sssssssssssssssssssssssssss....vvvvvvvvvvvvvvvvv....cccc535/* a construct from a layer over the core */cccc.vvvvvvvvvvvvvvvvvvv536Command("true").run()vvvvvvv.ssssss.......537enum Result {
+    case ok
+    case failed(code: Int, String)
+}
+Result.failed(code: "x", "boom")kkkk.tttttt...kkkk.CC..CCCCCC.......ttt..tttttt....vvvvvv..............sss..ssssss.538let a = env.GREETING
+let b = env["MISSING"]
+a
+b
+env.NEW = "x"
+env.GREETING = nil
+env.NEWkkk.v...vvv...........kkk.v...vvv.sssssssss...v..v..vvv.......sss..vvv............CCC..vvv....539enum Result {
+    case ok
+    case failed(code: Int, String)
+}
+Result.allCaseskkkk.tttttt...kkkk.CC..CCCCCC.......ttt..tttttt....vvvvvv.........540/* a construct from a layer over the core */cc.ff.ssssssss....cccccc....cc.ff.ssssssss541Date(timeIntervalSince1970: 0) < Date()
+Date(timeIntervalSince1970: 0).timeIntervalSince1970vvvv........................n....vvvv....vvvv........................n.......................542if 1 {
+    /* a construct from a layer over the core */
+}kk.n...cccc....543Command("sh", "-c", "exit 4").run()vvvvvvv.ssss..ssss..ssssssss.......544let d = Date(timeIntervalSince1970: 100)
+(d + 60) - d
+(d - 60) < dkkk.v...vvvv........................nnn....v...nn....v...v...nn....v545do {
+    1 / 0
+} catch {
+    print(error.localizedDescription)
+}kk...n...n...kkkkk...vvvvv.vvvvv........................546with(env: ["SWISH_TEST_498334": "block"]) { /* a construct from a layer over the core */ }
+env.SWISH_TEST_498334 == nilvvvv.......sssssssssssssssssss..sssssss.....cc.ff.sssssssssssssssssssssssssss....vvv......................CCC547do {
+    1 / 0
+} catch {
+    error.status
+}kk...n...n...kkkkk...vvvvv.........548let k = /* a construct from a layer over the core */
+for line in k.lines() {
+    /* a construct from a layer over the core */
+}kkk.v...kkkkk.ppcc.ff.sssssssssssssssssssssssssssssp..kkk.vvvv.kk.v...........cccc.ssssssppvvvvps..549/* a construct from a layer over the core */vvvv.ssssssssssssssssssssss.....cc.....550do {
+    1 / 0
+} catch {
+    error.message
+}kk...n...n...kkkkk...vvvvv..........551awaitkkkkk552do {
+    1 / 0
+} catch {
+    print((error as? CommandFailure) == nil)
+}kk...n...n...kkkkk...vvvvv.vvvvv.kkk.tttttttttttttt....CCC...553Date("someday") == nilvvvv.sssssssss.....CCC554Command("nope-not-a-program").run()vvvvvvv.ssssssssssssssssssss.......555struct S {
+    static let k = 1
+    func f() -> Int {
+        /* a construct from a layer over the core */
+    }
+}
+S().f()kkkkkk.t...kkkkkk.kkk.v...n..kkkk.c......ttt...c......v......556do {
+    try /* a construct from a layer over the core */
+} catch {
+    if let f = error as? CommandFailure {
+        print(f.status.code)
+        print(f.localizedDescription)
+    }
+}kk...kkk.ppcc.ff.sssssssssssssssssssssp...kkkkk...kk.kkk.v...vvvvv.kkk.tttttttttttttt...vvvvv.v...............vvvvv.v..........................557struct S {
+    static let k = 1
+    func f() -> Int {
+        S.k
+    }
+}
+S().f()kkkkkk.t...kkkkkk.kkk.v...n..kkkk.c......ttt...v........v......558let f = /* a construct from a layer over the core */
+let r = await f
+r.status.codekkk.v...kkkkk.cc.ff.ssssssss..kkk.v...kkkkk.v..v............559Command("true").run().and { Command("echo", "yes").run() }vvvvvvv.ssssss..............vvvvvvv.ssssss..sssss.........560/* a construct from a layer over the core */cccc.......561Command("sh", "-c", "exit 3").run().and { Command("false").run() }.or { Command("sh", "-c", "exit 3").run() }vvvvvvv.ssss..ssss..ssssssss..............vvvvvvv.sssssss...............vvvvvvv.ssss..ssss..ssssssss.........562let n = 5
+if n > 3 {
+    "big"
+} else {
+    "small"
+}
+let s = if n > 9 {
+    "big"
+} else {
+    "small"
+}
+skkk.v...n..v...n...sssss...sssssss..kkk.v...v...n...sssss...sssssss..v563/* a construct from a layer over the core */cccc...564Command("false").run().and { Command("echo", "no").run() }vvvvvvv.sssssss..............vvvvvvv.ssssss..ssss.........565if true {
+    if false {
+    "a"
+} else {
+    "b"
+}
+} else {
+    "c"
+}
+[1, 2].map { if $0 == 1 {
+    "one"
+} else {
+    "more"
+} }CCCC...CCCCC...sss...sss...sss...n..n........vv....n...sssss...ssssss..566/* a construct from a layer over the core */cccc...567Command("false").run().or { Command("echo", "fallback").run() }vvvvvvv.sssssss.............vvvvvvv.ssssss..ssssssssss.........568/* a construct from a layer over the core */cccc.....569/* a construct from a layer over the core */cccc.sppnsssnsssssssssssssssps570func double(_ n: Int) -> Int {
+    n * 2
+}
+func total(_ xs: [Int]) -> Int {
+    var t = 0
+    for x in xs {
+        t = t + x
+    }
+    return t
+}
+func evens(_ n: Int) -> Int? {
+    if (n % 2) == 0 {
+        return n
+    }
+    return nil
+}
+var calls = 0
+func counted(_ n: Int) -> Int {
+    calls = calls + 1
+    return n
+}
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkk.cccccc.kkkkkk......ttt.....ttt...v...n...kkkk.ccccc.kkkkkk........ttt......ttt...kkk.v...n..kkk.v.kk.vv...v...v...v....kkkkkk.v...kkkk.ccccc.kkkkkk......ttt.....ttt....kk.v...n....n...kkkkkk.v....kkkkkk.CCC...kkk.vvvvv...n.kkkk.ccccccc.kkkkkk......ttt.....ttt...vvvvv...vvvvv...n..kkkkkk.v...cccccc.....ccccc......571/* a construct from a layer over the core */cccc.....................572let f = /* a construct from a layer over the core */
+do {
+    try try await f
+} catch {
+    if let f = error as? CommandFailure {
+        /* a construct from a layer over the core */
+    }
+}kkk.v...kkkkk.cc.ff.ssssssss..kk...kkk.kkkkk.v...kkkkk...kk.kkk.v...vvvvv.kkk.tttttttttttttt...cccc.ssssssssppvssssssssssssps....573let n = 5
+let parity = if (n % 2) == 0 {
+    "even"
+} else {
+    if n > 4 {
+    "odd, big"
+} else {
+    "odd"
+}
+}
+parity
+let missing: Int? = nil
+let got = if let v = missing {
+    v
+} else {
+    -1
+}
+got
+func sign(_ x: Int) -> String {
+    if x < 0 {
+        "negative"
+    } else if x == 0 {
+        "zero"
+    } else {
+        "positive"
+    }
+}
+sign(-2)
+sign(3)kkk.v...n.kkk.vvvvvv...kk.v...n....n...ssssss...kkkk.kk.v...n...ssssssssss...kkkk...sssss...vvvvvv.kkk.vvvvvvv..ttt....CCC.kkk.vvv...kk.kkk.v...vvvvvvv...v...kkkk....n...vvv.kkkk.cccc......ttt.....tttttt.......kk.v...n...ssssssssss...kkkk.kk.v....n...ssssss...kkkk...ssssssssss.....vvvv..n...vvvv.n.574Command("true").run().or { Command("echo", "never").run() }vvvvvvv.ssssss.............vvvvvvv.ssssss..sssssss.........575func f(_ a: String, count: Int = 0, dryRun: Bool = false, color: Bool = true, include: [String]) -> String {
+    "\(a) \(count) \(dryRun) \(color) \(include)"
+}
+/* a construct from a layer over the core */kkkk.c......tttttt.........ttt...n..........tttt...CCCCC.........tttt...CCCC............tttttt......tttttt...sppvpsppvvvvvpsppvvvvvvpsppvvvvvpsppvvvvvvvps...c...fffffff...fffffffff.ffffffffff.fffffffff...fffffffffff576func f() -> Int {
+    1
+}
+func f() -> Int {
+    2
+}
+f()kkkk.c......ttt...n....kkkk.c......ttt...n....v..577let m = if 1 > 2 {
+    1
+} else {
+    nil
+}
+m ?? 0
+let d: Double = if true {
+    1
+} else {
+    2.5
+}
+dkkk.v...n...n...n...CCC..v....n..kkk.v..tttttt...CCCC...n...nnn..v578func f(_ a: String, count: Int = 0, dryRun: Bool = false, color: Bool = true, include: [String]) -> String {
+    "\(a) \(count) \(dryRun) \(color) \(include)"
+}
+/* a construct from a layer over the core */kkkk.c......tttttt.........ttt...n..........tttt...CCCCC.........tttt...CCCC............tttttt......tttttt...sppvpsppvvvvvpsppvvvvvvpsppvvvvvpsppvvvvvvvps...c.fffffffff.ff.fff579switch "x" {
+case "y":
+    /* a construct from a layer over the core */
+}kkkkkk.sss...kkkk.sss..cccc....580let o: Int? = 3
+o?.description
+let t = try? /* a construct from a layer over the core */
+t != nilkkk.v..ttt....n..v...............kkk.v...kkkk.ppCCCCp..v....CCC581/* a construct from a layer over the core */
+let x: Int = "a"cccc.........kkk.v..ttt...sss582/* a construct from a layer over the core */cc.ff.ssssssss....cc.ff.ssssssss....ccccc583let n = 41kkk.v...nn584/* a construct from a layer over the core */c....585/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkkk.ccccc......kkkkk.cc.ff.ssssssss..ccccc....586func names() -> [String] {
+    ["a", "b"]
+}
+/* a construct from a layer over the core */
+names()
+/* a construct from a layer over the core */kkkk.ccccc.......tttttt.....sss..sss.....ccccc..vvvvv....ccccc...ccc587/* a construct from a layer over the core */vvvvvvvv...cccccc.....588let f = /* a construct from a layer over the core */
+try try await fkkk.v...kkkkk.cc.ff.ssssssss..kkk.kkkkk.v589try? /* a construct from a layer over the core */ ?? "fallback"kkkk.ppCCCCCp....ssssssssss590func none() -> [Int] {
+    []
+}
+/* a construct from a layer over the core */kkkk.cccc.......ttt..........cccc591let y = try /* a construct from a layer over the core */
+ykkk.v...kkk.ppcccc......p..v592let h = env.HOME
+h ?? "none"kkk.v...vvv.......v....ssssss593env.X = "1"vvv.....sss594enum Kind {
+    case file
+    case directory
+}
+let k = Kind.directory
+k
+k == .directory
+k != .file
+Kind.allCaseskkkk.tttt...kkkk.CCCC..CCCCCCCCC...kkk.v...vvvv............v..v....CCCCCCCCCC..v....CCCCC..vvvv.........595/* a construct from a layer over the core */v...ccc596func greet(_ name: String, times: Int = 1, color: Bool = true, tags: [String]) {}
+/* a construct from a layer over the core */mmmmmmmmmmmmmmmmmmm.mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm.kkkk.ccccc.........tttttt..kkkkk.sss.........ttt...n.........tttt...CCCC.........tttttt......ccccc.ffffff597/* a construct from a layer over the core */kkk.cc.ff.ssssssss598let double = { $0 * 2 }
+double(21)kkk.vvvvvv.....vv...n....vvvvvv.nn.599enum Kind {
+    case file
+    case directory
+}
+Kind.socketkkkk.tttt...kkkk.CCCC..CCCCCCCCC...vvvv.......600Command("sh", "-c", "exit 3").run().and { Command("sh", "-c", "exit 3").run() }.or { Command("true").run() }vvvvvvv.ssss..ssss..ssssssss..............vvvvvvv.ssss..ssss..ssssssss...............vvvvvvv.ssssss.........601/* a construct from a layer over the core */kkkk.cc.ff.ssssssss602func f(n: Int, c: Character, p: FilePath) {
+    /* a construct from a layer over the core */
+}
+/* a construct from a layer over the core */kkkk.c....ttt.....ttttttttt.....tttttttt....cccc.sppvsssnpsppvpsppvsssssssssssssssps....c.fff...fff...fff.....603let add = { (a, b) in a + b }
+add(1, 2)kkk.vvv..........kk.v...v....vvv.n..n.604/* a construct from a layer over the core */cccc....cccc.......cccc...605let j = /* a construct from a layer over the core */
+/* a construct from a layer over the core */
+let k = /* a construct from a layer over the core */
+/* a construct from a layer over the core */kkk.v...kkkkk.cccc..kkkkk.v....cccc.....kkk.v...kkkkk.ccccc..kkkkk.v....cccc.......606enum Kind {
+    case file
+    case directory
+}
+Kind.file == "file"kkkk.tttt...kkkk.CCCC..CCCCCCCCC...vvvv.........ssssss607func apply(_ f: (Int) -> Int, _ x: Int) -> Int {
+    f(x)
+}
+apply({ $0 + 100 }, 1)kkkk.ccccc.......ttt.....ttt.......ttt.....ttt...v.v.....vvvvv...vv...nnn....n.608if /* a construct from a layer over the core */ {
+    /* a construct from a layer over the core */
+}kk.cccc.ff.......cccc.....609func f(r: ClosedRange<Int>) {
+    /* a construct from a layer over the core */
+}kkkk.c....ttttttttttt.ttt.....cccc.sppvps..610/* a construct from a layer over the core */c.fff......612let r = /* a construct from a layer over the core */
+r.count
+r[0]
+r.last
+r.text
+r.text.countkkk.v...ppcccccc.ssssssssssp.v........v.n...v.......v.......v...........613while /* a construct from a layer over the core */ {
+    /* a construct from a layer over the core */
+}kkkkk.cc.ff.ssssssss...cccc.....614/* a construct from a layer over the core */cccccc.ssssss.sssssssssssssssssssss.ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss.sssssssssssssssssssssssssss.p................................................................615"swish".uppercased()
+"swish".hasPrefix("sw")
+"swish".count
+2.5.rounded()
+12.isMultiple(of: 4)sssssss...............sssssss...........ssss...sssssss.........nnn..............nn.................n.616nil ?? (1 + 2)
+(1 ?? 2) == 1
+nil ?? (nil ?? 3)CCC....n...n..n....n....n..CCC....CCC....n617let r = /* a construct from a layer over the core */
+for line in r {
+    /* a construct from a layer over the core */
+}kkk.v...ppcccccc.ssssssssssp.kkk.vvvv.kk.v...cccc.ssppvvvvpss..618do {
+    let r = try /* a construct from a layer over the core */
+} catch {
+    if let f = error as? CommandFailure {
+        print(f.status.code)
+        print(f.text)
+    }
+}kk...kkk.v...kkk.ppcc.ff.ssssssssssssssssssssssp...kkkkk...kk.kkk.v...vvvvv.kkk.tttttttttttttt...vvvvv.v...............vvvvv.v..........619[3, 1, 2].contains(2)
+[3, 1, 2].firstIndex(of: 1)
+[3, 1, 2].max()
+[1, 2, 3].reduce(0) { $0 + $1 }
+[1, 2].map { $0 * 2 }.n..n..n...........n....n..n..n.................n....n..n..n..........n..n..n.........n....vv...vv.....n..n........vv...n..620func f(name: String? = nil) -> String {
+    name ?? "anon"
+}
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkk.c.......tttttt....CCC.....tttttt...vvvv....ssssss....c..c.ffffff..621/* a construct from a layer over the core */cc.ff.ssssssss....cc.ff.ssssssss....cccccc622func main(_ name: String, loud: Bool = false) {
+    if loud {
+        /* a construct from a layer over the core */
+    } else {
+        /* a construct from a layer over the core */
+    }
+}
+/* a construct from a layer over the core */mmmmmmmmmmmmmmmmmmm.kkkk.cccc.........tttttt........tttt...CCCCC....kk.vvvv...cccc.ssssppvvvvps...kkkk...cccc.ssssppvvvvps.....cccc.ssssssppvvvvssssssps.623Int.maxvvv....624let r = /* a construct from a layer over the core */
+r.status.code
+r.status.succeeded
+r.status.signal == nilkkk.v...ppcccccc.ssssssssssp.v..............v...................v..................CCC625/* a construct from a layer over the core */.isEmpty
+/* a construct from a layer over the core */.countppCCCCp..........ppCCCCp......626/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */ccccc.....................................................................cccc.ff..................cc........................................................................................cccccc......cc..........................................................................................ccccc........................................................................627do {
+    let r = try /* a construct from a layer over the core */
+} catch {
+    if let f = error as? CommandFailure {
+        print(f.status.signal)
+        print(f.status.code == nil)
+    }
+}kk...kkk.v...kkk.ppcc.ff.sssssssssssssssp...kkkkk...kk.kkk.v...vvvvv.kkk.tttttttttttttt...vvvvv.v.................vvvvv.v................CCC.....628func f(_ x: Int, label: String = "d") -> Int {
+    x
+}
+f()kkkk.c......ttt.........tttttt...sss.....ttt...v...v..629Command("sh", "-c", "exit 3").run().and { Command("sh", "-c", "exit 3").run() }.or { Command("false").run() }vvvvvvv.ssss..ssss..ssssssss..............vvvvvvv.ssss..ssss..ssssssss...............vvvvvvv.sssssss.........630func f(_ x: Int, label: String = "d") -> Int {
+    x
+}
+f("s")kkkk.c......ttt.........tttttt...sss.....ttt...v...v.sss.632func f(_ x: Int, label: String = "d") -> Int {
+    x
+}
+f(1, other: "x")kkkk.c......ttt.........tttttt...sss.....ttt...v...v.n.........sss.633func f(_ x: Int, label: String = "d") -> Int {
+    x
+}
+f(1, 2)kkkk.c......ttt.........tttttt...sss.....ttt...v...v.n..n.634/* a construct from a layer over the core */cc..................................................................................................................................................ccc.....635func f() -> Int {
+    "no"
+}
+f()kkkk.c......ttt...ssss....v..636/* a construct from a layer over the core */
+/* a construct from a layer over the core */ccccc.ff..........................................................................ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss.........................................................................ccccc.......................................................................................................................................................................................................................................................................................................................................................................................................................................................ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss................................................................................637/* a construct from a layer over the core */cc.........................................................................cccccc...vv.........sssssss.....ccc............638do {
+    let r = /* a construct from a layer over the core */
+} catch {
+    /* a construct from a layer over the core */
+}
+/* a construct from a layer over the core */kk...kkk.v...ppCCCCCp...kkkkk...cccc..........cccc.....639func f() -> Int {
+    /* a construct from a layer over the core */
+}
+f()kkkk.c......ttt...cccc.......v..640/* a construct from a layer over the core */cc.ff.ssssssss....cc.ff.ssssssss....cc.ff.ssssssss641let sign = { (x: Int) in
+    if x > 0 {
+        return "pos"
+    }
+    return "neg"
+}
+sign(-1).countkkk.vvvv.........ttt..kk.....kk.v...n...kkkkkk.sssss.......kkkkkk.sssss...vvvv..n.......642let xs = [(n: 3, s: "c"), (n: 1, s: "a"), (n: 2, s: "b")]
+/* a construct from a layer over the core */kkk.vv........n.....sss.......n.....sss.......n.....sss...vv...cccccc.ffff.....ccc..643/* a construct from a layer over the core */cccccc.ssssss.ssssssssssssssssssssss.ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss.ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss.ssssssssssssssssssssssss.sssssssssssssssssssssssssss.p..............................................................................6441.5 GB + 500 MB
+1.0 KB.bytes
+10.0 MB / 4
+1.0 MB > 999 KB
+4.0 MB / 2.0 MB
+-1.0 KBnnnnnn...nnnnnn..nnnnn........nnnnn...n..nnnn...nnnnnn..nnnn...nnnn...nnnn645let xs = [(n: 3, s: "c"), (n: 1, s: "a"), (n: 2, s: "b")]
+/* a construct from a layer over the core */kkk.vv........n.....sss.......n.....sss.......n.....sss...vv...cccccc.ff.....cccccccc...cccccc.....ccc..646struct Point {
+    var x: Int
+    var y: Int = 0
+    var lengthSquared: Int {
+        (self.x * self.x) + (self.y * self.y)
+    }
+    func describe() -> String {
+        "(\(self.x), \(self.y))"
+    }
+    mutating func move(by d: Int) {
+        self.x += d
+        self.y += d
+    }
+    mutating func reset() {
+        self.move(by: -self.x)
+        self.y = 0
+    }
+}
+Point(x: 3, y: 4)
+Point(x: 1)kkkkkk.ttttt.......kkk.v..ttt.....kkk.v..ttt...n.....kkk.vvvvvvvvvvvvv..ttt...v...v...v...v.......kkkk.cccccccc......tttttt...ssppvpssppvpss.......kkkkkkkk.kkkk.cccc.......ttt............v.pp.v.........vvvv...pp.v...........kkkkkkkk.kkkk.ccccc.....vvvv......v...v...n.....vvvvv....n.....n...vvvvv....n.647func f(_ s: FileSize) -> FileSize {
+    s
+}
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkk.c......tttttttt.....tttttttt...v....c........c.....648/* a construct from a layer over the core */
+/* a construct from a layer over the core */cc.ff.ssssssssssssssssssssssss.p......................................................................ppp..ccc.....................................................................649defer {
+    /* a construct from a layer over the core */
+    /* a construct from a layer over the core */
+}
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+func main() {
+    /* a construct from a layer over the core */
+}.kkkkk...cc.........................................................................cccc............ccccc........................................................................cccc.ssssppkkkkkkkkkps.kkkk.cccc.....cccc........650let xs = [(n: 3, s: "c"), (n: 1, s: "a"), (n: 2, s: "b")]
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkk.vv........n.....sss.......n.....sss.......n.....sss...vv...cccccccc...ccc....vv...ccccc651func prompt() -> String {
+    "plain> "
+}kkkk.cccccc......tttttt...sssssssss..652struct Point {
+    var x: Int
+    var y: Int = 0
+    var lengthSquared: Int {
+        (self.x * self.x) + (self.y * self.y)
+    }
+    func describe() -> String {
+        "(\(self.x), \(self.y))"
+    }
+    mutating func move(by d: Int) {
+        self.x += d
+        self.y += d
+    }
+    mutating func reset() {
+        self.move(by: -self.x)
+        self.y = 0
+    }
+}
+let p = Point(x: 3, y: 4)
+p.x
+p.lengthSquared
+p.describe()kkkkkk.ttttt.......kkk.v..ttt.....kkk.v..ttt...n.....kkk.vvvvvvvvvvvvv..ttt...v...v...v...v.......kkkk.cccccccc......tttttt...ssppvpssppvpss.......kkkkkkkk.kkkk.cccc.......ttt............v.pp.v.........vvvv...pp.v...........kkkkkkkk.kkkk.ccccc.....vvvv......v...v...n.....kkk.v...vvvvv....n.....n...v....v................v...........653func prompt(status: Int) -> String {
+    "[\(status)]> "
+}
+falsekkkk.cccccc.........ttt.....tttttt...ssppvvvvvvpssss....CCCCC654func prompt(_ n: Int) -> Int {
+    n
+}kkkk.cccccc......ttt.....ttt...v..655let xs = [(n: 3, s: "c"), (n: 1, s: "a"), (n: 2, s: "b")]
+/* a construct from a layer over the core */kkk.vv........n.....sss.......n.....sss.......n.....sss...vv...cccccc656struct Point {
+    var x: Int
+    var y: Int = 0
+    var lengthSquared: Int {
+        (self.x * self.x) + (self.y * self.y)
+    }
+    func describe() -> String {
+        "(\(self.x), \(self.y))"
+    }
+    mutating func move(by d: Int) {
+        self.x += d
+        self.y += d
+    }
+    mutating func reset() {
+        self.move(by: -self.x)
+        self.y = 0
+    }
+}
+/* a construct from a layer over the core */kkkkkk.ttttt.......kkk.v..ttt.....kkk.v..ttt...n.....kkk.vvvvvvvvvvvvv..ttt...v...v...v...v.......kkkk.cccccccc......tttttt...ssppvpssppvpss.......kkkkkkkk.kkkk.cccc.......ttt............v.pp.v.........vvvv...pp.v...........kkkkkkkk.kkkk.ccccc.....vvvv......v...v...n......vvvvv....n...vvvvv....n.....cccccc...vv.....n..657struct Point {
+    var x: Int
+    var y: Int = 0
+    var lengthSquared: Int {
+        (self.x * self.x) + (self.y * self.y)
+    }
+    func describe() -> String {
+        "(\(self.x), \(self.y))"
+    }
+    mutating func move(by d: Int) {
+        self.x += d
+        self.y += d
+    }
+    mutating func reset() {
+        self.move(by: -self.x)
+        self.y = 0
+    }
+}
+/* a construct from a layer over the core */kkkkkk.ttttt.......kkk.v..ttt.....kkk.v..ttt...n.....kkk.vvvvvvvvvvvvv..ttt...v...v...v...v.......kkkk.cccccccc......tttttt...ssppvpssppvpss.......kkkkkkkk.kkkk.cccc.......ttt............v.pp.v.........vvvv...pp.v...........kkkkkkkk.kkkk.ccccc.....vvvv......v...v...n.....vvvvv....n....cc........cc.ff.sssss658/* a construct from a layer over the core */
+/* a construct from a layer over the core */cccccc.sssssssssssssss...cccccc..cccccc.ssssssssssssssss...ccccccc659func double(_ x: Int) -> Int {
+    x * 2
+}
+[1, 2].map(double).map { $0 + 1 }kkkk.cccccc......ttt.....ttt...v...n.....n..n......vvvvvv........vv...n..660/* a construct from a layer over the core */cccc.ff...........................................................................cccc.........cccc.....661/* a construct from a layer over the core */
+/* a construct from a layer over the core */cc.ff.ssssssssssssssssssssssss.ppp.p........................................................................cc..........ccc.....................................................................662func conv(_ x: Int) -> String {
+    "int"
+}
+func conv(_ x: String) -> String {
+    "string"
+}
+let f: (String) -> String = conv
+f("a")kkkk.cccc......ttt.....tttttt...sssss....kkkk.cccc......tttttt.....tttttt...ssssssss....kkk.v...tttttt.....tttttt...vvvv..v.sss.663Command("sh", "-c", "exit 3").run().and { Command("sh", "-c", "exit 3").run() }.or { Command("sh", "-c", "exit 3").run() }vvvvvvv.ssss..ssss..ssssssss..............vvvvvvv.ssss..ssss..ssssssss...............vvvvvvv.ssss..ssss..ssssssss.........664/* a construct from a layer over the core */.n..nnn..n....cccccc665struct P: Equatable {
+    var x: Int
+    var y = 0
+}
+P(x: 1) == P(x: 1, y: 0)
+P(x: 1) != P(x: 2)kkkkkk.t..ttttttttt...kkk.v..ttt..kkk.v...n....v....n.....v....n.....n...v....n.....v....n.666func apply(_ f: (Int) -> Int, _ x: Int) -> Int {
+    f(x)
+}
+apply({ $0 * 3 }, 2)kkkk.ccccc.......ttt.....ttt.......ttt.....ttt...v.v.....vvvvv...vv...n....n.667struct Point {
+    var x: Int
+    var y: Int = 0
+    var lengthSquared: Int {
+        (self.x * self.x) + (self.y * self.y)
+    }
+    func describe() -> String {
+        "(\(self.x), \(self.y))"
+    }
+    mutating func move(by d: Int) {
+        self.x += d
+        self.y += d
+    }
+    mutating func reset() {
+        self.move(by: -self.x)
+        self.y = 0
+    }
+}
+Point(x: 1) == Point(x: 1, y: 0)kkkkkk.ttttt.......kkk.v..ttt.....kkk.v..ttt...n.....kkk.vvvvvvvvvvvvv..ttt...v...v...v...v.......kkkk.cccccccc......tttttt...ssppvpssppvpss.......kkkkkkkk.kkkk.cccc.......ttt............v.pp.v.........vvvv...pp.v...........kkkkkkkk.kkkk.ccccc.....vvvv......v...v...n.....vvvvv....n.....vvvvv....n.....n.668/* a construct from a layer over the core */
+/* a construct from a layer over the core */ccc...........cccccc....ccc...cccccc..669#filePathkkkkkkkkk670struct Point {
+    var x: Int
+    var y: Int = 0
+    var lengthSquared: Int {
+        (self.x * self.x) + (self.y * self.y)
+    }
+    func describe() -> String {
+        "(\(self.x), \(self.y))"
+    }
+    mutating func move(by d: Int) {
+        self.x += d
+        self.y += d
+    }
+    mutating func reset() {
+        self.move(by: -self.x)
+        self.y = 0
+    }
+}
+var a = Point(x: 1)
+var b = a
+b.x = 9
+a.xkkkkkk.ttttt.......kkk.v..ttt.....kkk.v..ttt...n.....kkk.vvvvvvvvvvvvv..ttt...v...v...v...v.......kkkk.cccccccc......tttttt...ssppvpssppvpss.......kkkkkkkk.kkkk.cccc.......ttt............v.pp.v.........vvvv...pp.v...........kkkkkkkk.kkkk.ccccc.....vvvv......v...v...n.....kkk.v...vvvvv....n...kkk.v...v..v.....n..v..671struct Entry: Tabular {
+    static let columns: [DisplayColumn] = ["size", "name"]
+    var name: String
+    var size: Int
+    var path: String
+}
+let es = [Entry(name: "a", size: 1, path: "/x"), Entry(name: "b", size: 22, path: "/y")]
+eskkkkkk.ttttt..ttttttt.......kkk.vvvv..tttttt.....kkk.vvvv..ttt.....kkk.vvvv..tttttt.....kkkkkk.kkk.vvvvvvv...ttttttttttttt.....ssssss..ssssss....kkk.vv....vvvvv.......sss........n........ssss...vvvvv.......sss........nn........ssss...vv672struct Entry: Tabular {
+    static let columns: [DisplayColumn] = ["size", "name"]
+    var name: String
+    var size: Int
+    var path: String
+}
+let es = [Entry(name: "a", size: 1, path: "/x"), Entry(name: "b", size: 22, path: "/y")]
+/* a construct from a layer over the core */kkkkkk.ttttt..ttttttt.......kkk.vvvv..tttttt.....kkk.vvvv..ttt.....kkk.vvvv..tttttt.....kkkkkk.kkk.vvvvvvv...ttttttttttttt.....ssssss..ssssss....kkk.vv....vvvvv.......sss........n........ssss...vvvvv.......sss........nn........ssss...vv...ccccc673/* a construct from a layer over the core */
+/* a construct from a layer over the core */cc.ff.ssssssssssssssssssssssss.pppp......................................................................ccc....................................................................674struct Entry: Tabular {
+    static let columns: [DisplayColumn] = ["size", "name"]
+    var name: String
+    var size: Int
+    var path: String
+}
+let es = [Entry(name: "a", size: 1, path: "/x"), Entry(name: "b", size: 22, path: "/y")]
+/* a construct from a layer over the core */kkkkkk.ttttt..ttttttt.......kkk.vvvv..tttttt.....kkk.vvvv..ttt.....kkk.vvvv..tttttt.....kkkkkk.kkk.vvvvvvv...ttttttttttttt.....ssssss..ssssss....kkk.vv....vvvvv.......sss........n........ssss...vvvvv.......sss........nn........ssss...vv...cccccc...vv........n.....cccccc..........675[3, 1, 3, 2].uniqued().sorted().n..n..n..n....................676struct P: Tabular {
+    var x: Int
+}kkkkkk.t..ttttttt...kkk.v..ttt..677struct P: Tabular {
+    static let columns = 1
+    var x: Int
+}kkkkkk.t..ttttttt...kkk.v..ttt..kkkkkk.kkk.vvvvvvv...n..678enum E: Tabular {
+    case a
+}kkkk.t..ttttttt...kkkk.C..679/* a construct from a layer over the core */
+/* a construct from a layer over the core */cc.ff.ssssssssssssss.pp....................................................................ccc..................................................................680/* a construct from a layer over the core */
+/* a construct from a layer over the core */
+/* a construct from a layer over the core */cc.ff.ssssssssssssss.pp.....................................................................cc.ff.sssssssssssssss.ppp.....................................................................ccc...................................................................681let k = /* a construct from a layer over the core */
+await k
+/* a construct from a layer over the core */kkk.v...kkkkk.ppcc.ff.ssssssssssssssssp..kkkkk.v..v...........ccc...vv...sss..682jobs.countvvvv......688/* a construct from a layer over the core */ccccccccccccc....689/* a construct from a layer over the core */ccccccc690let x: Int = "a"kkk.v..ttt...sss693/* a construct from a layer over the core */ccccccc..........695ls()vv..696func down(_ n: Int) -> Int {
+    down(n + 1)
+}
+down(0)kkkk.cccc......ttt.....ttt...vvvv.v...n.....vvvv.n.699Int = "x"vvv...sss700let shared = 1kkk.vvvvvv...n7011 + 2n...n702pwd()vvv..703/* a construct from a layer over the core */cccccc704/* a construct from a layer over the core */ccccccccccccccc705let xs = [3, 1, 2]
+xs.sorted()kkk.vv....n..n..n...vv.........707history()vvvvvvv..708/* a construct from a layer over the core */cccccccccssssssssc710members([1])vvvvvvv..n..711readLine()vvvvvvvv..712[["a": 1]].select("a")..sss..n..........sss.713from()vvvv..714/* a construct from a layer over the core */cccccccccccccccc715[(n: 3, s: "c"), (n: 1, s: "a"), (n: 2, s: "b")].sorted(by: \.n).map { $0.s }.....n.....sss.......n.....sss.......n.....sss..............vvv........vv....716let answer = 42kkk.vvvvvv...nn717to()vv..718let j: JSON = 1kkk.v..tttt...n719/* a construct from a layer over the core */
+/* a construct from a layer over the core */ccccccccccccccccccc......ccccccccccccccc.......................720table()vvvvv..721/* a construct from a layer over the core */cccccc....722await 1kkkkk.n723list()vvvv..724await 21kkkkk.nn725help()vvvv..726/* a construct from a layer over the core */cccccccccssssssssc......727/* a construct from a layer over the core */ccccccccccccccc...ssssss728while true {}kkkkk.CCCC...730/* a construct from a layer over the core */ccc.......731let h = /* a construct from a layer over the core */kkk.v...ppcccc...p732.HOMECCCCC733/* a construct from a layer over the core */ppccccp734func sum(_ n: Int) -> Int {
+    if n == 0 {
+    0
+} else {
+    n + sum(n - 1)
+}
+}
+sum(5000)kkkk.ccc......ttt.....ttt...v....n...n...v...vvv.v...n.....vvv.nnnn.735print("hello", 1 + 1)
+print([1, 2])vvvvv.sssssss..n...n...vvvvv..n..n..736env["HOME"]vvv.ssssss.7371 + 1n...n738for i in 1 ... 100000 {
+    print("xxxxxxxxxx")
+}kkk.v.kk.n...nnnnnn...vvvvv.ssssssssssss...

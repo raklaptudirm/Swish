@@ -35,7 +35,6 @@ let package = Package(
             name: "SwishShell",
             dependencies: [
                 .product(name: "Swiit", package: "Swiit"),
-                .product(name: "SwiitSwiftSyntax", package: "Swiit"),
                 "SwishShellLibrary",
                 .product(name: "SwiitKit", package: "SwiitKit"),
                 .product(name: "SystemPackage", package: "swift-system"),
@@ -43,7 +42,7 @@ let package = Package(
             exclude: ["Library"]
         ),
         .testTarget(name: "SwishShellTests", dependencies: [
-            "SwishShell", .product(name: "Swiit", package: "Swiit"), .product(name: "SwiitSwiftSyntax", package: "Swiit"),
-        ]),
+            "SwishShell", .product(name: "Swiit", package: "Swiit"),
+        ], exclude: ["Goldens"]),
     ]
 )
