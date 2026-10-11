@@ -49,3 +49,19 @@ private func run(_ source: String, in shell: Shell = Shell()) throws -> (output:
         #expect(error.message == "fetch can't become async: 'use' calls it without 'await'")
     }
 }
+
+// Errors of your own, in the shell: thrown, caught by pattern, and a failed
+// command's among them.
+
+@Test func errorsOfYourOwnInTheShell() throws {
+    let source = """
+    struct Oops: Error { let code: Int }
+    func f() throws { throw Oops(code: 4) }
+    do { try f() } catch let e as Oops { echo "oops \\(e.code)" }
+    do { try $(sh -c 'exit 3') } catch let failure as CommandFailure { echo "status \\(failure.status.code)" }
+    """
+    #expect(try run(source).output == "oops 4\nstatus 3\n")
+    // Nothing catching it, it's reported, and the status is a failure.
+    let uncaught = try run("struct Oops: Error {}; throw Oops()")
+    #expect(uncaught.status == 1)
+}

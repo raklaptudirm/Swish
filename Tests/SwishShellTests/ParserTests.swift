@@ -485,9 +485,9 @@ private func command(_ source: String) throws -> CommandNode? {
 
 @Test func doCatchForms() throws {
     let program = try parse("do { a } catch { error }\ndo { b } catch let e { e }\ndo { c }")
-    guard case .doCatch(_, "error", .some) = program.statements[0],
-          case .doCatch(_, "e", .some) = program.statements[1],
-          case .doCatch(_, _, nil) = program.statements[2] else {
+    guard case .doCatch(_, let bare) = program.statements[0], bare.count == 1, bare[0].patterns.isEmpty,
+          case .doCatch(_, let named) = program.statements[1], named.first?.patterns == [.binding(name: "e", mutable: false)],
+          case .doCatch(_, let none) = program.statements[2], none.isEmpty else {
         Issue.record("\(program.statements)")
         return
     }

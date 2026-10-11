@@ -85,11 +85,9 @@ result in the error:
 ```swift
 do {
     let log = try $(make)        // without `try`, a failure is only in log.status
-} catch {
-    if let failure = error as? CommandFailure {
-        echo "make failed with \(failure.status.code)"
-        failure.text             // what it printed before failing
-    }
+} catch let failure as CommandFailure {
+    echo "make failed with \(failure.status.code)"
+    failure.text                 // what it printed before failing
 }
 ```
 
@@ -97,7 +95,36 @@ do {
 `error.localizedDescription` says what happened, and a cast gets at more. A
 failed command is a `CommandFailure`, whose `status` has `code`, `signal` (if
 one ended it) and `succeeded`, and whose `text` is what it printed.
-`catch let e { … }` names it something else.
+
+Errors of your own are Swift's: a struct or enum declared `: Error` can be
+thrown, and `catch` clauses match by pattern, the first that matches running,
+as a switch's cases do. An error none matches goes on to the next `catch` out.
+
+```swift
+enum DeployError: Error { case dirty, rejected(code: Int) }
+
+func deploy() throws {
+    if !$(git status --porcelain).text.isEmpty { throw DeployError.dirty }
+    let push = $(git push)
+    if !push.status.succeeded { throw DeployError.rejected(code: push.status.code ?? 1) }
+}
+
+do {
+    try deploy()
+} catch DeployError.dirty {
+    echo "commit first"
+} catch DeployError.rejected(let code) where code == 128 {
+    echo "no access"
+} catch let failure as CommandFailure {
+    echo "a command failed: \(failure.status.code)"
+} catch {
+    echo "\(error)"             // a bare catch binds `error`
+}
+```
+
+`catch let e { … }` names any error something else; `catch is T` and
+`catch let e as T` match by type, and `case let n as Int:` and `case is
+String:` do the same in a switch.
 
 A command run as a statement only succeeds or fails, as in every shell:
 `if make { }`, `make && …`. `try make` makes its failure throw, so

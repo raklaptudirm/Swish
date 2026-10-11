@@ -60,8 +60,8 @@ extension Library {
     }
 
     /// What `try $(…)` throws when the command fails, and `try await job`:
-    /// `catch let` it with a cast, `if let failure = error as? CommandFailure`.
-    struct CommandFailure {
+    /// `catch let failure as CommandFailure`, or `error as? CommandFailure`.
+    struct CommandFailure: Error {
         let message: String
         let status: Status
         let text: String
