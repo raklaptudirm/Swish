@@ -1,6 +1,6 @@
 @_spi(Host) @_spi(Layer) import Swiit
 import Foundation
-import SwishKit
+import SwiitKit
 
 extension Shell {
     // MARK: Completion

@@ -1,5 +1,5 @@
 import Foundation
-import SwishKit
+import SwiitKit
 
 /// Parsed JSON: whatever it parsed as, a `Value`, which Swish reads by field
 /// and element. Object keys are kept in order, which Foundation's parser
@@ -28,7 +28,7 @@ public struct JSON: WrapsValue {
         case .bool(let bool): return String(bool)
         case .int(let int): return String(int)
         case .double(let double):
-            guard double.isFinite else { throw SwishError("to json: \(double) isn't valid JSON") }
+            guard double.isFinite else { throw SwiitError("to json: \(double) isn't valid JSON") }
             return String(double)
         case .string(let string): return quoted(string)
         case .enumValue(let value):
@@ -53,13 +53,13 @@ public struct JSON: WrapsValue {
             guard dictionary.count > 0 else { return "{}" }
             let fields = try dictionary.sortedForDisplay.map { key, value in
                 guard case .string(let name) = key else {
-                    throw SwishError("to json: an object's keys are Strings, and \(key.debugDescription) isn't one")
+                    throw SwiitError("to json: an object's keys are Strings, and \(key.debugDescription) isn't one")
                 }
                 return inner + quoted(name) + ": " + (try text(value, indent: inner))
             }
             return "{\n" + fields.joined(separator: ",\n") + "\n\(indent)}"
         case .function:
-            throw SwishError("to json: a function has no JSON form")
+            throw SwiitError("to json: a function has no JSON form")
         case .object(let object):
             if let fields = object.fields { return try text(.record(fields), indent: indent) }
             // What stands for text is its text; else a Swift value is as Swift
@@ -70,9 +70,9 @@ public struct JSON: WrapsValue {
                 if box.value is any ExpressibleByUnicodeScalarLiteral { return quoted(box.description) }
                 if let json = try box.json() { return json }
             }
-            throw SwishError("to json: a \(object.typeName) has no JSON form")
+            throw SwiitError("to json: a \(object.typeName) has no JSON form")
         @unknown default:
-            throw SwishError("to json: unsupported value")
+            throw SwiitError("to json: unsupported value")
         }
     }
 
@@ -97,8 +97,8 @@ private struct JSONParser {
     let bytes: [UInt8]
     var index = 0
 
-    func error(_ message: String) -> SwishError {
-        SwishError("from json: \(message) at byte \(index)")
+    func error(_ message: String) -> SwiitError {
+        SwiitError("from json: \(message) at byte \(index)")
     }
 
     mutating func skipWhitespace() {

@@ -5,7 +5,7 @@ import Foundation
 /// the checker and to you; its members are bridged (see
 /// Docs/Design/swift-interop.md). It compares, hashes and sorts as the Swift
 /// value does, when its type can.
-public final class SwiftValue: SwishObject, @unchecked Sendable {
+public final class SwiftValue: SwiitObject, @unchecked Sendable {
     public let value: Any
     /// Its Swift type, as Swish writes it: `Substring`.
     public let typeName: String
@@ -68,7 +68,7 @@ public final class SwiftValue: SwishObject, @unchecked Sendable {
     /// The Swift value in `value`, which must be one of type `T`.
     public static func unbox<T>(_ type: T.Type, _ value: Value) throws -> T {
         if case .object(let box as SwiftValue) = value, let unboxed = box.value as? T { return unboxed }
-        throw SwishError("expected \(T.self), not \(value.typeName)")
+        throw SwiitError("expected \(T.self), not \(value.typeName)")
     }
 
     /// Whether it sorts before `other`, if its type is Comparable.
@@ -80,8 +80,8 @@ public final class SwiftValue: SwishObject, @unchecked Sendable {
     public var memberNames: [String] { [] }
     public func member(_ name: String) -> Value? { nil }
     public var fields: Record? { nil }
-    public var description: String { (value as? any SwishDisplayed)?.swishDescription ?? String(describing: value) }
+    public var description: String { (value as? any SwiitDisplayed)?.swiitDescription ?? String(describing: value) }
     /// What a table shows of it: its description, unless the type says shorter.
-    public var cell: String { (value as? any SwishDisplayed)?.swishCell ?? description }
-    public var debugDescription: String { (value as? any SwishDisplayed)?.swishDebugDescription ?? String(reflecting: value) }
+    public var cell: String { (value as? any SwiitDisplayed)?.swiitCell ?? description }
+    public var debugDescription: String { (value as? any SwiitDisplayed)?.swiitDebugDescription ?? String(reflecting: value) }
 }

@@ -1,28 +1,28 @@
 # Plugins
 
 Status: **implemented** for local packages (`import Tools from "./Tools"`).
-Packages that don't use SwishKit, from URLs or the SDK, are planned in
+Packages that don't use SwiitKit, from URLs or the SDK, are planned in
 [swift-interop.md](swift-interop.md).
 
-A plugin is a Swift package that depends on SwishKit and marks what it
+A plugin is a Swift package that depends on SwiitKit and marks what it
 exports. `import` builds it, loads its library into the shell, and its
 functions become commands like any `func` declared in Swish: the same
 command line, `--help`, completion and streaming.
 
 ```swift
-import SwishKit
+import SwiitKit
 
 /// Greets someone.
 /// - Parameter times: how many times to greet
-@SwishExport
+@SwiitExport
 public func greet(_ name: String, @Flag("n") times: Int = 1, loud: Bool = false) -> [String] { … }
 
-@SwishExport
+@SwiitExport
 public func longest(@Input _ lines: [String]) -> String? { … }
 
-public enum Level: String, CaseIterable, SwishEnum { case low, high }
+public enum Level: String, CaseIterable, SwiitEnum { case low, high }
 
-@SwishObject
+@SwiitObject
 public final class Counter {
     public private(set) var total = 0
     public func add(_ amount: Int = 1) -> Int { … }
@@ -41,7 +41,7 @@ Tools.volume(.high)
 
 ## Marking exports
 
-- **`@SwishExport` on a function** generates a description of it:
+- **`@SwiitExport` on a function** generates a description of it:
   parameters with labels, types, defaults, `@Flag` and `@Input`, and the
   doc comment's summary and `- Parameter` lines. It also generates a thunk
   that converts the shell's arguments and the result. It's the same
@@ -51,17 +51,17 @@ Tools.volume(.high)
   through unchanged. Swift allows wrappers on parameters, so the Swift
   signature reads like the Swish one, and the function stays callable from
   Swift.
-- **Enums conform to `SwishEnum`** (with `CaseIterable`), and that's all:
+- **Enums conform to `SwiitEnum`** (with `CaseIterable`), and that's all:
   default implementations read the cases at run time, and raw `Int` or
   `String` values come along. This isn't a macro because Swift won't let
   one macro attach to both functions and types when it adds conformances.
   An enum with associated values can't be exported yet.
-- **Classes get `@SwishObject`**, which adds a `SwishObject` conformance.
+- **Classes get `@SwiitObject`**, which adds a `SwiitObject` conformance.
   Public properties and methods become members. Properties show as fields
   in tables and in a bare value's form (`Counter(total: 6, name: "x")`).
   Methods are functions (`c.add(5)`).
 - **Results can be any of these:** a convertible value (`Int`, `String`,
-  `[T]`, `T?`, `Date`, `FileSize`, `Value`, a `SwishEnum`), an object, or
+  `[T]`, `T?`, `Date`, `FileSize`, `Value`, a `SwiitEnum`), an object, or
   any `Encodable` data, which becomes records the way `ls` builds its own.
   Parameters must be convertible values or exported objects.
 - **Defaults:** literal ones (`1`, `"x"`, `false`, `[1, 2]`) are filled in
@@ -75,7 +75,7 @@ longest)`. But Swift can't refer to a function with a property-wrapped
 parameter as a value (`let f = longest` is ambiguous), so that list
 couldn't name functions that use `@Flag` or `@Input`.
 
-Instead each `@SwishExport` also defines a C symbol, `swish_export_greet`,
+Instead each `@SwiitExport` also defines a C symbol, `swish_export_greet`,
 that returns its description. On import the shell lists the library's
 symbols with that prefix and calls each one. It reads them from the file
 itself, as `nm -gU` would: a Mach-O's symbol table on macOS, an ELF's
@@ -93,12 +93,12 @@ typo can't leave something out.
    a second or two even when there's nothing to do. Build errors are shown
    as the compiler's `error:` lines.
 3. **Load.** `dlopen` the library and call each export symbol. The plugin
-   links SwishKit as `@rpath/libSwishKit.dylib` (`libSwishKit.so` on
+   links SwiitKit as `@rpath/libSwishKit.dylib` (`libSwishKit.so` on
    Linux), the name the shell's own copy has, so the loader uses the one
    already loaded, and a Swift
    type means the same thing on both sides. A plugin whose objects aren't
    the shell's `NativeFunction` loaded a second copy, and is refused.
-4. **Check the ABI version** each export was built with. SwishKit is built
+4. **Check the ABI version** each export was built with. SwiitKit is built
    with library evolution, so it can grow without breaking plugins; the
    version only changes for a break it can't absorb.
 5. **Register.** Each function is bound by name. A name that's already a
@@ -120,7 +120,7 @@ syntax error; command syntax (`greet Rak`) never needed to know.
 
 - Packages from URLs, pinned versions, and a cache of built libraries
   (milestone 9).
-- Generated bridges for packages that don't depend on SwishKit (milestone 9).
+- Generated bridges for packages that don't depend on SwiitKit (milestone 9).
 - `async` functions, variadic parameters, generic functions, and enums with
   associated values.
 - Two exports with the same name in one plugin (their symbols collide).

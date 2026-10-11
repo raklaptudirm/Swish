@@ -1,6 +1,6 @@
 @_spi(Layer) import Swiit
 import Foundation
-import SwishKit
+import SwiitKit
 
 /// The shell's syntax, plugged into the parser: commands, pipelines, redirects,
 /// `$(…)`, `$name`, `async …`, `env.NAME = value` and `import Name from path`.

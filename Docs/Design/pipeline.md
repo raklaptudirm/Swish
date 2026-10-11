@@ -18,7 +18,7 @@ enum Value {
     case record(Record)          // ordered String → Value, with an optional type name
     case output(Output)   // what $(…) and await give: text, lines and status
     case enumValue(EnumValue)    // a case of an enum: .directory, .failed(code: 2)
-    case object(any SwishObject) // a live value with its own members: a Job, and later
+    case object(any SwiitObject) // a live value with its own members: a Job, and later
                                  // bridged Swift objects (milestone 8)
     case function(any Callable)
     // A path is a bridged FilePath, held in .object; planned: duration.
@@ -38,7 +38,7 @@ compare; dates compare, and subtract to seconds.
   properties.
 - **Both expose members the same way.** `filter`, `select`, `sorted` and field
   access (`$0.size`) work identically on records and objects.
-- **An object shows its data as fields.** `SwishObject.fields` is a record
+- **An object shows its data as fields.** `SwiitObject.fields` is a record
   of its members that aren't methods, by default; tables, `select`, `list`
   and `to json` use it, so `jobs` is a table like `ls`. An object that
   isn't data, like an enum type, returns nil and shows as its description.
@@ -53,7 +53,7 @@ In order of preference:
 
 1. **Generated bridges** (see [callables.md](callables.md)) for functions
    and methods.
-2. **`Encodable` → `Value`** (`ValueEncoder` in SwishKit). Structs become
+2. **`Encodable` → `Value`** (`ValueEncoder` in SwiitKit). Structs become
    records named after their type, so views apply; `Date` and `FileSize`
    keep their meaning. Most library model types need no bridge code at
    all. The `ls` and `ps` builtins produce their records this way.

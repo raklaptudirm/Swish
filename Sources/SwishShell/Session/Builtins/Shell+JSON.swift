@@ -1,5 +1,5 @@
 @_spi(Host) @_spi(Layer) import Swiit
-import SwishKit
+import SwiitKit
 
 extension Interpreter {
     /// Registers parsed JSON as a type whose values are whatever they parsed

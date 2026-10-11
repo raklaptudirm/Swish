@@ -1,5 +1,5 @@
 @_spi(Host) @_spi(Layer) import Swiit
-import SwishKit
+import SwiitKit
 
 extension Library {
     /// The shell's own: `ls`, `ps`, `pwd`, `with(env:)`, `readLine`, `history`,

@@ -6,7 +6,7 @@ import Glibc
 import Musl
 #endif
 import Foundation
-import SwishKit
+import SwiitKit
 import SystemPackage
 
 /// A user's name, or their number if they have none.

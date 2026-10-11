@@ -1,6 +1,6 @@
 @_spi(Host) import Swiit
 import Foundation
-import SwishKit
+import SwiitKit
 
 extension Shell {
     /// Runs the read-eval loop until EOF or `exit`.

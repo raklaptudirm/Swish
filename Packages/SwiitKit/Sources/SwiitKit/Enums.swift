@@ -1,7 +1,7 @@
 /// An enum's definition: its name and cases, in order. Declared in Swish
 /// (`enum FileType { case file, directory }`) or by the shell and plugins.
 /// Types compare by identity, so two enums with the same name are distinct.
-public final class EnumType: SwishObject, @unchecked Sendable {
+public final class EnumType: SwiitObject, @unchecked Sendable {
     public struct Case: Sendable, Equatable {
         public let name: String
         /// For an enum with raw values (`enum Level: Int`).
@@ -40,7 +40,7 @@ public final class EnumType: SwishObject, @unchecked Sendable {
         return cases.map { EnumValue(type: self, name: $0.name) }
     }
 
-    // MARK: SwishObject
+    // MARK: SwiitObject
 
     public var typeName: String { "enum" }
 

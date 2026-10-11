@@ -1,6 +1,6 @@
 @_spi(Host) @_spi(Layer) import Swiit
 @_spi(Shell) @_spi(Host) @_spi(Layer) @testable import SwishShell
-import SwishKit
+import SwiitKit
 import Testing
 
 /// Swift's syntax alone, or with the shell's added.

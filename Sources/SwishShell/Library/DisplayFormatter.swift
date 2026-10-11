@@ -1,5 +1,5 @@
 import Foundation
-import SwishKit
+import SwiitKit
 
 /// Lays out a stream of items as it arrives. Records become table rows:
 /// the first 100, or whatever arrives in the first 200ms, decide the
@@ -60,7 +60,7 @@ package final class DisplayFormatter {
         default:
             guard flush() else { return false }
             // A Swift value with colors to show (help), on a terminal.
-            if styled, case .object(let box as SwiftValue) = item, let colored = (box.value as? any SwishDisplayed)?.swishColored {
+            if styled, case .object(let box as SwiftValue) = item, let colored = (box.value as? any SwiitDisplayed)?.swiitColored {
                 return emit(colored)
             }
             return emit(item.description)

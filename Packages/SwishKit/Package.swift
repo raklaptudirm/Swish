@@ -1,38 +1,19 @@
 // swift-tools-version: 6.0
-import CompilerPluginSupport
 import PackageDescription
 
+// SwiitKit's old name, for plugins written against SwishKit: a module of that
+// name that brings in SwiitKit, linked as SwiitKit's one shared copy.
 let package = Package(
     name: "SwishKit",
     platforms: [.macOS(.v14)],
     products: [
-        // Dynamic so the shell and every compiled plugin share one copy of
-        // SwishKit's types; a static copy per binary would make them distinct.
-        .library(name: "SwishKit", type: .dynamic, targets: ["SwishKit"]),
+        .library(name: "SwishKit", targets: ["SwishKit"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "602.0.0"),
+        .package(path: "../SwiitKit"),
     ],
     targets: [
-        .target(
-            name: "SwishKit",
-            dependencies: ["SwishKitMacros"],
-            swiftSettings: [
-                // Keeps the ABI resilient, so SwishKit can grow without
-                // breaking plugins that were built against an older version.
-                .unsafeFlags(["-enable-library-evolution"]),
-            ]
-        ),
-        // `@SwishExport` and `#swishPlugin`, run by the compiler when a
-        // plugin is built.
-        .macro(
-            name: "SwishKitMacros",
-            dependencies: [
-                .product(name: "SwiftSyntax", package: "swift-syntax"),
-                .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
-                .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
-            ]
-        ),
+        .target(name: "SwishKit", dependencies: [.product(name: "SwiitKit", package: "SwiitKit")]),
         .testTarget(name: "SwishKitTests", dependencies: ["SwishKit"]),
     ]
 )

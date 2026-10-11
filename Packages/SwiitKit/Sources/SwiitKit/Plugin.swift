@@ -2,30 +2,30 @@ import Foundation
 
 // MARK: What a plugin exports
 
-/// Raised when a plugin built against an older SwishKit can no longer be
-/// loaded. Library evolution lets SwishKit add to these types without it.
+/// Raised when a plugin built against an older SwiitKit can no longer be
+/// loaded. Library evolution lets SwiitKit add to these types without it.
 /// Not bumped while everything is unstable, before 1.0.
 ///
 /// Transparent, so it's compiled into each plugin as its number when the
-/// plugin was built, not read from SwishKit when it's loaded, which would
+/// plugin was built, not read from SwiitKit when it's loaded, which would
 /// always agree.
-@_transparent public var swishPluginABIVersion: Int { 1 }
+@_transparent public var swiitPluginABIVersion: Int { 1 }
 
-/// Each `@SwishExport` function also defines a C symbol with this prefix
-/// and its name, `swish_export_greet`, returning a retained
+/// Each `@SwiitExport` function also defines a C symbol with this prefix
+/// and its name, `swiit_export_greet`, returning a retained
 /// `NativeFunction`. The shell finds a plugin's exports by these, so
 /// there's nothing to list.
-public let swishExportSymbolPrefix = "swish_export_"
+public let swiitExportSymbolPrefix = "swiit_export_"
 
 /// A Swift function as Swish sees it: the same signature a `func` in Swish
 /// has, so it gets a command line, `--help` and completion the same way.
-/// `@SwishExport` builds one from a declaration.
+/// `@SwiitExport` builds one from a declaration.
 public struct ExportedFunction: Sendable {
     public let name: String
     public let summary: String?
     public let parameters: [ExportedParameter]
-    public let returnType: SwishType?
-    /// The `swishPluginABIVersion` the plugin was built with.
+    public let returnType: SwiitType?
+    /// The `swiitPluginABIVersion` the plugin was built with.
     public let abiVersion: Int
     /// Declared `throws`: a call to it needs `try`.
     public let isThrowing: Bool
@@ -34,8 +34,8 @@ public struct ExportedFunction: Sendable {
     public let call: @Sendable ([String: Value]) throws -> Value
 
     public init(
-        name: String, summary: String? = nil, parameters: [ExportedParameter], returnType: SwishType?,
-        abiVersion: Int = swishPluginABIVersion, isThrowing: Bool,
+        name: String, summary: String? = nil, parameters: [ExportedParameter], returnType: SwiitType?,
+        abiVersion: Int = swiitPluginABIVersion, isThrowing: Bool,
         call: @escaping @Sendable ([String: Value]) throws -> Value
     ) {
         self.abiVersion = abiVersion
@@ -47,11 +47,11 @@ public struct ExportedFunction: Sendable {
         self.call = call
     }
 
-    /// As plugins built before `isThrowing` call it: SwishKit keeps every
+    /// As plugins built before `isThrowing` call it: SwiitKit keeps every
     /// public initializer it has shipped, so they still load.
     public init(
-        name: String, summary: String? = nil, parameters: [ExportedParameter], returnType: SwishType?,
-        abiVersion: Int = swishPluginABIVersion, call: @escaping @Sendable ([String: Value]) throws -> Value
+        name: String, summary: String? = nil, parameters: [ExportedParameter], returnType: SwiitType?,
+        abiVersion: Int = swiitPluginABIVersion, call: @escaping @Sendable ([String: Value]) throws -> Value
     ) {
         self.init(name: name, summary: summary, parameters: parameters, returnType: returnType,
                   abiVersion: abiVersion, isThrowing: false, call: call)
@@ -62,7 +62,7 @@ public struct ExportedParameter: Sendable {
     /// nil for `_`: positional on the command line.
     public let label: String?
     public let name: String
-    public let type: SwishType
+    public let type: SwiitType
     /// The enums its type uses, which the shell learns by name.
     public let enums: [EnumType]
     public let variadic: Bool
@@ -78,7 +78,7 @@ public struct ExportedParameter: Sendable {
     public let defaultSource: String?
 
     public init(
-        label: String?, name: String, type: SwishType, enums: [EnumType] = [], variadic: Bool = false, isInput: Bool = false,
+        label: String?, name: String, type: SwiitType, enums: [EnumType] = [], variadic: Bool = false, isInput: Bool = false,
         shortFlag: Character? = nil, documentation: String? = nil, defaultValue: Value? = nil, defaultSource: String? = nil
     ) {
         self.label = label
@@ -95,12 +95,12 @@ public struct ExportedParameter: Sendable {
 }
 
 /// The type of a parameter or result, as Swish's type annotations name it.
-public indirect enum SwishType: Sendable, Hashable, CustomStringConvertible {
+public indirect enum SwiitType: Sendable, Hashable, CustomStringConvertible {
     case any, bool, int, double, string, record, filesize, date, output, function
     /// An enum the plugin exports, like `Level`.
     case named(String)
-    case list(SwishType)
-    case optional(SwishType)
+    case list(SwiitType)
+    case optional(SwiitType)
 
     public var description: String {
         switch self {
@@ -137,7 +137,7 @@ public final class NativeFunction: Callable, @unchecked Sendable {
 
 /// A failure in converting between Swift and Swish values, or one a plugin
 /// throws to report a problem the way the shell's own errors read.
-public struct SwishError: Error, CustomStringConvertible {
+public struct SwiitError: Error, CustomStringConvertible {
     public let description: String
 
     public init(_ description: String) {
@@ -149,126 +149,126 @@ public struct SwishError: Error, CustomStringConvertible {
 
 /// A Swift type that can be a parameter: the shell hands it a `Value`, and
 /// it says what type the shell should check for.
-public protocol SwishConvertible {
-    static var swishType: SwishType { get }
-    /// The enums `swishType` names, for the shell to register.
-    static var swishEnums: [EnumType] { get }
-    init(swishValue: Value) throws
-    var swishValue: Value { get }
+public protocol SwiitConvertible {
+    static var swiitType: SwiitType { get }
+    /// The enums `swiitType` names, for the shell to register.
+    static var swiitEnums: [EnumType] { get }
+    init(swiitValue: Value) throws
+    var swiitValue: Value { get }
 }
 
-extension SwishConvertible {
-    public static var swishEnums: [EnumType] { [] }
+extension SwiitConvertible {
+    public static var swiitEnums: [EnumType] { [] }
 }
 
-extension Value: SwishConvertible {
-    public static var swishType: SwishType { .any }
-    public init(swishValue: Value) { self = swishValue }
-    public var swishValue: Value { self }
+extension Value: SwiitConvertible {
+    public static var swiitType: SwiitType { .any }
+    public init(swiitValue: Value) { self = swiitValue }
+    public var swiitValue: Value { self }
 }
 
-extension Int: SwishConvertible {
-    public static var swishType: SwishType { .int }
-    public init(swishValue: Value) throws {
-        guard case .int(let value) = swishValue else { throw SwishError.expected("Int", swishValue) }
+extension Int: SwiitConvertible {
+    public static var swiitType: SwiitType { .int }
+    public init(swiitValue: Value) throws {
+        guard case .int(let value) = swiitValue else { throw SwiitError.expected("Int", swiitValue) }
         self = value
     }
-    public var swishValue: Value { .int(self) }
+    public var swiitValue: Value { .int(self) }
 }
 
-extension Double: SwishConvertible {
-    public static var swishType: SwishType { .double }
-    public init(swishValue: Value) throws {
-        switch swishValue {
+extension Double: SwiitConvertible {
+    public static var swiitType: SwiitType { .double }
+    public init(swiitValue: Value) throws {
+        switch swiitValue {
         case .double(let value): self = value
         case .int(let value): self = Double(value)
-        default: throw SwishError.expected("Double", swishValue)
+        default: throw SwiitError.expected("Double", swiitValue)
         }
     }
-    public var swishValue: Value { .double(self) }
+    public var swiitValue: Value { .double(self) }
 }
 
-extension String: SwishConvertible {
-    public static var swishType: SwishType { .string }
-    public init(swishValue: Value) throws {
-        switch swishValue {
+extension String: SwiitConvertible {
+    public static var swiitType: SwiitType { .string }
+    public init(swiitValue: Value) throws {
+        switch swiitValue {
         case .string(let value): self = value
         default:
             // What stands for text (a command's output) is its text.
-            guard let text = swishValue.text else { throw SwishError.expected("String", swishValue) }
+            guard let text = swiitValue.text else { throw SwiitError.expected("String", swiitValue) }
             self = text
         }
     }
-    public var swishValue: Value { .string(self) }
+    public var swiitValue: Value { .string(self) }
 }
 
-extension Bool: SwishConvertible {
-    public static var swishType: SwishType { .bool }
-    public init(swishValue: Value) throws {
-        guard case .bool(let value) = swishValue else { throw SwishError.expected("Bool", swishValue) }
+extension Bool: SwiitConvertible {
+    public static var swiitType: SwiitType { .bool }
+    public init(swiitValue: Value) throws {
+        guard case .bool(let value) = swiitValue else { throw SwiitError.expected("Bool", swiitValue) }
         self = value
     }
-    public var swishValue: Value { .bool(self) }
+    public var swiitValue: Value { .bool(self) }
 }
 
-extension Date: SwishConvertible {
-    public static var swishType: SwishType { .date }
-    public init(swishValue: Value) throws {
-        guard let value = swishValue.date else { throw SwishError.expected("Date", swishValue) }
+extension Date: SwiitConvertible {
+    public static var swiitType: SwiitType { .date }
+    public init(swiitValue: Value) throws {
+        guard let value = swiitValue.date else { throw SwiitError.expected("Date", swiitValue) }
         self = value
     }
-    public var swishValue: Value { .date(self) }
+    public var swiitValue: Value { .date(self) }
 }
 
-extension FileSize: SwishConvertible {
-    public static var swishType: SwishType { .filesize }
-    public init(swishValue: Value) throws {
-        if let size = swishValue.fileSize {
+extension FileSize: SwiitConvertible {
+    public static var swiitType: SwiitType { .filesize }
+    public init(swiitValue: Value) throws {
+        if let size = swiitValue.fileSize {
             self = size
-        } else if case .int(let bytes) = swishValue {
+        } else if case .int(let bytes) = swiitValue {
             self.init(bytes: bytes)
         } else {
-            throw SwishError.expected("FileSize", swishValue)
+            throw SwiitError.expected("FileSize", swiitValue)
         }
     }
-    public var swishValue: Value { .fileSize(self) }
+    public var swiitValue: Value { .fileSize(self) }
 }
 
-extension Output: SwishConvertible {
-    public static var swishType: SwishType { .output }
-    public init(swishValue: Value) throws {
-        guard let value = swishValue.commandOutput else { throw SwishError.expected("Output", swishValue) }
+extension Output: SwiitConvertible {
+    public static var swiitType: SwiitType { .output }
+    public init(swiitValue: Value) throws {
+        guard let value = swiitValue.commandOutput else { throw SwiitError.expected("Output", swiitValue) }
         self = value
     }
-    public var swishValue: Value { .output(self) }
+    public var swiitValue: Value { .output(self) }
 }
 
-extension Array: SwishConvertible where Element: SwishConvertible {
-    public static var swishType: SwishType { .list(Element.swishType) }
-    public static var swishEnums: [EnumType] { Element.swishEnums }
-    public init(swishValue: Value) throws {
-        switch swishValue {
-        case .list(let items): self = try items.map(Element.init(swishValue:))
-        case _ where swishValue.commandOutput != nil:
-            self = try swishValue.commandOutput!.lines.map { try Element(swishValue: .string($0)) }
-        default: throw SwishError.expected("[\(Element.swishType)]", swishValue)
+extension Array: SwiitConvertible where Element: SwiitConvertible {
+    public static var swiitType: SwiitType { .list(Element.swiitType) }
+    public static var swiitEnums: [EnumType] { Element.swiitEnums }
+    public init(swiitValue: Value) throws {
+        switch swiitValue {
+        case .list(let items): self = try items.map(Element.init(swiitValue:))
+        case _ where swiitValue.commandOutput != nil:
+            self = try swiitValue.commandOutput!.lines.map { try Element(swiitValue: .string($0)) }
+        default: throw SwiitError.expected("[\(Element.swiitType)]", swiitValue)
         }
     }
-    public var swishValue: Value { .list(map(\.swishValue)) }
+    public var swiitValue: Value { .list(map(\.swiitValue)) }
 }
 
-extension Optional: SwishConvertible where Wrapped: SwishConvertible {
-    public static var swishType: SwishType { .optional(Wrapped.swishType) }
-    public static var swishEnums: [EnumType] { Wrapped.swishEnums }
-    public init(swishValue: Value) throws {
-        self = swishValue == .nothing ? nil : try Wrapped(swishValue: swishValue)
+extension Optional: SwiitConvertible where Wrapped: SwiitConvertible {
+    public static var swiitType: SwiitType { .optional(Wrapped.swiitType) }
+    public static var swiitEnums: [EnumType] { Wrapped.swiitEnums }
+    public init(swiitValue: Value) throws {
+        self = swiitValue == .nothing ? nil : try Wrapped(swiitValue: swiitValue)
     }
-    public var swishValue: Value { map(\.swishValue) ?? .nothing }
+    public var swiitValue: Value { map(\.swiitValue) ?? .nothing }
 }
 
-extension SwishError {
-    static func expected(_ type: String, _ value: Value) -> SwishError {
-        SwishError("expected \(type), not \(value.typeName)")
+extension SwiitError {
+    static func expected(_ type: String, _ value: Value) -> SwiitError {
+        SwiitError("expected \(type), not \(value.typeName)")
     }
 }
 
@@ -295,47 +295,47 @@ extension Value {
     public init(returning result: Any) throws {
         switch result {
         case is Void: self = .nothing
-        case let value as any SwishConvertible: self = value.swishValue
-        case let object as any SwishObject: self = .object(object)
-        case let objects as [any SwishObject]: self = .list(objects.map(Value.object))
+        case let value as any SwiitConvertible: self = value.swiitValue
+        case let object as any SwiitObject: self = .object(object)
+        case let objects as [any SwiitObject]: self = .list(objects.map(Value.object))
         case let data as any Encodable: self = try ValueEncoder().encode(data)
-        default: throw SwishError("can't return a \(type(of: result)) to Swish; make it Encodable or @SwishExport it")
+        default: throw SwiitError("can't return a \(type(of: result)) to Swish; make it Encodable or @SwiitExport it")
         }
     }
 }
 
 /// What the shell checks a parameter's arguments against.
-public func swishParameterType<T: SwishConvertible>(_ type: T.Type) -> SwishType { T.swishType }
+public func swiitParameterType<T: SwiitConvertible>(_ type: T.Type) -> SwiitType { T.swiitType }
 /// An exported object: anything, checked when it's converted.
-public func swishParameterType<T: SwishObject>(_ type: T.Type) -> SwishType { .any }
+public func swiitParameterType<T: SwiitObject>(_ type: T.Type) -> SwiitType { .any }
 
-public func swishParameterEnums<T: SwishConvertible>(_ type: T.Type) -> [EnumType] { T.swishEnums }
-public func swishParameterEnums<T: SwishObject>(_ type: T.Type) -> [EnumType] { [] }
+public func swiitParameterEnums<T: SwiitConvertible>(_ type: T.Type) -> [EnumType] { T.swiitEnums }
+public func swiitParameterEnums<T: SwiitObject>(_ type: T.Type) -> [EnumType] { [] }
 
 /// What a function returns, for signatures and `--help`.
-public func swishReturnType(_ type: Any.Type) -> SwishType {
-    (type as? any SwishConvertible.Type)?.swishType ?? .any
+public func swiitReturnType(_ type: Any.Type) -> SwiitType {
+    (type as? any SwiitConvertible.Type)?.swiitType ?? .any
 }
 
 /// An object argument: one of the plugin's own exported classes.
-public func swishArgument<T: SwishObject>(
+public func swiitArgument<T: SwiitObject>(
     _ arguments: [String: Value], _ name: String, of function: String, as type: T.Type = T.self
 ) throws -> T {
     guard case .object(let object as T) = arguments[name] ?? .nothing else {
-        throw SwishError("\(function): \(name): expected \(T.self), not \((arguments[name] ?? .nothing).typeName)")
+        throw SwiitError("\(function): \(name): expected \(T.self), not \((arguments[name] ?? .nothing).typeName)")
     }
     return object
 }
 
 /// An argument the macro-generated code converts: a clear message naming
 /// the function and parameter when it doesn't fit.
-public func swishArgument<T: SwishConvertible>(
+public func swiitArgument<T: SwiitConvertible>(
     _ arguments: [String: Value], _ name: String, of function: String, as type: T.Type = T.self
 ) throws -> T {
     do {
-        return try T(swishValue: arguments[name] ?? .nothing)
-    } catch let error as SwishError {
-        throw SwishError("\(function): \(name): \(error)")
+        return try T(swiitValue: arguments[name] ?? .nothing)
+    } catch let error as SwiitError {
+        throw SwiitError("\(function): \(name): \(error)")
     }
 }
 
@@ -343,17 +343,17 @@ public func swishArgument<T: SwishConvertible>(
 /// `volume(.high)`), a result, and in `switch`. Conforming is all it takes,
 /// for an enum without associated values:
 ///
-///     public enum Level: String, CaseIterable, SwishEnum { case low, high }
+///     public enum Level: String, CaseIterable, SwiitEnum { case low, high }
 ///
 /// The shell learns it by name from the functions that take it.
-public protocol SwishEnum: SwishConvertible, CaseIterable {
+public protocol SwiitEnum: SwiitConvertible, CaseIterable {
     /// Its cases and raw values, as Swish sees them; one instance per type,
     /// so values compare equal across calls.
-    static var swishEnumType: EnumType { get }
+    static var swiitEnumType: EnumType { get }
 }
 
-extension SwishEnum {
-    public static var swishEnumType: EnumType {
+extension SwiitEnum {
+    public static var swiitEnumType: EnumType {
         EnumRegistry.shared.type(for: Self.self) {
             EnumType(name: String(describing: Self.self), cases: allCases.map { value in
                 let raw = (value as? any RawRepresentable)?.rawValue
@@ -368,23 +368,23 @@ extension SwishEnum {
         }
     }
 
-    public static var swishType: SwishType { .named(swishEnumType.name) }
-    public static var swishEnums: [EnumType] { [swishEnumType] }
+    public static var swiitType: SwiitType { .named(swiitEnumType.name) }
+    public static var swiitEnums: [EnumType] { [swiitEnumType] }
 
-    public init(swishValue: Value) throws {
-        guard case .enumValue(let value) = swishValue, value.type === Self.swishEnumType,
+    public init(swiitValue: Value) throws {
+        guard case .enumValue(let value) = swiitValue, value.type === Self.swiitEnumType,
               let found = Self.allCases.first(where: { String(describing: $0) == value.name }) else {
-            throw SwishError.expected(Self.swishEnumType.name, swishValue)
+            throw SwiitError.expected(Self.swiitEnumType.name, swiitValue)
         }
         self = found
     }
 
-    public var swishValue: Value {
-        .enumValue(EnumValue(type: Self.swishEnumType, name: String(describing: self)))
+    public var swiitValue: Value {
+        .enumValue(EnumValue(type: Self.swiitEnumType, name: String(describing: self)))
     }
 }
 
-/// Each `SwishEnum`'s `EnumType`, made once.
+/// Each `SwiitEnum`'s `EnumType`, made once.
 final class EnumRegistry: @unchecked Sendable {
     static let shared = EnumRegistry()
     private let lock = NSLock()
@@ -405,17 +405,17 @@ final class EnumRegistry: @unchecked Sendable {
 /// Exports a function to Swish: its signature, doc comment, `@Flag`s and
 /// `@Input` become the same command line and `--help` a Swish `func` gets.
 /// Importing the package is all that's needed; there's nothing to list.
-@attached(peer, names: prefixed(__swish_export_))
-public macro SwishExport() = #externalMacro(module: "SwishKitMacros", type: "SwishExportMacro")
+@attached(peer, names: prefixed(__swiit_export_))
+public macro SwiitExport() = #externalMacro(module: "SwiitKitMacros", type: "SwiitExportMacro")
 
 /// Makes a class a live object in Swish: its public properties and methods
 /// are members (`counter.total`, `counter.add(2)`), shown as fields in
 /// tables. Return it from an exported function to hand it out.
-@attached(extension, conformances: SwishObject, Sendable, names: named(typeName), named(memberNames), named(member), named(description))
-public macro SwishObject() = #externalMacro(module: "SwishKitMacros", type: "SwishObjectMacro")
+@attached(extension, conformances: SwiitObject, Sendable, names: named(typeName), named(memberNames), named(member), named(description))
+public macro SwiitObject() = #externalMacro(module: "SwiitKitMacros", type: "SwiitObjectMacro")
 
 /// `@Flag("n") times: Int = 1`: a short flag on the command line. It only
-/// marks the parameter for `@SwishExport`; the value passes through.
+/// marks the parameter for `@SwiitExport`; the value passes through.
 /// `@Flag all: Bool = false` alone makes the parameter's first letter the
 /// flag (`-a`), which is the form a symbol graph can read: it keeps the
 /// attribute's name but not its arguments.
@@ -436,7 +436,7 @@ public struct Rest<T> {
 }
 
 /// `@Input _ lines: [String]`: receives what's piped in, per item, or the
-/// whole stream for a list. Only a marker for `@SwishExport`.
+/// whole stream for a list. Only a marker for `@SwiitExport`.
 @propertyWrapper
 public struct Input<T> {
     public var wrappedValue: T

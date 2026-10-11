@@ -1,6 +1,6 @@
 @_spi(Host) @_spi(Layer) import Swiit
 import Foundation
-import SwishKit
+import SwiitKit
 
 // The shell's syntax in the core's tree: each form is a node that checks
 // itself, held in the tree as an extension (Language/Syntax/SyntaxExtension.swift),

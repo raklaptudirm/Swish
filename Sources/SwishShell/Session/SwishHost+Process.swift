@@ -1,7 +1,7 @@
 @_spi(Host) import Swiit
 import SwishShellLibrary
 import Foundation
-import SwishKit
+import SwiitKit
 import SwiitStandardLibrary
 
 extension SwishHost {

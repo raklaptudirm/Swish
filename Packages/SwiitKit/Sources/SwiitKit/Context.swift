@@ -1,8 +1,8 @@
 import Foundation
 /// What the shell lends a function that asks for it. A parameter of this type
 /// is filled in when the function is called and is never a command-line
-/// argument or a flag: `func history(in shell: ShellContext) -> [String]`.
-public struct ShellContext: Sendable {
+/// argument or a flag: `func history(in shell: HostContext) -> [String]`.
+public struct HostContext: Sendable {
     /// What was entered at the prompt, oldest first.
     public let history: [String]
     /// Whether output to the terminal may be colored.
@@ -48,7 +48,7 @@ public enum FieldAccess {
         init(_ reader: @escaping (Value, String) -> Value) { self.reader = reader }
     }
 
-    private static let key = "SwishKit.FieldAccess.reader"
+    private static let key = "SwiitKit.FieldAccess.reader"
 
     public static var reader: ((Value, String) -> Value)? {
         get { (Thread.current.threadDictionary[key] as? Box)?.reader }

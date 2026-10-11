@@ -1,5 +1,5 @@
 import Foundation
-import SwishKit
+import SwiitKit
 
 /// A line of standard input, or nil at its end.
 /// - Parameter strippingNewline: leave the line's newline off

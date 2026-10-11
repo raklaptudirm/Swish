@@ -163,17 +163,17 @@ await                             // bring back the most recent: the ^Z'd vim, s
 
 ### Swift packages as commands
 
-Mark functions in a Swift package with `@SwishExport` and `import` it: each
+Mark functions in a Swift package with `@SwiitExport` and `import` it: each
 one becomes a command with flags, `--help` and piping, derived from its
 signature and doc comment, just like a Swish `func`.
 
 ```swift
-// In a package that depends on SwishKit:
+// In a package that depends on SwiitKit:
 /// Greets someone.
-@SwishExport
+@SwiitExport
 public func greet(_ name: String, @Flag("n") times: Int = 1) -> [String] { … }
 
-@SwishExport
+@SwiitExport
 public func longest(@Input _ lines: [String]) -> String? { … }
 ```
 
@@ -183,8 +183,8 @@ greet Rak -n 2
 ls | get name | longest
 ```
 
-Enums that conform to `SwishEnum` work as arguments, `Encodable` results
-become records, and `@SwishObject` classes are live objects with their
+Enums that conform to `SwiitEnum` work as arguments, `Encodable` results
+become records, and `@SwiitObject` classes are live objects with their
 properties and methods. See [`Examples/Tools`](Examples/Tools).
 
 ### The rest of a shell, a little tidier
@@ -250,7 +250,7 @@ is reported, and the default prompt drawn instead. History lives in the XDG stat
 ```sh
 swift build
 .build/debug/swish
-swift run swish -c 'run test'     # unit tests of the shell, Swiit and SwishKit, plus pty-driven job-control, editor and background-job tests
+swift run swish -c 'run test'     # unit tests of the shell, Swiit, SwiitKit and SwishKit, plus pty-driven job-control, editor and background-job tests
 swift run swish -c 'run bridge'   # regenerate the standard library bridge (after a toolchain update)
 ```
 
@@ -264,7 +264,8 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
 
 | Path | What |
 |---|---|
-| `Packages/SwishKit` | `Value` and the plugin API, with the `@SwishExport` and `@SwishObject` macros. A separate package so it links as a **dynamic library** shared by the shell and every plugin. |
+| `Packages/SwiitKit` | `Value` and the plugin API, with the `@SwiitExport` and `@SwiitObject` macros. A separate package so it links as a **dynamic library** shared by the shell and every plugin. |
+| `Packages/SwishKit` | SwiitKit's old name: a module that brings in SwiitKit, which keeps the old names, so a plugin written against SwishKit builds unchanged. |
 | `Packages/Swiit` | The interpreter (Swiit), a package of its own that knows nothing of the shell; the shell is a client of it. Its `Sources/Swiit`: |
 | `…/Language` | The language: `Syntax` (the tree and the parser, with a plug-in for syntax a host adds), `Checking` (the type checker, which runs before anything else), `Interpreter` (statements, expressions, calls, structs and enums), `Prelude` (the builtins' declarations) and `Reflection` (a type's members, for `help` and `members`). |
 | `…/Bridge` | Swift's types and members, generated into `Bridge/Generated` from symbol graphs. |
@@ -347,8 +348,8 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
   multi-line editing and wrapping
 - [x] **Display**: at the prompt, the value of an expression is shown with its `debugDescription`,
   pretty-printed to fit the terminal (scripts and `-c` print only what they `print`); color for what matters (errors, job states, directories) and for structure
-- [x] **Plugin ABI**: `@SwishExport` functions with `@Flag`/`@Input`, `SwishEnum` enums,
-  `@SwishObject` classes and `Encodable` results; exports found by symbol, no list to keep;
+- [x] **Plugin ABI**: `@SwiitExport` functions with `@Flag`/`@Input`, `SwiitEnum` enums,
+  `@SwiitObject` classes and `Encodable` results; exports found by symbol, no list to keep;
   `import Name from "path"` builds, loads and registers a local package
 - [ ] **`import` from anywhere**: now part of static types' phase 5: any package or SDK module,
   from a URL or path, without annotations

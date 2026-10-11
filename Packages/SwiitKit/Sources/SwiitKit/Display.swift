@@ -80,7 +80,7 @@ public struct DisplayColumn: Sendable, ExpressibleByStringLiteral {
 /// How the shell's types show in a table, by the name of the type: the
 /// columns of the structs that say so (`Tabular`), and how an enum's cases
 /// are styled (`DisplayStyled`). A function that lays values out is lent it
-/// in the `ShellContext`.
+/// in the `HostContext`.
 public struct DisplayRegistry: Sendable {
     public var columns: [String: [DisplayColumn]]
     public var enumStyles: [String: @Sendable (String) -> DisplayStyle?]
@@ -105,15 +105,15 @@ public protocol DisplayStyled {
 
 /// A Swift type that shows in Swish other than as its `description`: a date
 /// in local time, to the second, and to the minute in a table.
-public protocol SwishDisplayed {
-    var swishDescription: String { get }
-    var swishCell: String { get }
-    var swishDebugDescription: String { get }
+public protocol SwiitDisplayed {
+    var swiitDescription: String { get }
+    var swiitCell: String { get }
+    var swiitDebugDescription: String { get }
     /// It with terminal color escapes, if it has colors to show: what's
-    /// written to a terminal, where `swishDescription` is for a pipe or file.
-    var swishColored: String? { get }
+    /// written to a terminal, where `swiitDescription` is for a pipe or file.
+    var swiitColored: String? { get }
     /// What else the printers need to know of how it looks.
-    var swishShape: DisplayShape { get }
+    var swiitShape: DisplayShape { get }
 }
 
 /// The facts about how a value looks that the printers need beyond its text,
@@ -140,21 +140,21 @@ public struct DisplayShape: Sendable {
 extension Value {
     /// How it looks, beyond its text: plain for anything that doesn't say.
     public var displayShape: DisplayShape {
-        if case .object(let box as SwiftValue) = self, let displayed = box.value as? any SwishDisplayed {
-            return displayed.swishShape
+        if case .object(let box as SwiftValue) = self, let displayed = box.value as? any SwiitDisplayed {
+            return displayed.swiitShape
         }
         return DisplayShape()
     }
 }
 
-extension SwishDisplayed {
-    public var swishShape: DisplayShape { DisplayShape() }
-    public var swishCell: String { swishDescription }
-    public var swishDebugDescription: String { swishDescription }
-    public var swishColored: String? { nil }
+extension SwiitDisplayed {
+    public var swiitShape: DisplayShape { DisplayShape() }
+    public var swiitCell: String { swiitDescription }
+    public var swiitDebugDescription: String { swiitDescription }
+    public var swiitColored: String? { nil }
 }
 
-extension Date: SwishDisplayed {
+extension Date: SwiitDisplayed {
     private static let formatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -162,7 +162,7 @@ extension Date: SwishDisplayed {
         return formatter
     }()
 
-    public var swishDescription: String { Date.formatter.string(from: self) }
+    public var swiitDescription: String { Date.formatter.string(from: self) }
     /// `2026-09-27 14:03`.
-    public var swishCell: String { String(swishDescription.prefix(16)) }
+    public var swiitCell: String { String(swiitDescription.prefix(16)) }
 }

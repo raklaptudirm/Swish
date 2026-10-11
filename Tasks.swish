@@ -11,6 +11,7 @@ let darwin = $(uname).text == "Darwin"
 func test() {
     try! _swiftTest(".")
     try! _swiftTest("Packages/Swiit")
+    try! _swiftTest("Packages/SwiitKit")
     try! _swiftTest("Packages/SwishKit")
     try! swift build
     for script in ["job-control", "line-editor", "background-jobs", "config", "signals"] {
@@ -33,14 +34,14 @@ func bridge() {
     try! swift build
     // Other modules that extend a module's types, whose graphs are read with
     // it; the shell's own also declares types the extensions use.
-    let extensions = ["Swift": ["_StringProcessing", "SwiitStandardLibrary"], "Foundation": ["SwiitStandardLibrary", "SwishKit"]]
+    let extensions = ["Swift": ["_StringProcessing", "SwiitStandardLibrary"], "Foundation": ["SwiitStandardLibrary", "SwiitKit"]]
     let declaresTypes = ["SwiitStandardLibrary"]
     // A module's types can be defined in a module it re-exports, which some
     // platforms don't have: Foundation's Date is FoundationEssentials' on
     // Linux. Their graphs are read with it, and what adds to them is too.
     let reexports = ["Foundation": ["FoundationEssentials"]]
     func exists(_ file: String) -> Bool { $(^test -f $file).status.succeeded }
-    for module in ["Swift", "SystemPackage", "SwishKit", "Foundation", "SwiitStandardLibrary", "SwishShellLibrary"] {
+    for module in ["Swift", "SystemPackage", "SwiitKit", "Foundation", "SwiitStandardLibrary", "SwishShellLibrary"] {
         try! _graph(module, into: graphs)
         var extra: [String] = []
         var hosts = [module]

@@ -1,4 +1,4 @@
-import SwishKit
+import SwiitKit
 import Testing
 
 @Test func rendersScalars() {
@@ -32,7 +32,7 @@ private final class Stub: Callable {
     #expect(!Output(text: "", code: nil, signal: 15).succeeded)
 }
 
-private final class Thing: SwishObject {
+private final class Thing: SwiitObject {
     var typeName: String { "Thing" }
     var memberNames: [String] { ["size"] }
     var description: String { "a thing" }

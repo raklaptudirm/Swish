@@ -1,5 +1,5 @@
 @_spi(Host) @_spi(Layer) import Swiit
-import SwishKit
+import SwiitKit
 
 extension Shell {
     /// `jobs`, the jobs in the background oldest first, and what `await` waits

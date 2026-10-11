@@ -1,7 +1,7 @@
 import SwishShellLibrary
 @_spi(Host) @_spi(Layer) import Swiit
 import Foundation
-import SwishKit
+import SwiitKit
 import SwiitStandardLibrary
 
 /// A pipeline of processes, one running in the foreground or a job in the
@@ -94,7 +94,7 @@ final class Job: CheckedObject, @unchecked Sendable {
         }, as: "Flow")
     }
 
-    // MARK: SwishObject
+    // MARK: SwiitObject
 
     var typeName: String { "Job" }
     var checkedType: TypeAnnotation { .named("Job") }

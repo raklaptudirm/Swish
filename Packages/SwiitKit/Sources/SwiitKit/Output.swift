@@ -52,15 +52,15 @@ public struct Status: Sendable, Hashable, Encodable {
     }
 }
 
-extension Output: CustomStringConvertible, CustomDebugStringConvertible, SwishDisplayed {
+extension Output: CustomStringConvertible, CustomDebugStringConvertible, SwiitDisplayed {
     public var description: String { text }
-    public var swishDescription: String { text }
+    public var swiitDescription: String { text }
     /// Shown as its text and status, and nothing at all if it's empty.
-    public var swishShape: DisplayShape {
+    public var swiitShape: DisplayShape {
         DisplayShape(isEmpty: text.isEmpty, fields: Record(["text": .string(text), "status": .record(statusRecord)], typeName: "Output"))
     }
     /// One line in a table: its newlines shown as ↵.
-    public var swishCell: String { text.replacingOccurrences(of: "\n", with: "↵") }
+    public var swiitCell: String { text.replacingOccurrences(of: "\n", with: "↵") }
     /// The record `output.status` is, with every field there.
     public var statusRecord: Record {
         Record([
@@ -72,7 +72,7 @@ extension Output: CustomStringConvertible, CustomDebugStringConvertible, SwishDi
     public var debugDescription: String {
         "Output(text: \(Value.quoted(text)), status: \(statusRecord.debugDescription))"
     }
-    public var swishDebugDescription: String { debugDescription }
+    public var swiitDebugDescription: String { debugDescription }
 }
 
 /// A type that stands for text where a String is wanted: a command's output,

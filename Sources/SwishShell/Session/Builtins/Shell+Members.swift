@@ -1,6 +1,6 @@
 import Foundation
 @_spi(Host) @_spi(Layer) import Swiit
-import SwishKit
+import SwiitKit
 
 extension Interpreter {
     // MARK: Conversions

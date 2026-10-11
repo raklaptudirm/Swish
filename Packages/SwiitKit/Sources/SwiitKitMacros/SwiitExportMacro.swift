@@ -3,8 +3,8 @@ import SwiftSyntax
 import SwiftSyntaxMacros
 
 @main
-struct SwishKitMacros: CompilerPlugin {
-    let providingMacros: [any Macro.Type] = [SwishExportMacro.self, SwishObjectMacro.self]
+struct SwiitKitMacros: CompilerPlugin {
+    let providingMacros: [any Macro.Type] = [SwiitExportMacro.self, SwiitObjectMacro.self]
 }
 
 struct MacroError: Error, CustomStringConvertible {
@@ -12,21 +12,21 @@ struct MacroError: Error, CustomStringConvertible {
     init(_ description: String) { self.description = description }
 }
 
-/// `@SwishExport`: a peer `__swish_export_<name>`, exported to C as
-/// `swish_export_<name>`, that describes the function.
-public struct SwishExportMacro: PeerMacro {
+/// `@SwiitExport`: a peer `__swiit_export_<name>`, exported to C as
+/// `swiit_export_<name>`, that describes the function.
+public struct SwiitExportMacro: PeerMacro {
     public static func expansion(
         of node: AttributeSyntax, providingPeersOf declaration: some DeclSyntaxProtocol, in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
         guard let function = declaration.as(FunctionDeclSyntax.self) else {
-            throw MacroError("@SwishExport goes on a function; use SwishEnum for an enum and @SwishObject for a class")
+            throw MacroError("@SwiitExport goes on a function; use SwiitEnum for an enum and @SwiitObject for a class")
         }
         let name = function.name.text
         let exported = try exportedFunction(function, receiver: nil)
         // The symbol the shell looks for when it loads the plugin.
         return ["""
-        @_cdecl("swish_export_\(raw: name)")
-        public func __swish_export_\(raw: name)() -> UnsafeMutableRawPointer {
+        @_cdecl("swiit_export_\(raw: name)")
+        public func __swiit_export_\(raw: name)() -> UnsafeMutableRawPointer {
             Unmanaged.passRetained(NativeFunction(\(raw: exported))).toOpaque()
         }
         """]
@@ -65,9 +65,9 @@ public struct SwishExportMacro: PeerMacro {
             for attribute in parameter.attributes {
                 guard let attribute = attribute.as(AttributeSyntax.self) else { continue }
                 switch attribute.attributeName.trimmedDescription {
-                case "Input", "SwishKit.Input":
+                case "Input", "SwiitKit.Input":
                     isInput = true
-                case "Flag", "SwishKit.Flag":
+                case "Flag", "SwiitKit.Flag":
                     guard let argument = attribute.arguments?.as(LabeledExprListSyntax.self)?.first?.expression
                         .as(StringLiteralExprSyntax.self)?.representedLiteralValue, argument.count == 1 else {
                         throw MacroError("\(name): @Flag takes one character, like @Flag(\"n\")")
@@ -81,14 +81,14 @@ public struct SwishExportMacro: PeerMacro {
             var fields = [
                 "label: \(label.map(quoted) ?? "nil")",
                 "name: \(quoted(parameterName))",
-                "type: swishParameterType(\(type).self)",
-                "enums: swishParameterEnums(\(type).self)",
+                "type: swiitParameterType(\(type).self)",
+                "enums: swiitParameterEnums(\(type).self)",
             ]
             if isInput { fields.append("isInput: true") }
             if let shortFlag { fields.append("shortFlag: \(quoted(shortFlag))") }
             if let doc = docs.parameters[parameterName] { fields.append("documentation: \(quoted(doc))") }
 
-            var argument = "try swishArgument(arguments, \(quoted(parameterName)), of: \(quoted(name)), as: \(type).self)"
+            var argument = "try swiitArgument(arguments, \(quoted(parameterName)), of: \(quoted(name)), as: \(type).self)"
             if let defaultExpr = parameter.defaultValue?.value {
                 if let literal = literalValue(defaultExpr) {
                     fields.append("defaultValue: \(literal)")
@@ -104,7 +104,7 @@ public struct SwishExportMacro: PeerMacro {
 
         let callee = receiver.map { "\($0).\(name)" } ?? name
         let call = "\(throwing ? "try " : "")\(callee)(\(arguments.joined(separator: ", ")))"
-        let returnType = signature.returnClause.map { "swishReturnType(\($0.type.trimmedDescription).self)" } ?? "nil"
+        let returnType = signature.returnClause.map { "swiitReturnType(\($0.type.trimmedDescription).self)" } ?? "nil"
         let capture = receiver.map { "[\($0)] " } ?? ""
         return """
         ExportedFunction(
@@ -112,7 +112,7 @@ public struct SwishExportMacro: PeerMacro {
             summary: \(docs.summary.map(quoted) ?? "nil"),
             parameters: [\(parameters.joined(separator: ", "))],
             returnType: \(returnType),
-            abiVersion: swishPluginABIVersion,
+            abiVersion: swiitPluginABIVersion,
             isThrowing: \(throwing),
             call: { \(capture)arguments in try Value(returning: \(call)) }
         )
@@ -144,15 +144,15 @@ public struct SwishExportMacro: PeerMacro {
 
 }
 
-/// `@SwishObject`: the members of a live object, from a class's public
+/// `@SwiitObject`: the members of a live object, from a class's public
 /// properties and methods.
-public struct SwishObjectMacro: ExtensionMacro {
+public struct SwiitObjectMacro: ExtensionMacro {
     public static func expansion(
         of node: AttributeSyntax, attachedTo declaration: some DeclGroupSyntax, providingExtensionsOf type: some TypeSyntaxProtocol,
         conformingTo protocols: [TypeSyntax], in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
         guard let classDecl = declaration.as(ClassDeclSyntax.self) else {
-            throw MacroError("@SwishObject goes on a class; a struct can be returned as Encodable data, and an enum can conform to SwishEnum")
+            throw MacroError("@SwiitObject goes on a class; a struct can be returned as Encodable data, and an enum can conform to SwiitEnum")
         }
         // The compiler says which conformances are missing: a class that's
         // already Sendable doesn't get it again.
@@ -173,7 +173,7 @@ public struct SwishObjectMacro: ExtensionMacro {
                 properties += names.filter { $0 != "description" }
             } else if let function = member.decl.as(FunctionDeclSyntax.self),
                       isPublic(function.modifiers), !isStatic(function.modifiers) {
-                methods.append((function.name.text, try SwishExportMacro.exportedFunction(function, receiver: "self")))
+                methods.append((function.name.text, try SwiitExportMacro.exportedFunction(function, receiver: "self")))
             }
         }
         let memberNames = properties + methods.map(\.0)
@@ -181,7 +181,7 @@ public struct SwishObjectMacro: ExtensionMacro {
         let methodCases = methods.map { "case \(quoted($0.0)): return .function(NativeFunction(\($0.1)))" }
         let description = hasDescription ? "" : "public var description: String { \(quoted("<" + name + ">")) }"
         return try ExtensionDeclSyntax("""
-        extension \(type.trimmed): SwishObject\(raw: needsSendable ? ", @unchecked Sendable" : "") {
+        extension \(type.trimmed): SwiitObject\(raw: needsSendable ? ", @unchecked Sendable" : "") {
             public var typeName: String { \(raw: quoted(name)) }
             public var memberNames: [String] { [\(raw: memberNames.map(quoted).joined(separator: ", "))] }
             public func member(_ name: String) -> Value? {

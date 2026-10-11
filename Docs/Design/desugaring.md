@@ -71,7 +71,7 @@ functions in scope there.
 | `ls $dir *.swift` (words with runtime parts) | `await Words.call(ls, [.interpolation(dir), .glob("*.swift")])`: the dynamic form, converting words to arguments at run time | no |
 | `where { $0.size > 1.mb }` (a closure word) | the closure, as an argument | no |
 | `^name args` | `Command("name", args)`: a program, skipping functions and builtins of that name | no |
-| `cd`, `exit`, `exec`, `source`, `umask`, `ulimit`, `which`, `run` | Swift functions, not sugar: library functions that take the shell through `ShellContext` | n/a |
+| `cd`, `exit`, `exec`, `source`, `umask`, `ulimit`, `which`, `run` | Swift functions, not sugar: library functions that take the shell through `HostContext` | n/a |
 
 How a name is read, command or expression, stays a parsing rule, not a
 rewrite: a name that isn't a known variable at the start of a statement is a

@@ -11,9 +11,9 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "Packages/Swiit"),
-        // A separate package so the host links SwishKit as a dylib (products of
+        // A separate package so the host links SwiitKit as a dylib (products of
         // the same package would be linked statically into the executable).
-        .package(path: "Packages/SwishKit"),
+        .package(path: "Packages/SwiitKit"),
         .package(url: "https://github.com/apple/swift-system.git", from: "1.4.0"),
     ],
     targets: [
@@ -24,7 +24,7 @@ let package = Package(
             name: "SwishShellLibrary",
             dependencies: [
                 .product(name: "SwiitStandardLibrary", package: "Swiit"),
-                .product(name: "SwishKit", package: "SwishKit"),
+                .product(name: "SwiitKit", package: "SwiitKit"),
                 .product(name: "SystemPackage", package: "swift-system"),
             ],
             path: "Sources/SwishShell/Library"
@@ -37,7 +37,7 @@ let package = Package(
                 .product(name: "Swiit", package: "Swiit"),
                 .product(name: "SwiitSwiftSyntax", package: "Swiit"),
                 "SwishShellLibrary",
-                .product(name: "SwishKit", package: "SwishKit"),
+                .product(name: "SwiitKit", package: "SwiitKit"),
                 .product(name: "SystemPackage", package: "swift-system"),
             ],
             exclude: ["Library"]

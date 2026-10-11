@@ -1,6 +1,6 @@
 @_spi(Host) @_spi(Layer) import Swiit
 import Foundation
-import SwishKit
+import SwiitKit
 
 /// Rewrites the shell's constructs in a checked program into Swift: what each
 /// means is in Docs/Design/desugaring.md. It runs after the checker, which

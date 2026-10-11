@@ -1,5 +1,5 @@
 import SwiitStandardLibrary
-import SwishKit
+import SwiitKit
 
 /// What text `from` can parse.
 public enum InputFormat: CaseIterable {
@@ -23,7 +23,7 @@ public enum OutputFormat: CaseIterable {
 
 /// Converts the input to text: json, or text for how it would be displayed.
 /// - Parameter format: json or text
-public func to(_ format: OutputFormat, @Input _ items: [SwishValue], in shell: ShellContext) throws -> String {
+public func to(_ format: OutputFormat, @Input _ items: [SwiitValue], in shell: HostContext) throws -> String {
     switch format {
     case .json: try JSON.text(items.count == 1 ? items[0] : .list(items))
     case .text: laidOut(items, useViews: true, shell).joined(separator: "\n")
@@ -31,12 +31,12 @@ public func to(_ format: OutputFormat, @Input _ items: [SwishValue], in shell: S
 }
 
 /// Lays records out as a table with every field.
-public func table(@Input _ items: [SwishValue], in shell: ShellContext) -> [String] {
+public func table(@Input _ items: [SwiitValue], in shell: HostContext) -> [String] {
     laidOut(items, useViews: false, shell)
 }
 
 /// Shows each record as a list of fields.
-public func list(@Input _ items: [SwishValue], in shell: ShellContext) -> [String] {
+public func list(@Input _ items: [SwiitValue], in shell: HostContext) -> [String] {
     var lines: [String] = []
     for item in items {
         if !lines.isEmpty { lines.append("") }
@@ -50,7 +50,7 @@ public func list(@Input _ items: [SwishValue], in shell: ShellContext) -> [Strin
 }
 
 /// The lines the display step would show for `items`.
-private func laidOut(_ items: [SwishValue], useViews: Bool, _ shell: ShellContext) -> [String] {
+private func laidOut(_ items: [SwiitValue], useViews: Bool, _ shell: HostContext) -> [String] {
     var lines: [String] = []
     let formatter = DisplayFormatter(useViews: useViews, registry: shell.display) { text in
         lines.append(String(text.dropLast()))

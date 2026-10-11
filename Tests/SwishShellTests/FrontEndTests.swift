@@ -2,7 +2,7 @@
 @_spi(Shell) import SwiitSwiftSyntax
 @_spi(Shell) @_spi(Host) @_spi(Layer) @testable import SwishShell
 import Foundation
-import SwishKit
+import SwiitKit
 import Testing
 
 // The shell's syntax under the SwiftSyntax front end: the hand-written parser,

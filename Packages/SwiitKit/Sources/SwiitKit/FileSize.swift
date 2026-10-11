@@ -69,12 +69,12 @@ public struct FileSize: Codable, Hashable, Comparable, Sendable, LosslessStringC
     /// A size from a number of bytes worked out in floating point; an error
     /// where it wouldn't fit.
     private static func scaled(_ bytes: Double) throws -> FileSize {
-        guard bytes.magnitude < Double(Int.max) else { throw SwishError("arithmetic overflow") }
+        guard bytes.magnitude < Double(Int.max) else { throw SwiitError("arithmetic overflow") }
         return FileSize(bytes: Int(bytes))
     }
 
     private static func divided(_ bytes: Int, by divisor: Double) throws -> FileSize {
-        guard divisor != 0 else { throw SwishError("division by zero") }
+        guard divisor != 0 else { throw SwiitError("division by zero") }
         return try scaled(Double(bytes) / divisor)
     }
 
@@ -93,8 +93,8 @@ public struct FileSize: Codable, Hashable, Comparable, Sendable, LosslessStringC
     public static func / (lhs: FileSize, rhs: FileSize) -> Double { Double(lhs.bytes) / Double(rhs.bytes) }
 }
 
-extension FileSize: SwishDisplayed {
-    public var swishDescription: String { description }
+extension FileSize: SwiitDisplayed {
+    public var swiitDescription: String { description }
     /// A number: in the constant color, and a column of them lines up on the right.
-    public var swishShape: DisplayShape { DisplayShape(role: .constant, isNumeric: true) }
+    public var swiitShape: DisplayShape { DisplayShape(role: .constant, isNumeric: true) }
 }

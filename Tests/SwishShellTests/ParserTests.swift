@@ -1,6 +1,6 @@
 @_spi(Layer) import Swiit
 @_spi(Shell) @_spi(Host) @_spi(Layer) @testable import SwishShell
-import SwishKit
+import SwiitKit
 import Testing
 
 private func names(_ variables: Set<String>, functions: Set<String> = []) -> [String: NameKind] {

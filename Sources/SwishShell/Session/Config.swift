@@ -1,6 +1,6 @@
 @_spi(Host) @_spi(Layer) import Swiit
 import Foundation
-import SwishKit
+import SwiitKit
 
 /// The config file: a Swish script the interactive shell runs as it
 /// starts, whose functions and variables stay defined at the prompt. A

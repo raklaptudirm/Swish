@@ -1,4 +1,4 @@
-import SwishKit
+import SwiitKit
 import Testing
 
 private struct FileEntry: Encodable {
@@ -91,6 +91,6 @@ private final class Node {
     #expect(try (kb / 4).bytes == 250)
     #expect(kb / FileSize(bytes: 500) == 2.0)
     #expect(kb < FileSize(bytes: 1001))
-    #expect(throws: SwishError.self) { try kb / 0 }
-    #expect(throws: SwishError.self) { try FileSize(bytes: .max) * 2 }
+    #expect(throws: SwiitError.self) { try kb / 0 }
+    #expect(throws: SwiitError.self) { try FileSize(bytes: .max) * 2 }
 }

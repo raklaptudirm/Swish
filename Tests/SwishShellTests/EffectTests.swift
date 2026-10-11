@@ -1,6 +1,6 @@
 @_spi(Host) @_spi(Layer) import Swiit
 @_spi(Shell) @_spi(Host) @_spi(Layer) @testable import SwishShell
-import SwishKit
+import SwiitKit
 import Testing
 
 // The shell's waits (`$(…)`, commands, `await job`) are blocking calls, not

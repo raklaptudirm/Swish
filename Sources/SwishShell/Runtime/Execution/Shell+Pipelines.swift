@@ -1,6 +1,6 @@
 @_spi(Host) import Swiit
 import Foundation
-import SwishKit
+import SwiitKit
 
 struct SpawnFailure: Error {
     let message: String

@@ -1,9 +1,9 @@
 @_spi(Host) @_spi(Layer) import Swiit
 import Foundation
-import SwishKit
+import SwiitKit
 
-/// `import Tools from "path"`: builds a Swift package that uses SwishKit,
-/// loads its library, and brings in every `@SwishExport` function, which
+/// `import Tools from "path"`: builds a Swift package that uses SwiitKit,
+/// loads its library, and brings in every `@SwiitExport` function, which
 /// then works like a `func` declared in Swish.
 extension Shell {
     func importPlugin(_ name: String, from path: String) throws {
@@ -72,7 +72,7 @@ extension Shell {
     /// Whether `library` is newer than the package's manifest and sources,
     /// so the import can skip asking SwiftPM, which takes a second or two
     /// even when there's nothing to do. Changes in other packages it
-    /// depends on aren't seen; SwishKit's are safe, its ABI is resilient.
+    /// depends on aren't seen; SwiitKit's are safe, its ABI is resilient.
     private func isUpToDate(_ library: String, package: String) -> Bool {
         let files = FileManager.default
         guard let built = (try? files.attributesOfItem(atPath: library))?[.modificationDate] as? Date else { return false }
@@ -110,31 +110,31 @@ extension Shell {
 
     // MARK: Loading
 
-    /// Opens the library and asks each `swish_export_…` symbol for its
+    /// Opens the library and asks each `swiit_export_…` symbol for its
     /// function.
     private func load(_ name: String, from library: String) throws -> [ExportedFunction] {
         guard let handle = dlopen(library, RTLD_NOW | RTLD_LOCAL) else {
             throw RuntimeError("import \(name): \(String(cString: dlerror()))")
         }
-        let symbols = try exportedSymbols(ofLibrary: library).filter { $0.hasPrefix(swishExportSymbolPrefix) }
+        let symbols = try exportedSymbols(ofLibrary: library).filter { $0.hasPrefix(swiitExportSymbolPrefix) }
         typealias Entry = @convention(c) () -> UnsafeMutableRawPointer
         var functions: [ExportedFunction] = []
         for symbol in symbols.sorted() {
             guard let address = dlsym(handle, symbol) else { continue }
             let entry = unsafeBitCast(address, to: Entry.self)
             let native = Unmanaged<AnyObject>.fromOpaque(entry()).takeRetainedValue()
-            // A plugin that loaded its own copy of SwishKit has types the
+            // A plugin that loaded its own copy of SwiitKit has types the
             // shell can't recognize.
             guard let exported = native as? NativeFunction else {
-                throw RuntimeError("import \(name): the plugin loaded a second copy of SwishKit; it must link the shell's")
+                throw RuntimeError("import \(name): the plugin loaded a second copy of SwiitKit; it must link the shell's")
             }
-            guard exported.function.abiVersion == swishPluginABIVersion else {
-                throw RuntimeError("import \(name): built for plugin ABI \(exported.function.abiVersion), but this shell has \(swishPluginABIVersion); update its SwishKit dependency and rebuild")
+            guard exported.function.abiVersion == swiitPluginABIVersion else {
+                throw RuntimeError("import \(name): built for plugin ABI \(exported.function.abiVersion), but this shell has \(swiitPluginABIVersion); update its SwiitKit dependency and rebuild")
             }
             functions.append(exported.function)
         }
         if functions.isEmpty {
-            throw RuntimeError("import \(name): the package exports nothing; mark functions with @SwishExport")
+            throw RuntimeError("import \(name): the package exports nothing; mark functions with @SwiitExport")
         }
         return functions
     }

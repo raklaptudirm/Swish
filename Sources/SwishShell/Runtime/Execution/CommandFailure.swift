@@ -1,5 +1,5 @@
 @_spi(Host) import Swiit
-import SwishKit
+import SwiitKit
 
 extension RuntimeError {
     /// A command that failed under `try`: what `catch` binds is a

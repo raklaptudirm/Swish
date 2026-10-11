@@ -21,7 +21,7 @@ public enum Waiting {
         init(_ host: WaitingHost?) { self.host = host }
     }
 
-    private static let key = "SwishKit.Waiting.host"
+    private static let key = "SwiitKit.Waiting.host"
 
     /// What runs the Swish code on this thread, if anything does.
     public static var host: WaitingHost? {

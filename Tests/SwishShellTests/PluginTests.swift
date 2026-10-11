@@ -10,7 +10,7 @@ private func output(_ source: String, in shell: Shell) throws -> String {
 private let tools = "/" + #filePath.split(separator: "/").dropLast(3).joined(separator: "/") + "/Examples/Tools"
 
 // One test, so the package builds once rather than from tests running in
-// parallel. The first run builds it (and SwishKit) in release mode.
+// parallel. The first run builds it (and SwiitKit) in release mode.
 @Test func importingAPlugin() throws {
     let shell = Shell()
     #expect(try output(#"import Tools from "\#(tools)""#, in: shell) == "")

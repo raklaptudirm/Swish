@@ -20,13 +20,13 @@ public enum Value: Sendable {
     case enumValue(EnumValue)
     /// A live value with members of its own: a background job, an enum type,
     /// and later bridged Swift objects.
-    case object(any SwishObject)
+    case object(any SwiitObject)
     case function(any Callable)
 }
 
 /// A live value that answers for its own members, properties and methods
 /// alike (a method is a function value). Objects compare by identity.
-public protocol SwishObject: AnyObject, Sendable, CustomStringConvertible, CustomDebugStringConvertible {
+public protocol SwiitObject: AnyObject, Sendable, CustomStringConvertible, CustomDebugStringConvertible {
     /// The name `members` and error messages use, like `Job`.
     var typeName: String { get }
     /// Names of its members, for `members` and completion.
@@ -47,7 +47,7 @@ public protocol SwishObject: AnyObject, Sendable, CustomStringConvertible, Custo
 /// A piece of text and the style it's shown in.
 public typealias DisplaySegment = (text: String, style: DisplayStyle?)
 
-extension SwishObject {
+extension SwiitObject {
     public var identity: AnyHashable { AnyHashable(ObjectIdentifier(self)) }
 
     public var displaySegments: [DisplaySegment]? { nil }
@@ -73,7 +73,7 @@ extension SwishObject {
 /// A Swish value as a Swift function takes or gives one whole, whatever it
 /// is. The name tells a bridged function's parameter from a generic parameter
 /// called `Value`.
-public typealias SwishValue = Value
+public typealias SwiitValue = Value
 
 extension Value {
     /// A record, or an object's fields: what a table row is made from.

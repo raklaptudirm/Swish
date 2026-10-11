@@ -1,7 +1,7 @@
 import Foundation
 @_spi(Host) @_spi(Layer) import Swiit
 import SwishShellLibrary
-import SwishKit
+import SwiitKit
 import SwiitStandardLibrary
 
 /// How the standard library's and the shell's own types show in a table:

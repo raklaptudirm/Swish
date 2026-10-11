@@ -12,19 +12,19 @@ import Foundation
 /// decided when it's shown.
 public enum DisplayStyleAttribute: AttributedStringKey {
     public typealias Value = DisplayStyle
-    public static let name = "swish.displayStyle"
+    public static let name = "swiit.displayStyle"
 }
 
 extension AttributeScopes {
-    public struct SwishAttributes: AttributeScope {
+    public struct SwiitAttributes: AttributeScope {
         public let displayStyle: DisplayStyleAttribute
     }
 
-    public var swish: SwishAttributes.Type { SwishAttributes.self }
+    public var swiit: SwiitAttributes.Type { SwiitAttributes.self }
 }
 
 extension AttributeDynamicLookup {
-    public subscript<T: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeScopes.SwishAttributes, T>) -> T {
+    public subscript<T: AttributedStringKey>(dynamicMember keyPath: KeyPath<AttributeScopes.SwiitAttributes, T>) -> T {
         self[T.self]
     }
 }
@@ -33,7 +33,7 @@ extension AttributedString {
     /// Text in a style, or plain if there's none.
     public init(_ text: String, _ style: DisplayStyle?) {
         self.init(text)
-        if let style { self.swish.displayStyle = style }
+        if let style { self.swiit.displayStyle = style }
     }
 
     /// Pieces one after the other.
@@ -60,7 +60,7 @@ extension AttributedString {
         var result = ""
         for run in runs {
             let text = String(self[run.range].characters)
-            if let style = run.swish.displayStyle, !text.isEmpty {
+            if let style = run.swiit.displayStyle, !text.isEmpty {
                 result += style.escape + text + DisplayStyle.reset
             } else {
                 result += text
@@ -75,10 +75,10 @@ extension AttributedString {
     }
 }
 
-extension AttributedString: StandsForText, SwishDisplayed {
+extension AttributedString: StandsForText, SwiitDisplayed {
     public var text: String { plain }
-    public var swishDescription: String { plain }
-    public var swishColored: String? { colored }
+    public var swiitDescription: String { plain }
+    public var swiitColored: String? { colored }
 }
 
 extension Value {

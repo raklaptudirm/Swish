@@ -1,6 +1,6 @@
 @_spi(Host) @_spi(Layer) import Swiit
 import Foundation
-import SwishKit
+import SwiitKit
 
 // What a command and a pipeline are in Swift: the prelude's `Command` and
 // `Pipeline` (Library+Shell.swift), built by hand or by the rewrite of the
@@ -15,7 +15,7 @@ import SwishKit
 /// What the checker decided about a stage, which a stage written by hand
 /// leaves to the shell: what its name is, given what flows into it, which
 /// overload a call to it takes, and why it isn't an expression.
-final class StageHint: SwishObject, @unchecked Sendable {
+final class StageHint: SwiitObject, @unchecked Sendable {
     let resolution: StageResolution?
     let overload: Int?
     let notAnExpression: String?

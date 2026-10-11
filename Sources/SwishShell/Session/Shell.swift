@@ -1,7 +1,7 @@
 @_spi(Host) @_spi(Layer) import Swiit
 @_spi(Shell) import SwiitSwiftSyntax
 import Foundation
-import SwishKit
+import SwiitKit
 
 /// The shell: a process with a terminal, jobs and a line editor, over an
 /// `Interpreter` that knows none of that. It supplies the interpreter's host
@@ -89,7 +89,7 @@ public final class Shell {
         interpreter.host = SwishHost(process: self)
         // Library functions that ask are lent what was entered before, too.
         interpreter.contextProvider = { [unowned self] in
-            ShellContext(history: historyEntries, colorOutput: interpreter.host.output.traits().styled,
+            HostContext(history: historyEntries, colorOutput: interpreter.host.output.traits().styled,
                          display: interpreter.displayRegistryProvider())
         }
         interpreter.owner = self
