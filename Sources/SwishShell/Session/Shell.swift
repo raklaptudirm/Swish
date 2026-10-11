@@ -14,19 +14,29 @@ public final class Shell {
     /// The language.
     let interpreter: Interpreter
 
-    /// The status the last statement gave, kept as statements run
-    /// (`recordStatuses`).
-    public internal(set) var lastStatus: Int32 = 0
-    /// The status the last signal-killed command gave, to tell 130 from ^C
-    /// apart from a command that exited with 130.
-    var lastSignalStatus: Int32?
+    /// What the shell keeps for the task running now (`ShellTask`).
+    var task: ShellTask { interpreter.task.host as! ShellTask }
 
-    /// Where builtins, displayed values and the last stage of a pipeline
-    /// write. Redirected while capturing `$(…)`.
-    var stdoutFD = STDOUT_FILENO
-    /// Where errors are reported, and programs' standard error goes, while
-    /// running something with `2>`.
-    var stderrFD = STDERR_FILENO
+    /// The status the current task's last statement gave.
+    public internal(set) var lastStatus: Int32 {
+        get { task.lastStatus }
+        set { task.lastStatus = newValue }
+    }
+    /// The status the current task's last signal-killed command gave.
+    var lastSignalStatus: Int32? {
+        get { task.lastSignalStatus }
+        set { task.lastSignalStatus = newValue }
+    }
+    /// Where the current task's output goes.
+    var stdoutFD: Int32 {
+        get { task.stdoutFD }
+        set { task.stdoutFD = newValue }
+    }
+    /// Where the current task's errors go.
+    var stderrFD: Int32 {
+        get { task.stderrFD }
+        set { task.stderrFD = newValue }
+    }
     /// Programs on PATH, for highlighting and completion.
     var executableCache: (path: String, time: Date, names: Set<String>)?
 
@@ -61,6 +71,7 @@ public final class Shell {
         // should end that write with EPIPE, not kill the shell.
         signal(SIGPIPE, SIG_IGN)
         interpreter = Interpreter(host: SwishHost(), outputCounter: OutputCounter())
+        interpreter.task.host = ShellTask()
         interpreter.syntax = ShellSyntax()
         interpreter.frontEnd = SwiftSyntaxFrontEnd()
         interpreter.host = SwishHost(process: self)
@@ -162,4 +173,22 @@ extension Shell {
             lastStatus = 1
         }
     }
+}
+
+/// What the shell keeps for each task (the core's `TaskContext`): where its
+/// output and errors go, and how its last statement went. The prompt is the
+/// one task for now (Docs/Design/async.md, step 1).
+final class ShellTask {
+    /// Where builtins, displayed values and the last stage of a pipeline
+    /// write. Redirected while capturing `$(…)`.
+    var stdoutFD = STDOUT_FILENO
+    /// Where errors are reported, and programs' standard error goes, while
+    /// running something with `2>`.
+    var stderrFD = STDERR_FILENO
+    /// The status the last statement gave, kept as statements run
+    /// (`recordStatuses`).
+    var lastStatus: Int32 = 0
+    /// The status the last signal-killed command gave, to tell 130 from ^C
+    /// apart from a command that exited with 130.
+    var lastSignalStatus: Int32?
 }
