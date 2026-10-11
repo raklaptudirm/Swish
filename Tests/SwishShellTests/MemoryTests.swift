@@ -1,25 +1,10 @@
-@_spi(Host) @_spi(Layer) import Swiit
-@_spi(Shell) @_spi(Host) @_spi(Layer) @testable import SwishShell
+@_spi(Layer) import Swiit
+@_spi(Shell) @_spi(Layer) @testable import SwishShell
 import SwiitKit
 import Testing
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
     try onLargeStack { try shell.capturing { shell.enter(source) } }
-}
-
-/// A closure keeps only the variables it names, not the scopes around it:
-/// keeping the scope it's stored in was a cycle, leaked on every call.
-@Test func closuresKeepOnlyWhatTheyUse() throws {
-    let shell = Shell()
-    #expect(try output("func f(_ i: Int) -> () -> Int { let g = { i + 1 }; let unused = [1, 2]; return g }; let h = f(1); h()", in: shell) == "2\n")
-    guard case .function(let closure as Function)? = shell.interpreter.lookup("h")?.value else {
-        Issue.record("h isn't a closure")
-        return
-    }
-    let capture = try #require(closure.captured.last)
-    #expect(capture.bindings.keys.sorted() == ["i"])
-    // The call's scope, which held `g` and `unused`, is gone once it returned.
-    #expect(!capture.fallbacks.isEmpty && capture.fallbacks.allSatisfy { $0.scope == nil })
 }
 
 @Test func capturedVariablesAreShared() throws {

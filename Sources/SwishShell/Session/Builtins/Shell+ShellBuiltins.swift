@@ -1,4 +1,4 @@
-@_spi(Host) import Swiit
+@_spi(Layer) import Swiit
 import Foundation
 import SwiitKit
 

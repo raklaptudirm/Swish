@@ -2,7 +2,7 @@
 // Don't edit: `run bridge` remakes it.
 import Foundation
 import SwiitKit
-@_spi(Host) @_spi(Layer) import Swiit
+@_spi(Layer) import Swiit
 import SwishShellLibrary
 import SystemPackage
 

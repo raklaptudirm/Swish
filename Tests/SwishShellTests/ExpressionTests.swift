@@ -1,5 +1,5 @@
-@_spi(Host) @_spi(Layer) import Swiit
-@_spi(Shell) @_spi(Host) @_spi(Layer) @testable import SwishShell
+@_spi(Layer) import Swiit
+@_spi(Shell) @_spi(Layer) @testable import SwishShell
 import SwiitKit
 import Testing
 

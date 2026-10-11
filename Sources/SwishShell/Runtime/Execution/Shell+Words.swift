@@ -1,5 +1,5 @@
 import SwishShellLibrary
-@_spi(Host) import Swiit
+import Swiit
 import Foundation
 import SwiitKit
 import SwiitStandardLibrary

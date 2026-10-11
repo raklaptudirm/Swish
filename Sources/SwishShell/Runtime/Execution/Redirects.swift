@@ -1,4 +1,4 @@
-@_spi(Host) import Swiit
+import Swiit
 import Foundation
 
 /// A redirect with its file name worked out.

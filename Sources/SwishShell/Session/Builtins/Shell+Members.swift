@@ -1,5 +1,5 @@
 import Foundation
-@_spi(Host) @_spi(Layer) import Swiit
+@_spi(Layer) import Swiit
 import SwiitKit
 
 extension Interpreter {

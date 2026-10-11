@@ -1,4 +1,4 @@
-@_spi(Host) import Swiit
+import Swiit
 import SwishShellLibrary
 import Foundation
 import SwiitKit
