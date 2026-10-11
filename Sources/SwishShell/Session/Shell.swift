@@ -14,12 +14,12 @@ public final class Shell {
     /// The language.
     let interpreter: Interpreter
 
-    /// The status the last statement gave. The interpreter's, which keeps it
-    /// for now (the `status` group of Docs/Design/boundaries.md).
-    public internal(set) var lastStatus: Int32 {
-        get { interpreter.lastStatus }
-        set { interpreter.lastStatus = newValue }
-    }
+    /// The status the last statement gave, kept as statements run
+    /// (`recordStatuses`).
+    public internal(set) var lastStatus: Int32 = 0
+    /// The status the last signal-killed command gave, to tell 130 from ^C
+    /// apart from a command that exited with 130.
+    var lastSignalStatus: Int32?
 
     /// Where builtins, displayed values and the last stage of a pipeline
     /// write. Redirected while capturing `$(…)`.
@@ -60,11 +60,15 @@ public final class Shell {
         // The shell writes into pipes itself now; a reader exiting early
         // should end that write with EPIPE, not kill the shell.
         signal(SIGPIPE, SIG_IGN)
-        interpreter = Interpreter(host: SwishHost(), shellLayer: nil)
+        interpreter = Interpreter(host: SwishHost(), outputCounter: OutputCounter())
         interpreter.syntax = ShellSyntax()
         interpreter.frontEnd = SwiftSyntaxFrontEnd()
         interpreter.host = SwishHost(process: self)
-        interpreter.shellLayer = ShellLayer(process: self)
+        // Library functions that ask are lent what was entered before, too.
+        interpreter.contextProvider = { [unowned self] in
+            ShellContext(history: historyEntries, colorOutput: interpreter.host.output.traits().styled,
+                         display: interpreter.displayRegistryProvider())
+        }
         interpreter.owner = self
         interpreter.displayRegistryProvider = { [unowned interpreter] in interpreter.tableRegistry() }
         interpreter.bind("env", to: EnvironmentObject(access: .process))

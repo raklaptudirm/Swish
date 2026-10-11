@@ -86,11 +86,11 @@ extension Shell {
                 throw RuntimeError("capture needs a block")
             }
             // What runs in it leaves the status it ends with.
-            let before = interpreter.lastStatus
-            interpreter.lastStatus = 0
+            let before = lastStatus
+            lastStatus = 0
             let text = try capturing { try interpreter.runBlock(program) }
-            let status = interpreter.lastStatus
-            interpreter.lastStatus = before
+            let status = lastStatus
+            lastStatus = before
             let output = output(text, status: status)
             // Without `try`, failing is just what `.status` says.
             if arguments["throwing"] == .bool(true) && status != 0 {
@@ -157,7 +157,7 @@ extension Shell {
             // A `try?` that caught an error failed; other nils, like a
             // function that returns nothing, didn't.
             if case .expression(.attempt(_, .optional)) = statement, value == .nothing { status = 1 }
-            interpreter.lastStatus = itemErrors && status == 0 ? 1 : status
+            lastStatus = itemErrors && status == 0 ? 1 : status
         }
     }
 

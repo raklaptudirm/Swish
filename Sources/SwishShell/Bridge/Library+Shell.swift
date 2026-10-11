@@ -21,9 +21,9 @@ extension Library {
                     return .nothing
                 }, nil),
                 "exitStatus": (.native { [unowned shell] _, arguments in shell.statusValue(shell.status(of: arguments["value"] ?? .nothing)) }, nil),
-                "importPlugin": (.native { interpreter, arguments in
+                "importPlugin": (.native { [unowned shell] _, arguments in
                     guard case .string(let name)? = arguments["name"], case .string(let path)? = arguments["path"] else { return .nothing }
-                    try interpreter.importPlugin(name, from: path)
+                    try shell.importPlugin(name, from: path)
                     return .nothing
                 }, nil),
                 "escapingWildcards": (.native { _, arguments in .string(Glob.escape(arguments["text"]?.description ?? "")) }, nil),

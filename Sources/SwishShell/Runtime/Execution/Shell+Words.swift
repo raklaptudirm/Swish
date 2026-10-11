@@ -10,7 +10,7 @@ import SwishStandardLibrary
 extension Interpreter {
     /// A status as an exit code, or the signal that ended the command.
     func exitCode(_ status: Int32) -> (code: Int?, signal: Int?) {
-        if status > 128 && status == lastSignalStatus { return (nil, Int(status - 128)) }
+        if status > 128 && status == shell.lastSignalStatus { return (nil, Int(status - 128)) }
         return (Int(status), nil)
     }
 
@@ -18,6 +18,13 @@ extension Interpreter {
     func withEnvironment<T>(_ variables: [(String, String)], _ body: () throws -> T) rethrows -> T {
         // A name given twice is the last one's.
         try with(env: Dictionary(variables, uniquingKeysWith: { $1 }), body)
+    }
+
+    /// The functions a command name refers to, if it was declared with `func`.
+    @_spi(Shell) public func commandFunctions(named name: String) -> OverloadSet? {
+        guard let binding = lookup(name), binding.isFunction,
+              case .function(let callable) = binding.value else { return nil }
+        return callable as? OverloadSet
     }
 
     /// The paths a pattern matches; without a wildcard, itself.

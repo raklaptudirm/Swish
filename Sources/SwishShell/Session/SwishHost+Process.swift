@@ -17,20 +17,6 @@ extension SwishHost {
     }
 }
 
-extension ShellLayer {
-    /// The process's environment, and commands that are programs.
-    init(process shell: Shell) {
-        self.init(
-            commands: CommandAccess(
-                callSequenceMethod: { [unowned shell] methods, items, arguments in
-                    try shell.callSequenceMethod(methods, on: items, arguments)
-                }),
-            importPlugin: { [unowned shell] name, path in try shell.importPlugin(name, from: path) },
-            history: { [unowned shell] in shell.historyEntries }
-        )
-    }
-}
-
 extension Interrupted {
     /// The signal that asked the shell to stop: the shell's reason is one.
     var signal: Int32 { reason.code }

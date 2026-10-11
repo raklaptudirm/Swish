@@ -183,25 +183,6 @@ extension Shell {
 
     // MARK: Methods
 
-    /// `xs.sorted(by: "size")`: a sequence method called on a list, with
-    /// the list as its input, and a list back (or a count, for `count`).
-    func callSequenceMethod(_ methods: OverloadSet, on items: [Value], _ arguments: [Argument]) throws -> Value {
-        let values = try [Argument(label: nil, value: .literal(.list(items)))] + arguments.map { argument -> Argument in
-            if case .caseLiteral = argument.value { return argument }
-            return Argument(label: argument.label, value: .literal(try interpreter.evaluate(argument.value)))
-        }
-        let (function, bindings) = try interpreter.resolve(methods) { try self.interpreter.bind(values, to: $0) }
-        guard let input = function.inputParameter else { return try interpreter.invoke(function, with: bindings) }
-        if input.type.isList, case .native = function.body {
-            return try interpreter.invoke(function, with: bindings)
-        }
-        var rest = bindings
-        rest.removeValue(forKey: input.name)
-        let output = try stream(function, rest, upstream: .elements(of: .list(items)), upstreamIsExternal: false)
-        var results: [Value] = []
-        while let item = try output.next() { results.append(item) }
-        return .list(results)
-    }
 
     /// `[p1, p2] | describe`: the method called on each item, with the
     /// stage's arguments; what it returns flows on.

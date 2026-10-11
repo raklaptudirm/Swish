@@ -227,7 +227,7 @@ extension Shell {
         }
         if status.signaled {
             let signal = status.signal
-            interpreter.lastSignalStatus = 128 + signal
+            lastSignalStatus = 128 + signal
             switch signal {
             case SIGINT: if interactive { writeAll(STDERR_FILENO, "\n") }
             case SIGPIPE: break

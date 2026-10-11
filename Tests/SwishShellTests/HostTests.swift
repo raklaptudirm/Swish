@@ -4,8 +4,7 @@ import SwishKit
 import Testing
 
 /// What a test host saw, and what it was told to answer: proof that the
-/// interpreter reaches the world only through its `SwishHost` and, for the
-/// shell's own constructs, its `ShellLayer`.
+/// interpreter reaches the world only through its `SwishHost`.
 private final class Recorder {
     /// Everything written, as `out: …` or `err: …`.
     var written: [String] = []
@@ -26,11 +25,6 @@ private func shellWithRecorder() -> (Shell, Recorder) {
         get: { recorder.variables[$0] },
         all: { recorder.variables.sorted { $0.key < $1.key }.map { (name: $0.key, value: $0.value) } },
         set: { recorder.variables[$0] = $1 })))
-    shell.interpreter.shellLayer = ShellLayer(
-        commands: CommandAccess(
-            callSequenceMethod: { _, _, _ in .nothing }),
-        importPlugin: { _, _ in },
-        history: { [] })
     return (shell, recorder)
 }
 
