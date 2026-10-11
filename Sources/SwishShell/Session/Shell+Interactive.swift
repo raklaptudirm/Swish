@@ -5,18 +5,24 @@ import SwishKit
 extension Shell {
     /// Runs the read-eval loop until EOF or `exit`.
     public func runInteractive() -> Int32 {
+        // Held but where it waits for a line (`suspend`), when tasks run.
+        interpreter.lock.acquire()
+        defer { interpreter.lock.release() }
         takeTerminal()
         if !interactive {
             return runScript { [unowned self] in interpreter.suspend { Swift.readLine() } }
         }
         editor.history = History(path: History.defaultPath)
         editor.continuationPrompt = "…".styled(DisplayStyle.dim) + " "
+        // These run while a line is read, when the lock is let go: they take it.
         editor.isComplete = { [unowned self] text in
-            if case .failure(let error) = interpreter.parse(text), error.incomplete { return false }
-            return true
+            interpreter.lock.withLock {
+                if case .failure(let error) = interpreter.parse(text), error.incomplete { return false }
+                return true
+            }
         }
-        editor.highlight = { [unowned self] in highlightStyles($0) }
-        editor.complete = { [unowned self] in completions(for: $0, cursor: $1) }
+        editor.highlight = { [unowned self] text in interpreter.lock.withLock { highlightStyles(text) } }
+        editor.complete = { [unowned self] text, cursor in interpreter.lock.withLock { completions(for: text, cursor: cursor) } }
         loadConfig()
         // Lines of a statement that isn't finished yet, like an open `if` block.
         var pending = ""

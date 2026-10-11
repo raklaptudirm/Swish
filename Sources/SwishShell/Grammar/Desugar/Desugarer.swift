@@ -42,6 +42,18 @@ final class Desugarer {
             switch node.target {
             case .command(let node): return call(pipeline(node), "start")
             case .capture(let node): return call(pipeline(node), "startCapturing")
+            // `async f(x)` is `startTask("f(x)") { f(x) }`; `async { … }` runs the closure.
+            case .task(let expr, let source):
+                let body: ClosureLiteral
+                if case .closure(let closure) = expr, closure.parameters.isEmpty {
+                    body = rewriter.closure(closure)
+                } else {
+                    let expr = rewriter.expression(expr)
+                    body = ClosureLiteral(parameters: [], body: Program(statements: [.expression(expr)]), names: Desugarer.names(in: expr))
+                }
+                return .call(.variable("startTask"), [
+                    Argument(label: nil, value: .literal(.string(source))), Argument(label: nil, value: .closure(body)),
+                ])
             }
         default:
             return expr
@@ -62,6 +74,18 @@ final class Desugarer {
         let body = Argument(label: nil, value: .closure(ClosureLiteral(parameters: [], body: rewriter.program(node.program))))
         let throwing = node.throwing ? [Argument(label: "throwing", value: .literal(.bool(true)))] : []
         return .call(.variable("capture"), throwing + [body])
+    }
+
+    /// The variables an expression reads, which a closure made of it holds
+    /// on to: a task can outlive the function that starts it.
+    private static func names(in expr: Expr) -> NamesUsed {
+        nonisolated(unsafe) var names: Set<String> = []
+        let collector = TreeRewriter(expr: { node in
+            if case .variable(let name) = node { names.insert(name) }
+            return node
+        })
+        _ = collector.expression(expr)
+        return NamesUsed(names: names)
     }
 
     // MARK: Statements

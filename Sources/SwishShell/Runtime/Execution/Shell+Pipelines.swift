@@ -112,7 +112,7 @@ extension Shell {
 
             let result = launch(argv, redirects: redirects, environment: environment,
                                 input: input, output: next?.write ?? stdoutFD,
-                                pgid: interactive ? job.pgid : -1, foreground: true)
+                                pgid: interactive ? job.pgid : -1, foreground: ownsTerminal)
             if input >= 0 { close(input) }
             if let next { close(next.write) }
 
@@ -180,11 +180,13 @@ extension Shell {
     /// Gives `job` the terminal and waits until it finishes or stops. A job
     /// stopped with ^Z keeps its terminal modes and goes to `jobs`.
     func waitForeground(_ job: Job) -> Int32 {
-        if interactive && job.pgid > 0 {
+        // A task in the background waits for its programs without the terminal.
+        let ownsTerminal = ownsTerminal
+        if ownsTerminal && job.pgid > 0 {
             tcsetpgrp(terminal, job.pgid)
         }
         defer {
-            if interactive {
+            if ownsTerminal {
                 tcsetpgrp(terminal, shellPgid)
                 tcsetattr(terminal, TCSANOW, &shellModes)
             }
@@ -198,7 +200,7 @@ extension Shell {
                 continue
             }
             if WaitStatus(raw).stopped {
-                if interactive {
+                if ownsTerminal {
                     var modes = termios()
                     tcgetattr(terminal, &modes)
                     job.modes = modes

@@ -217,12 +217,13 @@ extension Parser {
             }
             return .async(.capture(pipeline))
         }
-        guard peek() != nil else { throw .incomplete("expected a command after 'async'") }
+        guard peek() != nil else { throw .incomplete("expected a command or an expression after 'async'") }
         // `async false` is the command: a Bool value can't run.
-        guard commandAhead(boolIsCommand: true).isCommand else {
-            throw SyntaxError("async runs a command, as in `async swift build` or `async $(curl …)`")
-        }
-        return .async(.command(try parsePipeline()))
+        if commandAhead(boolIsCommand: true).isCommand { return .async(.command(try parsePipeline())) }
+        // `async f(x)`, `async { … }`: Swish code, as a task of its own.
+        let start = pos
+        let expr = try parseExpression()
+        return .async(.task(expr, source: String(chars[start..<pos]).trimmingCharacters(in: .whitespaces)))
     }
 
     /// `import Name from "path"`. The functions it brings aren't known until

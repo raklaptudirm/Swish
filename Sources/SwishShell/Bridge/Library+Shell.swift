@@ -16,6 +16,10 @@ extension Library {
                 "members": (shell.interpreter.members().body, nil),
                 "Sequence.select": selectBody,
                 "capture": (shell.captureBody, nil),
+                "startTask": (.native { [unowned shell] interpreter, arguments in
+                    guard case .string(let source)? = arguments["source"], let body = arguments["body"] else { return .nothing }
+                    return .object(try shell.startTask(source: source) { try interpreter.call(body, with: []) })
+                }, nil),
                 "displayItems": (.native { [unowned shell] _, arguments in
                     try shell.displayItems(arguments["value"] ?? .nothing)
                     return .nothing
@@ -209,6 +213,10 @@ extension Library {
     /// `||`: a Bool succeeds when true, an `Output` as its command did, a
     /// `Status` is itself, and anything else succeeds.
     func exitStatus(of value: Any) -> Status
+
+    /// Runs `body` as a task of its own, as `async f()` does: a `Job`, which
+    /// `await` joins for what `body` gives. `source` is how `jobs` shows it.
+    func startTask(_ source: String, _ body: () -> Any) -> Any
 
     /// Shows a value as a pipeline at the end of a statement does: its items,
     /// one a line, or as a table when they are records.

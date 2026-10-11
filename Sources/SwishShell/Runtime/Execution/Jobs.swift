@@ -4,10 +4,10 @@ import Foundation
 import SwishKit
 import SwishStandardLibrary
 
-/// A pipeline of processes: one running in the foreground, or a job in the
-/// background, from `async` or ^Z. Jobs in the background are values:
-/// `await` brings one to the foreground and waits for it, and `resume()`
-/// and `cancel()` act on it.
+/// A pipeline of processes, one running in the foreground or a job in the
+/// background (from `async` or ^Z), or Swish code running as a task of its
+/// own (`async f()`). Jobs in the background are values: `await` brings one
+/// to the foreground and waits for it, and `resume()` and `cancel()` act on it.
 final class Job: CheckedObject, @unchecked Sendable {
     enum State: String {
         case running, stopped, done
@@ -34,8 +34,12 @@ final class Job: CheckedObject, @unchecked Sendable {
     /// The terminal as the job left it when it stopped, as vim does, so it
     /// gets it back the same way.
     var modes: termios?
-    /// For `async $(…)`: its output, read as it comes.
+    /// For `async $(…)`, and a task: its output, read as it comes.
     var capture: OutputCollector?
+    /// Swish code running as a task of its own, rather than processes.
+    var task: TaskHandle?
+    /// `async $(…)`: `await` gives its Output, not what its task gave.
+    var givesOutput = false
     /// Once it's done: its output and how it exited.
     private(set) var output: Output?
     unowned let shell: Shell
@@ -47,6 +51,8 @@ final class Job: CheckedObject, @unchecked Sendable {
 
     func finish() {
         guard state != .done else { return }
+        // A task ended as it gave a value or threw.
+        if let result = task?.result, case .failure = result { status = 1 }
         var text = capture?.finish() ?? ""
         while text.last == "\n" { text.removeLast() }
         output = Output(text: text, code: signal == nil ? Int(status) : nil, signal: signal.map(Int.init))
@@ -56,6 +62,11 @@ final class Job: CheckedObject, @unchecked Sendable {
 
     /// Sends a signal to every process in the job.
     func send(_ signal: Int32) {
+        // A task isn't processes: cancelling it is asking it to stop.
+        if let task {
+            if signal == SIGTERM { task.cancel() }
+            return
+        }
         if pgid > 0 {
             kill(-pgid, signal)
         } else {
@@ -184,8 +195,14 @@ extension Shell {
     /// Starts a pipeline of programs in the background (`async`), capturing
     /// its output if asked (`async $(…)`).
     func startJob(_ stages: [Stage], source: String, capture: Bool) throws -> Job {
+        // Swish functions in it: the pipeline runs as a task of its own.
         guard stages.allSatisfy(\.isExternal) else {
-            throw RuntimeError("async runs programs; Swish functions and values can't run in the background yet")
+            let job = try startTask(source: source) { [unowned self] in
+                statusValue(try runPipeline(stages, source: source, display: true))
+            }
+            // A command's job, as any command's: `await` gives its Output.
+            job.givesOutput = true
+            return job
         }
         let job = Job(source: source, shell: self)
         var output = stdoutFD
@@ -237,15 +254,27 @@ extension Shell {
     /// Brings a job to the foreground and waits for it (`await`). If it's
     /// stopped again with ^Z, it goes back to `jobs` and the line is left.
     func awaitJob(_ job: Job) throws -> Output {
+        if let task = job.task {
+            let result = Result { try interpreter.join(task) }
+            job.finish()
+            jobs.removeAll { $0 === job }
+            if case .failure(let error) = result, !job.givesOutput {
+                // How it ended is the awaiting task's error, not a reason for it to stop too.
+                if error is RuntimeError { throw error }
+                if error is Cancelled { throw RuntimeError("\(job.source) was cancelled") }
+                throw RuntimeError("\(job.source) stopped: \(error)")
+            }
+            return job.output!
+        }
         if job.state != .done {
-            if interactive && job.pgid > 0, var modes = job.modes {
+            if ownsTerminal && job.pgid > 0, var modes = job.modes {
                 tcsetattr(terminal, TCSANOW, &modes)
             }
             // It may have stopped for the terminal without our having noticed
             // yet, so always hand the terminal over and continue it; for a
             // job that's running, that changes nothing.
             job.state = .running
-            if interactive && job.pgid > 0 { tcsetpgrp(terminal, job.pgid) }
+            if ownsTerminal && job.pgid > 0 { tcsetpgrp(terminal, job.pgid) }
             job.send(SIGCONT)
             _ = waitForeground(job)
             if job.state == .stopped { throw JobSuspended() }
@@ -294,6 +323,10 @@ extension Shell {
     /// announced or awaited.
     func updateJobs() {
         for job in jobs where job.state == .running {
+            if let task = job.task {
+                if task.isFinished { job.finish() }
+                continue
+            }
             var stopped = false
             for pid in job.running {
                 var raw: Int32 = 0
@@ -315,5 +348,31 @@ extension Shell {
                 job.state = .stopped
             }
         }
+    }
+}
+
+extension Shell {
+    /// Starts Swish code as a task of its own (`async f()`, `async { … }`): a
+    /// job, whose output is kept for `await`, as `async $(…)`'s is, and whose
+    /// value `await` gives.
+    func startTask(source: String, _ body: @escaping () throws -> Value) throws -> Job {
+        let job = Job(source: source, shell: self)
+        guard let pipe = makePipe() else { throw RuntimeError("pipe: \(errorMessage(errno))") }
+        job.capture = OutputCollector(reading: pipe.read)
+        let state = ShellTask()
+        state.inForeground = false
+        state.stdoutFD = pipe.write
+        state.stderrFD = stderrFD
+        do {
+            job.task = try interpreter.startTask(host: state) {
+                defer { close(pipe.write) }
+                return try body()
+            }
+        } catch {
+            close(pipe.write)
+            throw error
+        }
+        adopt(job)
+        return job
     }
 }

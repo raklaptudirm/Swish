@@ -123,8 +123,8 @@ and gives the values when a pipeline is an expression.
 
 | Shell | Swift |
 |---|---|
-| `async cmd`, `async $(cmd)` | `Job.start(cmd)`, `Job.start { $(cmd) }` |
-| `async f(x)`, `async { … }` | `Job.start { await f(x) }`: a task, the same handle |
+| `async cmd`, `async $(cmd)` | `Command(…).start()`, `Command(…).startCapturing()`: a `Job`; with a Swish function in the pipeline, it runs as a task |
+| `async f(x)`, `async { … }` | `startTask("f(x)") { f(x) }`: Swish code as a task of its own, a `Job<T>` whose value `await` gives |
 | `await job` | `await job.value`: joining a handle. `await f()` of a call is Swift's `await`. Which one is decided by the operand's type |
 | `jobs`, `job.cancel()`, `job.resume()` | `Shell.jobs` and methods on `Job` |
 

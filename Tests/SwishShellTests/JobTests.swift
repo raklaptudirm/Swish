@@ -1,5 +1,6 @@
 @_spi(Shell) import Swiit
 @_spi(Shell) @testable import SwishShell
+import Foundation
 import Testing
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
@@ -76,8 +77,50 @@ private func status(_ source: String) -> Int32 {
 
 @Test func whatAsyncAndAwaitRefuse() {
     #expect(status("await 5") == 2)
-    #expect(status("func f() {}; async f") == 1) // Swish functions can't run in the background yet
-    #expect(status("async 1 + 2") == 2)
+    #expect(status("await") == 1) // nothing to await
+}
+
+// Swish code as a task of its own, on a thread behind the interpreter's lock
+// (Docs/Design/async.md, step 4).
+
+private func run(_ source: String) throws -> String {
+    let shell = Shell()
+    return try onLargeStack { try shell.capturing { shell.execute(source) } }
+}
+
+@Test func aTaskGivesItsValueToAwait() throws {
+    #expect(try run("let t = async 1 + 2; print(await t)") == "3\n")
+    #expect(try run("func twice(_ n: Int) -> Int { n * 2 }; let t = async twice(21); let n: Int = await t; print(n)") == "42\n")
+    #expect(try run("let t = async { let a = 2; return a * 5 }; print(await t)") == "10\n")
+    // A command with Swish in it runs as a task too, and gives its Output, as a command's job does.
+    #expect(try run("func f() { echo hi }; let j = async f; print((await j).text)") == "hi\n")
+}
+
+@Test func tasksRunWhileOthersWait() throws {
+    // Each waits half a second on a program; together they take about that long.
+    let start = Date()
+    #expect(try run("let a = async { $(sleep 0.5); return 1 }; let b = async { $(sleep 0.5); return 2 }; print((await a) + (await b))") == "3\n")
+    #expect(Date().timeIntervalSince(start) < 0.9)
+    // The task that started them carries on while they wait.
+    #expect(try run("let t = async { $(sleep 0.3); print(\"later\") }; print(\"now\"); await t; print(t.output!.text)") == "now\nlater\n")
+}
+
+@Test func tasksShareTheGlobalsAndKeepTheirOutput() throws {
+    #expect(try run("var n = 0; let t = async { for _ in 1...3 { n += 1; $(sleep 0.05) } }; await t; print(n)") == "3\n")
+    // What a task prints is kept on its job, not written over the prompt.
+    #expect(try run("let t = async { print(\"inside\") }; await t; print(\"[\" + t.output!.text + \"]\")") == "[inside]\n")
+}
+
+@Test func aTaskIsCancelledAndItsErrorsReachAwait() throws {
+    // A task that never waits stops when it's cancelled, at its next step.
+    #expect(try run("let t = async { var n = 0; while true { n += 1 } }; t.cancel(); let r = try? await t; print(t.state)") == "cancelled\n")
+    // What it threw, `try await` throws.
+    #expect(try run("let t = async { try $(sh -c 'exit 3') }; do { let r = try await t } catch { print(\"caught\") }") == "caught\n")
+}
+
+@Test func tasksAreJobs() throws {
+    let output = try run("let t = async { $(sleep 0.2) }; print(jobs.map { $0.command }); await t; print(jobs.count)")
+    #expect(output == "[{ $(sleep 0.2) }]\n0\n")
 }
 
 @Test func fgAndBgNameTheirReplacements() {

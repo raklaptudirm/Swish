@@ -46,6 +46,9 @@ struct AsyncExpr: ExprExtension, Equatable {
         case command(PipelineNode)
         /// `async $(…)`: its output is kept, for `await` to give.
         case capture(PipelineNode)
+        /// `async f(x)`, `async { … }`: Swish code as a task of its own,
+        /// whose value `await` gives; `source` as it was written, for `jobs`.
+        case task(Expr, source: String)
     }
 
     var target: Target
@@ -58,6 +61,15 @@ struct AsyncExpr: ExprExtension, Equatable {
         case .capture(var pipeline):
             try checker.checkPipeline(&pipeline)
             target = .capture(pipeline)
+        case .task(var expr, let source):
+            // It runs as a closure would: `await` may be written in it.
+            let (type, _) = try checker.withEffects(allowsAwait: true) { () throws -> TypeAnnotation in
+                // `async { … }`: what the closure gives.
+                if case .closure = expr, case .functionType(_, let result, _, _) = try checker.typeOf(&expr) { return result }
+                return try checker.typeOf(&expr)
+            }
+            target = .task(expr, source: source)
+            return .generic("Job", [type])
         }
         return .named("Job")
     }

@@ -32,6 +32,9 @@ public final class Shell {
         get { task.stdoutFD }
         set { task.stdoutFD = newValue }
     }
+    /// Whether the current task's programs get the terminal: the task in the
+    /// foreground's do, in an interactive shell; a background task's don't.
+    var ownsTerminal: Bool { interactive && task.inForeground }
     /// Where the current task's errors go.
     var stderrFD: Int32 {
         get { task.stderrFD }
@@ -64,6 +67,14 @@ public final class Shell {
     /// history file's outside the interactive shell.
     var historyEntries: [String] {
         interactive ? editor.history.entries : History(path: History.defaultPath).entries
+    }
+
+    /// Tasks still running end with the shell: they're cancelled, and waited
+    /// for, as the scope that starts a task closes it (Docs/Design/async.md).
+    deinit {
+        let tasks = jobs.compactMap(\.task)
+        tasks.forEach { $0.cancel() }
+        for task in tasks { _ = try? interpreter.join(task) }
     }
 
     public init() {
@@ -107,6 +118,9 @@ extension Shell {
     }
 
     private func run(_ source: String, atPrompt: Bool) -> Int32 {
+        // The shell touches the interpreter holding its lock, as tasks do.
+        interpreter.lock.acquire()
+        defer { interpreter.lock.release() }
         switch interpreter.parse(source) {
         case .failure(let error):
             interpreter.report("syntax error: \(error)")
@@ -191,4 +205,6 @@ final class ShellTask {
     /// The status the last signal-killed command gave, to tell 130 from ^C
     /// apart from a command that exited with 130.
     var lastSignalStatus: Int32?
+    /// Whether it's the task in the foreground, whose programs get the terminal.
+    var inForeground = true
 }

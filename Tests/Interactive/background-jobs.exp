@@ -35,6 +35,21 @@ send "\r"
 step "a finished job is announced before the prompt" [colored {\[1\] done  sleep 0.2}]
 expect -re $prompt
 
+# A Swish task in the background leaves the prompt working, its programs
+# away from the terminal, and is announced when it's done.
+send "let t = async { \$(sleep 0.3); return 5 }\r"
+expect -re $prompt
+send "2 + 2\r"
+step "the prompt works while a task runs" "4"
+expect -re $prompt
+after 700
+send "\r"
+step "a finished task is announced" [colored {\[1\] done  }]
+expect -re $prompt
+send "await t\r"
+step "await gives a task's value" "5"
+expect -re $prompt
+
 # A job waiting for the terminal is stopped, and await gives it the terminal.
 # macOS cuts short a terminal read that stopping interrupted; cat and sh's
 # read give up (under bash's fg too), while Python, like vim or less, retries.

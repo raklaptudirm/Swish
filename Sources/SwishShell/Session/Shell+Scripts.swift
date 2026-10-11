@@ -14,6 +14,8 @@ extension Shell {
         // ^C, kill and hangup stop the script at the next statement, so its
         // defers run; then it ends by the signal (see `endBySignal`).
         catchInterrupts([SIGINT, SIGTERM, SIGHUP])
+        interpreter.lock.acquire()
+        defer { interpreter.lock.release() }
         return runFile(at: path, arguments: arguments) { _ in
             guard let main = topLevelFunction("main") else { return }
             // `main` stands for the script, so its help and errors use the script's name.
