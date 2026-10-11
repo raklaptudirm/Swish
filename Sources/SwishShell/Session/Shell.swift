@@ -82,11 +82,11 @@ public final class Shell {
         // The shell writes into pipes itself now; a reader exiting early
         // should end that write with EPIPE, not kill the shell.
         signal(SIGPIPE, SIG_IGN)
-        interpreter = Interpreter(host: SwishHost(), outputCounter: OutputCounter())
+        interpreter = Interpreter(host: SwiitHost(name: "swish"), outputCounter: OutputCounter())
         interpreter.task.host = ShellTask()
         interpreter.syntax = ShellSyntax()
         interpreter.frontEnd = SwiftSyntaxFrontEnd()
-        interpreter.host = SwishHost(process: self)
+        interpreter.host = SwiitHost(process: self)
         // Library functions that ask are lent what was entered before, too.
         interpreter.contextProvider = { [unowned self] in
             HostContext(history: historyEntries, colorOutput: interpreter.host.output.traits().styled,

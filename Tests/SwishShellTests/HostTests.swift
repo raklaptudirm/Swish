@@ -4,7 +4,7 @@ import SwiitKit
 import Testing
 
 /// What a test host saw, and what it was told to answer: proof that the
-/// interpreter reaches the world only through its `SwishHost`.
+/// interpreter reaches the world only through its `SwiitHost`.
 private final class Recorder {
     /// Everything written, as `out: …` or `err: …`.
     var written: [String] = []
@@ -17,7 +17,8 @@ private final class Recorder {
 private func shellWithRecorder() -> (Shell, Recorder) {
     let shell = Shell()
     let recorder = Recorder()
-    shell.interpreter.host = SwishHost(
+    shell.interpreter.host = SwiitHost(
+        name: "swish",
         output: OutputSink(write: { recorder.written.append("out: " + $0); return true }),
         error: OutputSink(write: { recorder.written.append("err: " + $0); return true }),
         interrupt: { recorder.interrupt() })

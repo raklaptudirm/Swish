@@ -8,7 +8,7 @@ import SystemPackage
 
 extension Bridge {
 
-    /// The module's structs, as Swish source: declared with the prelude.
+    /// The module's structs, as Swiit source: declared with the prelude.
     package static let shellTypes = #"""
 /// What text `from` can parse.
 enum InputFormat: Equatable, Hashable {

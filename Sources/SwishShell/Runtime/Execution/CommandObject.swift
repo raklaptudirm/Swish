@@ -82,7 +82,7 @@ extension Shell {
     /// `capture { … }`: the block, run with its output gathered.
     var captureBody: FunctionBody {
         .native { [unowned self] interpreter, arguments in
-            guard case .function(let body as Function)? = arguments["body"], case .swish(let program) = body.body else {
+            guard case .function(let body as Function)? = arguments["body"], case .swiit(let program) = body.body else {
                 throw RuntimeError("capture needs a block")
             }
             // What runs in it leaves the status it ends with.
