@@ -11,7 +11,7 @@ private func names(_ variables: Set<String>, functions: Set<String> = []) -> [St
 }
 
 private func parse(_ source: String, bound: Set<String> = [], functions: Set<String> = []) throws -> Program {
-    try Parser.parse(source, bound: names(bound, functions: functions), plugin: ShellSyntax())
+    try SwiftSyntaxFrontEnd().parse(source, bound: names(bound, functions: functions), plugin: ShellSyntax())
 }
 
 /// The kind of each top-level unit: "command", "expression", "if" or "loop".
@@ -53,7 +53,7 @@ private func words(_ source: String, bound: Set<String> = []) throws -> [[WordPa
 
 private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxError? {
     do {
-        _ = try Parser.parse(source, bound: names(bound), plugin: ShellSyntax())
+        _ = try SwiftSyntaxFrontEnd().parse(source, bound: names(bound), plugin: ShellSyntax())
         return nil
     } catch {
         return error
@@ -302,7 +302,8 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
 }
 
 @Test func realErrorsAreNotIncomplete() {
-    for source in ["| ls", "ls )", "echo (x)", "ls &", "}", "else { }", "1 < 2 < 3", "let if = 1", "(undefined + 1)", "(f(1))"] {
+    // (A name that isn't bound isn't a syntax error: the checker says so, as in Swift.)
+    for source in ["| ls", "ls )", "echo (x)", "ls &", "}", "else { }", "1 < 2 < 3", "let if = 1"] {
         let error = syntaxError(source)
         #expect(error != nil && error?.incomplete == false, "\(source)")
     }
@@ -575,7 +576,9 @@ private func command(_ source: String) throws -> CommandNode? {
     // A name that isn't bound, even when its start is: `git-lfs` is one word.
     #expect(try modes("ls -la; git-lfs version", bound: ["git"]) == ["command", "command"])
     // Expressions parse, and nothing but the end of the unit follows them.
-    #expect(try modes(#""text"; 1 + 2; x -1; .directory; !x; [1, 2]"#, bound: ["x"]) == Array(repeating: "expression", count: 6))
+    #expect(try modes(#""text"; 1 + 2; .directory; !x; [1, 2]"#, bound: ["x"]) == Array(repeating: "expression", count: 5))
+    // Swift reads `x -1` as `x` and `-1`: two things side by side, so a word follows an expression.
+    #expect(try modes("x -1", bound: ["x"]) == ["command"])
     // A function's name is a command unless it's called or read.
     #expect(try modes("greet Rak; greet; greet(); greet.self", functions: ["greet"]) == ["command", "command", "expression", "expression"])
     // Shell syntax always starts a command.

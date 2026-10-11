@@ -4,27 +4,27 @@ import SwiitKit
 
 /// The shell's syntax, plugged into the parser: commands, pipelines, redirects,
 /// `$(…)`, `$name`, `async …`, `env.NAME = value` and `import Name from path`.
-/// Everything here is the shell's; the parser in Parser*.swift is Swift's and
+/// Everything here is the shell's; the parser in SourceCursor*.swift is Swift's and
 /// calls this where its grammar has no meaning for what is there.
 struct ShellSyntax: SyntaxPlugin {
-    func chain(_ parser: inout Parser, condition: Bool) throws(SyntaxError) -> Expr? {
+    func chain(_ parser: inout SourceCursor, condition: Bool) throws(SyntaxError) -> Expr? {
         try parser.parseCommandChain(condition: condition).map(Expr.commands)
     }
 
-    func continuing(_ expression: Expr, from start: Int, _ parser: inout Parser) throws(SyntaxError) -> Expr? {
+    func continuing(_ expression: Expr, from start: Int, _ parser: inout SourceCursor) throws(SyntaxError) -> Expr? {
         guard parser.peek() == "|", parser.peek(1) != "|" else { return nil }
         parser.pos += 1
         parser.skipSpaces(newlines: true)
         return .commands(CommandChainExpr(first: .command(try parser.parsePipeline(from: start, input: expression))))
     }
 
-    func expression(_ parser: inout Parser) throws(SyntaxError) -> Expr? {
+    func expression(_ parser: inout SourceCursor) throws(SyntaxError) -> Expr? {
         if parser.identifier() == "async" { return try parser.parseAsync() }
         guard parser.peek() == "$" else { return nil }
         return try parser.parseShellDollar()
     }
 
-    func statement(_ parser: inout Parser) throws(SyntaxError) -> Statement? {
+    func statement(_ parser: inout SourceCursor) throws(SyntaxError) -> Statement? {
         switch parser.identifier() {
         case "import": return try parser.parseImport()
         default: return nil
@@ -32,7 +32,7 @@ struct ShellSyntax: SyntaxPlugin {
     }
 }
 
-extension Parser {
+extension SourceCursor {
     /// Commands joined by `&&` and `||`, with Swift between them or not, as a
     /// statement or a condition; nil (having looked ahead) when there is no
     /// command in it, which is Swift's. `a < 1 || b > 2` is one expression,
@@ -91,7 +91,7 @@ extension Parser {
     private mutating func parseChainOperand(_ sawCommand: inout Bool) throws(SyntaxError) -> CommandChainExpr.Operand {
         skipSpaces()
         guard peek() != nil else { throw .incomplete("expected a command") }
-        if let word = identifier(), Parser.statementKeywords.union(["if", "for", "while", "switch", "else", "case", "default", "in"]).contains(word) {
+        if let word = identifier(), SourceCursor.statementKeywords.union(["if", "for", "while", "switch", "else", "case", "default", "in"]).contains(word) {
             throw SyntaxError("'\(word)' must start a statement")
         }
         // `try make` or `try! make`: a command whose failure throws.
@@ -165,7 +165,7 @@ extension Parser {
         defer { self = saved }
         skipSpaces()
         guard let c = peek() else { return .expression }
-        if c == "^" || (c == "$" && peek(1).map(Parser.isIdentifierStart) ?? false) { return .command(notAnExpression: nil) }
+        if c == "^" || (c == "$" && peek(1).map(SourceCursor.isIdentifierStart) ?? false) { return .command(notAnExpression: nil) }
         if let word = identifier() {
             let after = peek(word.count)
             if boolIsCommand && (word == "true" || word == "false") && after.map(isWordBoundary) ?? true {
@@ -178,13 +178,13 @@ extension Parser {
         while wordEnd < chars.count, !isWordBoundary(chars[wordEnd]) { wordEnd += 1 }
         // Why it isn't an expression is worth saying only of a word that
         // starts like one (`1...2...3`), not of one that starts like a name.
-        let startsLikeName = Parser.isIdentifierStart(c)
+        let startsLikeName = SourceCursor.isIdentifierStart(c)
         do {
             _ = try parseExpression(logical: true)
         } catch {
             // Unfinished input is an unfinished expression, not a command.
             guard !error.incomplete, pos <= wordEnd else { return .expression }
-            return .command(notAnExpression: startsLikeName ? nil : error.description)
+            return .command(notAnExpression: startsLikeName ? nil : error.description.replacing(#/ \(line \d+\)$/#, with: ""))
         }
         skipSpaces()
         guard endsUnit() else {
@@ -240,7 +240,7 @@ extension Parser {
         }
         keyword("from")
         skipSpaces()
-        let path = try parsePrimary()
+        let path = try parseExpression(logical: false)
         scopes[scopes.count - 1][name] = .variable
         sawImport = true
         return .importPlugin(name: name, path: path)
@@ -271,7 +271,7 @@ extension Parser {
             return .substitution(program, throwing: throwing)
         case "?":
             throw SyntaxError("$? isn't Swish: a captured command has its own .status, and `try` makes a failure throw")
-        case let c? where Parser.isIdentifierStart(c):
+        case let c? where SourceCursor.isIdentifierStart(c):
             let start = pos
             pos += 1
             let name = identifier()!

@@ -2,7 +2,7 @@
 import Foundation
 import SwiitKit
 
-extension Parser {
+extension SourceCursor {
     // MARK: Command mode
 
     mutating func parsePipeline(from start: Int? = nil, input: Expr? = nil) throws(SyntaxError) -> PipelineNode {
@@ -45,17 +45,15 @@ extension Parser {
                 continue
             }
             if c == "{" && peek(1) != "}" {
-                pos += 1
                 words.append(.closure(try parseClosure()))
                 continue
             }
             // `sorted(by: "size")`: a name touching its arguments is a call,
             // as in Swift; a trailing closure may follow.
-            if c == "(", words.count == 1, call == nil, !external, pos > 0, Parser.isIdentifierPart(chars[pos - 1]) {
+            if c == "(", words.count == 1, call == nil, !external, pos > 0, SourceCursor.isIdentifierPart(chars[pos - 1]) {
                 call = try parseArguments()
                 skipSpaces()
                 if peek() == "{" {
-                    pos += 1
                     call!.append(Argument(label: nil, value: .closure(try parseClosure())))
                 }
                 continue
@@ -153,7 +151,7 @@ extension Parser {
     /// with the Swish spelling in the error.
     func rejectPosixRedirect() throws(SyntaxError) {
         var digits = ""
-        while let c = peek(digits.count), Parser.isDigit(c) { digits.append(c) }
+        while let c = peek(digits.count), SourceCursor.isDigit(c) { digits.append(c) }
         let rest = String(chars[(pos + digits.count)...].prefix(4))
         let swish: String?
         switch (digits, rest) {
@@ -219,7 +217,7 @@ extension Parser {
                 parts.append(.literal(try parseRawString()))
             case "\"":
                 flush()
-                parts += try parseInterpolatedString(dollar: true).map(WordPart.init)
+                parts += try parseInterpolatedString().map(WordPart.init)
             case "\\":
                 guard let next = peek(1) else { throw .incomplete("expected a character after '\\'") }
                 if next == "(" {

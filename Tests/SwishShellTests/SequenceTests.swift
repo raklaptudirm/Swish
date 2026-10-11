@@ -65,7 +65,7 @@ private let data = #"let xs = [(n: 2, s: "b"), (n: 1, s: "a"), (n: 3, s: "c")]; 
 /// The syntax or type error that stops `source` before it runs, or nil.
 private func checkError(_ source: String) -> String? {
     let shell = Shell()
-    guard let program = try? Parser.parse(source, bound: shell.interpreter.globalNames(), plugin: shell.interpreter.syntax) else { return "syntax error" }
+    guard let program = try? SwiftSyntaxFrontEnd().parse(source, bound: shell.interpreter.globalNames(), plugin: shell.interpreter.syntax) else { return "syntax error" }
     do {
         _ = try TypeChecker(interpreter: shell.interpreter).check(program)
         return nil

@@ -15,7 +15,7 @@ private func status(_ source: String) -> Int32 {
 
 private func typeError(_ source: String) -> String? {
     let shell = Shell()
-    guard case .success(let program) = Result(catching: { try Parser.parse(source, bound: shell.interpreter.globalNames(), plugin: shell.interpreter.syntax) }) else {
+    guard case .success(let program) = Result(catching: { try SwiftSyntaxFrontEnd().parse(source, bound: shell.interpreter.globalNames(), plugin: shell.interpreter.syntax) }) else {
         return "syntax error"
     }
     do {

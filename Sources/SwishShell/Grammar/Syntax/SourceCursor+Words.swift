@@ -1,10 +1,12 @@
+@_spi(Layer) import Swiit
 import Foundation
 import SwiitKit
 
-extension Parser {
-    // MARK: Strings and interpolation
+extension SourceCursor {
+    // MARK: Quotes and interpolation in a command's words
 
-    @_spi(Layer) public mutating func parseRawString() throws(SyntaxError) -> String {
+    /// `'text'`, positioned at the opening quote: the text, as it is.
+    mutating func parseRawString() throws(SyntaxError) -> String {
         guard let end = chars[(pos + 1)...].firstIndex(of: "'") else {
             mark(.string, from: pos, to: chars.count)
             throw .incomplete("unterminated string")
@@ -15,10 +17,9 @@ extension Parser {
         return text
     }
 
-    /// A double-quoted string: Swift escapes and `\(…)`, and in commands
-    /// (`dollar`) also `$name` and `$(…)`. In expressions it's pure Swift,
-    /// so `"costs $5"` and `"$HOME"` are literal there.
-    @_spi(Layer) public mutating func parseInterpolatedString(dollar: Bool) throws(SyntaxError) -> [StringPart] {
+    /// A double-quoted word: Swift's escapes and `\(…)`, and `$name` and `$(…)`
+    /// as a command's words have them, so `"costs $5"` keeps its `$5`.
+    mutating func parseInterpolatedString() throws(SyntaxError) -> [StringPart] {
         let start = pos
         pos += 1
         var parts: [StringPart] = []
@@ -55,7 +56,7 @@ extension Parser {
                 case "u": literal.append(try parseUnicodeEscape())
                 default: throw SyntaxError("invalid escape '\\\(next)' in string")
                 }
-            case "$" where dollar:
+            case "$":
                 if let expr = try parseDollar() {
                     if !literal.isEmpty { parts.append(.literal(literal)) }
                     literal = ""
@@ -86,7 +87,7 @@ extension Parser {
     }
 
     /// `\(expression)`, positioned at the backslash.
-    @_spi(Layer) public mutating func parseInterpolation() throws(SyntaxError) -> Expr {
+    mutating func parseInterpolation() throws(SyntaxError) -> Expr {
         mark(.punctuation, from: pos, to: pos + 2)
         pos += 2
         bracketDepth += 1
@@ -99,30 +100,33 @@ extension Parser {
         return expr
     }
 
-    /// `$0` in a closure, or a `$` form of the plug-in's (`$(…)`, `$name`),
+    /// Digits with optional `_` separators, which are dropped.
+    mutating func readDigits() -> String {
+        var digits = ""
+        while let c = peek(), SourceCursor.isDigit(c) || c == "_" {
+            if c != "_" { digits.append(c) }
+            pos += 1
+        }
+        return digits
+    }
+
+    /// `$0` in a closure, or a `$` form of the shell's (`$(…)`, `$name`),
     /// positioned at the dollar sign; nil if the dollar is just a character.
-    @_spi(Layer) public mutating func parseDollar() throws(SyntaxError) -> Expr? {
+    mutating func parseDollar() throws(SyntaxError) -> Expr? {
         switch peek(1) {
-        case let c? where Parser.isDigit(c):
+        case let c? where SourceCursor.isDigit(c):
             // Only special in a closure without named parameters; elsewhere,
             // as in "costs $5", it's just text.
-            guard let arity = anonymousArity.last ?? nil else { return nil }
+            guard inAnonymousClosure else { return nil }
             let start = pos
             pos += 1
             guard let index = Int(readDigits()) else { throw SyntaxError("closure parameter number is too large") }
             mark(.variable, from: start)
-            anonymousArity[anonymousArity.count - 1] = max(arity, index + 1)
             return .variable("$\(index)")
         case "(", "?":
-            guard let plugin = self.plugin else {
-                throw SyntaxError("$(…) runs commands, which are shell syntax, and isn't available in Swift-only code")
-            }
-            return try plugin.expression(&self)
-        case let c? where Parser.isIdentifierStart(c):
-            guard let plugin = self.plugin else {
-                throw SyntaxError("$name reads the environment, which is shell syntax, and isn't available in Swift-only code")
-            }
-            return try plugin.expression(&self)
+            return try parseShellDollar()
+        case let c? where SourceCursor.isIdentifierStart(c):
+            return try parseShellDollar()
         default:
             return nil
         }

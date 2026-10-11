@@ -12,7 +12,7 @@ private func checkError(_ source: String) -> String? {
     let shell = Shell()
     let program: Program
     do {
-        program = try Parser.parse(source, bound: shell.interpreter.globalNames(), plugin: shell.interpreter.syntax)
+        program = try SwiftSyntaxFrontEnd().parse(source, bound: shell.interpreter.globalNames(), plugin: shell.interpreter.syntax)
     } catch {
         return "syntax error: \(error)"
     }
@@ -88,7 +88,7 @@ private func checkError(_ source: String) -> String? {
 
     #expect(checkError(#"let z = true ? 1 : "a""#) == "error: an if expression's branches must have one type, not Int and String")
     #expect(checkError("let z = 3 ? 1 : 2") == "error: a condition must be a Bool, not Int")
-    #expect(checkError("let z = if true { 1 }") == "syntax error: an if expression needs an else")
+    #expect(checkError("let z = if true { 1 }")?.hasPrefix("syntax error: an if expression needs an else") == true)
     // A command is an expression too, whose value is how it ended.
     #expect(checkError("let z = if true { ls } else { 2 }") == "error: an if expression's branches must have one type, not Status and Int")
 }
@@ -119,7 +119,7 @@ private func checkError(_ source: String) -> String? {
     // The else must leave; what it binds must be an optional.
     #expect(checkError("guard true else { echo no }") == "error: guard's else must not carry on: end it with return, break, continue or exit")
     #expect(checkError("guard let q = 5 else { exit 1 }") == "error: 'let' in a condition unwraps an optional, but this is Int")
-    #expect(checkError("guard true { exit 1 }") == "syntax error: expected 'else' after guard's condition, found '{'")
+    #expect(checkError("guard true { exit 1 }")?.hasPrefix("syntax error: expected 'else' after guard's condition, found '{'") == true)
 }
 
 @Test func aWordThatIsNeitherSaysWhy() throws {

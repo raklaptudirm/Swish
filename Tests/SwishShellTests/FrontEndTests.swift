@@ -4,42 +4,15 @@ import Foundation
 import SwiitKit
 import Testing
 
-// The shell's syntax under the SwiftSyntax front end: the hand-written parser,
-// with the same plug-in, is the oracle.
+// The shell's syntax under the SwiftSyntax front end. What the hand-written
+// parser read with the same plug-in, which it was held to while it existed, is
+// kept as goldens (below).
 
 /// Programs harvested from the test suites, which Swiit's own tests keep.
 private func harvested() throws -> [String] {
     let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         .appendingPathComponent("Packages/Swiit/Tests/SwiitTests/programs.txt")
     return try String(contentsOf: url, encoding: .utf8).split(separator: "\u{1E}", omittingEmptySubsequences: true).map(String.init)
-}
-
-@Test func theSwiftSyntaxFrontEndReadsTheShellsSyntaxAsTheOracleDoes() throws {
-    let shell = Shell()
-    let bound = shell.interpreter.globalNames()
-    var readable = 0, agree = 0, unsupported: [String: Int] = [:], wrong: [String] = []
-    for source in try harvested() {
-        guard let oracle = try? Parser.parse(source, bound: bound, plugin: ShellSyntax()) else { continue }
-        readable += 1
-        do {
-            let lowered = try SwiftSyntaxFrontEnd().parse(source, bound: bound, plugin: ShellSyntax())
-            if lowered == oracle { agree += 1 } else { wrong.append(source) }
-        } catch {
-            let reason = "\(error)".replacingOccurrences(of: #" \(line \d+\)"#, with: "", options: .regularExpression)
-            unsupported[reason, default: 0] += 1
-        }
-    }
-    for source in wrong.prefix(30) {
-        let oracle = SwiftPrinter().source(try Parser.parse(source, bound: bound, plugin: ShellSyntax())).split(separator: "\n", omittingEmptySubsequences: false)
-        let lowered = SwiftPrinter().source(try SwiftSyntaxFrontEnd().parse(source, bound: bound, plugin: ShellSyntax())).split(separator: "\n", omittingEmptySubsequences: false)
-        var index = 0
-        while index < min(oracle.count, lowered.count), oracle[index] == lowered[index] { index += 1 }
-        print("DIFFERS: \(source.prefix(70).replacingOccurrences(of: "\n", with: "\\n"))\n   oracle: \(index < oracle.count ? String(oracle[index]) : "(ends)")\n   swiftsyntax: \(index < lowered.count ? String(lowered[index]) : "(ends)")")
-    }
-    print("harvested programs the oracle reads: \(readable); agree \(agree); unsupported \(unsupported.values.reduce(0, +)); wrong \(wrong.count)")
-    for (reason, count) in unsupported.sorted(by: { $0.value > $1.value }).prefix(25) { print("  \(count) × \(reason)") }
-    #expect(unsupported.isEmpty, "\(unsupported.values.reduce(0, +)) programs aren't read")
-    #expect(wrong.isEmpty, "\(wrong.count) programs differ, the first: \(wrong.first ?? "")")
 }
 
 /// The kind each character is painted, as the shell paints spans: longer
@@ -52,33 +25,11 @@ private func painted(_ spans: [Span], length: Int) -> [SpanKind?] {
     return kinds
 }
 
-@Test func theSwiftSyntaxFrontEndColorsAsTheOracleDoes() throws {
-    let shell = Shell()
-    let bound = shell.interpreter.globalNames()
-    var same = 0, differ: [(String, String)] = []
-    for source in try harvested() {
-        guard (try? Parser.parse(source, bound: bound, plugin: ShellSyntax())) != nil else { continue }
-        guard (try? SwiftSyntaxFrontEnd().parse(source, bound: bound, plugin: ShellSyntax())) != nil else { continue }
-        let length = source.count
-        let oracle = painted(HandWrittenFrontEnd().highlight(source, bound: bound, plugin: ShellSyntax()), length: length)
-        let colored = painted(SwiftSyntaxFrontEnd().highlight(source, bound: bound, plugin: ShellSyntax()), length: length)
-        if oracle == colored { same += 1; continue }
-        let characters = Array(source)
-        let index = oracle.indices.first { oracle[$0] != colored[$0] }!
-        let word = String(characters[max(0, index - 12)..<min(length, index + 12)])
-        differ.append((source, "at \(index) …\(word)…: oracle \(oracle[index].map { "\($0)" } ?? "plain"), swiftsyntax \(colored[index].map { "\($0)" } ?? "plain")"))
-    }
-    for (source, why) in differ.prefix(40) {
-        print("COLORS DIFFER: \(source.prefix(60).replacingOccurrences(of: "\n", with: "\\n"))\n   \(why.replacingOccurrences(of: "\n", with: "\\n"))")
-    }
-    print("programs both read: \(same + differ.count); colored the same \(same); differ \(differ.count)")
-    #expect(differ.isEmpty)
-}
-
 @Test func aCommentAfterACommandIsNotOne() throws {
     let bound = Shell().interpreter.globalNames()
-    let source = "try! swift build\n// a comment\nlet x = 1\nx"
-    #expect(try SwiftSyntaxFrontEnd().parse(source, bound: bound, plugin: ShellSyntax()) == Parser.parse(source, bound: bound, plugin: ShellSyntax()))
+    let program = try SwiftSyntaxFrontEnd().parse("try! swift build\n// a comment\nlet x = 1\nx", bound: bound, plugin: ShellSyntax())
+    // The comment isn't another command's word.
+    #expect(program.statements.count == 3)
 }
 
 /// Reading a command doesn't read the whole source again: a script of many
@@ -99,20 +50,6 @@ private func painted(_ spans: [Span], length: Int) -> [SpanKind?] {
     // 256 times, quadratic (it was over 60).
     let small = try seconds(250), large = try seconds(4000)
     #expect(large / small < 32, "250 commands: \(small)s, 4000: \(large)s")
-}
-
-/// The prelude, read through SwiftSyntax, is the tree the hand-written parser
-/// gives it: the oracle, for the shell's whole prelude, until it is deleted.
-@Test func thePreludeReadsAsTheOracleDoesIt() throws {
-    let shell = Shell()
-    let bound = Dictionary(uniqueKeysWithValues: Bridge.types.keys.map { ($0, NameKind.type) })
-    let source = shell.interpreter.preludeSource
-    let oracle = try Parser.parsePrelude(source, bound: bound)
-    let lowered = try SwiftSyntaxFrontEnd().parsePrelude(source, bound: bound)
-    #expect(oracle.statements.count == lowered.statements.count)
-    for (expected, actual) in zip(oracle.statements, lowered.statements) where expected != actual {
-        Issue.record("the prelude differs at \(String(reflecting: expected).prefix(200)) vs \(String(reflecting: actual).prefix(200))")
-    }
 }
 
 // MARK: What the hand-written parser read, kept
@@ -140,18 +77,18 @@ private func goldenURL() -> URL {
 /// The shell's syntax is held to what the hand-written parser read with the
 /// same plug-in (Goldens/shell.txt, made from it before it was deleted): each
 /// harvested program's tree, printed back as Swift, and its colors, a letter a
-/// character. A change is a decision, not an accident; `UPDATE_GOLDENS=1`
-/// writes the file again from the front end as it is.
+/// character. A change is a decision, not an accident.
 @Test func theShellsSyntaxReadsAsTheHandWrittenParserDid() throws {
     let shell = Shell()
     let bound = shell.interpreter.globalNames()
     let programs = try harvested()
+    // `UPDATE_GOLDENS=1` writes the file again from the front end as it is.
     if ProcessInfo.processInfo.environment["UPDATE_GOLDENS"] != nil {
         var records: [String] = []
         for (index, source) in programs.enumerated() {
-            guard let oracle = try? Parser.parse(source, bound: bound, plugin: ShellSyntax()) else { continue }
-            let colors = painted(HandWrittenFrontEnd().highlight(source, bound: bound, plugin: ShellSyntax()), length: source.count)
-            records.append("\(index)\u{1F}\(SwiftPrinter().source(oracle))\u{1F}\(String(colors.map(letter)))")
+            guard let lowered = try? SwiftSyntaxFrontEnd().parse(source, bound: bound, plugin: ShellSyntax()) else { continue }
+            let colors = painted(SwiftSyntaxFrontEnd().highlight(source, bound: bound, plugin: ShellSyntax()), length: source.count)
+            records.append("\(index)\u{1F}\(SwiftPrinter().source(lowered))\u{1F}\(String(colors.map(letter)))")
         }
         try records.joined(separator: "\u{1E}").write(to: goldenURL(), atomically: true, encoding: .utf8)
     }
@@ -162,14 +99,29 @@ private func goldenURL() -> URL {
         let parts = record.split(separator: "\u{1F}", maxSplits: 2, omittingEmptySubsequences: false)
         let index = try #require(Int(parts[0]))
         let source = programs[index]
-        guard let lowered = try? SwiftSyntaxFrontEnd().parse(source, bound: bound, plugin: ShellSyntax()) else {
-            wrongTree.append("#\(index) not read:\n\(source.prefix(120))")
+        let lowered: Program
+        do {
+            lowered = try SwiftSyntaxFrontEnd().parse(source, bound: bound, plugin: ShellSyntax())
+        } catch {
+            wrongTree.append("#\(index) not read (\(error)):\n\(source.prefix(120))")
             continue
         }
-        if SwiftPrinter().source(lowered) != String(parts[1]) { wrongTree.append("#\(index):\n\(source.prefix(120))") }
+        let printed = SwiftPrinter().source(lowered)
+        if printed != String(parts[1]) {
+            let expected = parts[1].split(separator: "\n", omittingEmptySubsequences: false), got = printed.split(separator: "\n", omittingEmptySubsequences: false)
+            var line = 0
+            while line < min(expected.count, got.count), expected[line] == got[line] { line += 1 }
+            wrongTree.append("#\(index):\n\(source.prefix(120))\n  kept: \(line < expected.count ? expected[line] : "(ends)")\n  read: \(line < got.count ? got[line] : "(ends)")")
+        }
         let colors = painted(SwiftSyntaxFrontEnd().highlight(source, bound: bound, plugin: ShellSyntax()), length: source.count)
-        if String(colors.map(letter)) != String(parts[2]) { wrongColors.append("#\(index):\n\(source.prefix(120))") }
+        let painting = String(colors.map(letter))
+        if painting != String(parts[2]) {
+            let kept = Array(parts[2]), got = Array(painting)
+            let at = kept.indices.first { kept[$0] != got[$0] } ?? 0
+            let characters = Array(source)
+            wrongColors.append("#\(index): at \(at) …\(String(characters[max(0, at - 10)..<min(characters.count, at + 14)]))… kept \(kept[at]) read \(got[at])\n\(source.prefix(100))")
+        }
     }
-    #expect(wrongTree.isEmpty, "\(wrongTree.count) trees differ:\n\(wrongTree.prefix(5).joined(separator: "\n---\n"))")
-    #expect(wrongColors.isEmpty, "\(wrongColors.count) colorings differ:\n\(wrongColors.prefix(5).joined(separator: "\n---\n"))")
+    #expect(wrongTree.isEmpty, "\(wrongTree.count) trees differ:\n\(wrongTree.prefix(ProcessInfo.processInfo.environment["GOLDEN_ALL"] != nil ? 400 : 5).joined(separator: "\n---\n"))")
+    #expect(wrongColors.isEmpty, "\(wrongColors.count) colorings differ:\n\(wrongColors.prefix(ProcessInfo.processInfo.environment["GOLDEN_ALL"] != nil ? 400 : 5).joined(separator: "\n---\n"))")
 }
