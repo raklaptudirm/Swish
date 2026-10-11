@@ -100,3 +100,17 @@ private func painted(_ spans: [Span], length: Int) -> [SpanKind?] {
     let small = try seconds(250), large = try seconds(4000)
     #expect(large / small < 32, "250 commands: \(small)s, 4000: \(large)s")
 }
+
+/// The prelude, read through SwiftSyntax, is the tree the hand-written parser
+/// gives it: the oracle, for the shell's whole prelude, until it is deleted.
+@Test func thePreludeReadsAsTheOracleDoesIt() throws {
+    let shell = Shell()
+    let bound = Dictionary(uniqueKeysWithValues: Bridge.types.keys.map { ($0, NameKind.type) })
+    let source = shell.interpreter.preludeSource
+    let oracle = try Parser.parsePrelude(source, bound: bound)
+    let lowered = try SwiftSyntaxFrontEnd().parsePrelude(source, bound: bound)
+    #expect(oracle.statements.count == lowered.statements.count)
+    for (expected, actual) in zip(oracle.statements, lowered.statements) where expected != actual {
+        Issue.record("the prelude differs at \(String(reflecting: expected).prefix(200)) vs \(String(reflecting: actual).prefix(200))")
+    }
+}
