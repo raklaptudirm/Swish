@@ -1,5 +1,4 @@
 @_spi(Layer) import Swiit
-@_spi(Shell) import SwiitSwiftSyntax
 @_spi(Shell) @_spi(Layer) @testable import SwishShell
 import Foundation
 import SwiitKit
@@ -11,7 +10,7 @@ import Testing
 /// Programs harvested from the test suites, which Swiit's own tests keep.
 private func harvested() throws -> [String] {
     let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        .appendingPathComponent("Packages/Swiit/Tests/SwiitSwiftSyntaxTests/programs.txt")
+        .appendingPathComponent("Packages/Swiit/Tests/SwiitTests/programs.txt")
     return try String(contentsOf: url, encoding: .utf8).split(separator: "\u{1E}", omittingEmptySubsequences: true).map(String.init)
 }
 

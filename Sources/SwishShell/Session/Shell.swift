@@ -1,5 +1,4 @@
 @_spi(Layer) import Swiit
-@_spi(Shell) import SwiitSwiftSyntax
 import Foundation
 import SwiitKit
 
@@ -85,7 +84,6 @@ public final class Shell {
         interpreter = Interpreter(host: SwiitHost(name: "swish"), outputCounter: OutputCounter())
         interpreter.task.host = ShellTask()
         interpreter.syntax = ShellSyntax()
-        interpreter.frontEnd = SwiftSyntaxFrontEnd()
         interpreter.host = SwiitHost(process: self)
         // Library functions that ask are lent what was entered before, too.
         interpreter.contextProvider = { [unowned self] in
