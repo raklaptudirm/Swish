@@ -282,13 +282,11 @@ Left:
 
 ## Open questions
 
-- **Function values and implicit effects.** A function made async only by
-  shell constructs is called with no `await`, but a value of its function type
-  (`let f = build`) loses that. Either its type carries an "implicit" mark so
-  `f()` needs no `await`, or calling through a value needs one. The first is
-  friendlier to scripts, the second simpler.
-- **Redefinition at the prompt** of a function from sync to async while
-  callers exist: an error, or re-check the callers.
+- ~~Function values and implicit effects~~ *Decided:* the type carries an
+  "implicit" mark (`Effect.implicitAsync`), so `let f = build; f()` needs no
+  `await`, as `build()` doesn't.
+- ~~Redefinition at the prompt~~ *Decided:* a function becoming `async` while
+  functions declared earlier call it without `await` is an error naming them.
 - **Where `Shell.status` lives** once tasks are concurrent: per task, which
   `$?`-like use after `await` suggests.
 - **Whether `Command` runs a Swift function and a program the same way,** so

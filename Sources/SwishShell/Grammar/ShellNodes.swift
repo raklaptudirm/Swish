@@ -31,6 +31,8 @@ struct DollarExpr: ExprExtension, Equatable {
 struct SubstitutionExpr: ExprExtension, Equatable {
     var program: Program
     var throwing: Bool
+    /// It waits for the commands to finish.
+    var waits: Bool { true }
 
     mutating func check(in checker: TypeChecker, expecting expected: TypeAnnotation?) throws -> TypeAnnotation {
         if throwing { try checker.throwingSite("the command") }
@@ -84,6 +86,8 @@ struct CommandChainExpr: ExprExtension, Equatable {
     var links: [Link] = []
     /// An `if`, `guard` or `while` condition, which asks whether it held.
     var isCondition = false
+    /// It waits for its commands to finish.
+    var waits: Bool { true }
 
     var operands: [Operand] { [first] + links.map(\.operand) }
 

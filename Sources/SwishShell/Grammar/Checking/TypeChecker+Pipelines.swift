@@ -232,7 +232,7 @@ extension TypeChecker {
             try checkClosures(&command, expecting: [:])
             return commonReturn(methods)
         }
-        if let members = interpreter.objectMembers[typeName], case .functionType(_, let result, _)? = members[name] {
+        if let members = interpreter.objectMembers[typeName], case .functionType(_, let result, _, _)? = members[name] {
             try checkClosures(&command, expecting: [:])
             return result
         }

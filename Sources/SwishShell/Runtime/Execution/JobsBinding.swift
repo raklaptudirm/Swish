@@ -9,7 +9,7 @@ extension Shell {
             updateJobs() // So their states are current.
             return .list(jobs.map { .object($0) })
         }
-        interpreter.awaiting = Awaiting(operand: .named("Job"), result: .output) { [unowned self] value, throwing in
+        interpreter.awaiting = Awaiting(operand: .named("Job"), result: .output, isHandle: { if case .object(_ as Job) = $0 { true } else { false } }) { [unowned self] value, throwing in
             let job: Job
             if let value {
                 guard case .object(let object as Job) = value else {
