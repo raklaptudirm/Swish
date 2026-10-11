@@ -31,10 +31,11 @@ private func status(_ source: String) -> Int32 {
 }
 
 @Test func jobsAndBareAwait() throws {
-    // Which jobs there are, not how far along: a slow machine may finish one already.
-    // Once the later, longer one is awaited, the first is done.
-    #expect(try output("let a = async sleep 0.1; let b = async sleep 0.2; jobs.map { $0.command }; jobs.count; await; jobs; await; jobs.count")
-        == "[\"sleep 0.1\", \"sleep 0.2\"]\n2\nid  state  command\n 1  done   sleep 0.1\n0\n")
+    // Which jobs there are, not how far along: a slow machine may finish one,
+    // or both, already. A bare `await` waits for the latest; the other is
+    // awaited by name, as a finished job may have been announced and gone.
+    #expect(try output("let a = async sleep 0.1; let b = async sleep 0.2; jobs.map { $0.command }; jobs.count; await; await a; jobs.count")
+        == "[\"sleep 0.1\", \"sleep 0.2\"]\n2\n0\n")
     #expect(status("await") == 1) // nothing to await
 }
 
