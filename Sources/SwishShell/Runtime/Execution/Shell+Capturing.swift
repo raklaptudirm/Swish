@@ -16,7 +16,7 @@ extension Shell {
         let result = Result { try body() }
         stdoutFD = savedOutput
         close(pipe.write)
-        let output = collector.finish()
+        let output = interpreter.suspend { collector.finish() }
         try result.get()
         return output
     }

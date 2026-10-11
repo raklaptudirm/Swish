@@ -5,20 +5,23 @@ import SwishStandardLibrary
 
 extension ValueStream {
     /// Lines of an external program's output, read as they arrive.
-    static func lines(from fd: Int32) -> ValueStream {
-        let reader = LineReader(fd: fd)
+    /// Reading waits through the interpreter's `suspend`.
+    static func lines(from fd: Int32, in interpreter: Interpreter) -> ValueStream {
+        let reader = LineReader(fd: fd, interpreter: interpreter)
         return ValueStream { reader.next().map(Value.string) }
     }
 }
 
 private final class LineReader {
     private let fd: Int32
+    private unowned let interpreter: Interpreter
     private var buffer: [UInt8] = []
     private var start = 0
     private var atEnd = false
 
-    init(fd: Int32) {
+    init(fd: Int32, interpreter: Interpreter) {
         self.fd = fd
+        self.interpreter = interpreter
     }
 
     func next() -> String? {
@@ -37,7 +40,7 @@ private final class LineReader {
             buffer.removeSubrange(..<start)
             start = 0
             var chunk = [UInt8](repeating: 0, count: 64 * 1024)
-            let count = read(fd, &chunk, chunk.count)
+            let count = interpreter.suspend { read(fd, &chunk, chunk.count) }
             if count > 0 {
                 buffer += chunk[..<count]
             } else if !(count == -1 && errno == EINTR) {
@@ -60,7 +63,7 @@ extension Shell {
         stdoutFD = output
         defer { stdoutFD = savedOutput }
 
-        var stream: ValueStream? = input >= 0 ? .lines(from: input) : nil
+        var stream: ValueStream? = input >= 0 ? .lines(from: input, in: interpreter) : nil
         var upstreamIsExternal = input >= 0
         for stage in stages {
             switch stage {

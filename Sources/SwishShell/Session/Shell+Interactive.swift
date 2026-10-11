@@ -7,7 +7,7 @@ extension Shell {
     public func runInteractive() -> Int32 {
         takeTerminal()
         if !interactive {
-            return runScript { Swift.readLine() }
+            return runScript { [unowned self] in interpreter.suspend { Swift.readLine() } }
         }
         editor.history = History(path: History.defaultPath)
         editor.continuationPrompt = "…".styled(DisplayStyle.dim) + " "
@@ -25,7 +25,8 @@ extension Shell {
             if pending.isEmpty {
                 for notice in announceJobs(styled: DisplayStyle.enabled(for: STDERR_FILENO)) { writeAll(STDERR_FILENO, notice + "\n") }
             }
-            switch editor.readLine(prompt: pending.isEmpty ? prompt() : "…".styled(DisplayStyle.dim) + " ") {
+            let prompt = pending.isEmpty ? prompt() : "…".styled(DisplayStyle.dim) + " "
+            switch interpreter.suspend({ editor.readLine(prompt: prompt) }) {
             case .eof:
                 if !pending.isEmpty { enter(pending) }
                 return lastStatus

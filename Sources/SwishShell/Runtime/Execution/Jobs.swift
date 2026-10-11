@@ -73,7 +73,7 @@ final class Job: CheckedObject, @unchecked Sendable {
         }
         return SwiftValue.make(Flow<Value> { [unowned self] in
             while true {
-                switch collector.nextLine(timeout: 0.05) {
+                switch shell.interpreter.suspend({ collector.nextLine(timeout: 0.05) }) {
                 case .line(let line): return .string(line)
                 case .end: return nil
                 // Waiting for a line is where Ctrl-C has to be noticed.

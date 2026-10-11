@@ -192,7 +192,7 @@ extension Shell {
 
         while let pid = job.running.first {
             var raw: Int32 = 0
-            guard waitpid(pid, &raw, WUNTRACED) == pid else {
+            guard interpreter.suspend({ waitpid(pid, &raw, WUNTRACED) }) == pid else {
                 if errno == EINTR { continue }
                 job.running.removeFirst()
                 continue
