@@ -1,4 +1,4 @@
-@_spi(Shell) import Swiit
+@_spi(Host) @_spi(Layer) @_spi(Internals) import Swiit
 @_spi(Shell) import SwiitSwiftSyntax
 import Foundation
 import SwishKit

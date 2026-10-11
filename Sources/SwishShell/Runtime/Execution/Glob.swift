@@ -1,4 +1,4 @@
-@_spi(Shell) import Swiit
+import Swiit
 import Foundation
 
 /// Filename patterns: `*`, `[a-z]`, and `**` for any depth of directories.

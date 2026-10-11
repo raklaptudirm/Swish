@@ -1,6 +1,6 @@
-@_spi(Shell) import Swiit
+@_spi(Host) @_spi(Layer) import Swiit
 @_spi(Shell) import SwiitSwiftSyntax
-@_spi(Shell) @testable import SwishShell
+@_spi(Shell) @_spi(Host) @_spi(Layer) @_spi(Internals) @testable import SwishShell
 import Foundation
 import SwishKit
 import Testing

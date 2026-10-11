@@ -1,4 +1,4 @@
-@_spi(Shell) import Swiit
+@_spi(Host) import Swiit
 import Foundation
 
 /// A dynamic library's file name on this platform: `libTools.dylib`, `libTools.so`.

@@ -1,4 +1,4 @@
-@_spi(Shell) import Swiit
+import Swiit
 import Foundation
 
 /// Writes unbuffered, so output from the shell and its children never
