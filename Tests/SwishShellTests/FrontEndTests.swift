@@ -81,3 +81,23 @@ private func painted(_ spans: [Span], length: Int) -> [SpanKind?] {
     let source = "try! swift build\n// a comment\nlet x = 1\nx"
     #expect(try SwiftSyntaxFrontEnd().parse(source, bound: bound, plugin: ShellSyntax()) == Parser.parse(source, bound: bound, plugin: ShellSyntax()))
 }
+
+/// Reading a command doesn't read the whole source again: a script of many
+/// commands parses in time that grows with it, not with its square.
+@Test func manyCommandsParseInLinearTime() throws {
+    // The best of a few runs, as other tests share the machine.
+    func seconds(_ commands: Int) throws -> Double {
+        let source = "func f() {\n" + String(repeating: "    true\n", count: commands) + "}"
+        var best = Double.infinity
+        for _ in 0..<2 {
+            let start = Date()
+            _ = try SwiftSyntaxFrontEnd().parse(source, bound: [:], plugin: ShellSyntax())
+            best = min(best, Date().timeIntervalSince(start))
+        }
+        return best
+    }
+    // Sixteen times the commands: about sixteen times as long, linear; up to
+    // 256 times, quadratic (it was over 60).
+    let small = try seconds(250), large = try seconds(4000)
+    #expect(large / small < 32, "250 commands: \(small)s, 4000: \(large)s")
+}
