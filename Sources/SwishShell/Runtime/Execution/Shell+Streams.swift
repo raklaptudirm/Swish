@@ -1,7 +1,8 @@
 @_spi(Host) @_spi(Layer) import Swiit
+import SwishShellLibrary
 import Foundation
 import SwishKit
-import SwishStandardLibrary
+import SwiitStandardLibrary
 
 extension ValueStream {
     /// Lines of an external program's output, read as they arrive.

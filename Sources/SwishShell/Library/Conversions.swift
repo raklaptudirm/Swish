@@ -1,4 +1,4 @@
-import SwishStandardLibrary
+import SwiitStandardLibrary
 import SwishKit
 
 /// What text `from` can parse.

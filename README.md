@@ -269,7 +269,7 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
 | `…/Language` | The language: `Syntax` (the tree and the parser, with a plug-in for syntax a host adds), `Checking` (the type checker, which runs before anything else), `Interpreter` (statements, expressions, calls, structs and enums), `Prelude` (the builtins' declarations) and `Reflection` (a type's members, for `help` and `members`). |
 | `…/Bridge` | Swift's types and members, generated into `Bridge/Generated` from symbol graphs. |
 | `…/Host` | What a host plugs in: `SwishHost`, dynamic objects, library registration, and `Embedding` (`Interpreter(host:limits:)`, `eval`, `register`, `set`, `Diagnostic`). |
-| `…/Library` | `SwishStandardLibrary`, a module of its own so the generator can read it. |
+| `…/Library` | `SwiitStandardLibrary`, a module of its own so the generator can read it. |
 | `Sources/SwishShell` | The shell (Swish), a client of Swiit: |
 | `…/Grammar` | The shell's syntax: `Syntax` (commands, pipelines, `$(…)`, redirects), `Checking` (types a pipeline's stages), `CommandLine` (binds `--flag` words to parameters) and the nodes they make. |
 | `…/Runtime` | Running it: `Execution` (pipelines, value streams, redirects, jobs, globs, `env`), `Platform` (`posix_spawn` with process groups and terminal handoff, resource limits, what differs between macOS and Linux) and `Plugins` (building and loading). |
@@ -279,7 +279,7 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
 | `Bridges`, `Packages/Swiit/Bridges` | Which members of each bridged type a platform has, one list a platform and module: what's bridged is what every platform has (`run bridge` keeps them current; CI checks). |
 | `Tests/Interactive` | `expect` scripts that drive the shell through a real terminal. |
 | `Examples/Tools` | An example plugin, which the tests import. |
-| `Packages/Swiit/Sources/SwiitBridge` | Reads Swift's symbol graphs and generates the glue that bridges the standard library, swift-system and `SwishStandardLibrary` and `SwishShellLibrary` (`run bridge`): the graph, declaration parsing, what Swish can hold and how values cross, and one member's glue each have a file. |
+| `Packages/Swiit/Sources/SwiitBridge` | Reads Swift's symbol graphs and generates the glue that bridges the standard library, swift-system and `SwiitStandardLibrary` and `SwishShellLibrary` (`run bridge`): the graph, declaration parsing, what Swish can hold and how values cross, and one member's glue each have a file. |
 
 </details>
 

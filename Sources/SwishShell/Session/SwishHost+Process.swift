@@ -1,7 +1,8 @@
 @_spi(Host) import Swiit
+import SwishShellLibrary
 import Foundation
 import SwishKit
-import SwishStandardLibrary
+import SwiitStandardLibrary
 
 extension SwishHost {
     /// The shell as a host: the process it is. Output goes to the

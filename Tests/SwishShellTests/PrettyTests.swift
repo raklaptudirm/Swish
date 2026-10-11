@@ -1,7 +1,8 @@
 import Swiit
 @_spi(Shell) @_spi(Host) @_spi(Layer) @testable import SwishShell
 import SwishKit
-import SwishStandardLibrary
+import SwiitStandardLibrary
+import SwishShellLibrary
 import Testing
 
 private let wide = PrettyPrinter(width: .max)

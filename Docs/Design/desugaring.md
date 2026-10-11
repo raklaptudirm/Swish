@@ -40,7 +40,7 @@ statements, and effects.
 
 ## The library the rewrite targets
 
-All Swift, in `SwishStandardLibrary`, callable by hand:
+All Swift, in `SwiitStandardLibrary`, callable by hand:
 
 | Type | What it is |
 |---|---|
@@ -190,7 +190,7 @@ the net: the behavior doesn't change. (Steps 2 and part of 3 are done; see
 "Where it stands" for why the status design moves ahead of the rest.)
 
 1. **The library types, by hand.** `Command`, `Pipeline`, `Words`,
-   `Environment`, `Shell.capture`, `Shell.chain` in `SwishStandardLibrary`,
+   `Environment`, `Shell.capture`, `Shell.chain` in `SwiitStandardLibrary`,
    with tests that call them directly, so every desugared form is runnable
    before anything rewrites to it.
 2. **A rewrite pass with a printer for tests,** printing the core tree as

@@ -1,7 +1,8 @@
 @_spi(Host) import Swiit
 @_spi(Shell) @_spi(Host) @_spi(Layer) @testable import SwishShell
 import SwishKit
-import SwishStandardLibrary
+import SwiitStandardLibrary
+import SwishShellLibrary
 import Testing
 
 /// Runs `source` in `shell`, returning what it wrote to standard output.

@@ -23,7 +23,7 @@ let package = Package(
         .target(
             name: "SwishShellLibrary",
             dependencies: [
-                .product(name: "SwishStandardLibrary", package: "Swiit"),
+                .product(name: "SwiitStandardLibrary", package: "Swiit"),
                 .product(name: "SwishKit", package: "SwishKit"),
                 .product(name: "SystemPackage", package: "swift-system"),
             ],
