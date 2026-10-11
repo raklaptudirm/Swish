@@ -181,3 +181,39 @@ private func run(_ source: String) throws -> String {
         + "$(sleep 0.2); print(read); print(await t ?? \"none\"); print(read)"
     #expect(try run(source) == "false\nhello\ntrue\n")
 }
+
+// Swift's own concurrency in the shell (Docs/Design/async.md, step 7).
+
+@Test func swiftsTaskRunsInTheShell() throws {
+    // Unlike `async { … }`, it isn't a job: it writes where its starter writes.
+    #expect(try run("let t = Task { print(\"inside\"); return 2 }; let n = await t.value; print(n * 3, jobs.count)") == "inside\n6 0\n")
+    #expect(try run("let t = Task { $(sh -c 'echo hi').text }; print(await t.value)") == "hi\n")
+}
+
+@Test func asyncLetAndForTryAwaitInTheShell() throws {
+    let start = Date()
+    let source = """
+    func slow(_ n: Int) async -> Int { try? await Task.sleep(nanoseconds: 300_000_000); return n }
+    async let a = slow(1)
+    async let b = slow(2)
+    print(await a + b)
+    """
+    #expect(try run(source) == "3\n")
+    #expect(Date().timeIntervalSince(start) < 0.55)
+    #expect(try run(#"let j = async $(sh -c 'echo a; echo b'); for try await line in j.lines() { print("got", line) }"#) == "got a\ngot b\n")
+    #expect(try run("_ = 1 + 1; let _ = 2; print(\"ok\")") == "ok\n")
+}
+
+@Test func anAwaitedSwiftTaskReadsTheInput() throws {
+    let saved = dup(STDIN_FILENO)
+    let pipe = makePipe()!
+    dup2(pipe.read, STDIN_FILENO)
+    close(pipe.read)
+    defer {
+        dup2(saved, STDIN_FILENO)
+        close(saved)
+    }
+    _ = "typed\n".withCString { write(pipe.write, $0, 6) }
+    close(pipe.write)
+    #expect(try run("let t = Task { readLine() ?? \"none\" }; print(await t.value)") == "typed\n")
+}

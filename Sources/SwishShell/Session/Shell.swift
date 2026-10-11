@@ -100,6 +100,25 @@ public final class Shell {
         interpreter.installJSON()
         installJobs()
         recordStatuses()
+        // Swift's `Task { }` writes where the code that started it writes, as
+        // in Swift, but is in the background: it waits for its turn at the
+        // input and the terminal, as a job's task does.
+        // (Weakly: the shell closes its tasks as it goes, in `deinit`.)
+        interpreter.newTaskHost = { [weak self] in
+            guard let self else { return ShellTask() }
+            let state = ShellTask()
+            state.inForeground = false
+            state.stdoutFD = stdoutFD
+            state.stderrFD = stderrFD
+            return state
+        }
+        // Awaited from the foreground, a task is in the foreground while it
+        // runs: it reads the input, and its programs get the terminal.
+        interpreter.awaitingTask = { [weak self] handle in
+            guard let self, task.inForeground, let state = handle.context.host as? ShellTask, !state.inForeground else { return {} }
+            state.inForeground = true
+            return { state.inForeground = false }
+        }
         // A task in the background reads the input only once it's awaited
         // from the foreground; reading sooner would take the prompt's.
         interpreter.inputTurn = { [unowned self] read in

@@ -255,12 +255,7 @@ extension Shell {
     /// stopped again with ^Z, it goes back to `jobs` and the line is left.
     func awaitJob(_ job: Job) throws -> Output {
         if let task = job.task {
-            // Awaited from the foreground, it's in the foreground while it runs:
-            // it reads the input, and its programs get the terminal.
-            let state = task.context.host as? ShellTask
-            if self.task.inForeground { state?.inForeground = true }
             let result = Result { try interpreter.join(task) }
-            state?.inForeground = false
             job.finish()
             jobs.removeAll { $0 === job }
             if case .failure(let error) = result, !job.givesOutput {
