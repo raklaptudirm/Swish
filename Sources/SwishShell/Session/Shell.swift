@@ -57,11 +57,8 @@ public final class Shell {
     var scriptStopped = false
     /// The signal that stopped the script, which it then ends by.
     var endingSignal: Int32?
-    /// The running script's directory, which relative `import` paths start
-    /// from; nil at the prompt, where they start from the working directory.
+    /// The running script's directory; nil at the prompt.
     var scriptDirectory: String?
-    /// Imported plugins: each module's name, and the package it came from.
-    var plugins: [String: String] = [:]
 
     let editor = LineEditor()
 

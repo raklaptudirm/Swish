@@ -41,10 +41,10 @@ step "its flags complete from the signature" {--times\x1b\[0m \r}
 send "3 Rak\r"
 step "and the completed line runs" "hi Rak x3"
 
-send "ls Packag\t"
-step "a shared prefix is filled in" {ls\x1b\[0m Package\r}
+send "ls Pack\t"
+step "a shared prefix is filled in" {ls\x1b\[0m Package\.\r}
 send "\t"
-step "and the rest are listed" {Package\.swift +Packages/}
+step "and the rest are listed" {Package\.resolved +Package\.swift}
 send "\x15"
 
 send "if true \{\r"

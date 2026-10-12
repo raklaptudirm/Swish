@@ -5,13 +5,11 @@ let root = FilePath(#filePath).removingLastComponent()
 cd $root
 let darwin = $(uname).text == "Darwin"
 
-/// Runs every test. The shell's unit tests and the SwishKit compatibility
-/// package's (Swiit's own run in its repository, ../Swiit), then the shell
-/// built and driven through a real terminal by the expect scripts (on Linux,
-/// install expect first).
+/// Runs every test. The shell's unit tests (Swiit's own run in its
+/// repository, ../Swiit), then the shell built and driven through a real
+/// terminal by the expect scripts (on Linux, install expect first).
 func test() {
     try! _swiftTest(".")
-    try! _swiftTest("Packages/SwishKit")
     try! swift build
     for script in ["job-control", "line-editor", "background-jobs", "config", "signals"] {
         try! expect "Tests/Interactive/\(script).exp"

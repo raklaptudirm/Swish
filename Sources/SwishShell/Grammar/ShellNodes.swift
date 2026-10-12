@@ -134,22 +134,6 @@ struct CommandChainExpr: ExprExtension, Equatable {
     }
 }
 
-// MARK: Statements
-
-/// `import Tools from "./Tools"`: builds a Swift package and loads the
-/// functions it exports.
-struct ImportPluginStatement: StatementExtension, Equatable {
-    var name: String
-    var path: Expr
-
-    mutating func check(in checker: TypeChecker) throws {
-        try checker.expect(&path, .string, "an import's path")
-        checker.scopes[checker.scopes.count - 1][name] = .module
-        checker.afterImport = true
-    }
-
-}
-
 // MARK: The parser's spelling, and reading them back
 
 extension Expr {
@@ -179,12 +163,6 @@ extension Expr {
 
     private var extensionNode: (any ExprExtension)? {
         if case .extended(let box) = self { box.node } else { nil }
-    }
-}
-
-extension Statement {
-    static func importPlugin(name: String, path: Expr) -> Statement {
-        .extended(StatementExtensionBox(ImportPluginStatement(name: name, path: path)))
     }
 }
 

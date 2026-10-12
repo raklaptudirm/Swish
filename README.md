@@ -161,32 +161,6 @@ jobs                              // background jobs, including ones you ^Z'd
 await                             // bring back the most recent: the ^Z'd vim, say
 ```
 
-### Swift packages as commands
-
-Mark functions in a Swift package with `@SwiitExport` and `import` it: each
-one becomes a command with flags, `--help` and piping, derived from its
-signature and doc comment, just like a Swish `func`.
-
-```swift
-// In a package that depends on SwiitKit:
-/// Greets someone.
-@SwiitExport
-public func greet(_ name: String, @Flag("n") times: Int = 1) -> [String] { … }
-
-@SwiitExport
-public func longest(@Input _ lines: [String]) -> String? { … }
-```
-
-```swift
-import Tools from "~/code/tools"   // builds it, and loads the library
-greet Rak -n 2
-ls | get name | longest
-```
-
-Enums that conform to `SwiitEnum` work as arguments, `Encodable` results
-become records, and `@SwiitObject` classes are live objects with their
-properties and methods. See [`Examples/Tools`](Examples/Tools).
-
 ### The rest of a shell, a little tidier
 
 ```swift
@@ -212,7 +186,7 @@ over lines when they're wide.
 ## Getting started
 
 Swish needs Swift 6 on macOS or Linux. It's all Swift: what differs between the two (starting
-programs, plugin libraries) is in `Sources/SwishShell/Runtime/Platform`.
+programs) is in `Sources/SwishShell/Runtime/Platform`.
 
 The interpreter, [Swiit](https://github.com/raklaptudirm/Swiit), is a repository of its
 own, which the build looks for beside this one, at the version in `.swiit-version`:
@@ -255,7 +229,7 @@ is reported, and the default prompt drawn instead. History lives in the XDG stat
 ```sh
 swift build
 .build/debug/swish
-swift run swish -c 'run test'     # unit tests of the shell and SwishKit (Swiit's are in its repository), plus pty-driven job-control, editor and background-job tests
+swift run swish -c 'run test'     # unit tests of the shell (Swiit's are in its repository), plus pty-driven job-control, editor and background-job tests
 swift run swish -c 'run bridge'   # regenerate the shell's bridge (after a toolchain update; Swiit's is Scripts/bridge there)
 ```
 
@@ -269,17 +243,15 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
 
 | Path | What |
 |---|---|
-| [`Swiit`](https://github.com/raklaptudirm/Swiit) | The interpreter, in a repository of its own, which knows nothing of the shell; the shell is a client of it, built against the version in `.swiit-version`. It is looked for beside this checkout (`../Swiit`; CI clones the tag), so work on both together by editing there. It holds the language, the bridges, the host API, `SwiitKit` (`Value` and the plugin API, with the `@SwiitExport` and `@SwiitObject` macros, a package of its own so it links as a **dynamic library** shared by the shell and every plugin) and the bridge generator. |
-| `Packages/SwishKit` | SwiitKit's old name: a module that brings in SwiitKit, which keeps the old names, so a plugin written against SwishKit builds unchanged. |
+| [`Swiit`](https://github.com/raklaptudirm/Swiit) | The interpreter, in a repository of its own, which knows nothing of the shell; the shell is a client of it, built against the version in `.swiit-version`. It is looked for beside this checkout (`../Swiit`; CI clones the tag), so work on both together by editing there. It holds the language, the bridges, the host API, `SwiitKit` (`Value`, and what a host converts through, a module of its own) and the bridge generator. |
 | `Sources/SwishShell` | The shell (Swish), a client of Swiit: |
 | `…/Grammar` | The shell's syntax: `Syntax` (commands, pipelines, `$(…)`, redirects), `Checking` (types a pipeline's stages), `CommandLine` (binds `--flag` words to parameters) and the nodes they make. |
-| `…/Runtime` | Running it: `Execution` (pipelines, value streams, redirects, jobs, globs, `env`), `Platform` (`posix_spawn` with process groups and terminal handoff, resource limits, what differs between macOS and Linux) and `Plugins` (building and loading). |
+| `…/Runtime` | Running it: `Execution` (pipelines, value streams, redirects, jobs, globs, `env`), `Platform` (`posix_spawn` with process groups and terminal handoff, resource limits, what differs between macOS and Linux). |
 | `…/Session` | The prompt: the `Shell` itself (loop, scripts, tasks, config), `Editor` (history, completion, highlighting) and the shell builtins and `help`. `Presentation` shows values: tables, key/value lists, and the prompt's echo of each value (the interpreter only tells it what a statement gave). |
 | `…/Bridge`, `…/Library` | The shell's generated bridge, and `SwishShellLibrary` (`pwd`, `readLine`, `history`, `ls`, `ps`, `from`, `to`, `table`, `list`, `JSON`). |
 | `Sources/Swish` | The executable. |
 | `Bridges` | Which members of each bridged type a platform has, one list a platform: what's bridged is what every platform has (`run bridge` keeps them current; CI checks). Swiit keeps its own the same way. |
 | `Tests/Interactive` | `expect` scripts that drive the shell through a real terminal. |
-| `Examples/Tools` | An example plugin, which the tests import. |
 
 </details>
 
@@ -334,8 +306,5 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
   multi-line editing and wrapping
 - [x] **Display**: at the prompt, the value of an expression is shown with its `debugDescription`,
   pretty-printed to fit the terminal (scripts and `-c` print only what they `print`); color for what matters (errors, job states, directories) and for structure
-- [x] **Plugin ABI**: `@SwiitExport` functions with `@Flag`/`@Input`, `SwiitEnum` enums,
-  `@SwiitObject` classes and `Encodable` results; exports found by symbol, no list to keep;
-  `import Name from "path"` builds, loads and registers a local package
-- [ ] **`import` from anywhere**: now part of static types' phase 5: any package or SDK module,
-  from a URL or path, without annotations
+- [ ] **`import` from anywhere**: any package or SDK module, from a URL or path, without
+  annotations (the earlier `@SwiitExport` plug-ins are gone; this replaces them)

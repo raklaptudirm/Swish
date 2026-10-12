@@ -25,11 +25,6 @@ extension Library {
                     return .nothing
                 }, nil),
                 "exitStatus": (.native { [unowned shell] _, arguments in shell.statusValue(shell.status(of: arguments["value"] ?? .nothing)) }, nil),
-                "importPlugin": (.native { [unowned shell] _, arguments in
-                    guard case .string(let name)? = arguments["name"], case .string(let path)? = arguments["path"] else { return .nothing }
-                    try shell.importPlugin(name, from: path)
-                    return .nothing
-                }, nil),
                 "escapingWildcards": (.native { _, arguments in .string(Glob.escape(arguments["text"]?.description ?? "")) }, nil),
             ]) { $1 }
         )
@@ -221,10 +216,6 @@ extension Library {
     /// Shows a value as a pipeline at the end of a statement does: its items,
     /// one a line, or as a table when they are records.
     func displayItems(_ value: Any)
-
-    /// `import Tools from "./Tools"`: builds the Swift package at `path` and
-    /// loads the functions it exports, as `Tools`.
-    func importPlugin(_ name: String, from path: String)
 
     /// Runs the block with its output gathered, as `$(…)` does. Throwing,
     /// a status other than 0 throws a `CommandFailure`.

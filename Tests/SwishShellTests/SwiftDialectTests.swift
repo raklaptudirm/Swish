@@ -46,7 +46,6 @@ private func syntaxError(_ source: String, _ dialect: Dialect, bound: [String: N
         ("let h = $(echo hi)", "$(…) runs commands"),
         ("let h = $HOME", "$name reads the environment"),
         ("async sleep 1", "'async' starts a command"),
-        (#"import Tools from "./Tools""#, "importing a package from a path is shell syntax"),
     ]
     for (source, says) in cases {
         let error = syntaxError(source, .swift)

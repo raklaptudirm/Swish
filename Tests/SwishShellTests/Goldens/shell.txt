@@ -902,23 +902,22 @@ print(s.code == nil)kkk.v...vvvvvvv.ssss..ssss..sssssssssssssss.........vvvvv.v
     "mine"
 }
 /* a construct from a layer over the core */
-/* a construct from a layer over the core */kkkk.cccccc......tttttt...ssssss.....n..n....cccccc..cccccc290/* a construct from a layer over the core */kkkkkk.ttttt.kkkk.ssssssssssssssssssssssssssssssssssssssssssssssssssss291Command("false").run().and { Command("true").run() }.or { Command("sh", "-c", "exit 3").run() }vvvvvvv.sssssss..............vvvvvvv.ssssss...............vvvvvvv.ssss..ssss..ssssssss.........292/* a construct from a layer over the core */cccccc.ssssssss...kkkkkkk.cccc293/* a construct from a layer over the core */cccc...cccccc...vv.........ssss.....cccccc.....ccc.......295/* a construct from a layer over the core */
-/* a construct from a layer over the core */ccc.....cccccc...sss..sssss..ssss....ccccccc296/* a construct from a layer over the core */cccc...cccccc...vv.........ssss.....cccccc.....ccc.......297/* a construct from a layer over the core */cccccc301/* a construct from a layer over the core */
-/* a construct from a layer over the core */cccccccccccc.CCCC...ccccc304/* a construct from a layer over the core */cccc...cccccc...vv.........ssssssss.....cccccc.....ccc.......305/* a construct from a layer over the core */
-/* a construct from a layer over the core */ccccc.ffffff..ccccccc.ffffff306/* a construct from a layer over the core */cc...cccccccccccccc307do {
-    /* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkk.cccccc......tttttt...ssssss.....n..n....cccccc..cccccc291Command("false").run().and { Command("true").run() }.or { Command("sh", "-c", "exit 3").run() }vvvvvvv.sssssss..............vvvvvvv.ssssss...............vvvvvvv.ssss..ssss..ssssssss.........292/* a construct from a layer over the core */cccccc.ssssssss...kkkkkkk.cccc293/* a construct from a layer over the core */cccc...cccccc...vv.........ssss.....cccccc.....ccc.......294greet("Rak", times: 2)
+/* a construct from a layer over the core */vvvvv.sssss.........n...ccccc.....ff...ffffff295/* a construct from a layer over the core */
+/* a construct from a layer over the core */ccc.....cccccc...sss..sssss..ssss....ccccccc296/* a construct from a layer over the core */cccc...cccccc...vv.........ssss.....cccccc.....ccc.......297/* a construct from a layer over the core */cccccc298/* a construct from a layer over the core */
+volume(.high)
+volume()
+/* a construct from a layer over the core */cccccc.......vvvvvv.CCCCC...vvvvvv....ccccccccc299/* a construct from a layer over the core */vvvvv..sssssss.....ccc.....300let c = counter("x")
+c.add()
+c.add(5)
+c.total
+ckkk.v...vvvvvvv.sss...v........v.....n...v........v301/* a construct from a layer over the core */
+/* a construct from a layer over the core */cccccccccccc.CCCC...ccccc302do {
+    try fail("nope")
 } catch {
     print(error.localizedDescription)
-}kk...kkkkkk.ttttt.kkkk.ssssss...kkkkk...vvvvv.vvvvv........................308/* a construct from a layer over the core */cccccc....cccccc....ccccc309/* a construct from a layer over the core */.....n.....sss.......n.....sss.....cccccc.....cccccc.ffff.....ccc..310func greet(_ name: String, times: Int = 1, loud: Bool = false) {}
-do {
-    /* a construct from a layer over the core */
-} catch {
-    print(error.localizedDescription)
-}kkkk.ccccc.........tttttt.........ttt...n........tttt...CCCCC......kk...kkkkkk.ttttt.kkkk.ssssssssssssssssssssssssssssssssssssssssssssssssssss...kkkkk...vvvvv.vvvvv........................311/* a construct from a layer over the core */cccc...cccccc...vv................sss......ccccc312do {
-    /* a construct from a layer over the core */
-} catch {
-    print(error.localizedDescription)
-}kk...kkkkkk.tttt.kkkk.ssssssssssssss...kkkkk...vvvvv.vvvvv........................313func makeCounter() -> () -> Int {
+}kk...kkk.vvvv.ssssss....kkkkk...vvvvv.vvvvv........................303greet(5)vvvvv.n.304/* a construct from a layer over the core */cccc...cccccc...vv.........ssssssss.....cccccc.....ccc.......305/* a construct from a layer over the core */
+/* a construct from a layer over the core */ccccc.ffffff..ccccccc.ffffff306/* a construct from a layer over the core */cc...cccccccccccccc308/* a construct from a layer over the core */cccccc....cccccc....ccccc309/* a construct from a layer over the core */.....n.....sss.......n.....sss.....cccccc.....cccccc.ffff.....ccc..311/* a construct from a layer over the core */cccc...cccccc...vv................sss......ccccc313func makeCounter() -> () -> Int {
     var n = 0
     return {
     n += 1
@@ -1352,7 +1351,8 @@ mkkkkkk.t...kkk.vv...ttt.....kkk.v...v..........v...........n...kkk.v.....n....
 func far(_ p: Point) -> Int {
     p.x
 }
-far(Point(x: 7))kkkkkk.ttttt.......kkk.v..ttt.....kkk.v..ttt...n.....kkk.vvvvvvvvvvvvv..ttt...v...v...v...v.......kkkk.cccccccc......tttttt...ssppvpssppvpss.......kkkkkkkk.kkkk.cccc.......ttt............v.pp.v.........vvvv...pp.v...........kkkkkkkk.kkkk.ccccc.....vvvv......v...v...n.....kkkk.ccc......ttttt.....ttt...v......vvv.vvvvv....n..427/* a construct from a layer over the core */c428FileTypevvvvvvvv430var xs = [1, 2, 3]
+far(Point(x: 7))kkkkkk.ttttt.......kkk.v..ttt.....kkk.v..ttt...n.....kkk.vvvvvvvvvvvvv..ttt...v...v...v...v.......kkkk.cccccccc......tttttt...ssppvpssppvpss.......kkkkkkkk.kkkk.cccc.......ttt............v.pp.v.........vvvv...pp.v...........kkkkkkkk.kkkk.ccccc.....vvvv......v...v...n.....kkkk.ccc......ttttt.....ttt...v......vvv.vvvvv....n..427/* a construct from a layer over the core */c428FileTypevvvvvvvv429await a
+await bkkkkk.v..kkkkk.v430var xs = [1, 2, 3]
 xs.removeLast()
 xs.popLast()kkk.vv....n..n..n...vv...............vv..........431Command("sh", "-c", "exit 3").run().and { Command("true").run() }.or { Command("true").run() }vvvvvvv.ssss..ssss..ssssssss..............vvvvvvv.ssssss...............vvvvvvv.ssssss.........432struct Point {
     var x: Int
@@ -1677,7 +1677,7 @@ j.cancel()kkk.v...kkkkk.ppcc.ff.ssssssssssssssssssssssssssssssssssssssssp..v...
     case ok
     case failed(code: Int, String)
 }
-Result.failed(code: 2, "boom")kkkk.tttttt...kkkk.CC..CCCCCC.......ttt..tttttt....vvvvvv..............n..ssssss.528/* a construct from a layer over the core */sssss...cc........530enum Result {
+Result.failed(code: 2, "boom")kkkk.tttttt...kkkk.CC..CCCCCC.......ttt..tttttt....vvvvvv..............n..ssssss.528/* a construct from a layer over the core */sssss...cc........529undefined.vvvvvvvvv.530enum Result {
     case ok
     case failed(code: Int, String)
 }
@@ -1913,7 +1913,7 @@ apply({ $0 + 100 }, 1)kkkk.ccccc.......ttt.....ttt.......ttt.....ttt...v.v.....
     /* a construct from a layer over the core */
 }kk.cccc.ff.......cccc.....609func f(r: ClosedRange<Int>) {
     /* a construct from a layer over the core */
-}kkkk.c....ttttttttttt.ttt.....cccc.sppvps..610/* a construct from a layer over the core */c.fff......612let r = /* a construct from a layer over the core */
+}kkkk.c....ttttttttttt.ttt.....cccc.sppvps..610/* a construct from a layer over the core */c.fff......611f(r: 1 ... 3)v....n...n.612let r = /* a construct from a layer over the core */
 r.count
 r[0]
 r.last
@@ -2195,12 +2195,13 @@ let es = [Entry(name: "a", size: 1, path: "/x"), Entry(name: "b", size: 22, path
 /* a construct from a layer over the core */
 /* a construct from a layer over the core */cc.ff.ssssssssssssss.pp.....................................................................cc.ff.sssssssssssssss.ppp.....................................................................ccc...................................................................681let k = /* a construct from a layer over the core */
 await k
-/* a construct from a layer over the core */kkk.v...kkkkk.ppcc.ff.ssssssssssssssssp..kkkkk.v..v...........ccc...vv...sss..682jobs.countvvvv......688/* a construct from a layer over the core */ccccccccccccc....689/* a construct from a layer over the core */ccccccc690let x: Int = "a"kkk.v..ttt...sss693/* a construct from a layer over the core */ccccccc..........695ls()vv..696func down(_ n: Int) -> Int {
+/* a construct from a layer over the core */kkk.v...kkkkk.ppcc.ff.ssssssssssssssssp..kkkkk.v..v...........ccc...vv...sss..682jobs.countvvvv......686try check(1)kkk.vvvvv.n.688/* a construct from a layer over the core */ccccccccccccc....689/* a construct from a layer over the core */ccccccc690let x: Int = "a"kkk.v..ttt...sss691greet(name: "Rak")vvvvv.......sssss.692try check(-1)kkk.vvvvv..n.693/* a construct from a layer over the core */ccccccc..........694twice([1, 2]).countvvvvv..n..n........695ls()vv..696func down(_ n: Int) -> Int {
     down(n + 1)
 }
-down(0)kkkk.cccc......ttt.....ttt...vvvv.v...n.....vvvv.n.699Int = "x"vvv...sss700let shared = 1kkk.vvvvvv...n7011 + 2n...n702pwd()vvv..703/* a construct from a layer over the core */cccccc704/* a construct from a layer over the core */ccccccccccccccc705let xs = [3, 1, 2]
-xs.sorted()kkk.vv....n..n..n...vv.........707history()vvvvvvv..708/* a construct from a layer over the core */cccccccccssssssssc710members([1])vvvvvvv..n..711readLine()vvvvvvvv..712[["a": 1]].select("a")..sss..n..........sss.713from()vvvv..714/* a construct from a layer over the core */cccccccccccccccc715[(n: 3, s: "c"), (n: 1, s: "a"), (n: 2, s: "b")].sorted(by: \.n).map { $0.s }.....n.....sss.......n.....sss.......n.....sss..............vvv........vv....716let answer = 42kkk.vvvvvv...nn717to()vv..718let j: JSON = 1kkk.v..tttt...n719/* a construct from a layer over the core */
-/* a construct from a layer over the core */ccccccccccccccccccc......ccccccccccccccc.......................720table()vvvvv..721/* a construct from a layer over the core */cccccc....722await 1kkkkk.n723list()vvvv..724await 21kkkkk.nn725help()vvvv..726/* a construct from a layer over the core */cccccccccssssssssc......727/* a construct from a layer over the core */ccccccccccccccc...ssssss728while true {}kkkkk.CCCC...730/* a construct from a layer over the core */ccc.......731let h = /* a construct from a layer over the core */kkk.v...ppcccc...p732.HOMECCCCC733/* a construct from a layer over the core */ppccccp734func sum(_ n: Int) -> Int {
+down(0)kkkk.cccc......ttt.....ttt...vvvv.v...n.....vvvv.n.697clamp("a", 0, 10)vvvvv.sss..n..nn.698let a = 1
+leps()kkk.v...n.vvvv..699Int = "x"vvv...sss700let shared = 1kkk.vvvvvv...n7011 + 2n...n702pwd()vvv..703/* a construct from a layer over the core */cccccc704/* a construct from a layer over the core */ccccccccccccccc705let xs = [3, 1, 2]
+xs.sorted()kkk.vv....n..n..n...vv.........706only(1)vvvv.n.707history()vvvvvvv..708/* a construct from a layer over the core */cccccccccssssssssc709only(shared)vvvv.vvvvvv.710members([1])vvvvvvv..n..711readLine()vvvvvvvv..712[["a": 1]].select("a")..sss..n..........sss.713from()vvvv..714/* a construct from a layer over the core */cccccccccccccccc715[(n: 3, s: "c"), (n: 1, s: "a"), (n: 2, s: "b")].sorted(by: \.n).map { $0.s }.....n.....sss.......n.....sss.......n.....sss..............vvv........vv....716let answer = 42kkk.vvvvvv...nn717to()vv..718let j: JSON = 1kkk.v..tttt...n719/* a construct from a layer over the core */
+/* a construct from a layer over the core */ccccccccccccccccccc......ccccccccccccccc.......................720table()vvvvv..721/* a construct from a layer over the core */cccccc....722await 1kkkkk.n723list()vvvv..724await 21kkkkk.nn725help()vvvv..726/* a construct from a layer over the core */cccccccccssssssssc......727/* a construct from a layer over the core */ccccccccccccccc...ssssss728while true {}kkkkk.CCCC...729let v: String = settings.volumekkk.v..tttttt...vvvvvvvv.......730/* a construct from a layer over the core */ccc.......731let h = /* a construct from a layer over the core */kkk.v...ppcccc...p732.HOMECCCCC733/* a construct from a layer over the core */ppccccp734func sum(_ n: Int) -> Int {
     if n == 0 {
     0
 } else {

@@ -3,7 +3,7 @@ import Foundation
 import SwiitKit
 
 /// The shell's syntax, plugged into the parser: commands, pipelines, redirects,
-/// `$(…)`, `$name`, `async …`, `env.NAME = value` and `import Name from path`.
+/// `$(…)`, `$name` and `async …`.
 /// Everything here is the shell's; the parser in SourceCursor*.swift is Swift's and
 /// calls this where its grammar has no meaning for what is there.
 struct ShellSyntax: SyntaxPlugin {
@@ -22,13 +22,6 @@ struct ShellSyntax: SyntaxPlugin {
         if parser.identifier() == "async" { return try parser.parseAsync() }
         guard parser.peek() == "$" else { return nil }
         return try parser.parseShellDollar()
-    }
-
-    func statement(_ parser: inout SourceCursor) throws(SyntaxError) -> Statement? {
-        switch parser.identifier() {
-        case "import": return try parser.parseImport()
-        default: return nil
-        }
     }
 }
 
@@ -224,26 +217,6 @@ extension SourceCursor {
         let start = pos
         let expr = try parseExpression()
         return .async(.task(expr, source: String(chars[start..<pos]).trimmingCharacters(in: .whitespaces)))
-    }
-
-    /// `import Name from "path"`. The functions it brings aren't known until
-    /// it runs; the module's name is, for `Tools.greet(…)`.
-    mutating func parseImport() throws(SyntaxError) -> Statement {
-        keyword("import")
-        skipSpaces()
-        let nameStart = pos
-        let name = try parseName(after: "'import'")
-        mark(.type, from: nameStart)
-        skipSpaces()
-        guard identifier() == "from" else {
-            throw SyntaxError("import needs where the package is: import \(name) from \"path/to/\(name)\"")
-        }
-        keyword("from")
-        skipSpaces()
-        let path = try parseExpression(logical: false)
-        scopes[scopes.count - 1][name] = .variable
-        sawImport = true
-        return .importPlugin(name: name, path: path)
     }
 
     /// `$(…)`, `$?` or `$name`, positioned at the dollar sign; nil if the dollar

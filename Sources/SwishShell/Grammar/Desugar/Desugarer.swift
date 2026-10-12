@@ -17,10 +17,7 @@ final class Desugarer {
         self.directCalls = directCalls
     }
 
-    private lazy var rewriter = TreeRewriter(
-        expr: { [unowned self] in expression($0) },
-        statement: { [unowned self] in statement($0) }
-    )
+    private lazy var rewriter = TreeRewriter(expr: { [unowned self] in expression($0) })
 
     func program(_ program: Program) -> Program {
         rewriter.program(program)
@@ -86,17 +83,6 @@ final class Desugarer {
         })
         _ = collector.expression(expr)
         return NamesUsed(names: names)
-    }
-
-    // MARK: Statements
-
-    /// `import Tools from "./Tools"` is `importPlugin("Tools", from: "./Tools")`.
-    private func statement(_ statement: Statement) -> Statement {
-        guard case .extended(let box) = statement, let node = box.node as? ImportPluginStatement else { return statement }
-        return .expression(.call(.variable("importPlugin"), [
-            Argument(label: nil, value: .literal(.string(node.name))),
-            Argument(label: "from", value: rewriter.expression(node.path)),
-        ]))
     }
 
     // MARK: Command statements, chains and conditions

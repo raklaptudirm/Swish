@@ -46,9 +46,8 @@ jobs:
         with:
           path: |
             .build
-            Examples/Tools/.build
           # The manifests, not `**`, which would walk into .build.
-          key: macos-${{ runner.arch }}-swift-${{ hashFiles('Package.swift', 'Package.resolved', '.swiit-version', 'Packages/*/Package.swift', 'Examples/*/Package.swift') }}
+          key: macos-${{ runner.arch }}-swift-${{ hashFiles('Package.swift', 'Package.resolved', '.swiit-version') }}
           restore-keys: macos-${{ runner.arch }}-swift-
 
       - name: Swift version
@@ -59,10 +58,6 @@ jobs:
 
       - name: Unit tests
         run: swift test
-
-      # Plugins written against SwiitKit's old name still build.
-      - name: SwishKit compatibility tests
-        run: swift test --package-path Packages/SwishKit
 
       - name: Terminal tests
         run: |
@@ -100,8 +95,7 @@ jobs:
         with:
           path: |
             .build
-            Examples/Tools/.build
-          key: linux-${{ runner.arch }}-swift-${{ hashFiles('Package.swift', 'Package.resolved', '.swiit-version', 'Packages/*/Package.swift', 'Examples/*/Package.swift') }}
+          key: linux-${{ runner.arch }}-swift-${{ hashFiles('Package.swift', 'Package.resolved', '.swiit-version') }}
           restore-keys: linux-${{ runner.arch }}-swift-
 
       - name: Swift version
@@ -112,10 +106,6 @@ jobs:
 
       - name: Unit tests
         run: swift test
-
-      # Plugins written against SwiitKit's old name still build.
-      - name: SwishKit compatibility tests
-        run: swift test --package-path Packages/SwishKit
 
       - name: Terminal tests
         run: |
@@ -155,7 +145,7 @@ jobs:
         with:
           path: |
             .build
-          key: bridges-macos-${{ runner.arch }}-swift-${{ hashFiles('Package.swift', 'Package.resolved', '.swiit-version', 'Packages/*/Package.swift', 'Examples/*/Package.swift') }}
+          key: bridges-macos-${{ runner.arch }}-swift-${{ hashFiles('Package.swift', 'Package.resolved', '.swiit-version') }}
           restore-keys: bridges-macos-${{ runner.arch }}-swift-
 
       - name: Build
@@ -198,7 +188,7 @@ jobs:
         with:
           path: |
             .build
-          key: bridges-linux-${{ runner.arch }}-swift-${{ hashFiles('Package.swift', 'Package.resolved', '.swiit-version', 'Packages/*/Package.swift', 'Examples/*/Package.swift') }}
+          key: bridges-linux-${{ runner.arch }}-swift-${{ hashFiles('Package.swift', 'Package.resolved', '.swiit-version') }}
           restore-keys: bridges-linux-${{ runner.arch }}-swift-
 
       - name: Build
