@@ -82,7 +82,7 @@ private func status(_ source: String) -> Int32 {
 }
 
 // Swish code as a task of its own, on a thread behind the interpreter's lock
-// (Docs/Design/async.md, step 4).
+// (Packages/Swiit/Docs/async.md, step 4).
 
 private func run(_ source: String) throws -> String {
     let shell = Shell()
@@ -141,7 +141,7 @@ private func run(_ source: String) throws -> String {
 }
 
 // Cancellation wakes a wait, and a task ends with the scope that started it
-// (Docs/Design/async.md, step 5).
+// (Packages/Swiit/Docs/async.md, step 5).
 
 @Test func cancellingATaskEndsWhatItWaitsFor() throws {
     let start = Date()
@@ -165,7 +165,7 @@ private func run(_ source: String) throws -> String {
 }
 
 // A task in the background reads the input only once it's awaited, and its
-// reads let other tasks run (Docs/Design/async.md, step 6).
+// reads let other tasks run (Packages/Swiit/Docs/async.md, step 6).
 
 @Test func aBackgroundTaskReadsTheInputWhenAwaited() throws {
     let saved = dup(STDIN_FILENO)
@@ -183,7 +183,7 @@ private func run(_ source: String) throws -> String {
     #expect(try run(source) == "false\nhello\ntrue\n")
 }
 
-// Swift's own concurrency in the shell (Docs/Design/async.md, step 7).
+// Swift's own concurrency in the shell (Packages/Swiit/Docs/async.md, step 7).
 
 @Test func swiftsTaskRunsInTheShell() throws {
     // Unlike `async { … }`, it isn't a job: it writes where its starter writes.

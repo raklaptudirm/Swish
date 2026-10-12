@@ -24,7 +24,7 @@ extension Shell {
     }
 
     /// Derives a command-line interface from the signature (see
-    /// Docs/Design/callables.md): unlabeled parameters are positional,
+    /// Packages/Swiit/Docs/callables.md): unlabeled parameters are positional,
     /// labeled ones are `--kebab-case` flags, Bools are switches.
     ///
     /// The penalty counts arguments taken as text by String or untyped

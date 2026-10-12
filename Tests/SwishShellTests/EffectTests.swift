@@ -5,7 +5,7 @@ import Testing
 
 // The shell's waits (`$(…)`, commands, `await job`) are blocking calls, not
 // effects: a function that runs commands is an ordinary function, and only
-// Swift's own `async` needs `await` (Docs/Design/async.md).
+// Swift's own `async` needs `await` (Packages/Swiit/Docs/async.md).
 
 private func effect(of name: String, after source: String) throws -> Effect? {
     let shell = Shell()

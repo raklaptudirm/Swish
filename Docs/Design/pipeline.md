@@ -51,7 +51,7 @@ compare; dates compare, and subtract to seconds.
 
 In order of preference:
 
-1. **Generated bridges** (see [callables.md](callables.md)) for functions
+1. **Generated bridges** (see [callables.md](../../Packages/Swiit/Docs/callables.md)) for functions
    and methods.
 2. **`Encodable` → `Value`** (`ValueEncoder` in SwiitKit). Structs become
    records named after their type, so views apply; `Date` and `FileSize`
@@ -92,7 +92,7 @@ early and upstream is external, Swish closes the read end and the process
 gets `SIGPIPE`, just as it would with `head`.
 
 Per-item versus whole-stream processing is decided by the function's
-signature (see `@input` in [callables.md](callables.md)). This replaces
+signature (see `@input` in [callables.md](../../Packages/Swiit/Docs/callables.md)). This replaces
 PowerShell's `begin`/`process`/`end` blocks.
 
 ## Format at the edge

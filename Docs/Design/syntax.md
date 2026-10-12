@@ -180,7 +180,7 @@ a `JobState` (`.running`, `.stopped`, `.done`, `.cancelled`).
 
 Swish is statically typed, as Swift is: each entry at the prompt, and a
 whole script, is checked before any of it runs, and a type error runs
-nothing (see [types.md](types.md)).
+nothing (see [types.md](../../Packages/Swiit/Docs/types.md)).
 
 ```swift
 let xs: [Int] = []                  // a type where the value can't say

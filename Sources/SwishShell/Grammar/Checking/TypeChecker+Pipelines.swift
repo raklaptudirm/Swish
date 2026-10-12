@@ -207,7 +207,7 @@ extension TypeChecker {
         }
         // `select`'s result is a tuple of the fields it names, which Swift could
         // only type with parameter packs over key paths; until then its rule is
-        // here (Docs/Design/foundations.md, open questions).
+        // here (Packages/Swiit/Docs/foundations.md, open questions).
         if name == "select" {
             let fields = TypeChecker.literalWords(command)
             guard let fields else { return .unknown }

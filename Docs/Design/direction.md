@@ -36,7 +36,7 @@ also the table of every departure from Swift.
 The interpreter is also a library: an app links it, registers Swift
 functions and values, and runs scripts, with no shell, terminal or process
 access unless the host grants it. That core is Swift only, with the shell and
-its syntax as a layer over it. See [embedding.md](embedding.md), and [boundaries.md](boundaries.md) for the
+its syntax as a layer over it. See [embedding.md](../../Packages/Swiit/Docs/embedding.md), and [boundaries.md](../../Packages/Swiit/Docs/boundaries.md) for the
 line between the core and the shell, what crosses it today and how each
 crossing exits.
 
@@ -46,7 +46,7 @@ Text becomes the core's tree through a front end behind a contract: today a
 hand-written parser, later SwiftSyntax with a lowering, so that Swish accepts
 Swift's syntax by construction and follows the language. The shell's grammar
 plugs in at the level of statements, not tokens, so it survives the swap. See
-[frontend.md](frontend.md).
+[frontend.md](../../Packages/Swiit/Docs/frontend.md).
 
 ## The engine is a hybrid
 
@@ -56,7 +56,7 @@ The real Swift compiler takes the heavy cases: generics-heavy code, imported
 packages, speed. It already does for `import Tools from path`, which builds a
 package and loads it. A function compiled this way is a Swift function like
 any other bridged one, including an `async` one, which is why concurrency
-([async.md](async.md)) follows Swift's model and not one of its own.
+([async.md](../../Packages/Swiit/Docs/async.md)) follows Swift's model and not one of its own.
 
 ## Not decided
 
