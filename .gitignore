@@ -3,3 +3,4 @@
 Packages/*/.build/
 Packages/*/.swiftpm/
 *.xcodeproj
+Docs/

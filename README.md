@@ -283,19 +283,6 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
 
 </details>
 
-## Design
-
-- [Structured pipelines](Docs/Design/pipeline.md): values instead of text,
-  the boundaries with external programs, formatting at the end, failures
-- [Functions and commands](https://github.com/raklaptudirm/Swiit/blob/main/Docs/callables.md): one callable, with a
-  Swift call syntax and a command-line syntax derived from its signature
-- [Shell syntax](Docs/Design/syntax.md): where Swish departs from POSIX:
-  comments, the environment, command output, scripts, redirects, background jobs
-- [Plugins](Docs/Design/plugins.md): exporting from Swift, and how `import`
-  builds, loads and registers a package
-- [One foundation](https://github.com/raklaptudirm/Swiit/blob/main/Docs/foundations.md): every function, method and type as a Swift
-  declaration read from a symbol graph, so pipes, flags and `help` treat them all alike (in progress)
-
 ## Roadmap
 
 - [x] **Shell basics**: REPL, `PATH` lookup, pipes, process groups, `^C`/`^Z`, `fg`/`jobs`,
@@ -309,7 +296,7 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
   `do`/`catch`, `env`, `//` comments, scripts with `args`, `main`, `defer` and `#filePath`
 - [x] **Enums and switch**: cases, raw and associated values, `.case` resolved by context,
   `switch` with Swift's patterns, `if case`; `FileType` from `ls`, enum parameters on the command line
-- [ ] **Static types** ([plan](https://github.com/raklaptudirm/Swiit/blob/main/Docs/types.md)): checked before anything runs, as in Swift
+- [ ] **Static types**: checked before anything runs, as in Swift
   - [x] The checker's core: inference, functions and `Void`, structs, enums, optionals with `!`
     and `?.`, tuples, dictionaries, `let x: T`
   - [x] Function values, closures' results inferred, static overloads, Swift's rules for `throws`
@@ -317,7 +304,7 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
     Swish prelude, typed pipelines with stages resolved from their input
   - [x] `Any` casts (`as?`, `as!`, `is`), the `JSON` type, optional subscripts
   - [ ] Swish types are Swift types: one type system read from Swift's symbol graphs, any package
-    usable as it is, generated Swift twins for Swish types ([design](https://github.com/raklaptudirm/Swiit/blob/main/Docs/swift-interop.md));
+    usable as it is, generated Swift twins for Swish types;
     so far the standard library's members, mutating ones too, on `String`, `Int`, `Double`, `Bool`,
     `Array`, `Set`, `Dictionary`, `Optional` and ranges, with `1...5` a real `ClosedRange<Int>`,
     and swift-system's `FilePath`
@@ -325,7 +312,7 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
   collected (Swift's, `xs | max`, `| joined(separator: ",")`, and the shell's streaming `filter`,
   `map`, `compactMap`, `prefix`, plus `select`, `get`, `sorted(by: \.size)`), then each item's
   (`names | uppercased`, `points | describe`, `jobs | cancel`); stages written as calls; the checker
-  decides, never the interpreter ([design](https://github.com/raklaptudirm/Swiit/blob/main/Docs/foundations.md))
+  decides, never the interpreter
 - [x] **Structs**: typed records with the memberwise init or custom `init`s, computed
   properties, methods and `mutating`; assignment into values (`p.x = 1`, `xs[0] += 5`)
 - [x] **Callables**: command lines derived from signatures, `@input` streaming, `@flag`,
