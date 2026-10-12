@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+@testable @_spi(Layer) import Swiit
 @_spi(Shell) @_spi(Layer) @testable import SwishShell
 import Foundation
 import SwiitKit

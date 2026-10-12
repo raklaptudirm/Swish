@@ -122,6 +122,73 @@ jobs:
           done
           exit $status
 
+  # Swiit alone: only its two packages are checked out, so a dependency on
+  # the shell (or on anything else in this repository) fails here. This is
+  # the build the interpreter will have in its own repository
+  # (Docs/Design/extraction.md).
+  swiit-macos:
+    name: Swiit alone (macOS)
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            Packages/Swiit
+            Packages/SwiitKit
+          sparse-checkout-cone-mode: false
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            Packages/Swiit/.build
+            Packages/SwiitKit/.build
+          key: swiit-macos-${{ runner.arch }}-swift-${{ hashFiles('Packages/*/Package.swift', 'Packages/*/Package.resolved') }}
+          restore-keys: swiit-macos-${{ runner.arch }}-swift-
+
+      - name: Build
+        run: swift build --package-path Packages/Swiit
+
+      - name: Swiit unit tests
+        run: swift test --package-path Packages/Swiit
+
+      - name: SwiitKit unit tests
+        run: swift test --package-path Packages/SwiitKit
+
+  swiit-linux:
+    name: Swiit alone (Linux)
+    runs-on: ubuntu-latest
+    container: swift:6.2
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            Packages/Swiit
+            Packages/SwiitKit
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            Packages/Swiit/.build
+            Packages/SwiitKit/.build
+          key: swiit-linux-${{ runner.arch }}-swift-${{ hashFiles('Packages/*/Package.swift', 'Packages/*/Package.resolved') }}
+          restore-keys: swiit-linux-${{ runner.arch }}-swift-
+
+      - name: Build
+        run: swift build --package-path Packages/Swiit
+
+      - name: Swiit unit tests
+        run: swift test --package-path Packages/Swiit
+
+      - name: SwiitKit unit tests
+        run: swift test --package-path Packages/SwiitKit
+
   # The bridges (Packages/Swiit/Sources/Swiit/Bridge/Generated, and the shell's own) are made from symbol
   # graphs, and a graph is read on the platform it's made on. Each platform's
   # members are kept in Bridges/<platform> (the interpreter's in Packages/Swiit/Bridges), and only what all of them have is
