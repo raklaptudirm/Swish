@@ -10,7 +10,7 @@ let package = Package(
         .library(name: "SwishKit", targets: ["SwishKit"]),
     ],
     dependencies: [
-        .package(path: "../SwiitKit"),
+        .package(path: "../../../Swiit/SwiitKit"),
     ],
     targets: [
         .target(name: "SwishKit", dependencies: [.product(name: "SwiitKit", package: "SwiitKit")]),

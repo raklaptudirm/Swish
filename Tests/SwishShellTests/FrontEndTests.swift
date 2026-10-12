@@ -8,10 +8,10 @@ import Testing
 // parser read with the same plug-in, which it was held to while it existed, is
 // kept as goldens (below).
 
-/// Programs harvested from the test suites, which Swiit's own tests keep.
+/// Programs harvested from the test suites, which Swiit's own tests keep too (a copy here, so this suite reads nothing outside the repository).
 private func harvested() throws -> [String] {
     let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        .appendingPathComponent("Packages/Swiit/Tests/SwiitTests/programs.txt")
+        .appendingPathComponent("Tests/SwishShellTests/programs.txt")
     return try String(contentsOf: url, encoding: .utf8).split(separator: "\u{1E}", omittingEmptySubsequences: true).map(String.init)
 }
 

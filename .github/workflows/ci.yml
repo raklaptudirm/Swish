@@ -1,7 +1,7 @@
 name: CI
 
 # Builds and tests Swish where it's meant to run: macOS and Linux. The same
-# steps as `run test` (Tasks.swish): both packages' unit tests, then the
+# steps as `run test` (Tasks.swish): the shell's unit tests, then the
 # shell driven through a real terminal by the expect scripts.
 
 on:
@@ -28,7 +28,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # The bridges in Packages/Swiit/Sources/Swiit/Bridge/Generated (and the shell's own in Sources/SwishShell/Bridge/Generated) are read from this
+      # Swiit, the interpreter, lives in a repository of its own, and the
+      # manifest looks for it beside this one. .swiit-version is the tag this
+      # shell is built against.
+      - name: Swiit
+        run: |
+          git clone https://github.com/raklaptudirm/Swiit.git ../Swiit
+          git -C ../Swiit checkout "$(cat .swiit-version)"
+
+      # The bridges in Sources/SwishShell/Bridge/Generated are read from this
       # Swift's symbol graphs, so the newest Xcode is the one they match.
       - uses: maxim-lobanov/setup-xcode@v1
         with:
@@ -38,10 +46,9 @@ jobs:
         with:
           path: |
             .build
-            Packages/SwiitKit/.build
             Examples/Tools/.build
           # The manifests, not `**`, which would walk into .build.
-          key: macos-${{ runner.arch }}-swift-${{ hashFiles('Package.swift', 'Package.resolved', 'Packages/*/Package.swift', 'Examples/*/Package.swift') }}
+          key: macos-${{ runner.arch }}-swift-${{ hashFiles('Package.swift', 'Package.resolved', '.swiit-version', 'Packages/*/Package.swift', 'Examples/*/Package.swift') }}
           restore-keys: macos-${{ runner.arch }}-swift-
 
       - name: Swift version
@@ -53,11 +60,6 @@ jobs:
       - name: Unit tests
         run: swift test
 
-      - name: Swiit unit tests
-        run: swift test --package-path Packages/Swiit
-
-      - name: SwiitKit unit tests
-        run: swift test --package-path Packages/SwiitKit
       # Plugins written against SwiitKit's old name still build.
       - name: SwishKit compatibility tests
         run: swift test --package-path Packages/SwishKit
@@ -86,13 +88,20 @@ jobs:
 
       - uses: actions/checkout@v4
 
+      # Swiit, the interpreter, lives in a repository of its own, and the
+      # manifest looks for it beside this one. .swiit-version is the tag this
+      # shell is built against.
+      - name: Swiit
+        run: |
+          git clone https://github.com/raklaptudirm/Swiit.git ../Swiit
+          git -C ../Swiit checkout "$(cat .swiit-version)"
+
       - uses: actions/cache@v4
         with:
           path: |
             .build
-            Packages/SwiitKit/.build
             Examples/Tools/.build
-          key: linux-${{ runner.arch }}-swift-${{ hashFiles('Package.swift', 'Package.resolved', 'Packages/*/Package.swift', 'Examples/*/Package.swift') }}
+          key: linux-${{ runner.arch }}-swift-${{ hashFiles('Package.swift', 'Package.resolved', '.swiit-version', 'Packages/*/Package.swift', 'Examples/*/Package.swift') }}
           restore-keys: linux-${{ runner.arch }}-swift-
 
       - name: Swift version
@@ -104,11 +113,6 @@ jobs:
       - name: Unit tests
         run: swift test
 
-      - name: Swiit unit tests
-        run: swift test --package-path Packages/Swiit
-
-      - name: SwiitKit unit tests
-        run: swift test --package-path Packages/SwiitKit
       # Plugins written against SwiitKit's old name still build.
       - name: SwishKit compatibility tests
         run: swift test --package-path Packages/SwishKit
@@ -122,77 +126,11 @@ jobs:
           done
           exit $status
 
-  # Swiit alone: only its two packages are checked out, so a dependency on
-  # the shell (or on anything else in this repository) fails here. This is
-  # the build the interpreter will have in its own repository
-  # (Docs/Design/extraction.md).
-  swiit-macos:
-    name: Swiit alone (macOS)
-    runs-on: macos-15
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          sparse-checkout: |
-            Packages/Swiit
-            Packages/SwiitKit
-          sparse-checkout-cone-mode: false
-
-      - uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: latest-stable
-
-      - uses: actions/cache@v4
-        with:
-          path: |
-            Packages/Swiit/.build
-            Packages/SwiitKit/.build
-          key: swiit-macos-${{ runner.arch }}-swift-${{ hashFiles('Packages/*/Package.swift', 'Packages/*/Package.resolved') }}
-          restore-keys: swiit-macos-${{ runner.arch }}-swift-
-
-      - name: Build
-        run: swift build --package-path Packages/Swiit
-
-      - name: Swiit unit tests
-        run: swift test --package-path Packages/Swiit
-
-      - name: SwiitKit unit tests
-        run: swift test --package-path Packages/SwiitKit
-
-  swiit-linux:
-    name: Swiit alone (Linux)
-    runs-on: ubuntu-latest
-    container: swift:6.2
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          sparse-checkout: |
-            Packages/Swiit
-            Packages/SwiitKit
-          sparse-checkout-cone-mode: false
-
-      - uses: actions/cache@v4
-        with:
-          path: |
-            Packages/Swiit/.build
-            Packages/SwiitKit/.build
-          key: swiit-linux-${{ runner.arch }}-swift-${{ hashFiles('Packages/*/Package.swift', 'Packages/*/Package.resolved') }}
-          restore-keys: swiit-linux-${{ runner.arch }}-swift-
-
-      - name: Build
-        run: swift build --package-path Packages/Swiit
-
-      - name: Swiit unit tests
-        run: swift test --package-path Packages/Swiit
-
-      - name: SwiitKit unit tests
-        run: swift test --package-path Packages/SwiitKit
-
-  # The bridges (Packages/Swiit/Sources/Swiit/Bridge/Generated, and the shell's own) are made from symbol
-  # graphs, and a graph is read on the platform it's made on. Each platform's
-  # members are kept in Bridges/<platform> (the interpreter's in Packages/Swiit/Bridges), and only what all of them have is
-  # bridged, so a member one platform lacks can't break the build on another.
+  # The shell's bridges (Sources/SwishShell/Bridge/Generated) are made from
+  # symbol graphs, and a graph is read on the platform it's made on. Each
+  # platform's members are kept in Bridges/<platform>, and only what all of
+  # them have is bridged, so a member one platform lacks can't break the build
+  # on another. The interpreter's are checked in its own repository.
 
   bridges-macos:
     name: Bridges (macOS)
@@ -200,6 +138,14 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+
+      # Swiit, the interpreter, lives in a repository of its own, and the
+      # manifest looks for it beside this one. .swiit-version is the tag this
+      # shell is built against.
+      - name: Swiit
+        run: |
+          git clone https://github.com/raklaptudirm/Swiit.git ../Swiit
+          git -C ../Swiit checkout "$(cat .swiit-version)"
 
       - uses: maxim-lobanov/setup-xcode@v1
         with:
@@ -209,8 +155,7 @@ jobs:
         with:
           path: |
             .build
-            Packages/SwiitKit/.build
-          key: bridges-macos-${{ runner.arch }}-swift-${{ hashFiles('Package.swift', 'Package.resolved', 'Packages/*/Package.swift', 'Examples/*/Package.swift') }}
+          key: bridges-macos-${{ runner.arch }}-swift-${{ hashFiles('Package.swift', 'Package.resolved', '.swiit-version', 'Packages/*/Package.swift', 'Examples/*/Package.swift') }}
           restore-keys: bridges-macos-${{ runner.arch }}-swift-
 
       - name: Build
@@ -222,10 +167,10 @@ jobs:
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           .build/debug/swish -c 'run bridge'
-          changes=$(git status --porcelain -- Sources Bridges Packages/Swiit/Sources Packages/Swiit/Bridges)
+          changes=$(git status --porcelain -- Sources Bridges)
           if [ -n "$changes" ]; then
-            git status --short -- Sources Bridges Packages/Swiit/Sources Packages/Swiit/Bridges
-            git diff --stat -- Sources Bridges Packages/Swiit/Sources Packages/Swiit/Bridges
+            git status --short -- Sources Bridges
+            git diff --stat -- Sources Bridges
             echo "::error::The bridges are out of date: run 'swift run swish -c \"run bridge\"' and commit the result."
             exit 1
           fi
@@ -241,12 +186,19 @@ jobs:
 
       - uses: actions/checkout@v4
 
+      # Swiit, the interpreter, lives in a repository of its own, and the
+      # manifest looks for it beside this one. .swiit-version is the tag this
+      # shell is built against.
+      - name: Swiit
+        run: |
+          git clone https://github.com/raklaptudirm/Swiit.git ../Swiit
+          git -C ../Swiit checkout "$(cat .swiit-version)"
+
       - uses: actions/cache@v4
         with:
           path: |
             .build
-            Packages/SwiitKit/.build
-          key: bridges-linux-${{ runner.arch }}-swift-${{ hashFiles('Package.swift', 'Package.resolved', 'Packages/*/Package.swift', 'Examples/*/Package.swift') }}
+          key: bridges-linux-${{ runner.arch }}-swift-${{ hashFiles('Package.swift', 'Package.resolved', '.swiit-version', 'Packages/*/Package.swift', 'Examples/*/Package.swift') }}
           restore-keys: bridges-linux-${{ runner.arch }}-swift-
 
       - name: Build
@@ -264,15 +216,15 @@ jobs:
           name: bridges-linux
           path: |
             Bridges/linux
-            Packages/Swiit/Bridges/linux
+           
 
       - name: Manifests are current
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          changes=$(git status --porcelain -- Bridges/linux Packages/Swiit/Bridges/linux)
+          changes=$(git status --porcelain -- Bridges/linux)
           if [ -n "$changes" ]; then
-            git status --short -- Bridges/linux Packages/Swiit/Bridges/linux
-            git diff --stat -- Bridges/linux Packages/Swiit/Bridges/linux
+            git status --short -- Bridges/linux
+            git diff --stat -- Bridges/linux
             echo "::error::Linux's bridge manifests changed: download the bridges-linux artifact into the repository root, run the bridge task on macOS, and commit."
             exit 1
           fi

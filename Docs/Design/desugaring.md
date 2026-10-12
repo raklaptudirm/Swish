@@ -7,7 +7,7 @@ plus shell constructs) and is the table of departures from Swift: anything
 not here is Swift.
 
 The rewrite and the library it targets belong to the shell layer, not the
-embeddable core ([embedding.md](../../Packages/Swiit/Docs/embedding.md)): the core is Swift only, and
+embeddable core ([embedding.md](https://github.com/raklaptudirm/Swiit/blob/main/Docs/embedding.md)): the core is Swift only, and
 reaches the outside only through its `SwiitHost`.
 
 Every shell construct is rewritten now: after checking, the shell's
@@ -202,14 +202,14 @@ the net: the behavior doesn't change. (Steps 2 and part of 3 are done; see
    largest step, since this is where `async` appears.
 6. **Pipelines,** the type-directed stages and their dynamic form.
 7. **Jobs and `async`/`await`,** together with the async plan
-   ([async.md](../../Packages/Swiit/Docs/async.md)); the shell's waits are blocking calls there, so
+   ([async.md](https://github.com/raklaptudirm/Swiit/blob/main/Docs/async.md)); the shell's waits are blocking calls there, so
    this document's "Effects" has nothing to insert.
 8. **Flatten statements.** Today every expression statement is a `Chain` of
    `Unit`s joined by `&&`/`||` with an exit status, because a statement was a
    command first. With command chains now library calls, `Unit`'s cases hoist
    into `Statement`, `Chain` is deleted, statements stop returning an `Int32`,
    and the shell records the status of command statements per task
-   ([boundaries.md](../../Packages/Swiit/Docs/boundaries.md), the `chain` and `status` groups).
+   ([boundaries.md](https://github.com/raklaptudirm/Swiit/blob/main/Docs/boundaries.md), the `chain` and `status` groups).
 9. **Delete the interpreter's shell nodes** once nothing produces them.
 
 Golden tests print each construct's desugaring; differential tests later

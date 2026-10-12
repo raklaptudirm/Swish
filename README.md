@@ -214,7 +214,12 @@ over lines when they're wide.
 Swish needs Swift 6 on macOS or Linux. It's all Swift: what differs between the two (starting
 programs, plugin libraries) is in `Sources/SwishShell/Runtime/Platform`.
 
+The interpreter, [Swiit](https://github.com/raklaptudirm/Swiit), is a repository of its
+own, which the build looks for beside this one, at the version in `.swiit-version`:
+
 ```sh
+git clone https://github.com/raklaptudirm/Swiit.git ../Swiit
+git -C ../Swiit checkout "$(cat .swiit-version)"
 swift build -c release
 .build/release/swish                  # start the shell
 .build/release/swish -c 'ls | count'  # run one line
@@ -250,8 +255,8 @@ is reported, and the default prompt drawn instead. History lives in the XDG stat
 ```sh
 swift build
 .build/debug/swish
-swift run swish -c 'run test'     # unit tests of the shell, Swiit, SwiitKit and SwishKit, plus pty-driven job-control, editor and background-job tests
-swift run swish -c 'run bridge'   # regenerate the standard library bridge (after a toolchain update)
+swift run swish -c 'run test'     # unit tests of the shell and SwishKit (Swiit's are in its repository), plus pty-driven job-control, editor and background-job tests
+swift run swish -c 'run bridge'   # regenerate the shell's bridge (after a toolchain update; Swiit's is Scripts/bridge there)
 ```
 
 The tasks are functions in [`Tasks.swish`](Tasks.swish); inside Swish, `run` lists them and
@@ -264,23 +269,17 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
 
 | Path | What |
 |---|---|
-| `Packages/SwiitKit` | `Value` and the plugin API, with the `@SwiitExport` and `@SwiitObject` macros. A separate package so it links as a **dynamic library** shared by the shell and every plugin. |
+| [`Swiit`](https://github.com/raklaptudirm/Swiit) | The interpreter, in a repository of its own, which knows nothing of the shell; the shell is a client of it, built against the version in `.swiit-version`. It is looked for beside this checkout (`../Swiit`; CI clones the tag), so work on both together by editing there. It holds the language, the bridges, the host API, `SwiitKit` (`Value` and the plugin API, with the `@SwiitExport` and `@SwiitObject` macros, a package of its own so it links as a **dynamic library** shared by the shell and every plugin) and the bridge generator. |
 | `Packages/SwishKit` | SwiitKit's old name: a module that brings in SwiitKit, which keeps the old names, so a plugin written against SwishKit builds unchanged. |
-| `Packages/Swiit` | The interpreter (Swiit), a package of its own that knows nothing of the shell; the shell is a client of it. Its `Sources/Swiit`: |
-| `…/Language` | The language: `Syntax` (the tree and the parser, with a plug-in for syntax a host adds), `Checking` (the type checker, which runs before anything else), `Interpreter` (statements, expressions, calls, structs and enums), `Prelude` (the builtins' declarations) and `Reflection` (a type's members, for `help` and `members`). |
-| `…/Bridge` | Swift's types and members, generated into `Bridge/Generated` from symbol graphs. |
-| `…/Host` | What a host plugs in: `SwiitHost`, dynamic objects, library registration, and `Embedding` (`Interpreter(host:limits:)`, `eval`, `register`, `set`, `Diagnostic`). |
-| `…/Library` | `SwiitStandardLibrary`, a module of its own so the generator can read it. |
 | `Sources/SwishShell` | The shell (Swish), a client of Swiit: |
 | `…/Grammar` | The shell's syntax: `Syntax` (commands, pipelines, `$(…)`, redirects), `Checking` (types a pipeline's stages), `CommandLine` (binds `--flag` words to parameters) and the nodes they make. |
 | `…/Runtime` | Running it: `Execution` (pipelines, value streams, redirects, jobs, globs, `env`), `Platform` (`posix_spawn` with process groups and terminal handoff, resource limits, what differs between macOS and Linux) and `Plugins` (building and loading). |
 | `…/Session` | The prompt: the `Shell` itself (loop, scripts, tasks, config), `Editor` (history, completion, highlighting) and the shell builtins and `help`. `Presentation` shows values: tables, key/value lists, and the prompt's echo of each value (the interpreter only tells it what a statement gave). |
 | `…/Bridge`, `…/Library` | The shell's generated bridge, and `SwishShellLibrary` (`pwd`, `readLine`, `history`, `ls`, `ps`, `from`, `to`, `table`, `list`, `JSON`). |
 | `Sources/Swish` | The executable. |
-| `Bridges`, `Packages/Swiit/Bridges` | Which members of each bridged type a platform has, one list a platform and module: what's bridged is what every platform has (`run bridge` keeps them current; CI checks). |
+| `Bridges` | Which members of each bridged type a platform has, one list a platform: what's bridged is what every platform has (`run bridge` keeps them current; CI checks). Swiit keeps its own the same way. |
 | `Tests/Interactive` | `expect` scripts that drive the shell through a real terminal. |
 | `Examples/Tools` | An example plugin, which the tests import. |
-| `Packages/Swiit/Sources/SwiitBridge` | Reads Swift's symbol graphs and generates the glue that bridges the standard library, swift-system and `SwiitStandardLibrary` and `SwishShellLibrary` (`run bridge`): the graph, declaration parsing, what Swish can hold and how values cross, and one member's glue each have a file. |
 
 </details>
 
@@ -288,13 +287,13 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
 
 - [Structured pipelines](Docs/Design/pipeline.md): values instead of text,
   the boundaries with external programs, formatting at the end, failures
-- [Functions and commands](Packages/Swiit/Docs/callables.md): one callable, with a
+- [Functions and commands](https://github.com/raklaptudirm/Swiit/blob/main/Docs/callables.md): one callable, with a
   Swift call syntax and a command-line syntax derived from its signature
 - [Shell syntax](Docs/Design/syntax.md): where Swish departs from POSIX:
   comments, the environment, command output, scripts, redirects, background jobs
 - [Plugins](Docs/Design/plugins.md): exporting from Swift, and how `import`
   builds, loads and registers a package
-- [One foundation](Packages/Swiit/Docs/foundations.md): every function, method and type as a Swift
+- [One foundation](https://github.com/raklaptudirm/Swiit/blob/main/Docs/foundations.md): every function, method and type as a Swift
   declaration read from a symbol graph, so pipes, flags and `help` treat them all alike (in progress)
 
 ## Roadmap
@@ -310,7 +309,7 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
   `do`/`catch`, `env`, `//` comments, scripts with `args`, `main`, `defer` and `#filePath`
 - [x] **Enums and switch**: cases, raw and associated values, `.case` resolved by context,
   `switch` with Swift's patterns, `if case`; `FileType` from `ls`, enum parameters on the command line
-- [ ] **Static types** ([plan](Packages/Swiit/Docs/types.md)): checked before anything runs, as in Swift
+- [ ] **Static types** ([plan](https://github.com/raklaptudirm/Swiit/blob/main/Docs/types.md)): checked before anything runs, as in Swift
   - [x] The checker's core: inference, functions and `Void`, structs, enums, optionals with `!`
     and `?.`, tuples, dictionaries, `let x: T`
   - [x] Function values, closures' results inferred, static overloads, Swift's rules for `throws`
@@ -318,7 +317,7 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
     Swish prelude, typed pipelines with stages resolved from their input
   - [x] `Any` casts (`as?`, `as!`, `is`), the `JSON` type, optional subscripts
   - [ ] Swish types are Swift types: one type system read from Swift's symbol graphs, any package
-    usable as it is, generated Swift twins for Swish types ([design](Packages/Swiit/Docs/swift-interop.md));
+    usable as it is, generated Swift twins for Swish types ([design](https://github.com/raklaptudirm/Swiit/blob/main/Docs/swift-interop.md));
     so far the standard library's members, mutating ones too, on `String`, `Int`, `Double`, `Bool`,
     `Array`, `Set`, `Dictionary`, `Optional` and ranges, with `1...5` a real `ClosedRange<Int>`,
     and swift-system's `FilePath`
@@ -326,7 +325,7 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
   collected (Swift's, `xs | max`, `| joined(separator: ",")`, and the shell's streaming `filter`,
   `map`, `compactMap`, `prefix`, plus `select`, `get`, `sorted(by: \.size)`), then each item's
   (`names | uppercased`, `points | describe`, `jobs | cancel`); stages written as calls; the checker
-  decides, never the interpreter ([design](Packages/Swiit/Docs/foundations.md))
+  decides, never the interpreter ([design](https://github.com/raklaptudirm/Swiit/blob/main/Docs/foundations.md))
 - [x] **Structs**: typed records with the memberwise init or custom `init`s, computed
   properties, methods and `mutating`; assignment into values (`p.x = 1`, `xs[0] += 5`)
 - [x] **Callables**: command lines derived from signatures, `@input` streaming, `@flag`,

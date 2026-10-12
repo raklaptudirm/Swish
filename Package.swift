@@ -1,7 +1,7 @@
 // swift-tools-version: 6.0
 import PackageDescription
 
-// The shell. It is a client of the interpreter (Packages/Swiit).
+// The shell. It is a client of the interpreter (github.com/raklaptudirm/Swiit, checked out beside this one).
 let package = Package(
     name: "Swish",
     platforms: [.macOS(.v14)],
@@ -10,10 +10,10 @@ let package = Package(
         .executable(name: "swish", targets: ["Swish"]),
     ],
     dependencies: [
-        .package(path: "Packages/Swiit"),
+        .package(path: "../Swiit"),
         // A separate package so the host links SwiitKit as a dylib (products of
         // the same package would be linked statically into the executable).
-        .package(path: "Packages/SwiitKit"),
+        .package(path: "../Swiit/SwiitKit"),
         .package(url: "https://github.com/apple/swift-system.git", from: "1.4.0"),
     ],
     targets: [
@@ -43,6 +43,6 @@ let package = Package(
         ),
         .testTarget(name: "SwishShellTests", dependencies: [
             "SwishShell", .product(name: "Swiit", package: "Swiit"),
-        ], exclude: ["Goldens"]),
+        ], exclude: ["Goldens", "programs.txt"]),
     ]
 )

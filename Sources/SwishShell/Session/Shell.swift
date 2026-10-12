@@ -72,7 +72,7 @@ public final class Shell {
     }
 
     /// Tasks still running end with the shell: they're cancelled, and waited
-    /// for, as the scope that starts a task closes it (Packages/Swiit/Docs/async.md).
+    /// for, as the scope that starts a task closes it (https://github.com/raklaptudirm/Swiit/blob/main/Docs/async.md).
     deinit {
         finishTasks()
     }
@@ -227,7 +227,7 @@ extension Shell {
 
 /// What the shell keeps for each task (the core's `TaskContext`): where its
 /// output and errors go, and how its last statement went. The prompt is the
-/// one task for now (Packages/Swiit/Docs/async.md, step 1).
+/// one task for now (https://github.com/raklaptudirm/Swiit/blob/main/Docs/async.md, step 1).
 final class ShellTask {
     /// Where builtins, displayed values and the last stage of a pipeline
     /// write. Redirected while capturing `$(…)`.

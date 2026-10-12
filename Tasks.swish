@@ -5,13 +5,12 @@ let root = FilePath(#filePath).removingLastComponent()
 cd $root
 let darwin = $(uname).text == "Darwin"
 
-/// Runs every test. Both packages' unit tests, then the shell built and
-/// driven through a real terminal by the expect scripts (on Linux, install
-/// expect first).
+/// Runs every test. The shell's unit tests and the SwishKit compatibility
+/// package's (Swiit's own run in its repository, ../Swiit), then the shell
+/// built and driven through a real terminal by the expect scripts (on Linux,
+/// install expect first).
 func test() {
     try! _swiftTest(".")
-    try! _swiftTest("Packages/Swiit")
-    try! _swiftTest("Packages/SwiitKit")
     try! _swiftTest("Packages/SwishKit")
     try! swift build
     for script in ["job-control", "line-editor", "background-jobs", "config", "signals"] {
@@ -19,61 +18,27 @@ func test() {
     }
 }
 
-/// Regenerates the bridges in Packages/Swiit/Sources/Swiit/Bridge/Generated
-/// (and the shell's own in Sources/SwishShell/Bridge/Generated), from the symbol
-/// graphs of the standard library, Foundation, swift-system and the shell's
-/// own modules. Run it after changing swiit-bridge, the Swift
-/// toolchain or swift-system. A graph is read on the platform it's made on,
-/// so each platform's members are kept in Bridges/<platform>, and what's
-/// bridged is what all the platforms there have: CI makes Linux's (see
+/// Regenerates the shell's bridges in Sources/SwishShell/Bridge/Generated, from
+/// the symbol graph of the shell's own module, SwishShellLibrary, with the
+/// generator from Swiit (../Swiit, which regenerates its own with its
+/// Scripts/bridge). Run it after changing the shell's library or the Swift
+/// toolchain. A graph is read on the platform it's made on, so each
+/// platform's members are kept in Bridges/<platform>, and what's bridged is
+/// what all the platforms there have: CI makes Linux's (see
 /// .github/workflows/ci.yml), and a member only one has can't break the other.
 func bridge() {
     let platform = darwin ? "macos" : "linux"
     let graphs = $(mktemp -d).text
     defer { rm -rf $graphs }
     try! swift build
-    // Other modules that extend a module's types, whose graphs are read with
-    // it; the shell's own also declares types the extensions use.
-    let extensions = ["Swift": ["_StringProcessing", "SwiitStandardLibrary"], "Foundation": ["SwiitStandardLibrary", "SwiitKit"]]
-    let declaresTypes = ["SwiitStandardLibrary"]
-    // A module's types can be defined in a module it re-exports, which some
-    // platforms don't have: Foundation's Date is FoundationEssentials' on
-    // Linux. Their graphs are read with it, and what adds to them is too.
-    let reexports = ["Foundation": ["FoundationEssentials"]]
-    func exists(_ file: String) -> Bool { $(^test -f $file).status.succeeded }
-    for module in ["Swift", "SystemPackage", "SwiitKit", "Foundation", "SwiitStandardLibrary", "SwishShellLibrary"] {
-        try! _graph(module, into: graphs)
-        var extra: [String] = []
-        var hosts = [module]
-        for host in reexports[module] ?? [] {
-            let made = try? _graph(host, into: graphs)
-            if exists("\(graphs)/\(host).symbols.json") {
-                hosts.append(host)
-                extra.append("\(graphs)/\(host).symbols.json")
-            }
-        }
-        for other in extensions[module] ?? [] {
-            try! _graph(other, into: graphs)
-            for host in hosts {
-                let file = "\(graphs)/\(other)@\(host).symbols.json"
-                if exists(file) { extra.append(file) }
-            }
-            if declaresTypes.contains(other) { extra.append("\(graphs)/\(other).symbols.json") }
-        }
-        let outputs = ["Swift": "StandardLibrary", "SwiitStandardLibrary": "SwiitLibrary", "SwishShellLibrary": "ShellLibrary"]
-        let output = outputs[module] ?? module
-        // The core's bridges are in the core; the shell's library is the shell's.
-        let generated = module == "SwishShellLibrary" ? "Sources/SwishShell" : "Packages/Swiit/Sources/Swiit"
-        // This platform's members to write, and the others' to keep to. The
-        // interpreter's are kept with it, the shell's with the shell.
-        let bridges = module == "SwishShellLibrary" ? "Bridges" : "Packages/Swiit/Bridges"
-        var platforms = ["--manifest", "\(bridges)/\(platform)/\(module).json"]
-        for other in ["macos", "linux"] {
-            let manifest = "\(bridges)/\(other)/\(module).json"
-            if other != platform && $(^test -f $manifest).status.succeeded { platforms += ["--also", manifest] }
-        }
-        try! swift run --package-path Packages/Swiit -c release swiit-bridge "\(graphs)/\(module).symbols.json" "\(generated)/Bridge/Generated/\(output).swift" $extra $platforms
+    let module = "SwishShellLibrary"
+    try! _graph(module, into: graphs)
+    var platforms = ["--manifest", "Bridges/\(platform)/\(module).json"]
+    for other in ["macos", "linux"] {
+        let manifest = "Bridges/\(other)/\(module).json"
+        if other != platform && $(^test -f $manifest).status.succeeded { platforms += ["--also", manifest] }
     }
+    try! swift run --package-path ../Swiit -c release swiit-bridge "\(graphs)/\(module).symbols.json" "Sources/SwishShell/Bridge/Generated/ShellLibrary.swift" $platforms
 }
 
 /// `swift test` for a package. With only the Command Line Tools installed,

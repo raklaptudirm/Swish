@@ -2,7 +2,7 @@
 
 Status: **implemented** for local packages (`import Tools from "./Tools"`).
 Packages that don't use SwiitKit, from URLs or the SDK, are planned in
-[swift-interop.md](../../Packages/Swiit/Docs/swift-interop.md).
+[swift-interop.md](https://github.com/raklaptudirm/Swiit/blob/main/Docs/swift-interop.md).
 
 A plugin is a Swift package that depends on SwiitKit and marks what it
 exports. `import` builds it, loads its library into the shell, and its
