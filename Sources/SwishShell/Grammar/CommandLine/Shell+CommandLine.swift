@@ -193,7 +193,7 @@ extension Shell {
             if let defaultValue = parameter.defaultValue {
                 bound[parameter.name] = try interpreter.defaultArgument(defaultValue, for: parameter, of: function)
             } else if parameter.externalDefault != nil {
-                continue // The plugin fills it in.
+                continue // The Swift function fills it in.
             } else if parameter.type == .bool && parameter.label != nil {
                 bound[parameter.name] = .bool(false)
             } else if parameter.label != nil, let (_, make) = Shell.collection(parameter.type) {

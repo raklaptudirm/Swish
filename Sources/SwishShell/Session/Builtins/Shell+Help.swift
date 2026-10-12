@@ -199,7 +199,7 @@ extension Shell {
                 guard SourceCursor.isIdentifier(name), case .function(let set as OverloadSet) = binding.value,
                       let first = set.candidates.first else { continue }
                 // One row a name: its overloads' usages, and what each says it does.
-                let source = first.plugin ?? (first.isBuiltin ? "builtin" : "yours")
+                let source = first.isBuiltin ? "builtin" : "yours"
                 var summaries: [String] = []
                 for candidate in set.candidates {
                     let summary = candidate.documentation?.summary ?? ""
