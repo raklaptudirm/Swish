@@ -139,7 +139,7 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
     #expect(typeError(risky + "let r = try [false].map { try risky($0) }") == nil)
     #expect(typeError(risky + "func apply(_ f: (Bool) -> Int) -> Int { f(true) }; apply({ try risky($0) })")
         == "apply: 'f' must be (Bool) -> Int, not (Bool) throws -> Int")
-    #expect(typeError(risky + "func apply(_ f: (Bool) throws -> Int) rethrows -> Int { 0 }") == "syntax error")
+    #expect(typeError(risky + "func apply(_ f: (Bool) throws -> Int) rethrows -> Int { 0 }") == nil)
     #expect(typeError(risky + "func apply(_ f: (Bool) throws -> Int) throws -> Int { try f(true) }; try apply({ try risky($0) })") == nil)
 }
 
