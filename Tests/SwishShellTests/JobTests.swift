@@ -121,7 +121,7 @@ private func run(_ source: String) throws -> String {
 
 @Test func tasksAreJobs() throws {
     let output = try run("let t = async { $(sleep 0.2) }; print(jobs.map { $0.command }); await t; print(jobs.count)")
-    #expect(output == "[{ $(sleep 0.2) }]\n0\n")
+    #expect(output == "[\"{ $(sleep 0.2) }\"]\n0\n")
 }
 
 @Test func fgAndBgNameTheirReplacements() {
@@ -179,7 +179,7 @@ private func run(_ source: String) throws -> String {
     _ = "hello\n".withCString { write(pipe.write, $0, 6) }
     close(pipe.write)
     let source = "var read = false; let t = async { let line = readLine(); read = true; return line }; "
-        + "$(sleep 0.2); print(read); print(await t ?? \"none\"); print(read)"
+        + "$(sleep 0.2); print(read); print((await t) ?? \"none\"); print(read)"
     #expect(try run(source) == "false\nhello\ntrue\n")
 }
 

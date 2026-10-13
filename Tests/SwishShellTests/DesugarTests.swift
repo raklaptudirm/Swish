@@ -103,7 +103,7 @@ private func desugared(_ source: String, in shell: Shell = Shell()) throws -> St
     #expect(try run(#"Command("echo", "a b", Spread(["x", "y"])).run()"#) == "a b x y\n")
     #expect(try run(#"print(Pipeline(from: [3, 1, 2], Command("sorted")).output().text)"#) == "1\n2\n3\n")
     #expect(try run(#"print(capture { echo hi }.text)"#) == "hi\n")
-    #expect(try run(#"print(Command("env").environment(["XYZ": "1"]).output().lines.filter { $0 == "XYZ=1" })"#) == "[XYZ=1]\n")
+    #expect(try run(#"print(Command("env").environment(["XYZ": "1"]).output().lines.filter { $0 == "XYZ=1" })"#) == "[\"XYZ=1\"]\n")
     // `e>o > /dev/null`: errors go where the output went before it was sent away.
     #expect(try run(#"Command("sh", "-c", "echo err >&2").sending(2, to: 1).writing(1, to: "/dev/null").run()"#) == "err\n")
     #expect(try run(#"do { try Command("false").check() } catch { print(error.localizedDescription) }"#) == "false failed with status 1\n")

@@ -54,8 +54,8 @@ private func checkError(_ source: String) -> String? {
     #expect(try output(xs + #"printf "%s|" $xs; echo"#) == "-n|a b|\n")
     #expect(try output(xs + #"printf "%s|" \(xs); echo"#) == "-n|a b|\n")
     // Quoted, or part of a longer word, it's one argument as it's written.
-    #expect(try output(xs + #"printf "%s|" "$xs"; echo"#) == "[-n, a b]|\n")
-    #expect(try output(xs + #"printf "%s|" x$xs; echo"#) == "x[-n, a b]|\n")
+    #expect(try output(xs + #"printf "%s|" "$xs"; echo"#) == "[\"-n\", \"a b\"]|\n")
+    #expect(try output(xs + #"printf "%s|" x$xs; echo"#) == "x[\"-n\", \"a b\"]|\n")
     // An empty list is no arguments at all.
     #expect(try output(#"let none: [String] = []; printf "%s|" a $none b; echo"#) == "a|b|\n")
     // Into a function's command line, filling its parameters in turn.

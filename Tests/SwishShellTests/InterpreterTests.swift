@@ -179,7 +179,7 @@ private let greet = #"func greet(_ name: String, times: Int = 1, loud: Bool = fa
 
 @Test func commandModeBinding() throws {
     let f = #"func f(_ a: String, count: Int = 0, dryRun: Bool = false, color: Bool = true, include: [String]) -> String { "\(a) \(count) \(dryRun) \(color) \(include)" };"#
-    #expect(try output(f + "f x --count 3 --dry-run --no-color --include a --include=b") == "x 3 true false [a, b]\n")
+    #expect(try output(f + "f x --count 3 --dry-run --no-color --include a --include=b") == "x 3 true false [\"a\", \"b\"]\n")
     #expect(try output(f + "f --count=2 -- --x") == "--x 2 false true []\n")
 }
 
@@ -551,8 +551,8 @@ private func fixture() throws -> String {
 // MARK: do/catch
 
 @Test func catchingAFailedCapture() throws {
-    #expect(try output(#"do { let r = try $(sh -c 'echo partial; exit 3') } catch { if let f = error as? CommandFailure { print(f.status.code); print(f.text) } }"#) == "3\npartial\n")
-    #expect(try output(#"do { let r = try $(sh -c 'kill -TERM $$') } catch { if let f = error as? CommandFailure { print(f.status.signal); print(f.status.code == nil) } }"#) == "15\ntrue\n")
+    #expect(try output(#"do { let r = try $(sh -c 'echo partial; exit 3') } catch { if let f = error as? CommandFailure { print(f.status.code); print(f.text) } }"#) == "Optional(3)\npartial\n")
+    #expect(try output(#"do { let r = try $(sh -c 'kill -TERM $$') } catch { if let f = error as? CommandFailure { print(f.status.signal); print(f.status.code == nil) } }"#) == "Optional(15)\ntrue\n")
     // Without `try`, nothing throws, so the catch doesn't run.
     #expect(try output(#"do { let r = $(false) } catch { echo never }; echo done"#) == "done\n")
 }
@@ -605,7 +605,7 @@ private func fixture() throws -> String {
     #expect(try output(#"let r = $(echo Hello); r"#) == #"Output(text: "Hello", status: Status(code: 0, signal: nil, succeeded: true))"# + "\n")
     #expect(try output(#""tab\there"; let xs: [Any] = [1, "x", nil]; xs; ["k": "v"].debugDescription"#) == #""tab\there""# + "\n" + #"[1, "x", nil]"# + "\n" + #""[\"k\": \"v\"]""# + "\n")
     #expect(try output(#"enum E { case a, b(code: Int, String) }; E.b(code: 2, "no"); "\(E.b(code: 2, "no"))""#)
-        == #"E.b(code: 2, "no")"# + "\n" + #""b(code: 2, no)""# + "\n")
+        == #"E.b(code: 2, "no")"# + "\n" + #""b(code: 2, \"no\")""# + "\n")
     // Interpolation, commands and pipelines use the plain text.
     #expect(try output(#"let r = $(echo Hello); echo $r "\(r)"; ["a", "b"] | prefix 2"#) == "Hello Hello\na\nb\n")
     // Awaiting a job that wrote to the terminal shows nothing more.
@@ -642,5 +642,5 @@ private func fixture() throws -> String {
     // A plain runtime error isn't a command failure; a failed `try $(…)` is.
     #expect(try output("do { 1 / 0 } catch { print(error as? CommandFailure == nil) }") == "true\n")
     #expect(try output(#"do { try $(sh -c 'echo no >&2; exit 2') } catch { if let f = error as? CommandFailure { print(f.status.code); print(f.localizedDescription) } }"#)
-        == "2\n$(…) failed with status 2\n")
+        == "Optional(2)\n$(…) failed with status 2\n")
 }

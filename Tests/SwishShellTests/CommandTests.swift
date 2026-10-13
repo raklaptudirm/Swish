@@ -19,8 +19,8 @@ private func status(_ source: String) -> Int32 {
 
 @Test func aCommandRunsAndGivesItsStatus() throws {
     #expect(try output(#"let s = Command("echo", "hi").run(); print(s.succeeded)"#) == "hi\ntrue\n")
-    #expect(try output(#"let s = Command("sh", "-c", "exit 3").run(); print(s.code); print(s.succeeded)"#) == "3\nfalse\n")
-    #expect(try output(#"let s = Command("sh", "-c", "kill -TERM $$").run(); print(s.signal); print(s.code == nil)"#) == "15\ntrue\n")
+    #expect(try output(#"let s = Command("sh", "-c", "exit 3").run(); print(s.code); print(s.succeeded)"#) == "Optional(3)\nfalse\n")
+    #expect(try output(#"let s = Command("sh", "-c", "kill -TERM $$").run(); print(s.signal); print(s.code == nil)"#) == "Optional(15)\ntrue\n")
 }
 
 @Test func aStatusIsTheStatementsStatus() {
@@ -32,7 +32,7 @@ private func status(_ source: String) -> Int32 {
 
 @Test func aCommandsOutputIsWhatSubstitutionGives() throws {
     #expect(try output(#"let o = Command("echo", "hi").output(); print(o.text); print(o.status.succeeded)"#) == "hi\ntrue\n")
-    #expect(try output(#"let o = Command("sh", "-c", "echo partial; exit 2").output(); print(o.text); print(o.status.code)"#) == "partial\n2\n")
+    #expect(try output(#"let o = Command("sh", "-c", "echo partial; exit 2").output(); print(o.text); print(o.status.code)"#) == "partial\nOptional(2)\n")
 }
 
 @Test func theWordsAreTakenAsTheyAre() throws {

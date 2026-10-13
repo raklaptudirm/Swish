@@ -156,7 +156,7 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
     #expect(try output("struct P: Equatable { var x: Int }; P(x: 1) == P(x: 1)") == "true\n")
     #expect(typeError("struct P { var x: Int }; P(x: 1) == P(x: 1)")?.hasPrefix("'==' needs Equatable values") == true)
     #expect(typeError("struct P: Equatable { var f: (Int) -> Int }") == "P can't be Equatable: its 'f' is (Int) -> Int, which isn't")
-    #expect(typeError("struct P: Comparable { var x: Int }")?.hasPrefix("P can't be Comparable yet") == true)
+    #expect(typeError("struct P: Comparable { var x: Int }")?.hasPrefix("P can't be Comparable without a '<' of its own") == true)
     #expect(typeError("struct P: Frobbable {}")?.hasPrefix("syntax error") == true)
     // An enum without associated values is Equatable anyway; one with them says so.
     #expect(typeError("enum K { case a, b }; K.a == .b") == nil)

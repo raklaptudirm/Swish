@@ -25,7 +25,7 @@ private func run(_ source: String, in shell: Shell = Shell()) throws -> (output:
     #expect(try effect(of: "f", after: "func f() async -> Int { 1 }") == .async)
     // Called by name or through a value, with no `await`; passed to Swift as any closure is.
     #expect(try run("func build() { echo hi }; build(); let f = build; f()").output == "hi\nhi\n")
-    #expect(try run(#"print(["a", "b"].map { x in $(echo \(x)).text })"#).output == "[a, b]\n")
+    #expect(try run(#"print(["a", "b"].map { x in $(echo \(x)).text })"#).output == "[\"a\", \"b\"]\n")
     // `async $(…)` is what runs it in the background; `await` joins it.
     #expect(try run("let j = async $(echo hi); print((await j).text)").output == "hi\n")
 }

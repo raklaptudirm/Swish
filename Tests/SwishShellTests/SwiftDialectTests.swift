@@ -42,7 +42,6 @@ private func syntaxError(_ source: String, _ dialect: Dialect, bound: [String: N
         // Two words side by side are two statements in Swift, and swiftc says the same.
         ("ls -la", "expected ';'"),
         ("git status", "expected ';'"),
-        ("let xs = [3, 1]\nxs | sorted", "'|' pipes commands"),
         ("let h = $(echo hi)", "$(…) runs commands"),
         ("let h = $HOME", "$name reads the environment"),
         ("async sleep 1", "'async' starts a command"),
@@ -52,6 +51,15 @@ private func syntaxError(_ source: String, _ dialect: Dialect, bound: [String: N
         #expect(error?.contains(says) == true, "\(source) -> \(error ?? "parsed")")
         #expect(syntaxError(source, .shell) == nil, "\(source) should parse as the shell's")
     }
+}
+
+@Test func aBarIsBitwiseOrInSwiftOnlyCodeAndAPipeInTheShells() {
+    // The same text: Swift reads an operator, which the checker would refuse
+    // between a list and a name; the shell reads a pipe.
+    let source = "let xs = [3, 1]\nxs | sorted"
+    #expect(syntaxError(source, .swift) == nil)
+    #expect(syntaxError(source, .shell) == nil)
+    #expect(syntaxError("let a = 6 | 1", .swift) == nil)
 }
 
 @Test func aFunctionNamedAsACommandIsNotOneInSwiftOnlyCode() {

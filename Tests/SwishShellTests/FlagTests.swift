@@ -28,7 +28,7 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 @Test func collectionsTakeSeveralWords() throws {
     // Labeled: a repeated flag. Unlabeled: the remaining words.
     #expect(try output(#"func f(xs: [Int]) { echo "\(xs)" }; f --xs 1 --xs 2; f"#) == "[1, 2]\n[]\n")
-    #expect(try output(#"func f(_ n: Int, _ rest: [String]) { echo "\(n) \(rest)" }; f 1 a b"#) == "1 [a, b]\n")
+    #expect(try output(#"func f(_ n: Int, _ rest: [String]) { echo "\(n) \(rest)" }; f 1 a b"#) == "1 [\"a\", \"b\"]\n")
     // Any collection an array literal can be, made from the words: a Set too.
     #expect(try output(#"func f(s: Set<Int>) { echo "\(s.count)" }; f --s 1 --s 1 --s 2"#) == "2\n")
     #expect(try output(#"func f(_ s: Set<String>) { echo "\(s.count)" }; f a a b"#) == "2\n")
