@@ -233,7 +233,9 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
     // A missing field and a JSON null are both nil, so isNull is true for either.
     #expect(try output(json + "j.server?.port?.string == nil; j.nothing?.isNull") == "true\ntrue\n")
     #expect(typeError(json + "j.server + 1") != nil)          // a JSON? isn't a number
-    #expect(typeError(json + "j.server?.port?.int! + 1") == nil)
+    // The `!` is part of the chain, as in Swift: the chain is still optional, and `(…)!` unwraps all of it.
+    #expect(typeError(json + "(j.server?.port?.int)! + 1") == nil)
+    #expect(typeError(json + "j.server?.port?.int! + 1") != nil)
     // A document of records flows through a pipeline as JSON items.
     #expect(try output(#"echo '[{"n": 1}, {"n": 2}]' | from json | get n"#) == "1\n2\n")
 }
