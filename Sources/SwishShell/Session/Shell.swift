@@ -55,6 +55,8 @@ public final class Shell {
     var warnedAboutJobs = false
     /// A `try!` failed in a script, which stops it.
     var scriptStopped = false
+    /// The source being run, so an error can show the line it is in (and the file it is from, if it is one).
+    var diagnosticSource: (text: String, path: String?)?
     /// The signal that stopped the script, which it then ends by.
     var endingSignal: Int32?
     /// The running script's directory; nil at the prompt.
@@ -144,12 +146,22 @@ extension Shell {
         run(source, atPrompt: true)
     }
 
+    /// Reports what went wrong the way a compiler does: the message, and the line it is in with the place marked.
+    func reportDiagnostic(_ kind: Diagnostic.Kind, _ message: String, at range: SourceRange?, calls: [RuntimeError.Call] = []) {
+        guard let (text, path) = diagnosticSource, range != nil else {
+            interpreter.report((kind == .syntax ? "syntax error: " : "error: ") + message)
+            return
+        }
+        interpreter.report(Diagnostic(kind: kind, message: message, range: range, calls: calls).rendered(in: text, path: path))
+    }
+
     private func run(_ source: String, atPrompt: Bool) -> Int32 {
         // The shell touches the interpreter holding its lock, as tasks do.
         interpreter.withMainTask {
+        diagnosticSource = (source, nil)
         switch interpreter.parse(source) {
         case .failure(let error):
-            interpreter.report("syntax error: \(error)")
+            reportDiagnostic(.syntax, "\(error)", at: error.range)
             lastStatus = 2
         case .success(let program):
             if let program = typeCheck(program) { runReportingErrors(program, atPrompt: atPrompt) }
@@ -175,8 +187,12 @@ extension Shell {
             // Now what the checker knows is written in: the shell's constructs become Swift.
             return Desugarer(directCalls: directCalls).program(checked)
         } catch {
-            let place = file.map { "\($0):\(error.line.map(String.init) ?? "")" + (error.line == nil ? "" : ":") + " " } ?? ""
-            interpreter.report("\(place)error: \(error.message)")
+            if error.spot ?? error.range != nil, diagnosticSource != nil {
+                reportDiagnostic(.type, error.message, at: error.spot ?? error.range)
+            } else {
+                let place = file.map { "\($0):\(error.line.map(String.init) ?? "")" + (error.line == nil ? "" : ":") + " " } ?? ""
+                interpreter.report("\(place)error: \(error.message)")
+            }
             lastStatus = 2
             return nil
         }
@@ -207,13 +223,13 @@ extension Shell {
         } catch is AlreadyReported {
             lastStatus = 1
         } catch let fatal as FatalError {
-            interpreter.report("error: \(fatal.error)")
+            reportDiagnostic(.runtime, "\(fatal.error)", at: fatal.error.range, calls: fatal.error.calls)
             lastStatus = fatal.error.status
             // At the prompt, stopping would mean exiting your shell; the
             // config file stops, as a script does.
             scriptStopped = !interactive || interpreter.file != nil
         } catch let error as RuntimeError {
-            interpreter.report("error: \(error)")
+            reportDiagnostic(.runtime, "\(error)", at: error.range, calls: error.calls)
             lastStatus = error.status
         } catch {
             interpreter.report("error: \(error)")

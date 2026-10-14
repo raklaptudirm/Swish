@@ -50,9 +50,11 @@ extension Shell {
         // `#!/usr/bin/env swish`, so it runs as a program; the line stays,
         // blank, so line numbers do too.
         if source.hasPrefix("#!") { source = String(source.drop { $0 != "\n" }) }
+        diagnosticSource = (source, path)
         switch interpreter.parse(source) {
         case .failure(let error):
-            interpreter.report("\(path): syntax error: \(error)")
+            if error.range != nil { reportDiagnostic(.syntax, "\(error)", at: error.range) }
+            else { interpreter.report("\(path): syntax error: \(error)") }
             return 2
         case .success(let parsed):
             program = parsed
@@ -62,17 +64,19 @@ extension Shell {
         var deferred: [Program] = []
         defer { interpreter.runDeferred(deferred) }
         // Functions and types first, so any line can use them.
-        runReportingErrors(Program(statements: program.statements.filter {
-            if case .function = $0 { return true }
-            return $0.declaresType
-        }))
-        for statement in program.statements {
+        let declarations = program.statements.indices.filter {
+            if case .function = program.statements[$0] { return true }
+            return program.statements[$0].declaresType
+        }
+        runReportingErrors(Program(statements: declarations.map { program.statements[$0] },
+                                   ranges: program.ranges.isEmpty ? [] : declarations.compactMap { $0 < program.ranges.count ? program.ranges[$0] : nil }))
+        for (index, statement) in program.statements.enumerated() {
             if case .deferBlock(let body) = statement {
                 deferred.append(body)
                 continue
             }
             if statement.declaresType { continue }
-            runReportingErrors(Program(statements: [statement]))
+            runReportingErrors(Program(statements: [statement], ranges: index < program.ranges.count ? [program.ranges[index]] : []))
             if scriptStopped { return lastStatus }
         }
         finish(program)

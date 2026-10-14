@@ -57,10 +57,10 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
 """#
 
     /// How the module's structs say which columns a table starts with.
-    package nonisolated(unsafe) static let shellColumns: [String: [DisplayColumn]] = ["FileEntry": FileEntry.columns, "ProcessEntry": ProcessEntry.columns]
+    package static let shellColumns: [String: [DisplayColumn]] = ["FileEntry": FileEntry.columns, "ProcessEntry": ProcessEntry.columns]
 
     /// How the module's enums say how a case is shown, by case name.
-    package nonisolated(unsafe) static let shellEnumStyles: [String: @Sendable (String) -> DisplayStyle?] = ["FileType": { name in FileType.allCases.first { "\($0)" == name }?.displayStyle }, "JobState": { name in JobState.allCases.first { "\($0)" == name }?.displayStyle }]
+    package static let shellEnumStyles: [String: @Sendable (String) -> DisplayStyle?] = ["FileType": { name in FileType.allCases.first { "\($0)" == name }?.displayStyle }, "JobState": { name in JobState.allCases.first { "\($0)" == name }?.displayStyle }]
 
     package nonisolated(unsafe) static let shellFunctions: [BridgedMember] = [member0, member1, member2, member3, member4, member5, member6, member7, member8, member9]
     nonisolated(unsafe) private static let member0: BridgedMember =                 BridgedMember(

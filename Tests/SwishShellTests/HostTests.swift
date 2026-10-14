@@ -1,3 +1,4 @@
+import Foundation
 @testable @_spi(Layer) import Swiit
 @_spi(Shell) @_spi(Layer) @testable import SwishShell
 import SwiitKit
@@ -33,7 +34,10 @@ private func shellWithRecorder() -> (Shell, Recorder) {
     let (shell, recorder) = shellWithRecorder()
     // A bare value is shown as its debug form; an error is reported.
     #expect(shell.enter("1 + 1; 1 / 0") != 0)
-    #expect(recorder.written == ["out: 2\n", "err: swish: error: division by zero\n"])
+    // The error shows the line it is in, with the place marked.
+    #expect(recorder.written.count == 2 && recorder.written[0] == "out: 2\n")
+    #expect(recorder.written[1].hasPrefix("err: swish: error: division by zero\n --> 1:8\n"))
+    #expect(recorder.written[1].contains("1 | 1 + 1; 1 / 0"))
 }
 
 @Test func theEnvironmentIsTheHosts() {
@@ -66,8 +70,37 @@ private func shellWithRecorder() -> (Shell, Recorder) {
     shell.interpreter.scopes[0].bindings["env"] = nil
     #expect(shell.execute("let h = env.HOME; h ?? \"none\"") != 0)
     #expect(shell.execute(#"env.X = "1""#) != 0)
-    #expect(recorder.written == [
-        "err: swish: error: no variable named 'env'\n",
-        "err: swish: env.X: command not found\n",
-    ])
+    #expect(recorder.written.count == 2)
+    #expect(recorder.written[0].hasPrefix("err: swish: error: no variable named 'env'\n --> 1:9\n"))
+    #expect(recorder.written[1] == "err: swish: env.X: command not found\n")
+}
+
+/// Runs a file of these lines in a shell whose errors are recorded, and gives the errors.
+private func errorsOfScript(_ lines: [String]) throws -> (errors: String, status: Int32, path: String) {
+    let (shell, recorder) = shellWithRecorder()
+    let path = NSTemporaryDirectory() + "diagnostic-\(UUID().uuidString).swish"
+    try (lines.joined(separator: "\n") + "\n").write(toFile: path, atomically: true, encoding: .utf8)
+    defer { try? FileManager.default.removeItem(atPath: path) }
+    let status = try onLargeStack { shell.runScript(at: path) }
+    return (recorder.written.filter { $0.hasPrefix("err: ") }.joined(), status, path)
+}
+
+@Test func anErrorShowsTheLineItIsInWithThePlaceMarked() throws {
+    // A run-time error: the statement it happened in, in the file, with the line and column.
+    let runtime = try errorsOfScript(["print(1)", "let xs = [1, 2]", "print(xs[7])", "print(2)"])
+    #expect(runtime.errors.contains("error: index 7 is out of range for a list of 2\n --> \(runtime.path):3:1\n"))
+    #expect(runtime.errors.contains("3 | print(xs[7])\n  | ^^^^^^^^^^^^"))
+    // Inside a function: where it was called from too.
+    let called = try errorsOfScript(["func half(_ n: Int) -> Int {", "    let h = 10 / n", "    return h", "}", "print(half(0))"])
+    #expect(called.errors.contains("note: in 'half', called from here\n --> \(called.path):5:1"))
+    #expect(called.errors.contains(" --> \(called.path):2:5\n"))
+    // A type error: the part of the line that is wrong.
+    let typed = try errorsOfScript(["let a = 1", #"let x: Int = "s""#])
+    #expect(typed.status == 2)
+    #expect(typed.errors.contains(" --> \(typed.path):2:14\n"))
+    #expect(typed.errors.contains("2 | let x: Int = \"s\"\n  |              ^^^"))
+    // A syntax error: the token.
+    let syntax = try errorsOfScript(["func f() {", "  print(1", "}"])
+    #expect(syntax.errors.contains("syntax error: expected ')'"))
+    #expect(syntax.errors.contains(" --> \(syntax.path):2:"))
 }

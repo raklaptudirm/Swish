@@ -41,11 +41,12 @@ extension Shell {
                 pending = ""
             case .line(let line):
                 pending = pending.isEmpty ? line : pending + "\n" + line
+                diagnosticSource = (pending, nil)
                 switch interpreter.parse(pending) {
                 case .failure(let error) where error.incomplete:
                     continue
                 case .failure(let error):
-                    interpreter.report("syntax error: \(error)")
+                    reportDiagnostic(.syntax, "\(error)", at: error.range)
                     lastStatus = 2
                 case .success(let program):
                     // Checked first, as everywhere else: a type error runs nothing.
@@ -63,11 +64,12 @@ extension Shell {
         var pending = ""
         while let line = nextLine() {
             pending = pending.isEmpty ? line : pending + "\n" + line
+            diagnosticSource = (pending, nil)
             switch interpreter.parse(pending) {
             case .failure(let error) where error.incomplete:
                 continue
             case .failure(let error):
-                interpreter.report("syntax error: \(error)")
+                reportDiagnostic(.syntax, "\(error)", at: error.range)
                 lastStatus = 2
             case .success(let program):
                 if let program = typeCheck(program) { runReportingErrors(program) }
