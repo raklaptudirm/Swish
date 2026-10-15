@@ -42,7 +42,7 @@ set file [open $config/swish/config.swish w]
 puts $file {let x: Int = "no"}
 close $file
 spawn .build/debug/swish
-step "a config's error is reported" {config.swish:1: error}
+step "a config's error is reported" {--> .*config.swish:1:14}
 step "and the default prompt shown" {\x1b\[0m \x1b\[32m}
 send "exit\r"
 expect eof
