@@ -152,7 +152,17 @@ extension Shell {
             interpreter.report((kind == .syntax ? "syntax error: " : "error: ") + message)
             return
         }
-        interpreter.report(Diagnostic(kind: kind, message: message, range: range, calls: calls).rendered(in: text, path: path))
+        // Where errors go decides whether the source is shown in color, as the line editor shows it.
+        var style: Diagnostic.Style?
+        if interpreter.host.error.traits().styled {
+            nonisolated(unsafe) let shell = self // safe: called holding the interpreter lock, as the report is
+            style = Diagnostic.Style(
+                source: { shell.highlightStyles($0) },
+                frame: { $0.styled(DisplayStyle.boldBlue) },
+                mark: { $0.styled(DisplayStyle.error) },
+                reset: DisplayStyle.reset)
+        }
+        interpreter.report(Diagnostic(kind: kind, message: message, range: range, calls: calls).rendered(in: text, path: path, style: style))
     }
 
     private func run(_ source: String, atPrompt: Bool) -> Int32 {

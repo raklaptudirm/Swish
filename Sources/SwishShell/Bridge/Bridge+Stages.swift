@@ -70,7 +70,7 @@ extension Shell {
     /// Whether some type has a member called `name` that a stage could
     /// call: a Swift type's, a struct's in scope, or a job's.
     func isMemberName(_ name: String) -> Bool {
-        if Bridge.stageNames.contains(name) || Job.members.contains { $0.name == name } { return true }
+        if Bridge.stageNames.contains(name) || Job.members.contains(where: { $0.name == name }) { return true }
         return interpreter.scopes.contains { scope in
             scope.bindings.values.contains { binding in
                 if case .object(let type as StructType) = binding.value { type.methods[name] != nil } else { false }
