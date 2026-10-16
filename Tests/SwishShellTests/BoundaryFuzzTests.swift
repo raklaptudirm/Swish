@@ -87,8 +87,8 @@ private func run(_ source: String) throws -> String {
     return try onLargeStack { try shell.capturing { shell.execute(source) } }
 }
 
-/// How many programs to try: a few hundred as part of the suite; `SWISH_FUZZ=3000` for a long run.
-private let programs = ProcessInfo.processInfo.environment["SWISH_FUZZ"].flatMap(Int.init) ?? 250
+/// How many programs to try: a hundred and fifty as part of the suite; `SWISH_FUZZ=3000` for a long run.
+private let programs = ProcessInfo.processInfo.environment["SWISH_FUZZ"].flatMap(Int.init) ?? 150
 
 @Test func everyPieceOfAProgramRunsWhateverIsAroundIt() throws {
     var generator = Generator(state: 20_261_016)

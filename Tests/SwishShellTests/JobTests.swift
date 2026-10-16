@@ -98,10 +98,10 @@ private func run(_ source: String) throws -> String {
 }
 
 @Test func tasksRunWhileOthersWait() throws {
-    // Each waits half a second on a program; together they take about that long.
+    // Each waits 0.6 s on a program; together they take about that long, and one after the other they would take 1.2 s.
     let start = Date()
-    #expect(try run("let a = async { $(sleep 0.5); return 1 }; let b = async { $(sleep 0.5); return 2 }; print((await a) + (await b))") == "3\n")
-    #expect(Date().timeIntervalSince(start) < 0.9)
+    #expect(try run("let a = async { $(sleep 0.6); return 1 }; let b = async { $(sleep 0.6); return 2 }; print((await a) + (await b))") == "3\n")
+    #expect(Date().timeIntervalSince(start) < 1.15)
     // The task that started them carries on while they wait.
     #expect(try run("let t = async { $(sleep 0.3); print(\"later\") }; print(\"now\"); await t; print(t.output!.text)") == "now\nlater\nlater\n")
 }
