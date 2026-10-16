@@ -95,13 +95,14 @@ final class LineEditor {
         while let key = nextKey() {
             switch key {
             case .character(let character):
+                if "}])".contains(character), !inputPending() { dedentLine() }
                 insert([character])
             case .enter:
                 let text = String(buffer)
                 if isComplete(text) { return accept() }
-                insert(["\n"])
+                insertNewline()
             case .newline:
-                insert(["\n"])
+                insertNewline()
             case .interrupt:
                 moveToEnd()
                 writeOut("^C\n")
@@ -174,6 +175,38 @@ final class LineEditor {
         buffer.insert(contentsOf: characters, at: cursor)
         cursor += characters.count
         startedEditing()
+    }
+
+    /// One level of indentation.
+    private static let indentation = "    "
+
+    /// A new line after the cursor, indented as the line it follows is, and a level deeper if that one opens a block
+    /// (`{`, `(`, `[`, or a `case …:`). Text pasted arrives with its own indentation, so with more input waiting there is none.
+    private func insertNewline() {
+        guard !inputPending() else { return insert(["\n"]) }
+        let line = buffer[lineStart(from: cursor)..<cursor]
+        var indent = String(line.prefix { $0 == " " || $0 == "\t" })
+        let trimmed = line.drop { $0 == " " || $0 == "\t" }
+        if let last = trimmed.last(where: { $0 != " " && $0 != "\t" }) {
+            let words = String(trimmed).split(separator: " ", maxSplits: 1).first.map(String.init) ?? ""
+            if "{([".contains(last) || last == ":" && (words == "case" || words == "default:" || words == "default") {
+                indent += LineEditor.indentation
+            }
+        }
+        insert(["\n"] + Array(indent))
+    }
+
+    /// A closing bracket typed first on a line takes the line back a level.
+    private func dedentLine() {
+        let start = lineStart(from: cursor)
+        let before = buffer[start..<cursor]
+        guard !before.isEmpty, before.allSatisfy({ $0 == " " || $0 == "\t" }) else { return }
+        if before.last == "\t" {
+            remove(cursor - 1..<cursor)
+        } else {
+            let spaces = min(before.count, LineEditor.indentation.count)
+            remove(cursor - spaces..<cursor)
+        }
     }
 
     private func remove(_ range: Range<Int>) {

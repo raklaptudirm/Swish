@@ -53,6 +53,31 @@ send "echo inside\r"
 send "\}\r"
 step "the block runs once it's complete" "\r\ninside\r\n"
 
+# A new line keeps the indentation, a level deeper after an opening brace; a closing brace takes it back.
+# (Typed with pauses: keys that arrive together are a paste, which brings its own indentation.)
+set ellipsis {\x1b\[90m…\x1b\[0m}
+send "if true \{\r"
+after 150
+send "if true \{\r"
+after 150
+send "echo deep"
+step "a line after a brace is indented a level" "${ellipsis} {9}(?:\\x1b\\\[\[0-9;\]*m)*\\x1b\\\[32mecho\\x1b\\\[0m deep"
+after 150
+send "\r"
+after 150
+send "echo level"
+step "and the next line keeps it" "${ellipsis} {9}(?:\\x1b\\\[\[0-9;\]*m)*\\x1b\\\[32mecho\\x1b\\\[0m level"
+after 150
+send "\r"
+after 150
+send "\}"
+step "a closing brace takes a level back" "${ellipsis} {5}\\\}"
+after 150
+send "\r"
+after 150
+send "\}\r"
+expect -re $ok
+
 send "echo persisted-entry\r"
 expect -re $ok
 # ^D rather than `exit`, which would itself be the newest history entry.
