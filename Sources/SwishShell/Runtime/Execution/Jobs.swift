@@ -40,6 +40,8 @@ final class Job: CheckedObject, @unchecked Sendable {
     var task: TaskHandle?
     /// `async $(…)`: `await` gives its Output, not what its task gave.
     var givesOutput = false
+    /// Its output has been written where the one who awaited it writes (or is being).
+    var relayed = false
     /// Once it's done: its output and how it exited.
     private(set) var output: Output?
     unowned let shell: Shell
@@ -255,8 +257,21 @@ extension Shell {
     /// stopped again with ^Z, it goes back to `jobs` and the line is left.
     func awaitJob(_ job: Job) throws -> Output {
         if let task = job.task {
+            // Awaiting brings a task to the foreground, and what it printed with it: what it has printed so far, and
+            // the rest as it prints. (A task that gives an Output keeps it for the value.)
+            var relay: Relay?
+            if !job.givesOutput, !job.relayed {
+                job.relayed = true
+                if let collector = job.capture {
+                    relay = collector.relay(to: stdoutFD)
+                } else if let text = job.output?.text, !text.isEmpty {
+                    writeAll(stdoutFD, text + "\n")
+                }
+            }
             let result = Result { try interpreter.join(task) }
             job.finish()
+            relay?.stop()
+            relay?.wait()
             jobs.removeAll { $0 === job }
             if case .failure(let error) = result, !job.givesOutput {
                 // How it ended is the awaiting task's error, not a reason for it to stop too.

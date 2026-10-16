@@ -22,6 +22,42 @@ extension Shell {
     }
 }
 
+/// Copies an `OutputCollector`'s output to a descriptor, as it arrives, on a thread of its own, until the output ends
+/// or it is stopped.
+final class Relay: @unchecked Sendable {
+    private let finished = DispatchSemaphore(value: 0)
+    private let lock = NSLock()
+    private var stopped = false
+
+    init(_ collector: OutputCollector, to fd: Int32) {
+        Thread.detachNewThread { [self] in
+            var offset = 0
+            while true {
+                let (chunk, ended) = collector.bytes(from: offset, waitingUpTo: 0.05)
+                if !chunk.isEmpty {
+                    chunk.withUnsafeBufferPointer { buffer in
+                        var written = 0
+                        while written < buffer.count {
+                            let count = write(fd, buffer.baseAddress! + written, buffer.count - written)
+                            if count > 0 { written += count } else if count == -1 && errno == EINTR { continue } else { break }
+                        }
+                    }
+                    offset += chunk.count
+                } else if ended || lock.withLock({ stopped }) {
+                    break
+                }
+            }
+            finished.signal()
+        }
+    }
+
+    /// Ends the copying once it has caught up with what is collected.
+    func stop() { lock.withLock { stopped = true } }
+
+    /// Waits for the copying to end.
+    func wait() { finished.wait() }
+}
+
 /// Reads a pipe on a thread of its own, and keeps all of it: as one String
 /// when it ends, or line by line as lines complete.
 final class OutputCollector: @unchecked Sendable {
@@ -63,6 +99,20 @@ final class OutputCollector: @unchecked Sendable {
             }
         }
     }
+
+    /// What was collected from `offset` on, waiting up to `timeout` seconds for some; and whether the output has ended.
+    func bytes(from offset: Int, waitingUpTo timeout: TimeInterval) -> (bytes: [UInt8], ended: Bool) {
+        condition.withLock {
+            let deadline = Date(timeIntervalSinceNow: timeout)
+            while bytes.count <= offset && !ended {
+                if !condition.wait(until: deadline) { break }
+            }
+            return (Array(bytes[min(offset, bytes.count)...]), ended)
+        }
+    }
+
+    /// Writes all of it to `fd`, what is collected already and what comes: a task awaited from the foreground shows its output.
+    func relay(to fd: Int32) -> Relay { Relay(self, to: fd) }
 
     /// All of it, once it ends.
     func finish() -> String {

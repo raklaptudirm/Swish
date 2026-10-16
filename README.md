@@ -156,6 +156,7 @@ echo "meanwhile…"
 let html = await page             // its Output
 for line in page.lines() { … }    // or its lines as they arrive, before it ends
 try await build                   // throws if the build failed
+let r = await async { echo "hi"; return 5 }  // a block's output is shown as it prints, when awaited
 
 jobs                              // background jobs, including ones you ^Z'd
 await                             // bring back the most recent: the ^Z'd vim, say

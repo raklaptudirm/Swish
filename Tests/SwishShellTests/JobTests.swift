@@ -103,13 +103,27 @@ private func run(_ source: String) throws -> String {
     #expect(try run("let a = async { $(sleep 0.5); return 1 }; let b = async { $(sleep 0.5); return 2 }; print((await a) + (await b))") == "3\n")
     #expect(Date().timeIntervalSince(start) < 0.9)
     // The task that started them carries on while they wait.
-    #expect(try run("let t = async { $(sleep 0.3); print(\"later\") }; print(\"now\"); await t; print(t.output!.text)") == "now\nlater\n")
+    #expect(try run("let t = async { $(sleep 0.3); print(\"later\") }; print(\"now\"); await t; print(t.output!.text)") == "now\nlater\nlater\n")
 }
 
 @Test func tasksShareTheGlobalsAndKeepTheirOutput() throws {
     #expect(try run("var n = 0; let t = async { for _ in 1...3 { n += 1; $(sleep 0.05) } }; await t; print(n)") == "3\n")
-    // What a task prints is kept on its job, not written over the prompt.
-    #expect(try run("let t = async { print(\"inside\") }; await t; print(\"[\" + t.output!.text + \"]\")") == "[inside]\n")
+    // What a task prints is kept on its job while it runs in the background, and written when it is awaited.
+    #expect(try run("let t = async { print(\"inside\") }; await t; print(\"[\" + t.output!.text + \"]\")") == "inside\n[inside]\n")
+    #expect(try run("let t = async { print(\"inside\") }; $(sleep 0.2); print(t.output ?? \"running\")") != "inside\n")
+}
+
+@Test func awaitingATaskShowsWhatItPrintsAsItPrints() throws {
+    // Printed so far, then the rest as it comes: the awaiting task writes it, in order, once.
+    #expect(try run(#"let t = async { print("a"); $(sleep 0.2); print("b"); return 1 }; $(sleep 0.1); print(await t)"#) == "a\nb\n1\n")
+    #expect(try run(#"func f() { print("in f"); print("twice") }; let j = async f(); await j; await j; print("end")"#) == "in f\ntwice\nend\n")
+    // A task that gives an Output keeps it for the value, and prints nothing itself.
+    #expect(try run(#"let j = async $(echo hi); let o = await j; print("got", o)"#) == "got hi\n")
+    // What is written while the awaiting is captured is part of the capture.
+    #expect(try run(#"let t = async { print("x") }; let s = $(await t); print("[\(s)]")"#) == "[x]\n")
+    // And a task awaited while it is still printing shows it live: the first line is out before the task ends.
+    let host = try run(#"let t = async { print("first"); $(sleep 0.6); print("last") }; let start = Date(); await t; print("took", Date().timeIntervalSince(start) > 0.5)"#)
+    #expect(host == "first\nlast\ntook true\n")
 }
 
 @Test func aTaskIsCancelledAndItsErrorsReachAwait() throws {

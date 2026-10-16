@@ -35,6 +35,19 @@ send "\r"
 step "a finished job is announced before the prompt" [colored {\[1\] done  sleep 0.2}]
 expect -re $prompt
 
+# Awaiting a task shows what it prints as it prints it: the first line is out well before the task ends.
+send "let p = async \{ print(\"early\"); \$(sleep 2); print(\"late\") \}\r"
+expect -re $prompt
+send "await p\r"
+set timeout 1
+expect {
+  "early" { puts "ok   an awaited task shows its output as it comes" }
+  timeout { puts "FAIL an awaited task shows its output as it comes"; incr failures }
+}
+set timeout 5
+step "and the rest when it prints" {late}
+expect -re $prompt
+
 # A Swish task in the background leaves the prompt working, its programs
 # away from the terminal, and is announced when it's done.
 send "let t = async { \$(sleep 0.3); return 5 }\r"
