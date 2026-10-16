@@ -201,6 +201,12 @@ swift build -c release
 .build/release/swish script.swish a b    # run a script, with arguments
 ```
 
+In a script the arguments are the list `args` (`["a", "b"]` here), and `#filePath` is the script's path:
+
+```swift
+for name in args { echo "hello, \(name)" }
+```
+
 ### Configuration
 
 The interactive shell runs `~/.config/swish/config.swish` as it starts: a Swish script whose

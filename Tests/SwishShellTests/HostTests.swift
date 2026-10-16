@@ -121,3 +121,16 @@ private func errorsOfScript(_ lines: [String]) throws -> (errors: String, status
         }
     }
 }
+
+@Test func anUnknownOptionSaysWhichSideOfAShadowedCommandItIs() throws {
+    // `ps` is Swish's function, not the program: a flag it lacks says how to reach the program, and never runs it instead.
+    let (shell, recorder) = shellWithRecorder()
+    #expect(shell.execute("ps -ax") != 0)
+    #expect(recorder.written.contains { $0.contains("unknown option -a in -ax; this is Swish's ps: ^ps runs the program") })
+}
+
+@Test func anInvalidEscapeSaysWhatToWriteInstead() throws {
+    let (shell, recorder) = shellWithRecorder()
+    #expect(shell.execute(#"print("a\|b")"#) != 0)
+    #expect(recorder.written.contains { $0.contains(#"write \\ for a backslash, or use single quotes"#) })
+}

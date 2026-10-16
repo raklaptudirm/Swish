@@ -54,7 +54,7 @@ extension SourceCursor {
                 case "0": literal.append("\0")
                 case "\\", "\"", "'", "$": literal.append(next)
                 case "u": literal.append(try parseUnicodeEscape())
-                default: throw SyntaxError("invalid escape '\\\(next)' in string")
+                default: throw SyntaxError("invalid escape '\\\(next)' in string: write \\\\ for a backslash, or use single quotes to keep every backslash")
                 }
             case "$":
                 if let expr = try parseDollar() {

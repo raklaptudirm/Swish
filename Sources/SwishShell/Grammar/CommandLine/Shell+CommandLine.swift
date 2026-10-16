@@ -6,6 +6,12 @@ import SystemPackage
 extension Shell {
     // MARK: Command-mode calls
 
+    /// For an option a function doesn't have, when a program of the same name is on PATH: that the function is Swish's,
+    /// and how to run the program. (It is never run in its place: a function is what was asked for.)
+    func programHint(_ name: String) -> String {
+        executableNames().contains(name) ? "; this is Swish's \(name): ^\(name) runs the program" : ""
+    }
+
     /// Calls a function with command-line arguments, displaying its result if
     /// asked. The status is 1 for a false result and 0 otherwise.
     func callCommand(_ set: OverloadSet, _ args: [CommandArgument], display shouldDisplay: Bool) throws -> Int32 {
@@ -104,7 +110,7 @@ extension Shell {
                 let flagName = String(body.prefix { $0 != "=" })
                 let inline = body.contains("=") ? String(body.drop { $0 != "=" }.dropFirst()) : nil
                 guard let (parameter, negated) = longFlags[flagName] else {
-                    throw RuntimeError("\(name): unknown option --\(flagName)")
+                    throw RuntimeError("\(name): unknown option --\(flagName)" + programHint(name))
                 }
                 if parameter.type == .bool && (inline == nil || negated) {
                     guard inline == nil else { throw RuntimeError("\(name): --\(flagName) doesn't take a value") }
@@ -138,7 +144,7 @@ extension Shell {
             while position < letters.count {
                 let letter = letters[position]
                 guard let parameter = shortFlags[letter] else {
-                    throw RuntimeError("\(name): unknown option -\(letter)\(letters.count > 1 ? " in \(arg)" : "")")
+                    throw RuntimeError("\(name): unknown option -\(letter)\(letters.count > 1 ? " in \(arg)" : "")" + programHint(name))
                 }
                 position += 1
                 if parameter.type == .bool {
