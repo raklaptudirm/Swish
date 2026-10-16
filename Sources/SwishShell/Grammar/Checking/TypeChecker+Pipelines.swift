@@ -222,7 +222,7 @@ extension TypeChecker {
     /// `points | describe`: a method of each item, when their type has one.
     func checkItemMethodStage(_ name: String, _ command: inout CommandNode, element: TypeAnnotation) throws -> TypeAnnotation? {
         guard case .named(let typeName) = element else { return nil }
-        if let info = structInfo(named: typeName), let methods = info.methods[name] {
+        if let info = structInfo(named: typeName), let methods = info.declared.methods[name] {
             if methods.count == 1 && methods[0].isMutating {
                 throw TypeError("\(typeName).\(name) is mutating, and a piped value can't change: call it on a variable")
             }
