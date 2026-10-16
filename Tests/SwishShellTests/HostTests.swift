@@ -104,3 +104,20 @@ private func errorsOfScript(_ lines: [String]) throws -> (errors: String, status
     #expect(syntax.errors.contains("syntax error: expected ')'"))
     #expect(syntax.errors.contains(" --> \(syntax.path):2:"))
 }
+
+@Test func whatFollowsACommandSubstitutionWithAClosureIsStillRead() throws {
+    // SwiftParser takes `$(echo hi | map { … })` for a Swift call that ends at the closure and leaves the rest of the
+    // line out of every statement; the layer reads on from where its own text ended.
+    let shell = Shell()
+    let cases: [(source: String, statements: Int)] = [
+        (#"let a = $(echo hi | map { "x" }); touch /tmp/never; print(a)"#, 3),
+        ("let a = $(echo hi | map { $0 })\nprint(a)\nprint(a)", 3),
+        (#"print($(echo hi | map { "x" })); print(1)"#, 2),
+    ]
+    for (source, statements) in cases {
+        switch shell.interpreter.parse(source) {
+        case .success(let program): #expect(program.statements.count == statements, "\(source)")
+        case .failure(let error): Issue.record("\(source): \(error)")
+        }
+    }
+}
