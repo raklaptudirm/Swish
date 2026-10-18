@@ -2,10 +2,12 @@
 import Foundation
 import SwiitKit
 
-// Spike: a command line bound to declarations as a lookup on their parameters
-// alone, with no function, value or scope: which overload the words mean, and
-// which words each parameter gets. The runtime's `bind(commandLine:)` makes
-// values; this makes the same decisions and makes nothing.
+// A command line bound to a declaration's parameters: which overload the words
+// mean, and what each parameter is given. It looks at parameters and words
+// alone, with no function, value or scope, so the checker binds a call to a
+// function the program has only just declared as the runtime binds one it is
+// about to run; the runtime then makes the values from what was decided
+// (`Shell.bind(commandLine:)`).
 
 /// A word of a command, as binding sees it.
 enum CommandWordShape {
@@ -14,14 +16,31 @@ enum CommandWordShape {
     case closure
 }
 
-/// What a parameter was given: the words it took, and the text it was given
-/// from one (a flag's inline value is part of its word).
+/// What a command line gave each parameter of the overload it chose.
 struct CommandLineBinding {
+    /// A word a parameter took, and the text it took from it (a flag's inline value is part of the flag's word).
     struct Piece { var word: Int; var text: String? }
+
+    enum Assigned {
+        /// Words: a positional, a flag's value, or the rest for a variadic or a collection.
+        case words([Piece])
+        /// A switch: `--verbose` is true, `--no-verbose` false.
+        case flag(Bool)
+        /// Not given, and the parameter has a default to fill in.
+        case defaulted
+        /// Not given, and it needs none: a switch is off, a collection empty, an optional nil.
+        case omitted
+    }
+
     /// The overload chosen, as a position among the signatures given.
     var overload: Int
-    var assigned: [String: [Piece]]
+    var assigned: [String: Assigned]
     var penalty: Int
+
+    /// The words a parameter took.
+    func pieces(of parameter: String) -> [Piece] {
+        if case .words(let pieces)? = assigned[parameter] { pieces } else { [] }
+    }
 }
 
 extension Shell {
@@ -37,16 +56,16 @@ extension Shell {
 
     /// Picks the overload the words bind to with the lowest penalty, as `Interpreter.resolve` does for values.
     func bindCommandLine(
-        _ words: [CommandWordShape], to signatures: [TypeChecker.Signature], name: String, excludingInput: Bool
+        _ words: [CommandWordShape], to signatures: [TypeChecker.Signature], name: String, excludingInput: Bool, declaredEnum: DeclaredEnum? = nil
     ) throws -> CommandLineBinding {
         let stand = Function(name: nil, parameters: [], returnType: nil, body: .native { _, _ in .nothing })
         if signatures.count == 1 {
-            return try bindWords(words, to: signatures[0], overload: 0, name: name, excludingInput: excludingInput, stand: stand)
+            return try bindWords(words, to: signatures[0].parameters, overload: 0, name: name, excludingInput: excludingInput, stand: stand, declaredEnum: declaredEnum)
         }
         var matches: [CommandLineBinding] = []
         for (position, signature) in signatures.enumerated() {
             do {
-                matches.append(try bindWords(words, to: signature, overload: position, name: name, excludingInput: excludingInput, stand: stand))
+                matches.append(try bindWords(words, to: signature.parameters, overload: position, name: name, excludingInput: excludingInput, stand: stand, declaredEnum: declaredEnum))
             } catch is RuntimeError {
                 continue
             }
@@ -73,11 +92,11 @@ extension Shell {
     }
 
     /// `bind(commandLine:to:excludingInput:)`, deciding and not making: the same flags, positionals, collections and errors.
-    private func bindWords(
-        _ words: [CommandWordShape], to signature: TypeChecker.Signature, overload: Int, name: String,
-        excludingInput: Bool, stand: Function
+    func bindWords(
+        _ words: [CommandWordShape], to allParameters: [Parameter], overload: Int, name: String,
+        excludingInput: Bool, stand: Function, declaredEnum: DeclaredEnum?
     ) throws -> CommandLineBinding {
-        let parameters = signature.parameters.filter { !(excludingInput && $0.isInput) }
+        let parameters = allParameters.filter { !(excludingInput && $0.isInput) }
         var longFlags: [String: (parameter: Parameter, negated: Bool)] = [:]
         var shortFlags: [Character: Parameter] = [:]
         for parameter in parameters {
@@ -90,13 +109,13 @@ extension Shell {
         }
 
         typealias Piece = CommandLineBinding.Piece
-        var bound: [String: [Piece]] = [:]
+        var bound: [String: CommandLineBinding.Assigned] = [:]
         var penalty = 0
         /// A word taken as a value of `type`: whether it can be, and what it costs.
         func take(_ word: Int, text: String?, as type: TypeAnnotation, for what: String) throws -> Piece {
             if let text {
                 if type == .string || type == .any { penalty += 1 }
-                _ = try converted(text, to: type, for: what, of: name)
+                _ = try converted(text, to: type, for: what, of: name, declaredEnum: declaredEnum)
             } else if interpreter.conform(.function(stand), to: type) == nil {
                 throw RuntimeError("\(name): \(what) must be \(type), not \(Value.function(stand).typeName)")
             }
@@ -108,7 +127,7 @@ extension Shell {
                 collected[parameter.name, default: []].append(try take(word, text: text, as: element, for: flag))
             } else {
                 guard bound[parameter.name] == nil else { throw RuntimeError("\(name): \(flag) given twice") }
-                bound[parameter.name] = [try take(word, text: text, as: parameter.type, for: flag)]
+                bound[parameter.name] = .words([try take(word, text: text, as: parameter.type, for: flag)])
             }
         }
         func textOf(_ index: Int) -> String? {
@@ -139,11 +158,11 @@ extension Shell {
                 if parameter.type == .bool && (inline == nil || negated) {
                     guard inline == nil else { throw RuntimeError("\(name): --\(flagName) doesn't take a value") }
                     if !negated, index < words.count, let next = textOf(index),
-                       (try? converted(next, to: parameter.type, for: "", of: name)) != nil {
-                        bound[parameter.name] = [Piece(word: index, text: next)]
+                       (try? converted(next, to: parameter.type, for: "", of: name, declaredEnum: declaredEnum)) != nil {
+                        bound[parameter.name] = .words([Piece(word: index, text: next)])
                         index += 1
                     } else {
-                        bound[parameter.name] = []
+                        bound[parameter.name] = .flag(!negated)
                     }
                 } else if let inline {
                     try assign(parameter, word: position, text: inline, flag: "--\(flagName)")
@@ -167,7 +186,7 @@ extension Shell {
                 }
                 cursor += 1
                 if parameter.type == .bool {
-                    bound[parameter.name] = []
+                    bound[parameter.name] = .flag(true)
                     continue
                 }
                 var value = String(letters[cursor...])
@@ -187,33 +206,33 @@ extension Shell {
         for parameter in parameters where parameter.label == nil {
             let what = "<\(parameter.name)>"
             if parameter.variadic {
-                bound[parameter.name] = try remaining.map { try take($0, text: textOf($0), as: parameter.type, for: what) }
+                bound[parameter.name] = .words(try remaining.map { try take($0, text: textOf($0), as: parameter.type, for: what) })
                 remaining = []
             } else if let (element, _) = Shell.collection(parameter.type) {
-                bound[parameter.name] = try remaining.map { try take($0, text: textOf($0), as: element, for: what) }
+                bound[parameter.name] = .words(try remaining.map { try take($0, text: textOf($0), as: element, for: what) })
                 remaining = []
             } else if let word = remaining.popFirst() {
-                bound[parameter.name] = [try take(word, text: textOf(word), as: parameter.type, for: what)]
+                bound[parameter.name] = .words([try take(word, text: textOf(word), as: parameter.type, for: what)])
             }
         }
         if remaining.count == 1, textOf(remaining.first!) == nil,
            let parameter = parameters.first(where: { $0.label != nil && bound[$0.name] == nil && $0.type.acceptsFunction }) {
-            bound[parameter.name] = [Piece(word: remaining.first!, text: nil)]
+            bound[parameter.name] = .words([Piece(word: remaining.first!, text: nil)])
             remaining = []
         }
         if let extra = remaining.first {
             throw RuntimeError("\(name): unexpected argument '\(textOf(extra) ?? "closure")'")
         }
-        for (name, items) in collected { bound[name] = items }
+        for (name, items) in collected { bound[name] = .words(items) }
         for parameter in parameters where bound[parameter.name] == nil {
             if parameter.defaultValue != nil || parameter.externalDefault != nil {
-                bound[parameter.name] = []
+                bound[parameter.name] = .defaulted
             } else if parameter.type == .bool && parameter.label != nil {
-                bound[parameter.name] = []
+                bound[parameter.name] = .omitted
             } else if parameter.label != nil, Shell.collection(parameter.type) != nil {
-                bound[parameter.name] = []
+                bound[parameter.name] = .omitted
             } else if case .optional = parameter.type {
-                bound[parameter.name] = []
+                bound[parameter.name] = .omitted
             } else {
                 throw RuntimeError("\(name): missing \(commandLineName(of: parameter))")
             }

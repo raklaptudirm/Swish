@@ -2,12 +2,12 @@
 import Foundation
 import SwiitKit
 
-/// Rewrites the shell's constructs in a checked program into Swift: what each
-/// means is in Docs/Design/desugaring.md. It runs after the checker, which
-/// has decided what it needs to know (whether `$name` is a variable, what
-/// each stage of a pipeline is), and before the program runs; what it leaves
-/// is the core's own tree, with no shell node in it, which the Swift printer
-/// can print.
+/// Rewrites the shell's constructs into Swift: what each means is in
+/// Docs/Design/desugaring.md. The checker calls it on each construct as soon
+/// as that construct is checked, when it has decided what the rewrite needs
+/// (whether `$name` is a variable, what each stage of a pipeline is); what
+/// the program is left with is the core's own tree, with no shell node in it,
+/// which the Swift printer can print.
 final class Desugarer {
     /// Whether a pipeline of Swift's own calls is those calls (`xs.sorted()`)
     /// rather than a `Pipeline`; off, to compare the two.
@@ -18,10 +18,6 @@ final class Desugarer {
     }
 
     private lazy var rewriter = TreeRewriter(expr: { [unowned self] in expression($0) })
-
-    func program(_ program: Program) -> Program {
-        rewriter.program(program)
-    }
 
     // MARK: Expressions
 

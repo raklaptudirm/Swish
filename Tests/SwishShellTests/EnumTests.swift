@@ -47,7 +47,7 @@ private func status(_ source: String) -> Int32 {
 @Test func enumParametersOnTheCommandLine() throws {
     let pick = "enum K { case a, b }; func pick(kind: K = .a) -> K { kind };"
     #expect(try output(pick + "pick --kind b; pick --kind .b; pick") == "b\nb\na\n")
-    #expect(status(pick + "pick --kind c") == 1)
+    #expect(status(pick + "pick --kind c") == 2)
     #expect(try output(pick + "pick --help").contains("--kind <a|b>"))
 }
 

@@ -190,12 +190,12 @@ private let greet = #"func greet(_ name: String, times: Int = 1, loud: Bool = fa
 
 @Test func commandModeErrors() {
     let f = "func f(_ n: Int, name: String) {};"
-    #expect(status(f + "f 1") == 1)                  // missing --name
-    #expect(status(f + "f abc --name x") == 1)       // not an Int
-    #expect(status(f + "f 1 --name x --bogus") == 1) // unknown option
-    #expect(status(f + "f 1 2 --name x") == 1)       // extra positional
-    #expect(status(f + "f 1 --name") == 1)           // flag without a value
-    #expect(status(f + "f 1 --name x -v") == 1)      // no short flags
+    #expect(status(f + "f 1") == 2)                  // missing --name
+    #expect(status(f + "f abc --name x") == 2)       // not an Int
+    #expect(status(f + "f 1 --name x --bogus") == 2) // unknown option
+    #expect(status(f + "f 1 2 --name x") == 2)       // extra positional
+    #expect(status(f + "f 1 --name") == 2)           // flag without a value
+    #expect(status(f + "f 1 --name x -v") == 2)      // no short flags
 }
 
 @Test func functionsInPipelinesAndSubstitutions() throws {
@@ -250,7 +250,7 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
 
 @Test func streamErrors() {
     #expect(status(streaming + "printf 'x\\n' | double") == 1) // not an Int
-    #expect(status(streaming + "double | cat | double") == 1)  // two in-process runs
+    #expect(status(streaming + "double | cat | double") == 2)  // two in-process runs
 }
 
 // MARK: Flags, overloads, help
@@ -258,8 +258,8 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
 @Test func shortFlags() throws {
     let f = #"func f(@flag("n") times: Int = 1, @flag("v") verbose: Bool = false, @flag("q") quiet: Bool = false) -> String { "\(times) \(verbose) \(quiet)" };"#
     #expect(try output(f + "f -n 3; f -n3 -vq; f -qv --times=2") == "3 false false\n3 true true\n2 true true\n")
-    #expect(status(f + "f -x") == 1)
-    #expect(status(f + "f -vx") == 1)
+    #expect(status(f + "f -x") == 2)
+    #expect(status(f + "f -vx") == 2)
 }
 
 @Test func negativeNumbersVersusShortFlags() throws {
@@ -279,7 +279,7 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
 }
 
 @Test func overloadErrors() {
-    #expect(status("func g(_ x: Int, _ y: Int) {}; func g(_ s: String) {}; g 1 2 3") == 1)
+    #expect(status("func g(_ x: Int, _ y: Int) {}; func g(_ s: String) {}; g 1 2 3") == 2)
     #expect(status("func g(a: Int) {}; func g(b: Int) {}; g(c: 1)") == 2)
     #expect(status(#"func g(_ x: Int, y: Int = 0) -> Int { 1 }; func g(_ x: Int, z: Int = 0) -> Int { 2 }; g(1)"#) == 2) // ambiguous
 }

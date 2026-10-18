@@ -36,6 +36,11 @@ struct CommandNode: Equatable, Sendable {
     /// (`7zip`, but also a mistyped `1...2...3`): shown instead of "command
     /// not found" if no program has the name.
     var notAnExpression: String? = nil
+
+    /// `< file`: what a function's `@input` is read from, as a pipe's would be.
+    var readsStandardInput: Bool {
+        redirects.contains { if case .file(_, .read) = $0.target { $0.fd == 0 } else { false } }
+    }
 }
 
 /// What a pipeline stage's name is, given what flows into it.

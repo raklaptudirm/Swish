@@ -4,8 +4,8 @@ import SwiitKit
 
 // The shell's syntax in the core's tree: each form is a node that checks
 // itself, held in the tree as an extension (Language/Syntax/SyntaxExtension.swift),
-// so the checker never names them; then `Desugarer` rewrites each into the
-// Swift it means, which is what runs. The factory functions
+// so the checker never names them; as each is checked, `Desugarer` rewrites it into
+// the Swift it means, which is what runs. The factory functions
 // keep the parser's spelling, `.commands(chain)`, `.substitution(program)`.
 
 // MARK: Expressions

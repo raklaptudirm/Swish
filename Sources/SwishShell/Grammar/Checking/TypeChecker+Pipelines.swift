@@ -34,10 +34,7 @@ extension TypeChecker {
             if index == 0, let single, let result = try checkBridgedStage(command.words.first.flatMap { _ in TypeChecker.literalName(command) } ?? "", &command, element: single, receiver: .value) {
                 flowing = result
             } else {
-                let before = flowing
-                let predicted = before.flatMap { predictedForm(of: command, element: $0) }
-                flowing = try checkStage(&command, input: before)
-                if let predicted { reportShadow(command, element: before!, predicted: predicted) }
+                flowing = try checkStage(&command, input: flowing)
             }
             pipeline.commands[index] = command
         }
@@ -137,7 +134,7 @@ extension TypeChecker {
             throw TypeError("\(name) is a method: pipe something into it, as in `ls | \(name)`, or call it on a value, as in `xs.\(name)(…)`")
         }
         if case .functions(let overloads)? = lookup(name) {
-            return try checkFunctionStage(name, overloads, &command, piped: input != nil)
+            return try checkFunctionStage(name, overloads, &command, piped: input != nil || command.readsStandardInput)
         }
         // Only a program is left, and a program only takes words.
         if command.call != nil || command.words.contains(where: { if case .closure = $0 { true } else { false } }) {
@@ -228,10 +225,10 @@ extension TypeChecker {
             if methods.count == 1 && methods[0].isMutating {
                 throw TypeError("\(typeName).\(name) is mutating, and a piped value can't change: call it on a variable")
             }
-            // Declared in this program, so not bound yet: checked as it runs.
-            guard case .object(let type as StructType)? = shell!.interpreter.lookup(typeName)?.value, type.methods[name] != nil else {
-                try checkClosures(&command, expecting: [:])
-                return commonReturn(methods)
+            // Written as a call, `scaled(by: 3)`, it binds as Swift does.
+            if var call = command.call {
+                defer { command.call = call }
+                return try resolve(methods, &call, name: name)?.returns ?? commonReturn(methods)
             }
             return try checkCommandLine(name, methods, &command, bindings: [:], excludingInput: false)
         }
@@ -261,11 +258,6 @@ extension TypeChecker {
             command.call = call
             if overloads.count > 1 { command.overload = chosen.index }
             return streamElement(chosen.returns)
-        }
-        // Declared in this program, so not bound yet: checked as it runs.
-        guard let runtime = shell!.interpreter.commandFunctions(named: name), runtime.candidates.count == overloads.count else {
-            try checkClosures(&command, expecting: [:])
-            return streamElement(commonReturn(overloads))
         }
         let result = try checkCommandLine(name, visible, &command, bindings: [:], excludingInput: piped)
         return streamElement(result)
@@ -323,15 +315,15 @@ extension TypeChecker {
         if shell!.helpRequested(shapes, for: signatures) { return .string }
         let binding: CommandLineBinding
         do {
-            binding = try shell!.bindCommandLine(shapes, to: signatures, name: name, excludingInput: excludingInput)
+            binding = try shell!.bindCommandLine(shapes, to: signatures, name: name, excludingInput: excludingInput, declaredEnum: { self.enumInfo(named: $0) })
         } catch let error as RuntimeError {
             throw TypeError(error.description)
         }
         let index = binding.overload
         // A key path's fields, as `--by size` reads them from the items.
-        let keyPathFields = { (parameter: String) in binding.assigned[parameter]?.first?.text.map { $0.split(separator: ".").map(String.init) } }
+        let keyPathFields = { (parameter: String) in binding.pieces(of: parameter).first?.text.map { $0.split(separator: ".").map(String.init) } }
         // A placeholder's word is counted from the command's name; a binding's from the first argument.
-        let tookClosure = { (parameter: String, word: Int) in binding.assigned[parameter]?.contains { $0.word == word - 1 } ?? false }
+        let tookClosure = { (parameter: String, word: Int) in binding.pieces(of: parameter).contains { $0.word == word - 1 } }
         guard index < signatures.count else { return .unknown }
         let signature = signatures[index]
         var bindings = initial
@@ -396,52 +388,4 @@ extension TypeChecker {
     /// The shell, when checking its commands: pipeline stages are typed with
     /// the shell's help on what a name is.
     var shell: Shell? { interpreter.owner as? Shell }
-}
-
-// MARK: Spike: is a stage's resolution a lookup?
-
-/// The forms a name can take as a stage, in the order `checkStage` tries them.
-enum StageForm: String {
-    case flow, sequenceMethod, collected, itemMethod, each, function, program
-}
-
-extension TypeChecker {
-    /// The first form with a member by that name, from the type flowing in and
-    /// nothing else: no arguments are looked at, nothing is checked.
-    func predictedForm(of command: CommandNode, element: TypeAnnotation) -> StageForm? {
-        guard ProcessInfo.processInfo.environment["SWISH_SHADOW"] != nil,
-              let name = TypeChecker.literalName(command), !command.external else { return nil }
-        func has(_ receiver: StageReceiver) -> Bool {
-            let receiverType: TypeAnnotation = switch receiver {
-            case .collected: .list(element)
-            case .flow: .generic("Flow", [element])
-            case .each, .value: element
-            }
-            guard let (bridgedType, bindings) = bridged(receiverType) else { return false }
-            return shell!.bridgedStage(bridgedType.name, name, receiver: receiver, bindings: bindings) != nil
-        }
-        if has(.flow) { return .flow }
-        if shell!.interpreter.sequenceMethods[name] != nil { return .sequenceMethod }
-        if has(.collected) { return .collected }
-        if case .named(let typeName) = element {
-            if let info = structInfo(named: typeName), info.declared.methods[name] != nil { return .itemMethod }
-            if let description = describe(named: typeName), description.kind == .protocolType, description.declared.methods[name]?.count == 1 { return .itemMethod }
-        }
-        if element != .unknown, element != .any, has(.each) { return .each }
-        if case .functions? = lookup(name) { return .function }
-        return .program
-    }
-
-    func reportShadow(_ command: CommandNode, element: TypeAnnotation, predicted: StageForm) {
-        let name = TypeChecker.literalName(command) ?? "?"
-        let actual: StageForm? = switch command.resolution {
-        case .bridged(_, let receiver, _)?: switch receiver { case .flow: .flow; case .collected: .collected; case .each: .each; case .value: nil }
-        case .sequenceMethod?: .sequenceMethod
-        case .itemMethod?: .itemMethod
-        case .other?: predicted == .function || predicted == .program ? predicted : .program
-        case nil: nil
-        }
-        let verdict = actual == predicted ? "AGREE" : "DIFFER"
-        FileHandle.standardError.write(Data("SHADOW \(verdict) \(name) of \(element): predicted \(predicted.rawValue), actual \(actual?.rawValue ?? "none")\n".utf8))
-    }
 }
