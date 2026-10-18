@@ -5,8 +5,6 @@ extension Shell {
     /// `jobs`, the jobs in the background oldest first, and what `await` waits
     /// for (a `Job`, or with no operand the latest one).
     func installJobs() {
-        // What the checker knows of a job: the protocol that describes it, which a `Job<Int>` is one of too.
-        do { try interpreter.describeHostType("Job", as: Job.declaration) } catch { preconditionFailure("Job's description doesn't read: \(error)") }
         interpreter.bind(computed: "jobs", type: .list(.named("Job"))) { [unowned self] in
             updateJobs() // So their states are current.
             return .list(jobs.map { .object($0) })

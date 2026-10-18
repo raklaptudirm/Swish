@@ -26,13 +26,18 @@ extension Library {
                 }, nil),
                 "exitStatus": (.native { [unowned shell] _, arguments in shell.statusValue(shell.status(of: arguments["value"] ?? .nothing)) }, nil),
                 "escapingWildcards": (.native { _, arguments in .string(Glob.escape(arguments["text"]?.description ?? "")) }, nil),
-            ]) { $1 }
+            ]) { $1 }.merging(jsonBodies) { $1 }
         )
     }
 
     /// Swish source read after the core's prelude. The checker works from the
     /// signatures; the bodies are in Swift, found by name (`bodies`).
     private static let shellDeclarations = #"""
+    /// A command or task started in the background, which `await` joins and
+    /// `jobs` lists. What scripts may use of it is what the shell's jobs have
+    /// (Jobs.swift); a `Job<Int>` is one of these too.
+    protocol Job { \#(Job.declaration) }
+
     /// How a command exited: `output.status`, and what `Command.run()` gives.
     /// A command statement is a `Status`, and `a && b || c` is
     /// `a.and { b }.or { c }`: run on the status, left to right.
@@ -186,9 +191,9 @@ extension Library {
         /// Runs it as `$(…)` does, gathering its output whatever its status.
         func output() -> Output
         /// Starts it in the background, as `async cmd` does: a `Job`.
-        func start() -> Any
+        func start() -> Job
         /// Starts it in the background keeping its output, as `async $(cmd)` does.
-        func startCapturing() -> Any
+        func startCapturing() -> Job
     }
 
     /// Commands joined by `|`, fed a value or nothing.
@@ -213,8 +218,8 @@ extension Library {
         func runQuietly() -> Status
         func check() throws -> Status
         func output() -> Output
-        func start() -> Any
-        func startCapturing() -> Any
+        func start() -> Job
+        func startCapturing() -> Job
     }
 
     /// A redirect of a `Command`'s: `mode` is "read", "write", "append", or
@@ -233,7 +238,7 @@ extension Library {
 
     /// Runs `body` as a task of its own, as `async f()` does: a `Job`, which
     /// `await` joins for what `body` gives. `source` is how `jobs` shows it.
-    func startTask(_ source: String, _ body: () -> Any) -> Any
+    func startTask<T>(_ source: String, _ body: () -> T) -> Job<T>
 
     /// Shows a value as a pipeline at the end of a statement does: its items,
     /// one a line, or as a table when they are records.
@@ -266,6 +271,21 @@ extension Library {
     /// (json[0]), each giving JSON?, and as a type with .string, .int,
     /// .double, .bool, .array, .object and .isNull.
     struct JSON {}
+
+    /// What `json.name`, `json["name"]` and `json[0]` read: the field or
+    /// element, or nil if there is none or the value isn't a record, a
+    /// dictionary or a list.
+    func jsonField(_ value: JSON?, _ key: Any) -> JSON?
+    /// What `json.string`, `.int`, `.double`, `.bool`, `.array` and `.object`
+    /// read: the value as that type, or nil if it is of another kind.
+    func jsonString(_ value: JSON?) -> String?
+    func jsonInt(_ value: JSON?) -> Int?
+    func jsonDouble(_ value: JSON?) -> Double?
+    func jsonBool(_ value: JSON?) -> Bool?
+    func jsonArray(_ value: JSON?) -> [JSON]?
+    func jsonObject(_ value: JSON?) -> [String: JSON]?
+    /// What `json.isNull` reads: whether it is nil.
+    func jsonIsNull(_ value: JSON?) -> Bool
 
     /// Lists every function you can call.
     func help() -> [Help]
