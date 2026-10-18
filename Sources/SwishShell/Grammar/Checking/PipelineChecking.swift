@@ -1,7 +1,31 @@
-@_spi(Layer) import Swiit
 import Foundation
 
-extension TypeChecker {
+// Checking a pipeline, written against what a layer can ask of the checker (Layer/CheckContext.swift) and nothing else.
+
+extension CommandNode {
+    /// The command's name, when it's written out rather than built at run time.
+    var literalName: String? {
+        guard case .text(let parts)? = words.first, parts.count == 1, case .literal(let name) = parts[0] else { return nil }
+        return name
+    }
+
+    /// The words after the name, when all of them are written out.
+    var literalWords: [String]? {
+        var result: [String] = []
+        for word in words.dropFirst() {
+            guard case .text(let parts) = word else { return nil }
+            var text = ""
+            for part in parts {
+                guard case .literal(let literal) = part else { return nil }
+                text += literal
+            }
+            result.append(text)
+        }
+        return result
+    }
+}
+
+extension CheckContext {
     // MARK: Pipelines
 
     /// A pipeline's stages, each typed by what flows into it: the value at
@@ -13,24 +37,23 @@ extension TypeChecker {
     func checkPipeline(_ pipeline: inout PipelineNode) throws {
         // `try make`: the command's failure throws, which must be handled.
         if case .some(.none) = pipeline.throwing {
-            throwingSites += 1
-            try checkHandled("'try \(pipeline.source)'")
+            try throwingTry("'try \(pipeline.source)'")
         }
-        var flowing: TypeAnnotation?
+        var flowing: ValueType?
         // `"a b" | split(…)`: a value that isn't a sequence is the first
         // stage's receiver itself.
-        var single: TypeAnnotation?
+        var single: ValueType?
         if pipeline.input != nil {
             // Stages type what flows, so an empty `[]` needs no type.
             let type = try typeOf(&pipeline.input!, expecting: .unknown)
-            if case .list = type { pipeline.inputIsList = true }
+            if type.isList { pipeline.inputIsList = true }
             flowing = streamElement(type)
-            if flowing == type && type != .unknown && type != .any { single = type }
+            if flowing == type && !type.isUnknownOrAny { single = type }
         }
         for index in pipeline.commands.indices {
             var command = pipeline.commands[index]
             try checkCommandText(&command)
-            if index == 0, let single, let result = try checkBridgedStage(command.words.first.flatMap { _ in TypeChecker.literalName(command) } ?? "", &command, element: single, receiver: .value) {
+            if index == 0, let single, let result = try checkBridgedStage(command.literalName ?? "", &command, element: single, receiver: .value) {
                 flowing = result
             } else {
                 flowing = try checkStage(&command, input: flowing)
@@ -57,33 +80,26 @@ extension TypeChecker {
     }
 
     /// What a value flowing into a pipeline is, item by item.
-    func streamElement(_ type: TypeAnnotation) -> TypeAnnotation {
-        switch type {
-        case .list(let element): element
-        case .generic: bridgedElement(type) ?? type
-        // A bridged sequence, like a FilePath's components: its elements.
-        case .named(let name) where Bridge.types[name]?.conformances["Sequence"] != nil:
-            Bridge.types[name]?.associatedTypes["Element"] ?? type
-        default: type
-        }
+    func streamElement(_ type: ValueType) -> ValueType {
+        itemType(ofSequence: type) ?? type
     }
 
     /// Checks one stage, fed items of type `input` (nil at the start), and
     /// gives the type of what it passes on.
-    func checkStage(_ command: inout CommandNode, input: TypeAnnotation?) throws -> TypeAnnotation {
-        guard let name = TypeChecker.literalName(command), !command.external else {
-            try checkClosures(&command, expecting: [:])
+    func checkStage(_ command: inout CommandNode, input: ValueType?) throws -> ValueType {
+        guard let name = command.literalName, !command.external else {
+            try checkClosures(&command)
             return .string // A program's lines.
         }
         let element = input ?? .unknown
-        let known = input != nil && element != .unknown && element != .any
+        let known = input != nil && !element.isUnknownOrAny
         // A method of the items as they come, where there is one: it reads
         // no more than the stage after it asks for.
         if input != nil {
             let attempt = command
             do {
                 if let result = try checkBridgedStage(name, &command, element: element, receiver: .flow) { return result }
-            } catch let flowError as TypeError {
+            } catch let flowError as TypeFailure {
                 // Where its arguments don't fit, the items collected may have
                 // a member that does (`prefix(while:)`); if not, it's the
                 // first one's error that says what's wrong.
@@ -95,22 +111,22 @@ extension TypeChecker {
         }
         // A stage is a method call: of the items collected, then of each
         // item, then a function, then a program (see foundations.md).
-        if input != nil, let methods = shell!.interpreter.sequenceMethods[name] {
+        if input != nil, let methods = sequenceMethod(named: name) {
             // The prelude's additions, and its streaming versions of Swift's
             // methods; where none fits, Swift's own.
             let attempt = command
             do {
                 command.resolution = .sequenceMethod
                 return try checkSequenceStage(name, methods, &command, element: element)
-            } catch let error as TypeError {
+            } catch let error as TypeFailure {
                 // Swift's, or else the prelude's error, the one meant first.
                 command = attempt
                 do {
                     guard let result = try checkBridgedStage(name, &command, element: element, receiver: .collected) else { throw error }
                     return result
-                } catch let swiftError as TypeError {
+                } catch let swiftError as TypeFailure {
                     command = attempt
-                    throw TypeChecker.preferred(prelude: error, swift: swiftError)
+                    throw preferred(prelude: error, swift: swiftError)
                 }
             }
         }
@@ -127,17 +143,17 @@ extension TypeChecker {
         // A method with nothing piped in, and no function or program by
         // that name, has nothing to work on.
         if input == nil, shell!.isStageMethod(name), lookup(name) == nil, shell!.findExecutable(name) == nil {
-            throw TypeError("\(name) is a method: pipe something into it, as in `ls | \(name)`, or call it on a value, as in `xs.\(name)(…)`")
+            throw TypeFailure("\(name) is a method: pipe something into it, as in `ls | \(name)`, or call it on a value, as in `xs.\(name)(…)`")
         }
         if case .functions(let overloads)? = lookup(name) {
             return try checkFunctionStage(name, overloads, &command, piped: input != nil || command.readsStandardInput)
         }
         // Only a program is left, and a program only takes words.
         if command.call != nil || command.words.contains(where: { if case .closure = $0 { true } else { false } }) {
-            let what = input.map { " of \(TypeAnnotation.list($0))" } ?? ""
-            throw TypeError("\(name) isn't a method\(what) or a function, and a program can't take a closure or (…)")
+            let what = input.map { " of \(ValueType.list($0))" } ?? ""
+            throw TypeFailure("\(name) isn't a method\(what) or a function, and a program can't take a closure or (…)")
         }
-        try checkClosures(&command, expecting: [:])
+        try checkClosures(&command)
         return .string
     }
 
@@ -145,29 +161,19 @@ extension TypeChecker {
     /// a Swift member of the items collected (as an Array), or of each item.
     /// Nil when the type has no member by that name.
     func checkBridgedStage(
-        _ name: String, _ command: inout CommandNode, element: TypeAnnotation, receiver: StageReceiver
-    ) throws -> TypeAnnotation? {
-        let receiverType: TypeAnnotation = switch receiver {
-        case .collected: .list(element)
-        case .flow: .generic("Flow", [element])
-        case .each, .value: element
-        }
-        guard !command.external, let (bridgedType, bindings) = bridged(receiverType),
-              shell!.bridgedStage(bridgedType.name, name, receiver: receiver, bindings: bindings) != nil else { return nil }
-        let signatures = (receiver == .flow ? Bridge.flowMembers(name) : Bridge.stageMembers(bridgedType.name, name)).enumerated().map { position, entry in
-            Signature(name: name, parameters: [Bridge.receiverParameter(receiver, element: element)] + entry.member.parameters,
-                      returns: entry.member.returns, isThrowing: entry.member.isThrowing,
-                      isRethrowing: entry.member.isRethrowing, index: position, generics: entry.member.generics)
-        }
-        command.resolution = .bridged(type: bridgedType.name, receiver: receiver, bindings: bindings)
-        let result: TypeAnnotation
+        _ name: String, _ command: inout CommandNode, element: ValueType, receiver: StageReceiver
+    ) throws -> ValueType? {
+        guard !command.external, let found = stageMembers(named: name, receiver: receiver, element: element) else { return nil }
+        let signatures = found.members.map(\.signature)
+        command.resolution = .bridged(type: found.typeName, receiver: receiver, bindings: found.bindings)
+        let result: ValueType
         if var call = command.call {
             let visible = signatures.map { signature -> Signature in
                 var signature = signature
                 signature.parameters.removeFirst()
                 return signature
             }
-            guard let chosen = try resolve(visible, &call, name: name, bindings: bindings) else {
+            guard let chosen = try resolve(visible, arguments: &call, name: name, bindings: found.bindings) else {
                 command.call = call
                 return .unknown
             }
@@ -176,102 +182,69 @@ extension TypeChecker {
             if chosen.isThrowing { try throwingSite("'\(name)'") }
             result = chosen.returns
         } else {
-            result = try checkCommandLine(name, signatures, &command, bindings: bindings, excludingInput: true)
+            result = try checkCommandLine(name, signatures, &command, bindings: found.bindings, excludingInput: true)
         }
         // Collected, a list comes out as its items; each item's result flows on as it is.
         return receiver == .each ? result : streamElement(result)
     }
 
-    /// The command's name, when it's written out rather than built at run time.
-    static func literalName(_ command: CommandNode) -> String? {
-        guard case .text(let parts)? = command.words.first, parts.count == 1, case .literal(let name) = parts[0] else { return nil }
-        return name
-    }
-
     /// `ls | sorted --by size`, or `ls | sorted(by: \.size)`: a method of
     /// the sequence, with `Element` what flows in.
     func checkSequenceStage(
-        _ name: String, _ methods: OverloadSet, _ command: inout CommandNode, element: TypeAnnotation
-    ) throws -> TypeAnnotation {
+        _ name: String, _ methods: [Signature], _ command: inout CommandNode, element: ValueType
+    ) throws -> ValueType {
         if var call = command.call {
-            var callee = Expr.variable(name)
-            let result = try sequenceMethodType(name, on: .list(element), &callee, &call) ?? .unknown
-            command.call = call
-            if case .chosen(_, let overload) = callee { command.overload = overload }
-            return streamElement(result)
+            defer { command.call = call }
+            let found = try sequenceMethodResult(named: name, element: element, arguments: &call)
+            if let overload = found?.overload { command.overload = overload }
+            return streamElement(found?.type ?? .unknown)
         }
         // `select`'s result is a tuple of the fields it names, which Swift could
         // only type with parameter packs over key paths; until then its rule is
         // here (https://github.com/raklaptudirm/Swiit/blob/main/Docs/foundations.md, open questions).
         if name == "select" {
-            let fields = TypeChecker.literalWords(command)
-            guard let fields else { return .unknown }
-            var arguments = fields.map { Argument(label: nil, value: .literal(.string($0))) }
-            return streamElement(try selectType(element, arguments: &arguments))
+            guard let fields = command.literalWords else { return .unknown }
+            return streamElement(try selectResult(element: element, fields: fields))
         }
-        let result = try checkCommandLine(name, sequenceSignatures(methods), &command,
-                                          bindings: ["Element": element], excludingInput: true)
+        let result = try checkCommandLine(name, methods, &command, bindings: ["Element": element], excludingInput: true)
         return streamElement(result)
     }
 
     /// `points | describe`: a method of each item, when their type has one.
-    func checkItemMethodStage(_ name: String, _ command: inout CommandNode, element: TypeAnnotation) throws -> TypeAnnotation? {
-        guard case .named(let typeName) = element else { return nil }
-        if let info = structInfo(named: typeName), let methods = info.declared.methods[name] {
-            if methods.count == 1 && methods[0].isMutating {
-                throw TypeError("\(typeName).\(name) is mutating, and a piped value can't change: call it on a variable")
+    func checkItemMethodStage(_ name: String, _ command: inout CommandNode, element: ValueType) throws -> ValueType? {
+        guard let found = itemMethods(of: element, named: name) else { return nil }
+        if !found.isHostObject {
+            if found.methods.count == 1 && found.methods[0].isMutating {
+                throw TypeFailure("\(found.typeName).\(name) is mutating, and a piped value can't change: call it on a variable")
             }
             // Written as a call, `scaled(by: 3)`, it binds as Swift does.
             if var call = command.call {
                 defer { command.call = call }
-                return try resolve(methods, &call, name: name)?.returns ?? commonReturn(methods)
+                return try resolve(found.methods, arguments: &call, name: name)?.returns ?? commonReturn(found.methods)
             }
-            return try checkCommandLine(name, methods, &command, bindings: [:], excludingInput: false)
+            return try checkCommandLine(name, found.methods, &command, bindings: [:], excludingInput: false)
         }
         // A host object's method, as the host described it.
-        if let description = describe(named: typeName), description.kind == .protocolType, let methods = description.declared.methods[name], methods.count == 1 {
-            try checkClosures(&command, expecting: [:])
-            return methods[0].returns
-        }
-        return nil
+        try checkClosures(&command)
+        return found.methods[0].returns
     }
 
     /// A function as a stage: its result per item, or its elements when it
     /// gives a list.
     func checkFunctionStage(
         _ name: String, _ overloads: [Signature], _ command: inout CommandNode, piped: Bool
-    ) throws -> TypeAnnotation {
-        let visible = overloads.map { signature -> Signature in
-            var signature = signature
-            if piped { signature.parameters.removeAll(where: \.isInput) }
-            return signature
-        }
+    ) throws -> ValueType {
+        let visible = piped ? overloads.map(\.withoutInput) : overloads
         if var call = command.call {
-            guard let chosen = try resolve(visible, &call, name: name) else {
-                command.call = call
+            defer { command.call = call }
+            guard let chosen = try resolve(visible, arguments: &call, name: name) else {
                 return streamElement(commonReturn(overloads))
             }
-            command.call = call
             if overloads.count > 1 { command.overload = chosen.index }
             return streamElement(chosen.returns)
         }
         let result = try checkCommandLine(name, visible, &command, bindings: [:], excludingInput: piped)
         return streamElement(result)
-    }
-
-    /// The words after a command's name, when all of them are written out.
-    static func literalWords(_ command: CommandNode) -> [String]? {
-        var words: [String] = []
-        for word in command.words.dropFirst() {
-            guard case .text(let parts) = word else { return nil }
-            var text = ""
-            for part in parts {
-                guard case .literal(let literal) = part else { return nil }
-                text += literal
-            }
-            words.append(text)
-        }
-        return words
     }
 
     /// Binds a command line's arguments as the interpreter will, to find
@@ -281,80 +254,72 @@ extension TypeChecker {
     /// the choice to run time.
     func checkCommandLine(
         _ name: String, _ signatures: [Signature], _ command: inout CommandNode,
-        bindings initial: [String: TypeAnnotation], excludingInput: Bool
-    ) throws -> TypeAnnotation {
-        var arguments: [CommandArgument] = []
-        var placeholders: [(word: Int, function: Function)] = []
+        bindings initial: [String: ValueType], excludingInput: Bool
+    ) throws -> ValueType {
+        var words: [CommandWordShape] = []
+        /// Where each closure is among the command's words.
+        var closureWords: [Int] = []
         for (index, word) in command.words.enumerated().dropFirst() {
             switch word {
             case .text(let parts):
                 var text = ""
                 for part in parts {
                     guard case .literal(let literal) = part else {
-                        try checkClosures(&command, expecting: initial)
+                        try checkClosures(&command)
                         return commonReturn(signatures.map { var s = $0; s.returns = substitute(s.returns, initial); return s })
                     }
                     text += literal
                 }
-                arguments.append(.text(text))
+                words.append(.text(text))
             case .closure:
-                // Stands in for the closure, to see which parameter it binds.
-                let stand = Function(name: nil, parameters: [], returnType: nil, body: .native { _, _ in .nothing })
-                placeholders.append((index, stand))
-                arguments.append(.value(.function(stand)))
+                closureWords.append(index)
+                words.append(.closure)
             }
         }
-        let shapes = arguments.map { argument -> CommandWordShape in
-            if case .text(let text) = argument { .text(text) } else { .closure }
-        }
         // `--help` shows help instead of running.
-        if shell!.helpRequested(shapes, for: signatures) { return .string }
+        if shell!.helpRequested(words, for: signatures) { return .string }
         let binding: CommandLineBinding
         do {
-            binding = try shell!.bindCommandLine(shapes, to: signatures, name: name, excludingInput: excludingInput, declaredEnum: { self.enumInfo(named: $0) })
-        } catch let error as RuntimeError {
-            throw TypeError(error.description)
+            binding = try shell!.bindCommandLine(words, to: signatures, name: name, excludingInput: excludingInput, declaredEnum: { self.isEnum($0) })
+        } catch let error as CommandLineFailure {
+            throw TypeFailure(error.message)
         }
-        let index = binding.overload
-        // A key path's fields, as `--by size` reads them from the items.
-        let keyPathFields = { (parameter: String) in binding.pieces(of: parameter).first?.text.map { $0.split(separator: ".").map(String.init) } }
-        // A placeholder's word is counted from the command's name; a binding's from the first argument.
-        let tookClosure = { (parameter: String, word: Int) in binding.pieces(of: parameter).contains { $0.word == word - 1 } }
-        guard index < signatures.count else { return .unknown }
-        let signature = signatures[index]
+        guard binding.overload < signatures.count else { return .unknown }
+        let signature = signatures[binding.overload]
         var bindings = initial
         for parameter in signature.parameters {
             // `--by size`: a key path read from the items.
-            if case .keyPath(let rootPattern, _) = parameter.type, let path = keyPathFields(parameter.name) {
+            if let (rootPattern, _) = parameter.type.keyPathParts, let text = binding.pieces(of: parameter.name).first?.text {
                 var type = substitute(rootPattern, bindings)
                 let root = type
-                if type != .unknown {
-                    for member in path { type = try memberType(of: type, member) }
+                if !type.isUnknown {
+                    for member in text.split(separator: ".").map(String.init) { type = try memberType(of: type, member) }
                 }
                 unify(parameter.type, .keyPath(root, type), &bindings)
             }
         }
-        for placeholder in placeholders {
-            guard let parameter = signature.parameters.first(where: { tookClosure($0.name, placeholder.word) }),
-                  case .closure(var closure) = command.words[placeholder.word] else { continue }
+        for word in closureWords {
+            // A placeholder's word is counted from the command's name; a binding's from the first argument.
+            guard let parameter = signature.parameters.first(where: { binding.pieces(of: $0.name).contains { $0.word == word - 1 } }),
+                  case .closure(var closure) = command.words[word] else { continue }
             let actual = try closureType(&closure, expecting: substitute(parameter.type, bindings))
-            command.words[placeholder.word] = .closure(closure)
+            command.words[word] = .closure(closure)
             guard fits(actual, substitute(parameter.type, bindings)) else {
-                throw TypeError("\(name): '\(parameter.name)' must be \(substitute(parameter.type, bindings)), not \(actual)")
+                throw TypeFailure("\(name): '\(parameter.name)' must be \(substitute(parameter.type, bindings)), not \(actual)")
             }
             unify(parameter.type, actual, &bindings)
         }
         for (parameter, protocols) in signature.generics {
-            guard let bound = bindings[parameter], bound != .unknown else { continue }
+            guard let bound = bindings[parameter], !bound.isUnknown else { continue }
             for proto in protocols where !conforms(bound, to: proto) {
-                throw TypeError("\(name) needs \(parameter) to be \(proto.hasPrefix("=") ? String(proto.dropFirst()) : proto), and \(bound) isn't")
+                throw TypeFailure("\(name) needs \(parameter) to be \(proto.hasPrefix("=") ? String(proto.dropFirst()) : proto), and \(bound) isn't")
             }
         }
         return substitute(signature.returns, bindings)
     }
 
     /// Closures in a command whose parameters aren't known: typed loosely.
-    func checkClosures(_ command: inout CommandNode, expecting bindings: [String: TypeAnnotation]) throws {
+    func checkClosures(_ command: inout CommandNode) throws {
         for index in command.words.indices {
             if case .closure(var closure) = command.words[index] {
                 _ = try closureType(&closure, expecting: nil)
@@ -378,10 +343,4 @@ extension TypeChecker {
             }
         }
     }
-}
-
-extension TypeChecker {
-    /// The shell, when checking its commands: pipeline stages are typed with
-    /// the shell's help on what a name is.
-    var shell: Shell? { interpreter.owner as? Shell }
 }

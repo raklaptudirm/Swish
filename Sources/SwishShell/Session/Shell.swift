@@ -81,7 +81,7 @@ public final class Shell {
         signal(SIGPIPE, SIG_IGN)
         interpreter = Interpreter(host: SwiitHost(name: "swish"), outputCounter: OutputCounter())
         interpreter.task.host = ShellTask()
-        interpreter.syntax = ShellSyntax()
+        interpreter.syntax = LayerPlugin(ShellSyntax())
         interpreter.host = SwiitHost(process: self)
         // Library functions that ask are lent what was entered before, too.
         interpreter.contextProvider = { [unowned self] in
@@ -191,7 +191,7 @@ extension Shell {
         let checker = TypeChecker(interpreter: interpreter)
         // Each shell construct becomes Swift as soon as it is checked, while the checker still has the scopes it was checked in.
         let desugarer = Desugarer(directCalls: directCalls)
-        checker.rewriteExtension = { desugarer.expression($0) }
+        checker.rewriteExtension = { desugarer.expression(SwiftExpression($0)).raw }
         do {
             let checked = try checker.check(program)
             interpreter.staticTypes.merge(checker.declaredGlobals) { $1 }

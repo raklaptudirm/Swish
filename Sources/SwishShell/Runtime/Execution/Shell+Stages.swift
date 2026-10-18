@@ -42,7 +42,7 @@ extension Shell {
             switch command.resolution {
             case .bridged(let type, let receiver, let bindings)?:
                 // `xs | max`: a Swift member, as the checker found it.
-                stages.append(try function(bridgedStage(type, name, receiver: receiver, bindings: bindings)))
+                stages.append(try function(bridgedStage(type, name, receiver: receiver, bindings: bindings.mapValues(\.raw))))
             case .sequenceMethod?:
                 stages.append(try function(interpreter.sequenceMethods[name]))
             case .itemMethod?:

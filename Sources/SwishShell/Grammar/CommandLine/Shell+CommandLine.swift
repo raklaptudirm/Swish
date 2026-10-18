@@ -55,8 +55,12 @@ extension Shell {
         let shapes = args.map { argument -> CommandWordShape in
             if case .text(let text) = argument { .text(text) } else { .closure }
         }
-        let stand = Function(name: nil, parameters: [], returnType: nil, body: .native { _, _ in .nothing })
-        let binding = try bindWords(shapes, to: function.parameters, overload: 0, name: name, excludingInput: excludingInput, stand: stand, declaredEnum: nil)
+        let binding: CommandLineBinding
+        do {
+            binding = try bindWords(shapes, to: function.parameters.map(ParameterShape.init), overload: 0, name: name, excludingInput: excludingInput, declaredEnum: nil)
+        } catch let failure as CommandLineFailure {
+            throw RuntimeError(failure.message)
+        }
 
         func take(_ word: Int, text: String?, as type: TypeAnnotation, for what: String) throws -> Value {
             if let text { return try converted(text, to: type, for: what, of: name) }
@@ -109,7 +113,7 @@ extension Shell {
 
     /// Whether a word can be a value of `type` at all: a Swift type text
     /// can be, an enum, or one of Swish's own that's read from text.
-    func takesWords(_ type: TypeAnnotation, declaredEnum: DeclaredEnum? = nil) -> Bool {
+    func takesWords(_ type: TypeAnnotation, declaredEnum: EnumRule? = nil) -> Bool {
         switch type {
         case .any, .unknown, .parameter, .keyPath, .output: return true
         case .optional(let wrapped): return takesWords(wrapped, declaredEnum: declaredEnum)
@@ -121,18 +125,16 @@ extension Shell {
     }
 
     /// An enum the program being checked declares, which has no `EnumType` to read its cases from yet.
-    typealias DeclaredEnum = (String) -> TypeProfile?
 
     /// `text` as a value of `type`. With `declaredEnum`, a word for an enum is only checked against its declared cases
     /// (a `.string` stands for the value), which is how the checker reads a command line before anything has run.
     func converted(
-        _ text: String, to type: TypeAnnotation, for what: String, of function: String, declaredEnum: DeclaredEnum? = nil
+        _ text: String, to type: TypeAnnotation, for what: String, of function: String, declaredEnum: EnumRule? = nil
     ) throws -> Value {
         let value: Value?
-        if case .named(let name) = type, let profile = declaredEnum?(name) {
+        if case .named(let name) = type, let shape = declaredEnum?(name) {
             let bare = text.hasPrefix(".") ? String(text.dropFirst()) : text
-            let isCase = profile.cases.contains { $0.name == bare && $0.payload.isEmpty }
-            value = isCase || profile.rawType != nil ? .string(text) : nil
+            value = shape.plainCases.contains(bare) || shape.hasRawValues ? .string(text) : nil
         } else if case .named(let name) = type, let enumType = interpreter.enumType(named: name) {
             value = interpreter.enumCase(fromText: text, enumType)
         } else if let (bridgedType, _) = Bridge.type(of: type), let made = Bridge.value(of: bridgedType.name, from: text) {
@@ -156,6 +158,20 @@ extension Shell {
             throw RuntimeError("\(function): \(what) must be \(type), got '\(text)'")
         }
         return value
+    }
+
+    /// A word as a value of `type`, for the checker: whether it can be, with the message if not.
+    func readWord(_ text: String, as type: ValueType, for what: String, of function: String, declaredEnum: EnumRule?) throws(CommandLineFailure) {
+        do { _ = try converted(text, to: type.raw, for: what, of: function, declaredEnum: declaredEnum) } catch { throw CommandLineFailure("\(error)") }
+    }
+
+    /// What a parameter given several words is made of: a collection's element type.
+    static func collectionElement(of type: ValueType) -> ValueType? {
+        collection(type.raw).map { ValueType($0.element) }
+    }
+
+    func commandLineName(of parameter: ParameterShape) -> String {
+        parameter.label.map { "--\(kebabCase($0))" } ?? "<\(parameter.name)>"
     }
 
     func kebabCase(_ label: String) -> String {

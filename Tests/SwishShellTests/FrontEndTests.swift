@@ -26,7 +26,7 @@ private func painted(_ spans: [Span], length: Int) -> [SpanKind?] {
 
 @Test func aCommentAfterACommandIsNotOne() throws {
     let bound = Shell().interpreter.globalNames()
-    let program = try SwiftSyntaxFrontEnd().parse("try! swift build\n// a comment\nlet x = 1\nx", bound: bound, plugin: ShellSyntax())
+    let program = try SwiftSyntaxFrontEnd().parse("try! swift build\n// a comment\nlet x = 1\nx", bound: bound, plugin: LayerPlugin(ShellSyntax()))
     // The comment isn't another command's word.
     #expect(program.statements.count == 3)
 }
@@ -40,7 +40,7 @@ private func painted(_ spans: [Span], length: Int) -> [SpanKind?] {
         var best = Double.infinity
         for _ in 0..<2 {
             let start = Date()
-            _ = try SwiftSyntaxFrontEnd().parse(source, bound: [:], plugin: ShellSyntax())
+            _ = try SwiftSyntaxFrontEnd().parse(source, bound: [:], plugin: LayerPlugin(ShellSyntax()))
             best = min(best, Date().timeIntervalSince(start))
         }
         return best
@@ -85,8 +85,8 @@ private func goldenURL() -> URL {
     if ProcessInfo.processInfo.environment["UPDATE_GOLDENS"] != nil {
         var records: [String] = []
         for (index, source) in programs.enumerated() {
-            guard let lowered = try? SwiftSyntaxFrontEnd().parse(source, bound: bound, plugin: ShellSyntax()) else { continue }
-            let colors = painted(SwiftSyntaxFrontEnd().highlight(source, bound: bound, plugin: ShellSyntax()), length: source.count)
+            guard let lowered = try? SwiftSyntaxFrontEnd().parse(source, bound: bound, plugin: LayerPlugin(ShellSyntax())) else { continue }
+            let colors = painted(SwiftSyntaxFrontEnd().highlight(source, bound: bound, plugin: LayerPlugin(ShellSyntax())), length: source.count)
             records.append("\(index)\u{1F}\(SwiftPrinter().source(lowered))\u{1F}\(String(colors.map(letter)))")
         }
         try records.joined(separator: "\u{1E}").write(to: goldenURL(), atomically: true, encoding: .utf8)
@@ -100,7 +100,7 @@ private func goldenURL() -> URL {
         let source = programs[index]
         let lowered: Program
         do {
-            lowered = try SwiftSyntaxFrontEnd().parse(source, bound: bound, plugin: ShellSyntax())
+            lowered = try SwiftSyntaxFrontEnd().parse(source, bound: bound, plugin: LayerPlugin(ShellSyntax()))
         } catch {
             wrongTree.append("#\(index) not read (\(error)):\n\(source.prefix(120))")
             continue
@@ -112,7 +112,7 @@ private func goldenURL() -> URL {
             while line < min(expected.count, got.count), expected[line] == got[line] { line += 1 }
             wrongTree.append("#\(index):\n\(source.prefix(120))\n  kept: \(line < expected.count ? expected[line] : "(ends)")\n  read: \(line < got.count ? got[line] : "(ends)")")
         }
-        let colors = painted(SwiftSyntaxFrontEnd().highlight(source, bound: bound, plugin: ShellSyntax()), length: source.count)
+        let colors = painted(SwiftSyntaxFrontEnd().highlight(source, bound: bound, plugin: LayerPlugin(ShellSyntax())), length: source.count)
         let painting = String(colors.map(letter))
         if painting != String(parts[2]) {
             let kept = Array(parts[2]), got = Array(painting)

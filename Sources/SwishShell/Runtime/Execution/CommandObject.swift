@@ -23,22 +23,22 @@ struct StageHint {
     var isEmpty: Bool { resolution == nil && overload == nil && notAnExpression == nil }
 
     /// The arguments of the `StageHint(…)` that says it.
-    var arguments: [Argument] {
-        func text(_ label: String, _ value: String) -> Argument { Argument(label: label, value: .literal(.string(value))) }
-        var arguments: [Argument] = []
+    var arguments: [SwiftArgument] {
+        func text(_ label: String, _ value: String) -> SwiftArgument { SwiftArgument(label: label, value: .text(value)) }
+        var arguments: [SwiftArgument] = []
         switch resolution {
         case .sequenceMethod?: arguments.append(text("method", "sequence"))
         case .itemMethod?: arguments.append(text("method", "item"))
         case .bridged(let type, let receiver, let bindings)?:
             arguments += [text("method", "bridged"), text("type", type), text("receiver", "\(receiver)")]
             if !bindings.isEmpty {
-                arguments.append(Argument(label: "bindings", value: .record(bindings.sorted { $0.key < $1.key }.map {
-                    RecordEntry(key: .literal(.string($0.key)), value: .literal(.string($0.value.description)))
+                arguments.append(SwiftArgument(label: "bindings", value: .record(bindings.sorted { $0.key < $1.key }.map {
+                    (key: $0.key, value: SwiftExpression.text($0.value.description))
                 })))
             }
         case nil: break
         }
-        if let overload { arguments.append(Argument(label: "overload", value: .literal(.int(overload)))) }
+        if let overload { arguments.append(SwiftArgument(label: "overload", value: .integer(overload))) }
         if let notAnExpression { arguments.append(text("notAnExpression", notAnExpression)) }
         return arguments
     }
@@ -60,7 +60,7 @@ struct StageHint {
         case "item"?: resolution = .itemMethod
         case "bridged"?:
             guard let type = string("type"), let receiver = StageReceiver(string("receiver")) else { return nil }
-            var bindings: [String: TypeAnnotation] = [:]
+            var bindings: [String: ValueType] = [:]
             if case .dictionary(let written)? = record["bindings"] {
                 for (key, value) in written.dictionary { bindings[key.description] = StageHint.type(spelled: value.description, interpreter) }
             }
@@ -72,9 +72,9 @@ struct StageHint {
     }
 
     /// A type as it is written: read by the front end, as `x as! T` says it.
-    static func type(spelled text: String, _ interpreter: Interpreter) -> TypeAnnotation {
+    static func type(spelled text: String, _ interpreter: Interpreter) -> ValueType {
         if case .success(let program) = interpreter.parse("0 as! \(text)"),
-           case .expression(.cast(_, let type, _))? = program.statements.first { return type }
+           case .expression(.cast(_, let type, _))? = program.statements.first { return ValueType(type) }
         return .unknown
     }
 }

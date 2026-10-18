@@ -19,7 +19,7 @@ private func harvested() throws -> [String] {
     for source in programs {
         let shell = Shell()
         let bound = shell.interpreter.globalNames()
-        guard let parsed = try? SwiftSyntaxFrontEnd().parse(source, bound: bound, plugin: ShellSyntax()) else { continue }
+        guard let parsed = try? SwiftSyntaxFrontEnd().parse(source, bound: bound, plugin: LayerPlugin(ShellSyntax())) else { continue }
         total += 1
         var desugared: Program?
         _ = try? shell.capturing { desugared = shell.typeCheck(parsed) }

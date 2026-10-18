@@ -1,5 +1,5 @@
-@_spi(Layer) import Swiit
 import Foundation
+import SwishShellLibrary
 
 /// Rewrites the shell's constructs into Swift: what each means is in
 /// Docs/Design/desugaring.md. The checker calls it on each construct as soon
@@ -16,68 +16,52 @@ final class Desugarer {
         self.directCalls = directCalls
     }
 
-    private lazy var rewriter = TreeRewriter(expr: { [unowned self] in expression($0) })
+    // The Swift inside a form of the shell's, rewritten the same way where its own check did not reach it.
+    private func rewritten(_ expression: SwiftExpression) -> SwiftExpression { expression.rewritingNodes { [unowned self] in self.expression($0) } }
+    private func rewritten(_ closure: SwiftClosure) -> SwiftClosure { closure.rewritingNodes { [unowned self] in self.expression($0) } }
+    private func rewritten(_ block: SwiftBlock) -> SwiftBlock { block.rewritingNodes { [unowned self] in self.expression($0) } }
+    private func rewritten(_ arguments: [SwiftArgument]) -> [SwiftArgument] { arguments.rewritingNodes { [unowned self] in self.expression($0) } }
 
     // MARK: Expressions
 
-    func expression(_ expr: Expr) -> Expr {
-        guard case .extended(let box) = expr else { return expr }
-        switch box.node {
-        case let node as DollarExpr:
-            return dollar(node)
-        case let node as SubstitutionExpr:
-            return substitution(node)
-        case let node as CommandChainExpr:
-            return commands(node)
-        case let node as AsyncExpr:
+    func expression(_ expr: SwiftExpression) -> SwiftExpression {
+        if let node = expr.node(as: DollarExpr.self) { return dollar(node) }
+        if let node = expr.node(as: SubstitutionExpr.self) { return substitution(node) }
+        if let node = expr.node(as: CommandChainExpr.self) { return commands(node) }
+        if let node = expr.node(as: AsyncExpr.self) {
             // `async cmd` starts it; `async $(cmd)` keeps its output too.
             switch node.target {
             case .command(let node): return call(pipeline(node), "start")
             case .capture(let node): return call(pipeline(node), "startCapturing")
             // `async f(x)` is `startTask("f(x)") { f(x) }`; `async { … }` runs the closure.
             case .task(let expr, let source):
-                let body: ClosureLiteral
-                if case .closure(let closure) = expr, closure.parameters.isEmpty {
-                    body = rewriter.closure(closure)
+                let body: SwiftClosure
+                if let closure = expr.closure, closure.parameterCount == 0 {
+                    body = rewritten(closure)
                 } else {
-                    let expr = rewriter.expression(expr)
-                    body = ClosureLiteral(parameters: [], body: Program(statements: [.expression(expr)]), names: Desugarer.names(in: expr))
+                    let expr = rewritten(expr)
+                    body = SwiftClosure(expression: expr, capturing: expr.variableNames)
                 }
-                return .call(.variable("startTask"), [
-                    Argument(label: nil, value: .literal(.string(source))), Argument(label: nil, value: .closure(body)),
-                ])
+                return .call("startTask", [SwiftArgument(value: .text(source)), SwiftArgument(value: .closure(body))])
             }
-        default:
-            return expr
         }
+        return expr
     }
 
     /// `$name` is the variable `name` if one is in scope, else the
     /// environment's: `env["name"]!`, which stops with a plain error when it
     /// isn't set.
-    private func dollar(_ node: DollarExpr) -> Expr {
+    private func dollar(_ node: DollarExpr) -> SwiftExpression {
         if node.isVariable { return .variable(node.name) }
-        return .forceUnwrap(.index(.variable("env"), .literal(.string(node.name))))
+        return SwiftExpression.variable("env").subscripted(by: .text(node.name)).forceUnwrapped()
     }
 
     /// `$(…)` is `capture { … }`, the block run with its output gathered;
     /// under `try`, `capture(throwing: true) { … }`.
-    private func substitution(_ node: SubstitutionExpr) -> Expr {
-        let body = Argument(label: nil, value: .closure(ClosureLiteral(parameters: [], body: rewriter.program(node.program))))
-        let throwing = node.throwing ? [Argument(label: "throwing", value: .literal(.bool(true)))] : []
-        return .call(.variable("capture"), throwing + [body])
-    }
-
-    /// The variables an expression reads, which a closure made of it holds
-    /// on to: a task can outlive the function that starts it.
-    private static func names(in expr: Expr) -> NamesUsed {
-        nonisolated(unsafe) var names: Set<String> = []
-        let collector = TreeRewriter(expr: { node in
-            if case .variable(let name) = node { names.insert(name) }
-            return node
-        })
-        _ = collector.expression(expr)
-        return NamesUsed(names: names)
+    private func substitution(_ node: SubstitutionExpr) -> SwiftExpression {
+        let body = SwiftArgument(value: .closure(SwiftClosure(block: rewritten(node.program))))
+        let throwing = node.throwing ? [SwiftArgument(label: "throwing", value: .boolean(true))] : []
+        return .call("capture", throwing + [body])
     }
 
     // MARK: Command statements, chains and conditions
@@ -88,37 +72,35 @@ final class Desugarer {
     /// which throws. Joined, `a && b || c` is `a.and { b }.or { c }` over
     /// their statuses, a Swift expression among them its `exitStatus(of:)`; a
     /// condition asks whether that `succeeded`.
-    private func commands(_ node: CommandChainExpr) -> Expr {
+    private func commands(_ node: CommandChainExpr) -> SwiftExpression {
         let display = !node.isCondition && node.links.isEmpty
         // `xs | sorted` alone, when it is Swift's own calls: shown as a
         // pipeline at the end of a statement shows what it gives.
         if display, directCalls, case .command(let pipeline) = node.first, let calls = self.calls(pipeline) {
-            return .call(.variable("displayItems"), [Argument(label: nil, value: calls)])
+            return .call("displayItems", [SwiftArgument(value: calls)])
         }
-        func status(_ operand: CommandChainExpr.Operand) -> Expr {
+        func status(_ operand: CommandChainExpr.Operand) -> SwiftExpression {
             switch operand {
             case .command(let pipeline):
-                if case .some(let kind) = pipeline.throwing { return .attempt(call(self.pipeline(pipeline), "check"), kind ?? .plain) }
+                if case .some(let kind) = pipeline.throwing { return call(self.pipeline(pipeline), "check").attempt(kind ?? .plain) }
                 return call(self.pipeline(pipeline), display ? "run" : "runQuietly")
             case .expression(let expr):
-                let expr = rewriter.expression(expr)
+                let expr = rewritten(expr)
                 // `try? build() && …`: whether it caught an error.
-                let value = if case .attempt(_, .optional) = expr { Expr.binary(.notEqual, expr, .literal(.nothing)) } else { expr }
-                return .call(.variable("exitStatus"), [Argument(label: "of", value: value)])
+                let value = expr.isOptionalAttempt ? expr.isNotNil() : expr
+                return .call("exitStatus", [SwiftArgument(label: "of", value: value)])
             }
         }
         var result = status(node.first)
         for link in node.links {
-            let body = Program(statements: [.expression(status(link.operand))])
-            result = .call(.member(result, link.isAnd ? "and" : "or"), [
-                Argument(label: nil, value: .closure(ClosureLiteral(parameters: [], body: body))),
-            ])
+            let body = SwiftBlock(expressions: [status(link.operand)])
+            result = result.calling(link.isAnd ? "and" : "or", [SwiftArgument(value: .closure(SwiftClosure(block: body)))])
         }
-        return node.isCondition ? .member(result, "succeeded") : result
+        return node.isCondition ? result.member("succeeded") : result
     }
 
-    private func call(_ target: Expr, _ method: String) -> Expr {
-        .call(.member(target, method), [])
+    private func call(_ target: SwiftExpression, _ method: String) -> SwiftExpression {
+        target.calling(method)
     }
 
     // MARK: Commands and pipelines
@@ -133,60 +115,58 @@ final class Desugarer {
     /// other, which runs through `Pipeline`: an Array member after items
     /// flow, a method of the prelude's, a function, a program, or words to
     /// convert (`sorted --by size`).
-    private func calls(_ node: PipelineNode) -> Expr? {
-        guard var expr = node.input.map(rewriter.expression), node.throwing == nil else { return nil }
+    private func calls(_ node: PipelineNode) -> SwiftExpression? {
+        guard var expr = node.input.map(rewritten), node.throwing == nil else { return nil }
         /// What the next stage gets: an Array of the items, a `Flow` of them, or one value.
         enum Flowing { case list, flow, value }
         var flowing: Flowing = node.inputIsList ? .list : .value
         // Items as they come: a `Flow` of the list, made once.
         func asFlow() -> Bool {
             if flowing == .flow { return true }
-            guard flowing == .list, let initializer = Bridge.flowInitializer else { return false }
-            expr = .bridged(type: "Flow", member: initializer, receiver: nil, arguments: [Argument(label: nil, value: expr)])
+            guard flowing == .list, let initializer = StageMember.flowInitializer else { return false }
+            expr = .nativeCall(initializer, on: nil, [SwiftArgument(value: expr)])
             flowing = .flow
             return true
         }
         // `{ $0.… }`, dropping what gives nothing.
-        func compactMap(_ call: Expr) -> Bool {
-            guard asFlow(), let member = Bridge.stageMembers("Flow", "compactMap").first else { return false }
-            let item = Parameter(name: "$0")
-            let transform = ClosureLiteral(parameters: [item], body: Program(statements: [.expression(call)]))
-            expr = .bridged(type: "Flow", member: member.index, receiver: expr, arguments: [Argument(label: nil, value: .closure(transform))])
+        func compactMap(_ call: SwiftExpression) -> Bool {
+            guard asFlow(), let member = StageMember.members(of: "Flow", named: "compactMap").first else { return false }
+            let transform = SwiftClosure(parameter: "$0", returning: call)
+            expr = .nativeCall(member, on: expr, [SwiftArgument(value: .closure(transform))])
             return true
         }
         for (index, command) in node.commands.enumerated() {
-            guard !command.external, command.redirects.isEmpty, command.environment.isEmpty,
-                  case .text(let parts)? = command.words.first, parts.count == 1, case .literal(let name) = parts[0] else { return nil }
+            guard !command.external, command.redirects.isEmpty, command.environment.isEmpty, let name = command.literalName else { return nil }
             // A closure word (`filter { … }`) is a trailing closure; any other word converts as a command line's.
-            var closures: [Argument] = []
+            var closures: [SwiftArgument] = []
             for word in command.words.dropFirst() {
                 guard case .closure(let closure) = word else { return nil }
-                closures.append(Argument(label: nil, value: .closure(rewriter.closure(closure))))
+                closures.append(SwiftArgument(value: .closure(rewritten(closure))))
             }
-            let arguments = (command.call.map(rewriter.arguments) ?? []) + closures
+            let arguments = (command.call.map(rewritten) ?? []) + closures
             switch command.resolution {
             case .bridged(let type, let receiver, _)?:
-                var members = Bridge.stageMembers(type, name)
+                let all = StageMember.members(of: type, named: name)
                 // With no arguments, it is the member that needs none.
-                if arguments.isEmpty { members = members.filter { $0.member.parameters.allSatisfy(\.hasDefault) } }
-                guard let member = command.overload.map({ Bridge.stageMembers(type, name)[$0] }) ?? (members.count == 1 ? members[0] : nil) else {
+                let candidates = arguments.isEmpty ? all.filter(\.needsNoArguments) : all
+                guard let member = command.overload.map({ all[$0] }) ?? (candidates.count == 1 ? candidates[0] : nil) else {
                     return nil
                 }
                 switch receiver {
                 case .collected where flowing == .list, .value where index == 0:
-                    expr = .bridged(type: type, member: member.index, receiver: expr, arguments: arguments)
-                    if case .list = member.member.returns { flowing = .list } else { flowing = .value }
+                    expr = .nativeCall(member, on: expr, arguments)
+                    flowing = member.returnsList ? .list : .value
                 case .flow:
                     guard asFlow() else { return nil }
-                    expr = .bridged(type: type, member: member.index, receiver: expr, arguments: arguments)
+                    expr = .nativeCall(member, on: expr, arguments)
                 case .each:
-                    guard compactMap(.bridged(type: type, member: member.index, receiver: .variable("$0"), arguments: arguments)) else { return nil }
+                    guard compactMap(.nativeCall(member, on: .variable("$0"), arguments)) else { return nil }
                 default:
                     return nil
                 }
             // `points | describe`: the method of each item.
             case .itemMethod?:
-                guard compactMap(.call(.member(.variable("$0"), name), arguments)) else { return nil }
+                guard compactMap(SwiftExpression.variable("$0").calling(name, arguments)) else { return nil }
             default:
                 return nil
             }
@@ -196,69 +176,67 @@ final class Desugarer {
 
     /// `Command(…)` alone, or `Pipeline(from: input, …)` for more than one or
     /// a value fed in.
-    private func pipeline(_ node: PipelineNode) -> Expr {
+    private func pipeline(_ node: PipelineNode) -> SwiftExpression {
         let commands = node.commands.map(command)
         if commands.count == 1, node.input == nil { return commands[0] }
-        let input = node.input.map { [Argument(label: "from", value: rewriter.expression($0))] } ?? []
-        return .call(.variable("Pipeline"), input + commands.map { Argument(label: nil, value: $0) })
+        let input = node.input.map { [SwiftArgument(label: "from", value: rewritten($0))] } ?? []
+        return .call("Pipeline", input + commands.map { SwiftArgument(value: $0) })
     }
 
     /// `Command(words…)`, with what else the command has as methods:
     /// `^name` is `external()`, `X=1` is `environment(["X": "1"])`, a
     /// redirect `reading`, `writing`, `appending` or `sending`, a call's
     /// arguments `calling((…))`, and what the checker decided `checked(…)`.
-    private func command(_ node: CommandNode) -> Expr {
-        var expr = Expr.call(.variable("Command"), node.words.map { word in
+    private func command(_ node: CommandNode) -> SwiftExpression {
+        var expr = SwiftExpression.call("Command", node.words.map { word in
             switch word {
-            case .text(let parts): Argument(label: nil, value: self.word(parts))
-            case .closure(let closure): Argument(label: nil, value: .closure(rewriter.closure(closure)))
+            case .text(let parts): SwiftArgument(value: self.word(parts))
+            case .closure(let closure): SwiftArgument(value: .closure(rewritten(closure)))
             }
         })
-        func method(_ name: String, _ arguments: [Argument]) {
-            expr = .call(.member(expr, name), arguments)
+        func method(_ name: String, _ arguments: [SwiftArgument]) {
+            expr = expr.calling(name, arguments)
         }
         if node.external { method("external", []) }
         if !node.environment.isEmpty {
-            method("environment", [Argument(label: nil, value: .record(node.environment.map {
-                RecordEntry(key: .literal(.string($0.name)), value: text($0.value))
-            }))])
+            method("environment", [SwiftArgument(value: .record(node.environment.map { (key: $0.name, value: text($0.value)) }))])
         }
         for redirect in node.redirects {
-            let fd = Argument(label: nil, value: .literal(.int(Int(redirect.fd))))
+            let fd = SwiftArgument(value: .integer(Int(redirect.fd)))
             switch redirect.target {
-            case .file(let parts, .read): method("reading", [fd, Argument(label: "from", value: word(parts))])
-            case .file(let parts, .write): method("writing", [fd, Argument(label: "to", value: word(parts))])
-            case .file(let parts, .append): method("appending", [fd, Argument(label: "to", value: word(parts))])
-            case .descriptor(let other): method("sending", [fd, Argument(label: "to", value: .literal(.int(Int(other))))])
+            case .file(let parts, .read): method("reading", [fd, SwiftArgument(label: "from", value: word(parts))])
+            case .file(let parts, .write): method("writing", [fd, SwiftArgument(label: "to", value: word(parts))])
+            case .file(let parts, .append): method("appending", [fd, SwiftArgument(label: "to", value: word(parts))])
+            case .descriptor(let other): method("sending", [fd, SwiftArgument(label: "to", value: .integer(Int(other)))])
             }
         }
-        if let call = node.call { method("calling", [Argument(label: nil, value: .tuple(rewriter.arguments(call)))]) }
+        if let call = node.call { method("calling", [SwiftArgument(value: .tuple(rewritten(call)))]) }
         let hint = StageHint(resolution: node.resolution, overload: node.overload, notAnExpression: node.notAnExpression)
-        if !hint.isEmpty { method("checked", [Argument(label: nil, value: .call(.variable("StageHint"), hint.arguments))]) }
+        if !hint.isEmpty { method("checked", [SwiftArgument(value: .call("StageHint", hint.arguments))]) }
         return expr
     }
 
     /// A command's word: a String; `Glob("*.swift")` where it has an unquoted
     /// wildcard; `Spread(xs)` for an unquoted value alone, a word per item.
-    private func word(_ parts: [WordPart]) -> Expr {
+    private func word(_ parts: [WordPart]) -> SwiftExpression {
         let parts = parts.map(part)
-        if parts.count == 1, case .spread(let value) = parts[0] { return .call(.variable("Spread"), [Argument(label: nil, value: value)]) }
+        if parts.count == 1, case .spread(let value) = parts[0] { return .call("Spread", [SwiftArgument(value: value)]) }
         guard parts.contains(where: { if case .glob = $0 { true } else { false } }) else { return text(parts) }
         // In a pattern, the text that isn't a wildcard stands for itself.
-        let pattern = parts.map { part -> StringPart in
+        let pattern = parts.map { part -> StringPiece in
             switch part {
             case .literal(let text): .literal(Glob.escape(text))
             // `?` isn't a wildcard in Swish, so URLs need no quoting.
             case .glob(let text): .literal(text.replacingOccurrences(of: "?", with: "\\?"))
             case .expression(let value), .spread(let value):
-                .expression(.call(.variable("escapingWildcards"), [Argument(label: nil, value: .string([.expression(value)]))]))
+                .expression(.call("escapingWildcards", [SwiftArgument(value: .interpolated([.expression(value)]))]))
             }
         }
-        return .call(.variable("Glob"), [Argument(label: nil, value: string(pattern))])
+        return .call("Glob", [SwiftArgument(value: string(pattern))])
     }
 
     /// A word's parts joined into one String, as an environment variable's value is.
-    private func text(_ parts: [WordPart]) -> Expr {
+    private func text(_ parts: [WordPart]) -> SwiftExpression {
         string(parts.map(part).map { part in
             switch part {
             case .literal(let text), .glob(let text): .literal(text)
@@ -268,8 +246,8 @@ final class Desugarer {
     }
 
     /// A string literal, or an interpolation where it has values in it.
-    private func string(_ parts: [StringPart]) -> Expr {
-        var merged: [StringPart] = []
+    private func string(_ parts: [StringPiece]) -> SwiftExpression {
+        var merged: [StringPiece] = []
         for part in parts {
             if case .literal(let text) = part, case .literal(let before)? = merged.last {
                 merged[merged.count - 1] = .literal(before + text)
@@ -277,15 +255,15 @@ final class Desugarer {
                 merged.append(part)
             }
         }
-        if merged.isEmpty { return .literal(.string("")) }
-        if merged.count == 1, case .literal(let text) = merged[0] { return .literal(.string(text)) }
-        return .string(merged)
+        if merged.isEmpty { return .text("") }
+        if merged.count == 1, case .literal(let text) = merged[0] { return .text(text) }
+        return .interpolated(merged)
     }
 
     private func part(_ part: WordPart) -> WordPart {
         switch part {
-        case .expression(let expr): .expression(rewriter.expression(expr))
-        case .spread(let expr): .spread(rewriter.expression(expr))
+        case .expression(let expr): .expression(rewritten(expr))
+        case .spread(let expr): .spread(rewritten(expr))
         case .literal, .glob: part
         }
     }

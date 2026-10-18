@@ -1,28 +1,27 @@
-@_spi(Layer) import Swiit
 import Foundation
 
-extension SourceCursor {
+extension SourceReader {
     // MARK: Command mode
 
-    mutating func parsePipeline(from start: Int? = nil, input: Expr? = nil) throws(SyntaxError) -> PipelineNode {
-        let start = start ?? pos
+    mutating func parsePipeline(from start: Int? = nil, input: SwiftExpression? = nil) throws(ParseFailure) -> PipelineNode {
+        let start = start ?? position
         var commands = [try parseCommand()]
-        var end = pos
+        var end = position
         while true {
             skipSpaces()
             guard peek() == "|", peek(1) != "|" else { break }
-            pos += 1
+            position += 1
             skipSpaces(newlines: true)
             commands.append(try parseCommand())
-            end = pos
+            end = position
         }
-        let source = String(chars[start..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
+        let source = String(characters[start..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
         return PipelineNode(commands: commands, source: source, input: input)
     }
 
-    mutating func parseCommand() throws(SyntaxError) -> CommandNode {
+    mutating func parseCommand() throws(ParseFailure) -> CommandNode {
         skipSpaces()
-        let nameStart = pos
+        let nameStart = position
         // `foreign ls` (or `^ls`): the program, never a function or builtin.
         var external = consume("^")
         // Where the command name's highlight starts: at a `^` touching it.
@@ -35,7 +34,7 @@ extension SourceCursor {
         var words: [Word] = []
         var redirects: [Redirect] = []
         var environment: [EnvironmentAssignment] = []
-        var call: [Argument]?
+        var call: [SwiftArgument]?
         while true {
             skipSpaces()
             guard let c = peek(), !endsCommand(c) else { break }
@@ -49,48 +48,48 @@ extension SourceCursor {
             }
             // `sorted(by: "size")`: a name touching its arguments is a call,
             // as in Swift; a trailing closure may follow.
-            if c == "(", words.count == 1, call == nil, !external, pos > 0, SourceCursor.isIdentifierPart(chars[pos - 1]) {
+            if c == "(", words.count == 1, call == nil, !external, position > 0, SourceReader.isIdentifierPart(characters[position - 1]) {
                 call = try parseArguments()
                 skipSpaces()
                 if peek() == "{" {
-                    call!.append(Argument(label: nil, value: .closure(try parseClosure())))
+                    call!.append(SwiftArgument(value: .closure(try parseClosure())))
                 }
                 continue
             }
             if c == "(" {
-                throw SyntaxError("unexpected '(' in a command; quote it, or use \\(…) to interpolate an expression")
+                throw ParseFailure("unexpected '(' in a command; quote it, or use \\(…) to interpolate an expression")
             }
             if call != nil {
-                throw SyntaxError("a command written as a call takes all its arguments in the parentheses")
+                throw ParseFailure("a command written as a call takes all its arguments in the parentheses")
             }
             if c == "&" {
-                throw SyntaxError("'&' isn't Swish; background jobs will be `async command`")
+                throw ParseFailure("'&' isn't Swish; background jobs will be `async command`")
             }
             // `NAME=value` before the command sets it for the command.
             if words.isEmpty, let name = identifier(), peek(name.count) == "=", peek(name.count + 1) != "=" {
-                mark(.variable, from: pos, to: pos + name.count)
-                pos += name.count + 1
+                mark(.variable, from: position, to: position + name.count)
+                position += name.count + 1
                 let value = peek().map(isWordBoundary) ?? true ? [.literal("")] : try parseWord()
                 environment.append(EnvironmentAssignment(name: name, value: value))
                 continue
             }
-            let wordStart = pos
+            let wordStart = position
             let word = try parseWord()
             if words.isEmpty {
                 // A command's name may be a function the body calls.
                 if word.count == 1, case .literal(let name) = word[0] { use(name) }
                 mark(.command, from: redirects.isEmpty && environment.isEmpty ? caretStart ?? wordStart : wordStart)
-            } else if chars[wordStart] == "-" {
+            } else if characters[wordStart] == "-" {
                 mark(.flag, from: wordStart)
             }
             words.append(.text(word))
         }
         guard !words.isEmpty else {
             if let assignment = environment.first {
-                throw SyntaxError("\(assignment.name)=… sets a variable for one command; use env.\(assignment.name) = … to set it for the session")
+                throw ParseFailure("\(assignment.name)=… sets a variable for one command; use env.\(assignment.name) = … to set it for the session")
             }
             if let c = peek() { throw unexpected(c) }
-            throw .incomplete("expected a command")
+            throw ParseFailure.incomplete("expected a command")
         }
         return CommandNode(words: words, external: external, redirects: redirects, environment: environment, call: call)
     }
@@ -100,20 +99,20 @@ extension SourceCursor {
     /// `e>` and `e>>` for standard error; `o+e>` and `o+e>>` for both; `e>o`
     /// sends standard error wherever standard output goes, and `o>e` the
     /// other way. POSIX forms like `2>&1` are an error naming the new one.
-    mutating func parseRedirect() throws(SyntaxError) -> [Redirect]? {
-        let start = pos
+    mutating func parseRedirect() throws(ParseFailure) -> [Redirect]? {
+        let start = position
         try rejectPosixRedirect()
 
         func touchesBoundary(after count: Int) -> Bool {
             peek(count).map(isWordBoundary) ?? true
         }
         if startsWith("e>o") && touchesBoundary(after: 3) {
-            pos += 3
+            position += 3
             mark(.punctuation, from: start)
             return [Redirect(fd: 2, target: .descriptor(1))]
         }
         if startsWith("o>e") && touchesBoundary(after: 3) {
-            pos += 3
+            position += 3
             mark(.punctuation, from: start)
             return [Redirect(fd: 1, target: .descriptor(2))]
         }
@@ -135,7 +134,7 @@ extension SourceCursor {
 
         skipSpaces()
         guard let c = peek(), !isWordBoundary(c) else {
-            if peek() == nil { throw .incomplete("expected a file to redirect to") }
+            if peek() == nil { throw ParseFailure.incomplete("expected a file to redirect to") }
             throw expected("a file to redirect to")
         }
         let file = try parseWord()
@@ -148,10 +147,10 @@ extension SourceCursor {
 
     /// POSIX redirects, which would otherwise read as a word and a redirect,
     /// with the Swish spelling in the error.
-    func rejectPosixRedirect() throws(SyntaxError) {
+    func rejectPosixRedirect() throws(ParseFailure) {
         var digits = ""
-        while let c = peek(digits.count), SourceCursor.isDigit(c) { digits.append(c) }
-        let rest = String(chars[(pos + digits.count)...].prefix(4))
+        while let c = peek(digits.count), SourceReader.isDigit(c) { digits.append(c) }
+        let rest = String(characters[(position + digits.count)...].prefix(4))
         let swish: String?
         switch (digits, rest) {
         case (_, _) where startsWith("&>>"): swish = "o+e>>"
@@ -163,11 +162,11 @@ extension SourceCursor {
         case ("1", _) where rest.hasPrefix(">"): swish = rest.hasPrefix(">>") ? ">>" : ">"
         case ("0", _) where rest.hasPrefix("<"): swish = "<"
         case let (number, _) where !number.isEmpty && (rest.hasPrefix(">") || rest.hasPrefix("<")):
-            throw SyntaxError("numbered descriptors like \(number)\(rest.prefix(1)) aren't part of Swish; redirect with >, e>, e>o, o>e or o+e>")
+            throw ParseFailure("numbered descriptors like \(number)\(rest.prefix(1)) aren't part of Swish; redirect with >, e>, e>o, o>e or o+e>")
         default: swish = nil
         }
         if let swish {
-            throw SyntaxError("that's a POSIX redirect; in Swish it's \(swish)")
+            throw ParseFailure("that's a POSIX redirect; in Swish it's \(swish)")
         }
     }
 
@@ -177,7 +176,7 @@ extension SourceCursor {
         case "&": peek(1) == "&"
         case "{": peek(1) != "}" && conditionDepth > 0
         // `guard test -d x else { … }`: `else` isn't the command's.
-        case "e": guardCondition && identifier() == "else" && (pos == 0 || isWordBoundary(chars[pos - 1]))
+        case "e": guardCondition && identifier() == "else" && (position == 0 || isWordBoundary(characters[position - 1]))
         default: false
         }
     }
@@ -186,7 +185,7 @@ extension SourceCursor {
         c == " " || c == "\t" || c == "\n" || "|;&(){}<>".contains(c)
     }
 
-    mutating func parseWord() throws(SyntaxError) -> [WordPart] {
+    mutating func parseWord() throws(ParseFailure) -> [WordPart] {
         var parts: [WordPart] = []
         var literal = ""
         // Whether the unquoted text in `literal` has a wildcard in it.
@@ -199,14 +198,14 @@ extension SourceCursor {
 
         if peek() == "~", peek(1).map({ $0 == "/" || isWordBoundary($0) }) ?? true {
             parts.append(.expression(.dollar("HOME")))
-            pos += 1
+            position += 1
         }
 
         while let c = peek() {
             // `{}` is a word (as in `find -exec … {} \;`), not a block.
             if c == "{" && peek(1) == "}" {
                 literal += "{}"
-                pos += 2
+                position += 2
                 continue
             }
             if isWordBoundary(c) { break }
@@ -218,20 +217,20 @@ extension SourceCursor {
                 flush()
                 parts += try parseInterpolatedString().map(WordPart.init)
             case "\\":
-                guard let next = peek(1) else { throw .incomplete("expected a character after '\\'") }
+                guard let next = peek(1) else { throw ParseFailure.incomplete("expected a character after '\\'") }
                 if next == "(" {
                     flush()
                     parts.append(.spread(try parseInterpolation()))
                 } else if next == "\n" {
-                    pos += 2
+                    position += 2
                 } else if "*[".contains(next) {
                     // An escaped wildcard is literal, even next to real ones.
                     flush()
                     parts.append(.literal(String(next)))
-                    pos += 2
+                    position += 2
                 } else {
                     literal.append(next)
-                    pos += 2
+                    position += 2
                 }
             case "$":
                 if let expr = try parseDollar() {
@@ -239,12 +238,12 @@ extension SourceCursor {
                     parts.append(.spread(expr))
                 } else {
                     literal.append(c)
-                    pos += 1
+                    position += 1
                 }
             default:
                 if "*[".contains(c) { wildcard = true }
                 literal.append(c)
-                pos += 1
+                position += 1
             }
         }
         flush()

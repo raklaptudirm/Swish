@@ -6,7 +6,7 @@ import Testing
 private enum Dialect {
     case swift, shell
 
-    var plugin: (any SyntaxPlugin)? { self == .shell ? ShellSyntax() : nil }
+    var plugin: (any SyntaxPlugin)? { self == .shell ? LayerPlugin(ShellSyntax()) : nil }
 }
 
 /// The syntax error that stops `source`, or nil if it parses.

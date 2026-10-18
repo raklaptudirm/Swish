@@ -1,4 +1,3 @@
-@_spi(Layer) import Swiit
 import Foundation
 
 struct PipelineNode: Equatable, Sendable {
@@ -6,10 +5,10 @@ struct PipelineNode: Equatable, Sendable {
     /// The pipeline as typed, for job messages like "Stopped".
     var source: String
     /// A value feeding the pipeline, as in `[3, 1, 2] | sort`.
-    var input: Expr?
+    var input: SwiftExpression?
     /// `try make` (`.some(nil)`) or `try! make`: failing throws, rather than
     /// only setting the status.
-    var throwing: TryKind?? = nil
+    var throwing: TryStyle?? = nil
     /// What the checker found: the value fed in is a list, so a stage that
     /// collects the items gets that list as it is.
     var inputIsList = false
@@ -25,7 +24,7 @@ struct CommandNode: Equatable, Sendable {
     /// `EDITOR=vim git commit`: environment variables for this command only.
     var environment: [EnvironmentAssignment] = []
     /// `sorted(by: "size")` after a `|`: arguments written as a call.
-    var call: [Argument]? = nil
+    var call: [SwiftArgument]? = nil
     /// What the checker found the name to be, when it is a method of the flow.
     var resolution: StageResolution? = nil
     /// For a stage written as a call, the overload the checker chose.
@@ -52,7 +51,7 @@ enum StageResolution: Equatable, Sendable {
     /// A Swift member of a bridged type, called on `receiver`. `bindings`:
     /// what its generic parameters are here, so a word on the command line
     /// converts to them (`xs | contains 2`, 2 an Int).
-    case bridged(type: String, receiver: StageReceiver, bindings: [String: TypeAnnotation])
+    case bridged(type: String, receiver: StageReceiver, bindings: [String: ValueType])
 }
 
 /// What a Swift member as a stage is called on.
@@ -93,22 +92,22 @@ struct Redirect: Equatable, Sendable {
 enum Word: Equatable, Sendable {
     case text([WordPart])
     /// `where { $0.size > 1.mb }`: a closure passed as an argument.
-    case closure(ClosureLiteral)
+    case closure(SwiftClosure)
 }
 
 /// A piece of a command word: a string's parts, and the two a word has that a
 /// string doesn't.
 enum WordPart: Equatable, Sendable {
     case literal(String)
-    case expression(Expr)
+    case expression(SwiftExpression)
     /// An unquoted `$xs` or `\(xs)` in a command word. A list there, alone
     /// in its word, is one argument per item; quoted, it's one argument.
-    case spread(Expr)
+    case spread(SwiftExpression)
     /// Unquoted text with a wildcard, like `*.swift`; only unquoted
     /// wildcards expand to file names.
     case glob(String)
 
-    init(_ part: StringPart) {
+    init(_ part: StringPiece) {
         switch part {
         case .literal(let text): self = .literal(text)
         case .expression(let expr): self = .expression(expr)

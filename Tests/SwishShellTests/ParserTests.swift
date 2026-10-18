@@ -10,15 +10,15 @@ private func names(_ variables: Set<String>, functions: Set<String> = []) -> [St
 }
 
 private func parse(_ source: String, bound: Set<String> = [], functions: Set<String> = []) throws -> Program {
-    try SwiftSyntaxFrontEnd().parse(source, bound: names(bound, functions: functions), plugin: ShellSyntax())
+    try SwiftSyntaxFrontEnd().parse(source, bound: names(bound, functions: functions), plugin: LayerPlugin(ShellSyntax()))
 }
 
 /// The kind of each top-level unit: "command", "expression", "if" or "loop".
 private func modes(_ source: String, bound: Set<String> = [], functions: Set<String> = []) throws -> [String] {
     try parse(source, bound: bound, functions: functions).statements.map { statement in
         switch statement {
-        case .expression(.extended(let box)):
-            guard let chain = box.node as? CommandChainExpr, case .command = chain.first else { return "expression" }
+        case .expression(let expression):
+            guard let chain = SwiftExpression(expression).node(as: CommandChainExpr.self), case .command = chain.first else { return "expression" }
             return "command"
         case .expression: return "expression"
         case .ifStatement: return "if"
@@ -52,7 +52,7 @@ private func words(_ source: String, bound: Set<String> = []) throws -> [[WordPa
 
 private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxError? {
     do {
-        _ = try SwiftSyntaxFrontEnd().parse(source, bound: names(bound), plugin: ShellSyntax())
+        _ = try SwiftSyntaxFrontEnd().parse(source, bound: names(bound), plugin: LayerPlugin(ShellSyntax()))
         return nil
     } catch {
         return error
@@ -180,7 +180,7 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
 @Test func valuesCanFeedPipelines() throws {
     guard case .expression(let commands) = try parse("[1, 2] | sorted | head -1").statements[0],
           let pipeline = commands.pipelineNode else { Issue.record(); return }
-    #expect(pipeline.input == .list([.literal(.int(1)), .literal(.int(2))]))
+    #expect(pipeline.input?.raw == .list([.literal(.int(1)), .literal(.int(2))]))
     #expect(pipeline.commands.map { $0.words.count } == [1, 2])
     #expect(pipeline.source == "[1, 2] | sorted | head -1")
     #expect(try modes("false || true") == ["expression"]) // `||` is still a chain
@@ -195,7 +195,7 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
     )])
     // A command operand makes it a chain of commands instead.
     guard case .expression(.extended(let box)) = try parse("a && echo hi", bound: ["a"]).statements[0],
-          let chain = box.node as? CommandChainExpr else { Issue.record(); return }
+          let chain = SwiftExpression(.extended(box)).node(as: CommandChainExpr.self) else { Issue.record(); return }
     #expect(chain.first == .expression(.variable("a")))
     #expect(chain.links.count == 1)
 }
@@ -218,7 +218,7 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
     guard case .expression(let commands) = try parse("ls | filter { $0.size > 1.mb }").statements[0],
           let pipeline = commands.pipelineNode,
           case .closure(let closure) = pipeline.commands[1].words[1] else { Issue.record(); return }
-    #expect(closure.parameters.map(\.name) == ["$0"])
+    #expect(closure.raw.parameters.map(\.name) == ["$0"])
 }
 
 @Test func braceEndsACommandInAConditionOnly() throws {
