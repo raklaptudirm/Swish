@@ -137,8 +137,7 @@ extension TypeChecker {
             throw TypeError("\(name) is a method: pipe something into it, as in `ls | \(name)`, or call it on a value, as in `xs.\(name)(…)`")
         }
         if case .functions(let overloads)? = lookup(name) {
-            let runtime = shell!.interpreter.commandFunctions(named: name)
-            return try checkFunctionStage(name, overloads, runtime, &command, piped: input != nil)
+            return try checkFunctionStage(name, overloads, &command, piped: input != nil)
         }
         // Only a program is left, and a program only takes words.
         if command.call != nil || command.words.contains(where: { if case .closure = $0 { true } else { false } }) {
@@ -184,7 +183,7 @@ extension TypeChecker {
             if chosen.isThrowing { try throwingSite("'\(name)'") }
             result = chosen.returns
         } else {
-            result = try checkCommandLine(name, runtime, signatures, &command, bindings: bindings, excludingInput: true)
+            result = try checkCommandLine(name, signatures, &command, bindings: bindings, excludingInput: true)
         }
         // Collected, a list comes out as its items; each item's result flows on as it is.
         return receiver == .each ? result : streamElement(result)
@@ -217,7 +216,7 @@ extension TypeChecker {
             var arguments = fields.map { Argument(label: nil, value: .literal(.string($0))) }
             return streamElement(try selectType(element, arguments: &arguments))
         }
-        let result = try checkCommandLine(name, methods, sequenceSignatures(methods), &command,
+        let result = try checkCommandLine(name, sequenceSignatures(methods), &command,
                                           bindings: ["Element": element], excludingInput: true)
         return streamElement(result)
     }
@@ -229,11 +228,12 @@ extension TypeChecker {
             if methods.count == 1 && methods[0].isMutating {
                 throw TypeError("\(typeName).\(name) is mutating, and a piped value can't change: call it on a variable")
             }
-            if case .object(let type as StructType)? = shell!.interpreter.lookup(typeName)?.value, let set = type.methods[name] {
-                return try checkCommandLine(name, set, methods, &command, bindings: [:], excludingInput: false)
+            // Declared in this program, so not bound yet: checked as it runs.
+            guard case .object(let type as StructType)? = shell!.interpreter.lookup(typeName)?.value, type.methods[name] != nil else {
+                try checkClosures(&command, expecting: [:])
+                return commonReturn(methods)
             }
-            try checkClosures(&command, expecting: [:])
-            return commonReturn(methods)
+            return try checkCommandLine(name, methods, &command, bindings: [:], excludingInput: false)
         }
         // A host object's method, as the host described it.
         if let description = describe(named: typeName), description.kind == .protocolType, let methods = description.declared.methods[name], methods.count == 1 {
@@ -246,7 +246,7 @@ extension TypeChecker {
     /// A function as a stage: its result per item, or its elements when it
     /// gives a list.
     func checkFunctionStage(
-        _ name: String, _ overloads: [Signature], _ runtime: OverloadSet?, _ command: inout CommandNode, piped: Bool
+        _ name: String, _ overloads: [Signature], _ command: inout CommandNode, piped: Bool
     ) throws -> TypeAnnotation {
         let visible = overloads.map { signature -> Signature in
             var signature = signature
@@ -262,12 +262,12 @@ extension TypeChecker {
             if overloads.count > 1 { command.overload = chosen.index }
             return streamElement(chosen.returns)
         }
-        guard let runtime, runtime.candidates.count == overloads.count else {
-            // Declared in this program, so not bound yet: checked as it runs.
+        // Declared in this program, so not bound yet: checked as it runs.
+        guard let runtime = shell!.interpreter.commandFunctions(named: name), runtime.candidates.count == overloads.count else {
             try checkClosures(&command, expecting: [:])
             return streamElement(commonReturn(overloads))
         }
-        let result = try checkCommandLine(name, runtime, visible, &command, bindings: [:], excludingInput: piped)
+        let result = try checkCommandLine(name, visible, &command, bindings: [:], excludingInput: piped)
         return streamElement(result)
     }
 
@@ -292,7 +292,7 @@ extension TypeChecker {
     /// wants, and gives its result. A word built at run time (`$x`) leaves
     /// the choice to run time.
     func checkCommandLine(
-        _ name: String, _ set: OverloadSet, _ signatures: [Signature], _ command: inout CommandNode,
+        _ name: String, _ signatures: [Signature], _ command: inout CommandNode,
         bindings initial: [String: TypeAnnotation], excludingInput: Bool
     ) throws -> TypeAnnotation {
         var arguments: [CommandArgument] = []
@@ -319,51 +319,19 @@ extension TypeChecker {
         let shapes = arguments.map { argument -> CommandWordShape in
             if case .text(let text) = argument { .text(text) } else { .closure }
         }
-        // What the words were bound to: the overload, a key path's fields, and whether a parameter took a closure.
-        let index: Int
-        let keyPathFields: (String) -> [String]?
-        let tookClosure: (String, Int) -> Bool
-        let pure = ProcessInfo.processInfo.environment["SWISH_PUREBIND"]
-        if pure == "1" {
-            // Spike: bound from the signatures alone; the runtime's overloads aren't consulted.
-            if shell!.helpRequested(shapes, for: signatures) { return .string }
-            let binding: CommandLineBinding
-            do {
-                binding = try shell!.bindCommandLine(shapes, to: signatures, name: name, excludingInput: excludingInput)
-            } catch let error as RuntimeError {
-                throw TypeError(error.description)
-            }
-            index = binding.overload
-            keyPathFields = { binding.assigned[$0]?.first?.text.map { $0.split(separator: ".").map(String.init) } }
-            // A placeholder's word is counted from the command's name; a binding's from the first argument.
-            tookClosure = { parameter, word in binding.assigned[parameter]?.contains { $0.word == word - 1 } ?? false }
-        } else {
-            // `--help` shows help instead of running.
-            if shell!.helpRequested(arguments, for: set) { return .string }
-            let function: Function
-            let bound: [String: Value]
-            do {
-                (function, bound) = try shell!.interpreter.resolve(set) { try self.shell!.bind(commandLine: arguments, to: $0, excludingInput: excludingInput) }
-            } catch let error as RuntimeError {
-                throw TypeError(error.description)
-            }
-            guard let found = set.candidates.firstIndex(where: { $0 === function }), found < signatures.count else { return .unknown }
-            index = found
-            keyPathFields = { name in
-                if case .function(let keyPath as KeyPathValue)? = bound[name] { keyPath.path } else { nil }
-            }
-            tookClosure = { parameter, word in
-                if case .function(let value as Function)? = bound[parameter], let stand = placeholders.first(where: { $0.word == word }) { value === stand.function } else { false }
-            }
-            if pure == "shadow", let binding = try? shell!.bindCommandLine(shapes, to: signatures, name: name, excludingInput: excludingInput) {
-                if binding.overload == index { FileHandle.standardError.write(Data("BIND SAME \(name) \(signatures.count)\n".utf8)) }
-                if binding.overload != index {
-                    FileHandle.standardError.write(Data("BIND DIFFER \(name): runtime \(index), pure \(binding.overload)\n".utf8))
-                }
-            } else if pure == "shadow" {
-                FileHandle.standardError.write(Data("BIND DIFFER \(name): runtime bound, pure threw\n".utf8))
-            }
+        // `--help` shows help instead of running.
+        if shell!.helpRequested(shapes, for: signatures) { return .string }
+        let binding: CommandLineBinding
+        do {
+            binding = try shell!.bindCommandLine(shapes, to: signatures, name: name, excludingInput: excludingInput)
+        } catch let error as RuntimeError {
+            throw TypeError(error.description)
         }
+        let index = binding.overload
+        // A key path's fields, as `--by size` reads them from the items.
+        let keyPathFields = { (parameter: String) in binding.assigned[parameter]?.first?.text.map { $0.split(separator: ".").map(String.init) } }
+        // A placeholder's word is counted from the command's name; a binding's from the first argument.
+        let tookClosure = { (parameter: String, word: Int) in binding.assigned[parameter]?.contains { $0.word == word - 1 } ?? false }
         guard index < signatures.count else { return .unknown }
         let signature = signatures[index]
         var bindings = initial
