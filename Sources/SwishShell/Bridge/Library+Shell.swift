@@ -81,6 +81,28 @@ extension Library {
         init(_ value: Any) { self.value = value }
     }
 
+    /// What the checker decided about a stage of a pipeline, written in the
+    /// rewritten program: a `method` ("sequence", "item" or "bridged", the
+    /// last on a `receiver` of a bridged `type` whose generic parameters are
+    /// the `bindings`, spelled as types), the `overload` a call takes, and why
+    /// it `notAnExpression`. A field it does not use is empty (-1 for the overload).
+    struct StageHint {
+        let method: String
+        let type: String
+        let receiver: String
+        let bindings: [String: String]
+        let overload: Int
+        let notAnExpression: String
+        init(method: String = "", type: String = "", receiver: String = "", bindings: [String: String] = [:], overload: Int = -1, notAnExpression: String = "") {
+            self.method = method
+            self.type = type
+            self.receiver = receiver
+            self.bindings = bindings
+            self.overload = overload
+            self.notAnExpression = notAnExpression
+        }
+    }
+
     /// A program or function with its words, to run by hand: what a command
     /// typed at the prompt means. A word is a String, a `Glob`, a `Spread` or
     /// a closure; the first is the name.

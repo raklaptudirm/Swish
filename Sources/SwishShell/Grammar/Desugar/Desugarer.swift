@@ -235,7 +235,7 @@ final class Desugarer {
         }
         if let call = node.call { method("calling", [Argument(label: nil, value: .tuple(rewriter.arguments(call)))]) }
         let hint = StageHint(resolution: node.resolution, overload: node.overload, notAnExpression: node.notAnExpression)
-        if !hint.isEmpty { method("checked", [Argument(label: nil, value: .literal(.object(hint)))]) }
+        if !hint.isEmpty { method("checked", [Argument(label: nil, value: .call(.variable("StageHint"), hint.arguments))]) }
         return expr
     }
 

@@ -12,13 +12,36 @@ import SwiitKit
 // Here is how they run: through the same machinery as a command typed at the
 // prompt.
 
-/// What the checker decided about a stage: what its name is, given what flows
-/// into it and what is in scope, which overload a call to it takes, and why it
-/// isn't an expression.
-final class StageHint: SwiitObject, @unchecked Sendable {
-    let resolution: StageResolution?
-    let overload: Int?
-    let notAnExpression: String?
+/// What the checker decided about a stage, as the rewritten program says it
+/// (`StageHint` in Library+Shell.swift): written as a call by the rewrite, and
+/// read back when the command runs.
+struct StageHint {
+    var resolution: StageResolution?
+    var overload: Int?
+    var notAnExpression: String?
+
+    var isEmpty: Bool { resolution == nil && overload == nil && notAnExpression == nil }
+
+    /// The arguments of the `StageHint(…)` that says it.
+    var arguments: [Argument] {
+        func text(_ label: String, _ value: String) -> Argument { Argument(label: label, value: .literal(.string(value))) }
+        var arguments: [Argument] = []
+        switch resolution {
+        case .sequenceMethod?: arguments.append(text("method", "sequence"))
+        case .itemMethod?: arguments.append(text("method", "item"))
+        case .bridged(let type, let receiver, let bindings)?:
+            arguments += [text("method", "bridged"), text("type", type), text("receiver", "\(receiver)")]
+            if !bindings.isEmpty {
+                arguments.append(Argument(label: "bindings", value: .record(bindings.sorted { $0.key < $1.key }.map {
+                    RecordEntry(key: .literal(.string($0.key)), value: .literal(.string($0.value.description)))
+                })))
+            }
+        case nil: break
+        }
+        if let overload { arguments.append(Argument(label: "overload", value: .literal(.int(overload)))) }
+        if let notAnExpression { arguments.append(text("notAnExpression", notAnExpression)) }
+        return arguments
+    }
 
     init(resolution: StageResolution? = nil, overload: Int? = nil, notAnExpression: String? = nil) {
         self.resolution = resolution
@@ -26,27 +49,46 @@ final class StageHint: SwiitObject, @unchecked Sendable {
         self.notAnExpression = notAnExpression
     }
 
-    var isEmpty: Bool { resolution == nil && overload == nil && notAnExpression == nil }
-
-    var typeName: String { "StageHint" }
-    var memberNames: [String] { [] }
-    func member(_ name: String) -> Value? { nil }
-    var fields: Record? { nil }
-
-    var description: String {
-        var parts: [String] = []
-        switch resolution {
-        case .sequenceMethod?: parts.append(".sequenceMethod")
-        case .itemMethod?: parts.append(".itemMethod")
-        case .bridged(let type, let receiver, _)?: parts.append(".member(of: \"\(type)\", on: .\(receiver))")
-        case nil: break
+    /// A `StageHint` value read back.
+    init?(_ value: Value, interpreter: Interpreter) {
+        guard case .record(let record) = value, record.typeName == "StageHint" else { return nil }
+        func string(_ key: String) -> String? {
+            if case .string(let text)? = record[key], !text.isEmpty { text } else { nil }
         }
-        if let overload { parts.append("overload: \(overload)") }
-        if let notAnExpression { parts.append("notAnExpression: \"\(notAnExpression)\"") }
-        return "StageHint(" + parts.joined(separator: ", ") + ")"
+        switch string("method") {
+        case "sequence"?: resolution = .sequenceMethod
+        case "item"?: resolution = .itemMethod
+        case "bridged"?:
+            guard let type = string("type"), let receiver = StageReceiver(string("receiver")) else { return nil }
+            var bindings: [String: TypeAnnotation] = [:]
+            if case .dictionary(let written)? = record["bindings"] {
+                for (key, value) in written.dictionary { bindings[key.description] = StageHint.type(spelled: value.description, interpreter) }
+            }
+            resolution = .bridged(type: type, receiver: receiver, bindings: bindings)
+        default: break
+        }
+        if case .int(let number)? = record["overload"], number >= 0 { overload = number }
+        notAnExpression = string("notAnExpression")
     }
 
-    var debugDescription: String { description }
+    /// A type as it is written: read by the front end, as `x as! T` says it.
+    static func type(spelled text: String, _ interpreter: Interpreter) -> TypeAnnotation {
+        if case .success(let program) = interpreter.parse("0 as! \(text)"),
+           case .expression(.cast(_, let type, _))? = program.statements.first { return type }
+        return .unknown
+    }
+}
+
+extension StageReceiver {
+    init?(_ text: String?) {
+        switch text {
+        case "collected"?: self = .collected
+        case "each"?: self = .each
+        case "flow"?: self = .flow
+        case "value"?: self = .value
+        default: return nil
+        }
+    }
 }
 
 extension Shell {
@@ -215,7 +257,7 @@ extension Shell {
                 Argument(label: Int(key) == nil ? key : nil, value: .literal(tuple[key] ?? .nothing))
             }
         }
-        if case .object(let hint as StageHint)? = record["hint"] {
+        if let value = record["hint"], let hint = StageHint(value, interpreter: interpreter) {
             spec.resolution = hint.resolution
             spec.overload = hint.overload
             spec.notAnExpression = hint.notAnExpression

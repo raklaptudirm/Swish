@@ -73,7 +73,7 @@ private func desugared(_ source: String, in shell: Shell = Shell()) throws -> St
     #expect(try desugared("echo a | cat") == #"Pipeline(Command("echo", "a"), Command("cat")).run()"#)
     // With a program after it, a Swift member is a stage too.
     #expect(try desugared("[3, 1] | sorted | cat")
-        == #"Pipeline(from: [3, 1], Command("sorted").checked(StageHint(.member(of: "Array", on: .collected))), Command("cat")).run()"#)
+        == #"Pipeline(from: [3, 1], Command("sorted").checked(StageHint(method: "bridged", type: "Array", receiver: "collected", bindings: ["Element": "Int"])), Command("cat")).run()"#)
     #expect(try desugared(#"ls | sorted(by: \.size)"#).contains(#"Command("sorted").calling((by: \.size))"#))
 }
 

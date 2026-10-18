@@ -54,6 +54,7 @@ d.first!.key == d.keys.first!kkk.v....sss..n..sss..n...v........v..........v...
 func _helper() -> String {
     greeting
 }
+/// Says hello. More detail here.
 func hello(name: String = "you", loud: Bool = false) {
     var shown = name
     if loud {
@@ -61,6 +62,7 @@ func hello(name: String = "you", loud: Bool = false) {
     }
     /* a construct from a layer over the core */
 }
+/// Fails.
 func broken() {
     /* a construct from a layer over the core */
     /* a construct from a layer over the core */
@@ -152,7 +154,8 @@ func f(_ x: Int) -> String {
     "int"
 }
 f(5)
-f(5.5)kkkk.c......tttttt.....tttttt...ssssssss....kkkk.c......ttt.....tttttt...sssss....v.n...v.nnn.48func d(_ x: Int) -> Int {
+f(5.5)kkkk.c......tttttt.....tttttt...ssssssss....kkkk.c......ttt.....tttttt...sssss....v.n...v.nnn.48/// Doubles the `x`, **fast**.
+func d(_ x: Int) -> Int {
     x * 2
 }
 /* a construct from a layer over the core */mmmmmmmmmmmmmmmmmmmmmmmmmmmmmm.kkkk.c......ttt.....ttt...v...n...cccc.....cccccc..49/* a construct from a layer over the core */ + "y"ppcccc..p...sss50/* a construct from a layer over the core */ccccc....................................................................51[1, 2, 3, 4].dropFirst()
@@ -300,7 +303,7 @@ j!.statekkkkk.ccccc....vvvv...cccccc..kkk.v...vvvv........kkkkk.v...v.......10
     return g
 }
 let h = f(1)
-h()kkkk.c......ttt...........ttt...kkk.v.....v...n....kkk.vvvvvv....n..n...kkkkkk.v....kkk.v...v.n...v..107func f(_ x: Int, five: Bool = false) -> String {
+h()kkkk.c......ttt...........ttt...kkk.v.....v...n....kkk.vvvvvv....n..n...kkkkkk.v....kkk.v...v.n...v..107func f(_ x: Int, @flag("5") five: Bool = false) -> String {
     "\(x) \(five)"
 }
 /* a construct from a layer over the core */kkkk.c......ttt..kkkkk.sss........tttt...CCCCC.....tttttt...sppvpsppvvvvps....c.ff.ff108let p: FilePath = "/usr/local/bin/swish.tar.gz"
@@ -314,7 +317,7 @@ func g(_ s: String) {}
 /* a construct from a layer over the core */kkkk.c......ttt.......ttt......kkkk.c......tttttt......c......110Command("true").run().and { Command("false").run() }.or { Command("sh", "-c", "exit 3").run() }vvvvvvv.ssssss..............vvvvvvv.sssssss...............vvvvvvv.ssss..ssss..ssssssss.........111/* a construct from a layer over the core */cccc.ssssssssssssssssssssssssssssssssssssssssssssssssssssssss...cccc........cc.....112func greet() {
     /* a construct from a layer over the core */
 }
-func double(_ n: Int) -> Int {
+func double(@input _ n: Int) -> Int {
     n * 2
 }
 func boom() -> Int {
@@ -338,7 +341,7 @@ g(1)kkkk.c......ttt.....ttt...n.....ttt...n....kkkk.c......ttt.....ttt...n.....
 /* a construct from a layer over the core */n...n..n...n..nnn...n..cc120/* a construct from a layer over the core */cccc.ssssssssssssssssssssss...cccc........ccc..121func greet() {
     /* a construct from a layer over the core */
 }
-func double(_ n: Int) -> Int {
+func double(@input _ n: Int) -> Int {
     n * 2
 }
 func boom() -> Int {
@@ -368,7 +371,7 @@ nkkk.v...n..kkkkk.cccc.vv.fff.....v...v...n....v1271 < 2
 [1, 2][1]n...n..n....nnn...n..n..n.128/* a construct from a layer over the core */cccc.sssssssss...cccc.....129func greet() {
     /* a construct from a layer over the core */
 }
-func double(_ n: Int) -> Int {
+func double(@input _ n: Int) -> Int {
     n * 2
 }
 func boom() -> Int {
@@ -438,7 +441,7 @@ l.endkkkkkk.ttttt.......kkk.v..ttt.....kkk.v..ttt...n.....kkk.vvvvvvvvvvvvv..tt
 /* a construct from a layer over the core */ccccc.sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss..ccccc..............................................................................................................................................147func greet() {
     /* a construct from a layer over the core */
 }
-func double(_ n: Int) -> Int {
+func double(@input _ n: Int) -> Int {
     n * 2
 }
 func boom() -> Int {
@@ -468,7 +471,8 @@ q.move(by: 1)kkkkkk.ttttt.......kkk.v..ttt.....kkk.v..ttt...n.....kkk.vvvvvvvvv
     /* a construct from a layer over the core */
 } else {
     /* a construct from a layer over the core */
-}kk.kkk.v...kkkk.ppcccc...p...cccc.sssssppvps...kkkk...cccc.......152func zzgreet() {}mmmmmmmmmmm.kkkk.ccccccc.....153struct C {
+}kk.kkk.v...kkkk.ppcccc...p...cccc.sssssppvps...kkkk...cccc.......152/// Greets.
+func zzgreet() {}mmmmmmmmmmm.kkkk.ccccccc.....153struct C {
     var n: Int
     func bump() {
         self.n += 1
@@ -490,7 +494,7 @@ print(Command("echo", "a b").words.count)vvvvvvv.ssssss..sssssssss..sssssss..ss
 /* a construct from a layer over the core */kk.kkk.v...kkkk.ppCCCCCp......c163let x = /* a construct from a layer over the core */
 x.status.code
 x.text
-/* a construct from a layer over the core */kkk.v...ppcc.ff.ssssssssssssssssssssssp..v..............v.......cccc......164func f(times: Int = 1, verbose: Bool = false, quiet: Bool = false) -> String {
+/* a construct from a layer over the core */kkk.v...ppcc.ff.ssssssssssssssssssssssp..v..............v.......cccc......164func f(@flag("n") times: Int = 1, @flag("v") verbose: Bool = false, @flag("q") quiet: Bool = false) -> String {
     "\(times) \(verbose) \(quiet)"
 }
 /* a construct from a layer over the core */
@@ -498,55 +502,55 @@ x.text
 /* a construct from a layer over the core */kkkk.c.kkkkk.sss.........ttt...n..kkkkk.sss...........tttt...CCCCC..kkkkk.sss.........tttt...CCCCC.....tttttt...sppvvvvvpsppvvvvvvvpsppvvvvvps...c.ff....c.fff.fff..c.fff.fffffffff165try? [1][5] == nil
 try? (1 / 0) == nilkkkk..n..n.....CCC..kkkk.n...n....CCC166/* a construct from a layer over the core */
 /* a construct from a layer over the core */
-/* a construct from a layer over the core */cccc.....p....................................................................cccc.....pp....................................................................ccc.p..................................................................167func f(times: Int = 1, verbose: Bool = false, quiet: Bool = false) -> String {
+/* a construct from a layer over the core */cccc.....p....................................................................cccc.....pp....................................................................ccc.p..................................................................167func f(@flag("n") times: Int = 1, @flag("v") verbose: Bool = false, @flag("q") quiet: Bool = false) -> String {
     "\(times) \(verbose) \(quiet)"
 }
-/* a construct from a layer over the core */kkkk.c.kkkkk.sss.........ttt...n..kkkkk.sss...........tttt...CCCCC..kkkkk.sss.........tttt...CCCCC.....tttttt...sppvvvvvpsppvvvvvvvpsppvvvvvps...c.ff168func double(_ n: Int) -> Int {
+/* a construct from a layer over the core */kkkk.c.kkkkk.sss.........ttt...n..kkkkk.sss...........tttt...CCCCC..kkkkk.sss.........tttt...CCCCC.....tttttt...sppvvvvvpsppvvvvvvvpsppvvvvvps...c.ff168func double(@input _ n: Int) -> Int {
     n * 2
 }
-func total(_ xs: [Int]) -> Int {
+func total(@input _ xs: [Int]) -> Int {
     var t = 0
     for x in xs {
         t = t + x
     }
     return t
 }
-func evens(_ n: Int) -> Int? {
+func evens(@input _ n: Int) -> Int? {
     if (n % 2) == 0 {
         return n
     }
     return nil
 }
 var calls = 0
-func counted(_ n: Int) -> Int {
+func counted(@input _ n: Int) -> Int {
     calls = calls + 1
     return n
 }
 /* a construct from a layer over the core */kkkk.cccccc.kkkkkk......ttt.....ttt...v...n...kkkk.ccccc.kkkkkk........ttt......ttt...kkk.v...n..kkk.v.kk.vv...v...v...v....kkkkkk.v...kkkk.ccccc.kkkkkk......ttt.....ttt....kk.v...n....n...kkkkkk.v....kkkkkk.CCC...kkk.vvvvv...n.kkkk.ccccccc.kkkkkk......ttt.....ttt...vvvvv...vvvvv...n..kkkkkk.v...ccc.....cccccc169(try? [1][5]) == nil
-(try? 1 / 0) == nil.kkkk..n..n......CCC...kkkk.n...n.....CCC170func f(times: Int = 1, verbose: Bool = false, quiet: Bool = false) -> String {
+(try? 1 / 0) == nil.kkkk..n..n......CCC...kkkk.n...n.....CCC170func f(@flag("n") times: Int = 1, @flag("v") verbose: Bool = false, @flag("q") quiet: Bool = false) -> String {
     "\(times) \(verbose) \(quiet)"
 }
 /* a construct from a layer over the core */kkkk.c.kkkkk.sss.........ttt...n..kkkkk.sss...........tttt...CCCCC..kkkkk.sss.........tttt...CCCCC.....tttttt...sppvvvvvpsppvvvvvvvpsppvvvvvps...c.fff171func f() -> Int {
     [1][9]
 }
-(try? f()) ?? 0kkkk.c......ttt....n..n......kkkk.v.......n172func double(_ n: Int) -> Int {
+(try? f()) ?? 0kkkk.c......ttt....n..n......kkkk.v.......n172func double(@input _ n: Int) -> Int {
     n * 2
 }
-func total(_ xs: [Int]) -> Int {
+func total(@input _ xs: [Int]) -> Int {
     var t = 0
     for x in xs {
         t = t + x
     }
     return t
 }
-func evens(_ n: Int) -> Int? {
+func evens(@input _ n: Int) -> Int? {
     if (n % 2) == 0 {
         return n
     }
     return nil
 }
 var calls = 0
-func counted(_ n: Int) -> Int {
+func counted(@input _ n: Int) -> Int {
     calls = calls + 1
     return n
 }
@@ -559,24 +563,24 @@ env.SWISH_TEST_645381 = nil
 env.SWISH_TEST_645381 == nilvvv......................CCC..vvv.....................sssssssss..cccc.vvvvvvvvvvvvvvvvvv..vvv.sssssssssssssssssss...vvv.....................CCC..vvv......................CCC176func show(_ path: FilePath, to other: FilePath = "/tmp") {
     /* a construct from a layer over the core */
 }kkkk.cccc.........tttttttt............tttttttt...ssssss....cccc.sppvvvvssssssssssssssspsppvvvvvps..177Command("true").run().and { Command("sh", "-c", "exit 3").run() }.or { Command("false").run() }vvvvvvv.ssssss..............vvvvvvv.ssss..ssss..ssssssss...............vvvvvvv.sssssss.........178/* a construct from a layer over the core */
-/* a construct from a layer over the core */cccc..........cccc.........ffff...179/* a construct from a layer over the core */cccc.ppCCCCCp..180/* a construct from a layer over the core */cccc.vvvvv181func double(_ n: Int) -> Int {
+/* a construct from a layer over the core */cccc..........cccc.........ffff...179/* a construct from a layer over the core */cccc.ppCCCCCp..180/* a construct from a layer over the core */cccc.vvvvv181func double(@input _ n: Int) -> Int {
     n * 2
 }
-func total(_ xs: [Int]) -> Int {
+func total(@input _ xs: [Int]) -> Int {
     var t = 0
     for x in xs {
         t = t + x
     }
     return t
 }
-func evens(_ n: Int) -> Int? {
+func evens(@input _ n: Int) -> Int? {
     if (n % 2) == 0 {
         return n
     }
     return nil
 }
 var calls = 0
-func counted(_ n: Int) -> Int {
+func counted(@input _ n: Int) -> Int {
     calls = calls + 1
     return n
 }
@@ -687,24 +691,24 @@ Set("hello").countkkk.v...vvv..n..n....v..............n...n...v..............vv
 Counter.zero
 Counter.step
 Counter.make(3)
-Counter.nextkkkkkk.ttttttt..ttttttttt.......kkk.v..ttt.....kkkkkk.kkk.vvvv...vvvvvvv....n......kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv..ttt...vvvv...vvvv.......kkkkkk.kkkk.cccc......ttt.....ttttttt...vvvv.pp.n..kkkkkk.vvvvvvv....v...vvvv........kkkk.cccccc......ttttttt...vvvvvvv....v...vvvvvvv...........vvvvvvv.......vvvvvvv.......vvvvvvv......n...vvvvvvv.....238func double(_ n: Int) -> Int {
+Counter.nextkkkkkk.ttttttt..ttttttttt.......kkk.v..ttt.....kkkkkk.kkk.vvvv...vvvvvvv....n......kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv..ttt...vvvv...vvvv.......kkkkkk.kkkk.cccc......ttt.....ttttttt...vvvv.pp.n..kkkkkk.vvvvvvv....v...vvvv........kkkk.cccccc......ttttttt...vvvvvvv....v...vvvvvvv...........vvvvvvv.......vvvvvvv.......vvvvvvv......n...vvvvvvv.....238func double(@input _ n: Int) -> Int {
     n * 2
 }
-func total(_ xs: [Int]) -> Int {
+func total(@input _ xs: [Int]) -> Int {
     var t = 0
     for x in xs {
         t = t + x
     }
     return t
 }
-func evens(_ n: Int) -> Int? {
+func evens(@input _ n: Int) -> Int? {
     if (n % 2) == 0 {
         return n
     }
     return nil
 }
 var calls = 0
-func counted(_ n: Int) -> Int {
+func counted(@input _ n: Int) -> Int {
     calls = calls + 1
     return n
 }
@@ -748,24 +752,24 @@ f(1)kkkkkk.ttttttt..ttttttttt.......kkk.v..ttt.....kkkkkk.kkk.vvvv...vvvvvvv...
 }
 Counter.made += 5
 Counter.made = Counter.made * 2
-Counter.madekkkkkk.ttttttt..ttttttttt.......kkk.v..ttt.....kkkkkk.kkk.vvvv...vvvvvvv....n......kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv..ttt...vvvv...vvvv.......kkkkkk.kkkk.cccc......ttt.....ttttttt...vvvv.pp.n..kkkkkk.vvvvvvv....v...vvvv........kkkk.cccccc......ttttttt...vvvvvvv....v...vvvvvvv...........vvvvvvv......pp.n..vvvvvvv........vvvvvvv........n..vvvvvvv.....248func double(_ n: Int) -> Int {
+Counter.madekkkkkk.ttttttt..ttttttttt.......kkk.v..ttt.....kkkkkk.kkk.vvvv...vvvvvvv....n......kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv...n.....kkkkkk.kkk.vvvv..ttt...vvvv...vvvv.......kkkkkk.kkkk.cccc......ttt.....ttttttt...vvvv.pp.n..kkkkkk.vvvvvvv....v...vvvv........kkkk.cccccc......ttttttt...vvvvvvv....v...vvvvvvv...........vvvvvvv......pp.n..vvvvvvv........vvvvvvv........n..vvvvvvv.....248func double(@input _ n: Int) -> Int {
     n * 2
 }
-func total(_ xs: [Int]) -> Int {
+func total(@input _ xs: [Int]) -> Int {
     var t = 0
     for x in xs {
         t = t + x
     }
     return t
 }
-func evens(_ n: Int) -> Int? {
+func evens(@input _ n: Int) -> Int? {
     if (n % 2) == 0 {
         return n
     }
     return nil
 }
 var calls = 0
-func counted(_ n: Int) -> Int {
+func counted(@input _ n: Int) -> Int {
     calls = calls + 1
     return n
 }
@@ -938,7 +942,8 @@ c()kkkk.ccccccccccc............ttt...kkk.v...n..kkkkkk...v.pp.n..kkkkkk.v......
 f()kkkk.c.....kkkkk...cccc........kkkkk...cccc........cccc.........v..316struct P: Equatable {
     var x: Int
 }
-P(x: 1) == P(x: 1)kkkkkk.t..ttttttttt...kkk.v..ttt....v....n.....v....n.317func hi(_ name: String) {}
+P(x: 1) == P(x: 1)kkkkkk.t..ttttttttt...kkk.v..ttt....v....n.....v....n.317/// Says hi.
+func hi(_ name: String) {}
 /* a construct from a layer over the core */mmmmmmmmmmmm.kkkk.cc.........tttttt.....cccc...cccccc...vv...........sssssss.....ccc......318func f() -> Int {
     var n = 0
     let inc = { n += 1 }
@@ -955,7 +960,8 @@ f()kkkk.c......ttt...kkk.v...n..kkk.vvv.....v.pp.n....vvv....vvv....kkkkkk.v...
     }
     return fact
 }
-make()(5)kkkk.cccc.......ttt.....ttt...kkkk.cccc......ttt.....ttt...kk.v....n...kkkkkk.n....kkkkkk.v...vvvv.v...n.....kkkkkk.vvvv....vvvv...n.321/* a construct from a layer over the core */cccccc....cccccc....cccccc322func hi(_ name: String) {}
+make()(5)kkkk.cccc.......ttt.....ttt...kkkk.cccc......ttt.....ttt...kk.v....n...kkkkkk.n....kkkkkk.v...vvvv.v...n.....kkkkkk.vvvv....vvvv...n.321/* a construct from a layer over the core */cccccc....cccccc....cccccc322/// Says hi.
+func hi(_ name: String) {}
 /* a construct from a layer over the core */mmmmmmmmmmmm.kkkk.cc.........tttttt.....cccc...cccccc...vv.........ssss.....ccc........323func f(_ n: Int, name: String) {}
 /* a construct from a layer over the core */kkkk.c......ttt........tttttt.....c..324func f() -> Int {
     defer {
@@ -1248,7 +1254,7 @@ xs.append(contentsOf: [5])
 xs.insert(0, at: 0)
 xs.sort()
 xskkk.vv....n..n...vv........n...vv.....................n....vv........n......n...vv.........vv408let xs = [1]
-xs[0] = 2kkk.vv....n...vv.n....n409func g(_ x) -> String {
+xs[0] = 2kkk.vv....n...vv.n....n409func g(_ x: Any) -> String {
     "any"
 }
 func g(_ x: Int) -> String {
@@ -1271,24 +1277,24 @@ f(5)
 f(5.5)kkkk.c......ttt.....tttttt...sssss....kkkk.c......tttttt.....tttttt...ssssssss....v.n...v.nnn.414var d = ["a": 1]
 d.updateValue(2, forKey: "b")
 d.removeValue(forKey: "a")
-dkkk.v....sss..n...v.............n..........sss...v.....................sss...v415func double(_ n: Int) -> Int {
+dkkk.v....sss..n...v.............n..........sss...v.....................sss...v415func double(@input _ n: Int) -> Int {
     n * 2
 }
-func total(_ xs: [Int]) -> Int {
+func total(@input _ xs: [Int]) -> Int {
     var t = 0
     for x in xs {
         t = t + x
     }
     return t
 }
-func evens(_ n: Int) -> Int? {
+func evens(@input _ n: Int) -> Int? {
     if (n % 2) == 0 {
         return n
     }
     return nil
 }
 var calls = 0
-func counted(_ n: Int) -> Int {
+func counted(@input _ n: Int) -> Int {
     calls = calls + 1
     return n
 }
@@ -1301,24 +1307,24 @@ s.remove(1)
 var t = "ab"
 t.append("c")
 s
-tkkk.v...vvv..n....v........n...v........n...kkk.v...ssss..v........sss...v..v419func double(_ n: Int) -> Int {
+tkkk.v...vvv..n....v........n...v........n...kkk.v...ssss..v........sss...v..v419func double(@input _ n: Int) -> Int {
     n * 2
 }
-func total(_ xs: [Int]) -> Int {
+func total(@input _ xs: [Int]) -> Int {
     var t = 0
     for x in xs {
         t = t + x
     }
     return t
 }
-func evens(_ n: Int) -> Int? {
+func evens(@input _ n: Int) -> Int? {
     if (n % 2) == 0 {
         return n
     }
     return nil
 }
 var calls = 0
-func counted(_ n: Int) -> Int {
+func counted(@input _ n: Int) -> Int {
     calls = calls + 1
     return n
 }
@@ -1596,48 +1602,48 @@ let x = .akkkk.t...kkkk.C..C...kkk.v...CC508struct Temp {
     }
 }
 var t = Temp(celsius: 1)
-t.celsius = 2kkkkkk.tttt.......kkk.vvvvvvv..tttttt.....kkk.vvvvvvvvvv..tttttt...vvvvvvv...n...n...nn.......kkkk...............tttttt....vvvvvvv....v...nn....n...n.......kkkk..........tttttt....vvvv...........vvvvvvv.....kkk.v...vvvv..........n...v...........n509func double(_ n: Int) -> Int {
+t.celsius = 2kkkkkk.tttt.......kkk.vvvvvvv..tttttt.....kkk.vvvvvvvvvv..tttttt...vvvvvvv...n...n...nn.......kkkk...............tttttt....vvvvvvv....v...nn....n...n.......kkkk..........tttttt....vvvv...........vvvvvvv.....kkk.v...vvvv..........n...v...........n509func double(@input _ n: Int) -> Int {
     n * 2
 }
-func total(_ xs: [Int]) -> Int {
+func total(@input _ xs: [Int]) -> Int {
     var t = 0
     for x in xs {
         t = t + x
     }
     return t
 }
-func evens(_ n: Int) -> Int? {
+func evens(@input _ n: Int) -> Int? {
     if (n % 2) == 0 {
         return n
     }
     return nil
 }
 var calls = 0
-func counted(_ n: Int) -> Int {
+func counted(@input _ n: Int) -> Int {
     calls = calls + 1
     return n
 }
-/* a construct from a layer over the core */kkkk.cccccc.kkkkkk......ttt.....ttt...v...n...kkkk.ccccc.kkkkkk........ttt......ttt...kkk.v...n..kkk.v.kk.vv...v...v...v....kkkkkk.v...kkkk.ccccc.kkkkkk......ttt.....ttt....kk.v...n....n...kkkkkk.v....kkkkkk.CCC...kkk.vvvvv...n.kkkk.ccccccc.kkkkkk......ttt.....ttt...vvvvv...vvvvv...n..kkkkkk.v...cccccc.sssss...cccccc510func f(times: Int = 1, color: Bool = true) {}kkkk.c.kkkkk.sss.........ttt...n.........tttt...CCCC....511/* a construct from a layer over the core */cc.ff.ssssssss....cccccc....cccccc512/* a construct from a layer over the core */
+/* a construct from a layer over the core */kkkk.cccccc.kkkkkk......ttt.....ttt...v...n...kkkk.ccccc.kkkkkk........ttt......ttt...kkk.v...n..kkk.v.kk.vv...v...v...v....kkkkkk.v...kkkk.ccccc.kkkkkk......ttt.....ttt....kk.v...n....n...kkkkkk.v....kkkkkk.CCC...kkk.vvvvv...n.kkkk.ccccccc.kkkkkk......ttt.....ttt...vvvvv...vvvvv...n..kkkkkk.v...cccccc.sssss...cccccc510func f(@flag("n") times: Int = 1, color: Bool = true) {}kkkk.c.kkkkk.sss.........ttt...n.........tttt...CCCC....511/* a construct from a layer over the core */cc.ff.ssssssss....cccccc....cccccc512/* a construct from a layer over the core */
 /* a construct from a layer over the core */kkk.cccc.ppCCCCCp....cccc............513let c = 1
 c = 2
-/* a construct from a layer over the core */kkk.v...n..v...n..cccc............514func double(_ n: Int) -> Int {
+/* a construct from a layer over the core */kkk.v...n..v...n..cccc............514func double(@input _ n: Int) -> Int {
     n * 2
 }
-func total(_ xs: [Int]) -> Int {
+func total(@input _ xs: [Int]) -> Int {
     var t = 0
     for x in xs {
         t = t + x
     }
     return t
 }
-func evens(_ n: Int) -> Int? {
+func evens(@input _ n: Int) -> Int? {
     if (n % 2) == 0 {
         return n
     }
     return nil
 }
 var calls = 0
-func counted(_ n: Int) -> Int {
+func counted(@input _ n: Int) -> Int {
     calls = calls + 1
     return n
 }
@@ -1646,28 +1652,28 @@ func counted(_ n: Int) -> Int {
 }
 let o = try f()
 o.status.codekkkk.c......tttttt...ppCCCCCp....kkk.v...kkk.v....v............516let c = 1
-c = 2kkk.v...n..v...n517let zzvalue = 1kkk.vvvvvvv...n518func f(_ x: Int) -> Int {
+c = 2kkk.v...n..v...n517let zzvalue = 1kkk.vvvvvvv...n518func f(@input _ x: Int) -> Int {
     x
 }
 /* a construct from a layer over the core */kkkk.c.kkkkkk......ttt.....ttt...v....ccc.....c.p.............c519/* a construct from a layer over the core */cc520/* a construct from a layer over the core */
-env.SWISH_TEST_498334 == nilvvvvvvvvvvvvvvvvv.sssss.cc.ff.sssssssssssssssssssssssssss..vvv......................CCC5211 / 0n...n522func double(_ n: Int) -> Int {
+env.SWISH_TEST_498334 == nilvvvvvvvvvvvvvvvvv.sssss.cc.ff.sssssssssssssssssssssssssss..vvv......................CCC5211 / 0n...n522func double(@input _ n: Int) -> Int {
     n * 2
 }
-func total(_ xs: [Int]) -> Int {
+func total(@input _ xs: [Int]) -> Int {
     var t = 0
     for x in xs {
         t = t + x
     }
     return t
 }
-func evens(_ n: Int) -> Int? {
+func evens(@input _ n: Int) -> Int? {
     if (n % 2) == 0 {
         return n
     }
     return nil
 }
 var calls = 0
-func counted(_ n: Int) -> Int {
+func counted(@input _ n: Int) -> Int {
     calls = calls + 1
     return n
 }
@@ -1781,24 +1787,24 @@ skkk.v...n..v...n...sssss...sssssss..kkk.v...v...n...sssss...sssssss..v563/* 
     "one"
 } else {
     "more"
-} }CCCC...CCCCC...sss...sss...sss...n..n........vv....n...sssss...ssssss..566/* a construct from a layer over the core */cccc...567Command("false").run().or { Command("echo", "fallback").run() }vvvvvvv.sssssss.............vvvvvvv.ssssss..ssssssssss.........568/* a construct from a layer over the core */cccc.....569/* a construct from a layer over the core */cccc.sppnsssnsssssssssssssssps570func double(_ n: Int) -> Int {
+} }CCCC...CCCCC...sss...sss...sss...n..n........vv....n...sssss...ssssss..566/* a construct from a layer over the core */cccc...567Command("false").run().or { Command("echo", "fallback").run() }vvvvvvv.sssssss.............vvvvvvv.ssssss..ssssssssss.........568/* a construct from a layer over the core */cccc.....569/* a construct from a layer over the core */cccc.sppnsssnsssssssssssssssps570func double(@input _ n: Int) -> Int {
     n * 2
 }
-func total(_ xs: [Int]) -> Int {
+func total(@input _ xs: [Int]) -> Int {
     var t = 0
     for x in xs {
         t = t + x
     }
     return t
 }
-func evens(_ n: Int) -> Int? {
+func evens(@input _ n: Int) -> Int? {
     if (n % 2) == 0 {
         return n
     }
     return nil
 }
 var calls = 0
-func counted(_ n: Int) -> Int {
+func counted(@input _ n: Int) -> Int {
     calls = calls + 1
     return n
 }
@@ -1889,7 +1895,9 @@ let k = Kind.directory
 k
 k == .directory
 k != .file
-Kind.allCaseskkkk.tttt...kkkk.CCCC..CCCCCCCCC...kkk.v...vvvv............v..v....CCCCCCCCCC..v....CCCCC..vvvv.........595/* a construct from a layer over the core */v...ccc596func greet(_ name: String, times: Int = 1, color: Bool = true, tags: [String]) {}
+Kind.allCaseskkkk.tttt...kkkk.CCCC..CCCCCCCCC...kkk.v...vvvv............v..v....CCCCCCCCCC..v....CCCCC..vvvv.........595/* a construct from a layer over the core */v...ccc596/// Greets someone.
+/// - Parameter name: who to greet
+func greet(_ name: String, @flag("n") times: Int = 1, color: Bool = true, tags: [String]) {}
 /* a construct from a layer over the core */mmmmmmmmmmmmmmmmmmm.mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm.kkkk.ccccc.........tttttt..kkkkk.sss.........ttt...n.........tttt...CCCC.........tttttt......ccccc.ffffff597/* a construct from a layer over the core */kkk.cc.ff.ssssssss598let double = { $0 * 2 }
 double(21)kkk.vvvvvv.....vv...n....vvvvvv.nn.599enum Kind {
     case file
@@ -1944,7 +1952,8 @@ for line in r {
     name ?? "anon"
 }
 /* a construct from a layer over the core */
-/* a construct from a layer over the core */kkkk.c.......tttttt....CCC.....tttttt...vvvv....ssssss....c..c.ffffff..621/* a construct from a layer over the core */cc.ff.ssssssss....cc.ff.ssssssss....cccccc622func main(_ name: String, loud: Bool = false) {
+/* a construct from a layer over the core */kkkk.c.......tttttt....CCC.....tttttt...vvvv....ssssss....c..c.ffffff..621/* a construct from a layer over the core */cc.ff.ssssssss....cc.ff.ssssssss....cccccc622/// Greets someone.
+func main(_ name: String, loud: Bool = false) {
     if loud {
         /* a construct from a layer over the core */
     } else {

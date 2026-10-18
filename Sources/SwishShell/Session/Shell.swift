@@ -196,6 +196,24 @@ extension Shell {
         do {
             let checked = try checker.check(program)
             interpreter.staticTypes.merge(checker.declaredGlobals) { $1 }
+            // Spike: what is left is Swift alone, so it can go to the interpreter as source, with no layer's syntax in it.
+            if ProcessInfo.processInfo.environment["SWISH_SPLIT"] != nil {
+                let printed = SwiftPrinter().source(checked)
+                switch interpreter.parseSwift(printed) {
+                case .success(let again):
+                    do {
+                        let rechecked = try TypeChecker(interpreter: interpreter).check(again)
+                        FileHandle.standardError.write(Data("SPLIT OK\n".utf8))
+                        return rechecked
+                    } catch let error as TypeError {
+                        FileHandle.standardError.write(Data("SPLIT RECHECK: \(error.message)\n  \(printed.prefix(200))\n".utf8))
+                    } catch {
+                        preconditionFailure("the checker only throws TypeError")
+                    }
+                case .failure(let error):
+                    FileHandle.standardError.write(Data("SPLIT UNREAD: \(error)\n  \(printed.prefix(200))\n".utf8))
+                }
+            }
             return checked
         } catch {
             if error.spot ?? error.range != nil, diagnosticSource != nil {
