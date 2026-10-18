@@ -125,9 +125,6 @@ extension TypeChecker {
         if known, let result = try checkBridgedStage(name, &command, element: element, receiver: .each) {
             return result
         }
-        // Decided here, even when the items' type isn't known: the
-        // interpreter doesn't guess.
-        if input != nil { command.resolution = .other }
         // A method with nothing piped in, and no function or program by
         // that name, has nothing to work on.
         if input == nil, shell!.isStageMethod(name), lookup(name) == nil, shell!.findExecutable(name) == nil {
@@ -157,7 +154,7 @@ extension TypeChecker {
         case .each, .value: element
         }
         guard !command.external, let (bridgedType, bindings) = bridged(receiverType),
-              let runtime = shell!.bridgedStage(bridgedType.name, name, receiver: receiver, bindings: bindings) else { return nil }
+              shell!.bridgedStage(bridgedType.name, name, receiver: receiver, bindings: bindings) != nil else { return nil }
         let signatures = (receiver == .flow ? Bridge.flowMembers(name) : Bridge.stageMembers(bridgedType.name, name)).enumerated().map { position, entry in
             Signature(name: name, parameters: [Bridge.receiverParameter(receiver, element: element)] + entry.member.parameters,
                       returns: entry.member.returns, isThrowing: entry.member.isThrowing,

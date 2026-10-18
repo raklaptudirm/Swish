@@ -12,9 +12,9 @@ import SwiitKit
 // Here is how they run: through the same machinery as a command typed at the
 // prompt.
 
-/// What the checker decided about a stage, which a stage written by hand
-/// leaves to the shell: what its name is, given what flows into it, which
-/// overload a call to it takes, and why it isn't an expression.
+/// What the checker decided about a stage: what its name is, given what flows
+/// into it and what is in scope, which overload a call to it takes, and why it
+/// isn't an expression.
 final class StageHint: SwiitObject, @unchecked Sendable {
     let resolution: StageResolution?
     let overload: Int?
@@ -39,7 +39,6 @@ final class StageHint: SwiitObject, @unchecked Sendable {
         case .sequenceMethod?: parts.append(".sequenceMethod")
         case .itemMethod?: parts.append(".itemMethod")
         case .bridged(let type, let receiver, _)?: parts.append(".member(of: \"\(type)\", on: .\(receiver))")
-        case .other?: parts.append(".other")
         case nil: break
         }
         if let overload { parts.append("overload: \(overload)") }

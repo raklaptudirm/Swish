@@ -27,8 +27,7 @@ struct CommandNode: Equatable, Sendable {
     var environment: [EnvironmentAssignment] = []
     /// `sorted(by: "size")` after a `|`: arguments written as a call.
     var call: [Argument]? = nil
-    /// What the checker found the name to be, from the type of what's piped
-    /// in; nil when it couldn't tell, and the interpreter looks.
+    /// What the checker found the name to be, when it is a method of the flow.
     var resolution: StageResolution? = nil
     /// For a stage written as a call, the overload the checker chose.
     var overload: Int? = nil
@@ -43,7 +42,9 @@ struct CommandNode: Equatable, Sendable {
     }
 }
 
-/// What a pipeline stage's name is, given what flows into it.
+/// What a command's name is, when it is a method of what flows into it, as
+/// the checker decided from the type. Any other name has no resolution: it is
+/// a function if one has that name, else a program.
 enum StageResolution: Equatable, Sendable {
     /// A method of the sequence: `ls | sorted`.
     case sequenceMethod
@@ -53,8 +54,6 @@ enum StageResolution: Equatable, Sendable {
     /// what its generic parameters are here, so a word on the command line
     /// converts to them (`xs | contains 2`, 2 an Int).
     case bridged(type: String, receiver: StageReceiver, bindings: [String: TypeAnnotation])
-    /// Neither: a function or a program, looked up as for the first command.
-    case other
 }
 
 /// What a Swift member as a stage is called on.

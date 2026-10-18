@@ -70,10 +70,10 @@ private func desugared(_ source: String, in shell: Shell = Shell()) throws -> St
 }
 
 @Test func pipelinesCarryWhatTheCheckerDecided() throws {
-    #expect(try desugared("echo a | cat") == #"Pipeline(Command("echo", "a"), Command("cat").checked(StageHint(.other))).run()"#)
+    #expect(try desugared("echo a | cat") == #"Pipeline(Command("echo", "a"), Command("cat")).run()"#)
     // With a program after it, a Swift member is a stage too.
     #expect(try desugared("[3, 1] | sorted | cat")
-        == #"Pipeline(from: [3, 1], Command("sorted").checked(StageHint(.member(of: "Array", on: .collected))), Command("cat").checked(StageHint(.other))).run()"#)
+        == #"Pipeline(from: [3, 1], Command("sorted").checked(StageHint(.member(of: "Array", on: .collected))), Command("cat")).run()"#)
     #expect(try desugared(#"ls | sorted(by: \.size)"#).contains(#"Command("sorted").calling((by: \.size))"#))
 }
 
@@ -98,10 +98,11 @@ private func desugared(_ source: String, in shell: Shell = Shell()) throws -> St
 }
 
 @Test func commandsAndPipelinesRunWrittenByHand() throws {
+    // A name written by hand is a function or a program; only the checker says it is a method of what flows in.
     let shell = Shell()
     let run = { (source: String) in try onLargeStack { try shell.capturing { shell.execute(source) } } }
     #expect(try run(#"Command("echo", "a b", Spread(["x", "y"])).run()"#) == "a b x y\n")
-    #expect(try run(#"print(Pipeline(from: [3, 1, 2], Command("sorted")).output().text)"#) == "1\n2\n3\n")
+    #expect(try run(#"print(Pipeline(from: [3, 1, 2], Command("cat")).output().text)"#) == "3\n1\n2\n")
     #expect(try run(#"print(capture { echo hi }.text)"#) == "hi\n")
     #expect(try run(#"print(Command("env").environment(["XYZ": "1"]).output().lines.filter { $0 == "XYZ=1" })"#) == "[\"XYZ=1\"]\n")
     // `e>o > /dev/null`: errors go where the output went before it was sent away.
