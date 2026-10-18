@@ -36,7 +36,11 @@ func bridge() {
         let manifest = "Bridges/\(other)/\(module).json"
         if other != platform && $(^test -f $manifest).status.succeeded { platforms += ["--also", manifest] }
     }
-    try! swift run --package-path ../Swiit -c release swiit-bridge "\(graphs)/\(module).symbols.json" "Sources/SwishShell/Bridge/Generated/ShellLibrary.swift" $platforms
+    // What the library adds to the standard library's types (`String.styled`) is in a graph of its own.
+    var added: [String] = []
+    let extensions = "\(graphs)/\(module)@Swift.symbols.json"
+    if $(^test -f $extensions).status.succeeded { added.append(extensions) }
+    try! swift run --package-path ../Swiit -c release swiit-bridge "\(graphs)/\(module).symbols.json" "Sources/SwishShell/Bridge/Generated/ShellLibrary.swift" $added $platforms
 }
 
 /// `swift test` for a package. With only the Command Line Tools installed,

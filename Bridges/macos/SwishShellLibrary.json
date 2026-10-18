@@ -118,7 +118,8 @@
     "Output\tswift.property\tstatusRecord",
     "Output\tswift.property\tsucceeded",
     "Output\tswift.property\ttext",
-    "Output\tswift.property\tunderestimatedCount"
+    "Output\tswift.property\tunderestimatedCount",
+    "String\tswift.method\tstyled(_:in:)"
   ],
   "module" : "SwishShellLibrary",
   "platform" : "macos"

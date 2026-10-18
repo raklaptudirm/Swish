@@ -331,6 +331,11 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
     #expect(try output(#""a\nb".lines.count; [1, 2].last; "abc".count"#) == "2\n2\n3\n")
 }
 
+@Test func textIsStyledOnlyWhereColorIsOn() throws {
+    // A method the shell's library adds to String; plain here, as the output is no terminal.
+    #expect(try output(#"print("x".styled(.bold, .red)); "y".styled(.green).count"#) == "x\n1\n")
+}
+
 @Test func fileSizes() throws {
     #expect(try output("1.5.gb + 500.mb; 1.kib.bytes; 10.mb / 4; 1.mb > 999.kb; 4.mb / 2.mb; -1.kb") == "2.0 GB\n1024\n2.5 MB\ntrue\n2.0\n-1.0 KB\n")
     #expect(try output(#"func f(_ s: FileSize) -> FileSize { s }; f 1.5mb; f 2048"#) == "1.5 MB\n2.0 KB\n")
