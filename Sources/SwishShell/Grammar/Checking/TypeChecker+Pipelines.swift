@@ -316,33 +316,71 @@ extension TypeChecker {
                 arguments.append(.value(.function(stand)))
             }
         }
-        // `--help` shows help instead of running.
-        if shell!.helpRequested(arguments, for: set) { return .string }
-        let function: Function
-        let bound: [String: Value]
-        do {
-            (function, bound) = try shell!.interpreter.resolve(set) { try self.shell!.bind(commandLine: arguments, to: $0, excludingInput: excludingInput) }
-        } catch let error as RuntimeError {
-            throw TypeError(error.description)
+        let shapes = arguments.map { argument -> CommandWordShape in
+            if case .text(let text) = argument { .text(text) } else { .closure }
         }
-        guard let index = set.candidates.firstIndex(where: { $0 === function }), index < signatures.count else { return .unknown }
+        // What the words were bound to: the overload, a key path's fields, and whether a parameter took a closure.
+        let index: Int
+        let keyPathFields: (String) -> [String]?
+        let tookClosure: (String, Int) -> Bool
+        let pure = ProcessInfo.processInfo.environment["SWISH_PUREBIND"]
+        if pure == "1" {
+            // Spike: bound from the signatures alone; the runtime's overloads aren't consulted.
+            if shell!.helpRequested(shapes, for: signatures) { return .string }
+            let binding: CommandLineBinding
+            do {
+                binding = try shell!.bindCommandLine(shapes, to: signatures, name: name, excludingInput: excludingInput)
+            } catch let error as RuntimeError {
+                throw TypeError(error.description)
+            }
+            index = binding.overload
+            keyPathFields = { binding.assigned[$0]?.first?.text.map { $0.split(separator: ".").map(String.init) } }
+            // A placeholder's word is counted from the command's name; a binding's from the first argument.
+            tookClosure = { parameter, word in binding.assigned[parameter]?.contains { $0.word == word - 1 } ?? false }
+        } else {
+            // `--help` shows help instead of running.
+            if shell!.helpRequested(arguments, for: set) { return .string }
+            let function: Function
+            let bound: [String: Value]
+            do {
+                (function, bound) = try shell!.interpreter.resolve(set) { try self.shell!.bind(commandLine: arguments, to: $0, excludingInput: excludingInput) }
+            } catch let error as RuntimeError {
+                throw TypeError(error.description)
+            }
+            guard let found = set.candidates.firstIndex(where: { $0 === function }), found < signatures.count else { return .unknown }
+            index = found
+            keyPathFields = { name in
+                if case .function(let keyPath as KeyPathValue)? = bound[name] { keyPath.path } else { nil }
+            }
+            tookClosure = { parameter, word in
+                if case .function(let value as Function)? = bound[parameter], let stand = placeholders.first(where: { $0.word == word }) { value === stand.function } else { false }
+            }
+            if pure == "shadow", let binding = try? shell!.bindCommandLine(shapes, to: signatures, name: name, excludingInput: excludingInput) {
+                if binding.overload == index { FileHandle.standardError.write(Data("BIND SAME \(name) \(signatures.count)\n".utf8)) }
+                if binding.overload != index {
+                    FileHandle.standardError.write(Data("BIND DIFFER \(name): runtime \(index), pure \(binding.overload)\n".utf8))
+                }
+            } else if pure == "shadow" {
+                FileHandle.standardError.write(Data("BIND DIFFER \(name): runtime bound, pure threw\n".utf8))
+            }
+        }
+        guard index < signatures.count else { return .unknown }
         let signature = signatures[index]
         var bindings = initial
         for parameter in signature.parameters {
             // `--by size`: a key path read from the items.
-            if case .keyPath(let rootPattern, _) = parameter.type, case .function(let keyPath as KeyPathValue)? = bound[parameter.name] {
+            if case .keyPath(let rootPattern, _) = parameter.type, let path = keyPathFields(parameter.name) {
                 var type = substitute(rootPattern, bindings)
                 let root = type
                 if type != .unknown {
-                    for member in keyPath.path { type = try memberType(of: type, member) }
+                    for member in path { type = try memberType(of: type, member) }
                 }
                 unify(parameter.type, .keyPath(root, type), &bindings)
             }
         }
         for placeholder in placeholders {
-            guard let parameter = signature.parameters.first(where: {
-                if case .function(let value as Function)? = bound[$0.name] { value === placeholder.function } else { false }
-            }), case .closure(var closure) = command.words[placeholder.word] else { continue }
+            guard let parameter = signature.parameters.first(where: { tookClosure($0.name, placeholder.word) }),
+                  case .closure(var closure) = command.words[placeholder.word] else { continue }
             let actual = try closureType(&closure, expecting: substitute(parameter.type, bindings))
             command.words[placeholder.word] = .closure(closure)
             guard fits(actual, substitute(parameter.type, bindings)) else {
