@@ -190,11 +190,21 @@ extension Shell {
     /// decided written in, or nil if it mustn't run.
     func typeCheck(_ program: Program, file: String? = nil) -> Program? {
         let checker = TypeChecker(interpreter: interpreter)
+        let desugarer = Desugarer(directCalls: directCalls)
+        let fused = ProcessInfo.processInfo.environment["SWISH_FUSED"] != nil
+        if fused { checker.rewriteExtension = { desugarer.expression($0) } }
         do {
             let checked = try checker.check(program)
             interpreter.staticTypes.merge(checker.declaredGlobals) { $1 }
             // Now what the checker knows is written in: the shell's constructs become Swift.
-            return Desugarer(directCalls: directCalls).program(checked)
+            // Fused, the checker already did; the pass over it finds nothing left to do.
+            if fused {
+                // Spike: anything still a shell node was missed by the fused rewrite.
+                nonisolated(unsafe) var left = 0
+                _ = TreeRewriter(expr: { if case .extended = $0 { left += 1 }; return $0 }).program(checked)
+                if left > 0 { FileHandle.standardError.write(Data("FUSED: \(left) shell nodes left\n".utf8)) }
+            }
+            return desugarer.program(checked)
         } catch {
             if error.spot ?? error.range != nil, diagnosticSource != nil {
                 reportDiagnostic(.type, error.message, at: error.spot ?? error.range)

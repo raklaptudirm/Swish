@@ -25,7 +25,7 @@ final class Desugarer {
 
     // MARK: Expressions
 
-    private func expression(_ expr: Expr) -> Expr {
+    func expression(_ expr: Expr) -> Expr {
         guard case .extended(let box) = expr else { return expr }
         switch box.node {
         case let node as DollarExpr:
