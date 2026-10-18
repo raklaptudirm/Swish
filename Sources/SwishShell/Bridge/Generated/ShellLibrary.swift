@@ -27,6 +27,15 @@ extension Bridge {
                 member24, member25, member26
             ]
         ),
+        BridgedType(
+            name: "Output", genericParameters: [],
+            conformances: ["CustomStringConvertible": [:], "Equatable": [:], "Hashable": [:], "Sequence": [:], "StandsForText": [:]],
+            associatedTypes: ["Element": .string, "Index": .int],
+            parse: nil, literal: nil, arrayLiteral: nil,
+            members: [
+                member27, member28, member29, member30, member31, member32, member33, member34, member35, member36, member37, member38, member39, member40, member41, member42, member43, member44, member45, member46, member47, member48, member49, member50, member51, member52, member53, member54, member55, member56, member57, member58, member59, member60, member61, member62, member63, member64, member65, member66, member67, member68, member69, member70, member71, member72, member73, member74, member75
+            ]
+        ),
     ]
     /// The module's structs, as Swiit source: declared with the prelude.
     package static let shellTypes = #"""
@@ -82,7 +91,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
     /// How the module's enums say how a case is shown, by case name.
     package static let shellEnumStyles: [String: @Sendable (String) -> DisplayStyle?] = ["FileType": { name in FileType.allCases.first { "\($0)" == name }?.displayStyle }, "JobState": { name in JobState.allCases.first { "\($0)" == name }?.displayStyle }]
 
-    package nonisolated(unsafe) static let shellFunctions: [BridgedMember] = [member27, member28, member29, member30, member31, member32, member33, member34, member35, member36]
+    package nonisolated(unsafe) static let shellFunctions: [BridgedMember] = [member76, member77, member78, member79, member80, member81, member82, member83, member84, member85]
     nonisolated(unsafe) private static let member0: BridgedMember =                 BridgedMember(
                     kind: .method, name: "...", isStatic: true,
                     parameters: [Parameter(label: nil, name: "minimum", type: .named("FileSize")), Parameter(label: nil, name: "maximum", type: .named("FileSize"))],
@@ -439,6 +448,690 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                 )
 
     nonisolated(unsafe) private static let member27: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "map", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "transform", type: .functionType([.string], .parameter("T"), throws: true))],
+                    returns: .list(.parameter("T")), generics: ["T": []],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Returns an array containing the results of mapping the given closure over the sequence's elements.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result: [Value] = try receiver.map({ (a0: String) throws -> Value in try bridgeClosure(shell, args["transform"]!)([a0.swiitValue]) })
+                return .list(result)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member28: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "last", isStatic: false,
+                    parameters: [],
+                    returns: .optional(.string), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "The last element of the collection.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.last
+                return (result.map { $0.swiitValue } ?? .nothing)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member29: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "firstIndex", isStatic: false,
+                    parameters: [Parameter(label: "of", name: "element", type: .string)],
+                    returns: .optional(.int), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns the first index where the specified value appears in the collection.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.firstIndex(of: try String(swiitValue: args["element"]!))
+                return (result.map { $0.swiitValue } ?? .nothing)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member30: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "firstIndex", isStatic: false,
+                    parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.string], .bool, throws: true))],
+                    returns: .optional(.int), generics: [:],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Returns the first index in which an element of the collection satisfies the given predicate.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = try receiver.firstIndex(where: { (a0: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["predicate"]!)([a0.swiitValue])) })
+                return (result.map { $0.swiitValue } ?? .nothing)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member31: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "last", isStatic: false,
+                    parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.string], .bool, throws: true))],
+                    returns: .optional(.string), generics: [:],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Returns the last element of the sequence that satisfies the given predicate.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = try receiver.last(where: { (a0: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["predicate"]!)([a0.swiitValue])) })
+                return (result.map { $0.swiitValue } ?? .nothing)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member32: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "lastIndex", isStatic: false,
+                    parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.string], .bool, throws: true))],
+                    returns: .optional(.int), generics: [:],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Returns the index of the last element in the collection that matches the given predicate.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = try receiver.lastIndex(where: { (a0: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["predicate"]!)([a0.swiitValue])) })
+                return (result.map { $0.swiitValue } ?? .nothing)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member33: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "lastIndex", isStatic: false,
+                    parameters: [Parameter(label: "of", name: "element", type: .string)],
+                    returns: .optional(.int), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns the last index where the specified value appears in the collection.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.lastIndex(of: try String(swiitValue: args["element"]!))
+                return (result.map { $0.swiitValue } ?? .nothing)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member34: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "shuffled", isStatic: false,
+                    parameters: [],
+                    returns: .list(.string), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns the elements of the sequence, shuffled.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result: [String] = receiver.shuffled()
+                return .list(result.map { $0.swiitValue })
+                    }
+                )
+
+    nonisolated(unsafe) private static let member35: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "!=", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "lhs", type: .named("Output")), Parameter(label: nil, name: "rhs", type: .named("Output"))],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a Boolean value indicating whether two values are not equal.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = (try SwiftValue.unbox(Output.self, args["lhs"]!)) != (try SwiftValue.unbox(Output.self, args["rhs"]!))
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member36: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "filter", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "isIncluded", type: .functionType([.string], .bool, throws: true))],
+                    returns: .list(.string), generics: [:],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Returns an array containing, in order, the elements of the sequence that satisfy the given predicate.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result: [String] = try receiver.filter({ (a0: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["isIncluded"]!)([a0.swiitValue])) })
+                return .list(result.map { $0.swiitValue })
+                    }
+                )
+
+    nonisolated(unsafe) private static let member37: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "forEach", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "body", type: .functionType([.string], .void, throws: true))],
+                    returns: .void, generics: [:],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Calls the given closure on each element in the sequence in the same order as a `for`-`in` loop.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                try receiver.forEach({ (a0: String) throws -> Void in _ = try bridgeClosure(shell, args["body"]!)([a0.swiitValue]) })
+                return .nothing
+                    }
+                )
+
+    nonisolated(unsafe) private static let member38: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "first", isStatic: false,
+                    parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.string], .bool, throws: true))],
+                    returns: .optional(.string), generics: [:],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Returns the first element of the sequence that satisfies the given predicate.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = try receiver.first(where: { (a0: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["predicate"]!)([a0.swiitValue])) })
+                return (result.map { $0.swiitValue } ?? .nothing)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member39: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "min", isStatic: false,
+                    parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.string, .string], .bool, throws: true))],
+                    returns: .optional(.string), generics: [:],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Returns the minimum element in the sequence, using the given predicate as the comparison between elements.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = try receiver.min(by: { (a0: String, a1: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0.swiitValue, a1.swiitValue])) })
+                return (result.map { $0.swiitValue } ?? .nothing)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member40: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "max", isStatic: false,
+                    parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.string, .string], .bool, throws: true))],
+                    returns: .optional(.string), generics: [:],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Returns the maximum element in the sequence, using the given predicate as the comparison between elements.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = try receiver.max(by: { (a0: String, a1: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0.swiitValue, a1.swiitValue])) })
+                return (result.map { $0.swiitValue } ?? .nothing)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member41: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "min", isStatic: false,
+                    parameters: [],
+                    returns: .optional(.string), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns the minimum element in the sequence.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.min()
+                return (result.map { $0.swiitValue } ?? .nothing)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member42: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "max", isStatic: false,
+                    parameters: [],
+                    returns: .optional(.string), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns the maximum element in the sequence.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.max()
+                return (result.map { $0.swiitValue } ?? .nothing)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member43: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "starts", isStatic: false,
+                    parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.parameter("PossiblePrefix.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.string, .parameter("PossiblePrefix.Element")], .bool, throws: true))],
+                    returns: .bool, generics: ["PossiblePrefix.Element": []],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Returns a Boolean value indicating whether the initial elements of the sequence are equivalent to the elements in another sequence, using the given predicate as the equivalence test.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = try receiver.starts(with: try bridgeSequence(args["possiblePrefix"]!), by: { (a0: String, a1: Value) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["areEquivalent"]!)([a0.swiitValue, a1])) })
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member44: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "starts", isStatic: false,
+                    parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.string))],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a Boolean value indicating whether the initial elements of the sequence are the same as the elements in another sequence.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.starts(with: try bridgeSequence(args["possiblePrefix"]!).map { try String(swiitValue: $0) })
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member45: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "elementsEqual", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("OtherSequence.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.string, .parameter("OtherSequence.Element")], .bool, throws: true))],
+                    returns: .bool, generics: ["OtherSequence.Element": []],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Returns a Boolean value indicating whether this sequence and another sequence contain equivalent elements in the same order, using the given predicate as the equivalence test.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = try receiver.elementsEqual(try bridgeSequence(args["other"]!), by: { (a0: String, a1: Value) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["areEquivalent"]!)([a0.swiitValue, a1])) })
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member46: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "uniqued", isStatic: false,
+                    parameters: [],
+                    returns: .list(.string), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "The items without repeats, first ones kept.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result: [String] = receiver.uniqued()
+                return .list(result.map { $0.swiitValue })
+                    }
+                )
+
+    nonisolated(unsafe) private static let member47: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "compactMap", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "transform", type: .functionType([.string], .optional(.parameter("ElementOfResult")), throws: true))],
+                    returns: .list(.parameter("ElementOfResult")), generics: ["ElementOfResult": []],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Returns an array containing the non-`nil` results of calling the given transformation with each element of this sequence.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result: [Value] = try receiver.compactMap({ (a0: String) throws -> Value? in bridgeOptional(try bridgeClosure(shell, args["transform"]!)([a0.swiitValue])) { $0 } })
+                return .list(result)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member48: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "sorted", isStatic: false,
+                    parameters: [],
+                    returns: .list(.string), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns the elements of the sequence, sorted.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result: [String] = receiver.sorted()
+                return .list(result.map { $0.swiitValue })
+                    }
+                )
+
+    nonisolated(unsafe) private static let member49: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "sorted", isStatic: false,
+                    parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.string, .string], .bool, throws: true))],
+                    returns: .list(.string), generics: [:],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Returns the elements of the sequence, sorted using the given predicate as the comparison between elements.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result: [String] = try receiver.sorted(by: { (a0: String, a1: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0.swiitValue, a1.swiitValue])) })
+                return .list(result.map { $0.swiitValue })
+                    }
+                )
+
+    nonisolated(unsafe) private static let member50: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "lexicographicallyPrecedes", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "other", type: .someSequence(.string)), Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.string, .string], .bool, throws: true))],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Returns a Boolean value indicating whether the sequence precedes another sequence in a lexicographical (dictionary) ordering, using the given predicate to compare elements.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = try receiver.lexicographicallyPrecedes(try bridgeSequence(args["other"]!).map { try String(swiitValue: $0) }, by: { (a0: String, a1: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0.swiitValue, a1.swiitValue])) })
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member51: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "lexicographicallyPrecedes", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "other", type: .someSequence(.string))],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a Boolean value indicating whether the sequence precedes another sequence in a lexicographical (dictionary) ordering, using the less-than operator (`<`) to compare elements.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.lexicographicallyPrecedes(try bridgeSequence(args["other"]!).map { try String(swiitValue: $0) })
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member52: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "contains", isStatic: false,
+                    parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.string], .bool, throws: true))],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Returns a Boolean value indicating whether the sequence contains an element that satisfies the given predicate.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = try receiver.contains(where: { (a0: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["predicate"]!)([a0.swiitValue])) })
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member53: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "allSatisfy", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "predicate", type: .functionType([.string], .bool, throws: true))],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Returns a Boolean value indicating whether every element of a sequence satisfies a given predicate.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = try receiver.allSatisfy({ (a0: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["predicate"]!)([a0.swiitValue])) })
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member54: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "contains", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "element", type: .string)],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a Boolean value indicating whether the sequence contains the given element.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.contains(try String(swiitValue: args["element"]!))
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member55: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "count", isStatic: false,
+                    parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.string], .bool, throws: true))],
+                    returns: .int, generics: [:],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Returns the number of elements in the sequence that satisfy the given predicate.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = try receiver.count(where: { (a0: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["predicate"]!)([a0.swiitValue])) })
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member56: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "reduce", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "initialResult", type: .parameter("Result")), Parameter(label: nil, name: "nextPartialResult", type: .functionType([.parameter("Result"), .string], .parameter("Result"), throws: true))],
+                    returns: .parameter("Result"), generics: ["Result": []],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Returns the result of combining the elements of the sequence using the given closure.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = try receiver.reduce(args["initialResult"]!, { (a0: Value, a1: String) throws -> Value in try bridgeClosure(shell, args["nextPartialResult"]!)([a0, a1.swiitValue]) })
+                return result
+                    }
+                )
+
+    nonisolated(unsafe) private static let member57: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "flatMap", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "transform", type: .functionType([.string], .someSequence(.parameter("SegmentOfResult.Element")), throws: true))],
+                    returns: .list(.parameter("SegmentOfResult.Element")), generics: ["SegmentOfResult.Element": []],
+                    isThrowing: false, isRethrowing: true, isMutating: false,
+                    discardableResult: false, summary: "Returns an array containing the concatenated results of calling the given transformation with each element of this sequence.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result: [Value] = try receiver.flatMap({ (a0: String) throws -> [Value] in try bridgeSequence(try bridgeClosure(shell, args["transform"]!)([a0.swiitValue])) })
+                return .list(result)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member58: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "elementsEqual", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "other", type: .someSequence(.string))],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a Boolean value indicating whether this sequence and another sequence contain the same elements in the same order.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.elementsEqual(try bridgeSequence(args["other"]!).map { try String(swiitValue: $0) })
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member59: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "randomElement", isStatic: false,
+                    parameters: [],
+                    returns: .optional(.string), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a random element of the collection.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.randomElement()
+                return (result.map { $0.swiitValue } ?? .nothing)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member60: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "isEmpty", isStatic: false,
+                    parameters: [],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "A Boolean value indicating whether the collection is empty.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.isEmpty
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member61: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "first", isStatic: false,
+                    parameters: [],
+                    returns: .optional(.string), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "The first element of the collection.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.first
+                return (result.map { $0.swiitValue } ?? .nothing)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member62: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "underestimatedCount", isStatic: false,
+                    parameters: [],
+                    returns: .int, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "A value less than or equal to the number of elements in the collection.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.underestimatedCount
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member63: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "count", isStatic: false,
+                    parameters: [],
+                    returns: .int, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "The number of elements in the collection.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.count
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member64: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "index", isStatic: false,
+                    parameters: [Parameter(label: nil, name: "i", type: .int), Parameter(label: "offsetBy", name: "distance", type: .int), Parameter(label: "limitedBy", name: "limit", type: .int)],
+                    returns: .optional(.int), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns an index that is the specified distance from the given index, unless that distance is beyond a given limiting index.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.index(try Int(swiitValue: args["i"]!), offsetBy: try Int(swiitValue: args["distance"]!), limitedBy: try Int(swiitValue: args["limit"]!))
+                return (result.map { $0.swiitValue } ?? .nothing)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member65: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "text", isStatic: false,
+                    parameters: [],
+                    returns: .string, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "All of it, as one String.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.text
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member66: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "code", isStatic: false,
+                    parameters: [],
+                    returns: .optional(.int), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "The exit code, or nil if a signal ended the command.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.code
+                return (result.map { $0.swiitValue } ?? .nothing)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member67: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "signal", isStatic: false,
+                    parameters: [],
+                    returns: .optional(.int), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "The signal that ended the command, if one did.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.signal
+                return (result.map { $0.swiitValue } ?? .nothing)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member68: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "lines", isStatic: false,
+                    parameters: [],
+                    returns: .list(.string), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "One String for each line.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result: [String] = receiver.lines
+                return .list(result.map { $0.swiitValue })
+                    }
+                )
+
+    nonisolated(unsafe) private static let member69: BridgedMember =                 BridgedMember(
+                    kind: .initializer, name: "init", isStatic: true,
+                    parameters: [Parameter(label: "text", name: "text", type: .string), Parameter(label: "code", name: "code", type: .optional(.int)), Parameter(label: "signal", name: "signal", type: .optional(.int), defaultValue: .literal(.nothing))],
+                    returns: .named("Output"), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = Output(text: try String(swiitValue: args["text"]!), code: (args["code"]! == .nothing ? nil : try Int(swiitValue: args["code"]!)), signal: (args["signal"]! == .nothing ? nil : try Int(swiitValue: args["signal"]!)))
+                return SwiftValue.make(result, as: "Output")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member70: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "succeeded", isStatic: false,
+                    parameters: [],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.succeeded
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member71: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "status", isStatic: false,
+                    parameters: [],
+                    returns: .named("Status"), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "`output.status`: how the command exited.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.status
+                return bridgeRecord(shell, result)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member72: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "startIndex", isStatic: false,
+                    parameters: [],
+                    returns: .int, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "The position of the first element in a nonempty collection.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.startIndex
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member73: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "endIndex", isStatic: false,
+                    parameters: [],
+                    returns: .int, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "The collection's \"past the end\" position---that is, the position one greater than the last valid subscript argument.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.endIndex
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member74: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "description", isStatic: false,
+                    parameters: [],
+                    returns: .string, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "A textual representation of this instance.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.description
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member75: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "debugDescription", isStatic: false,
+                    parameters: [],
+                    returns: .string, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "A textual representation of this instance, suitable for debugging.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.debugDescription
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member76: BridgedMember =                 BridgedMember(
                     kind: .method, name: "from", isStatic: false,
                     parameters: [Parameter(label: nil, name: "format", type: .named("InputFormat")), Parameter(label: nil, name: "text", type: .list(.string), isInput: true)],
                     returns: .named("JSON"), generics: [:],
@@ -452,7 +1145,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     parameterDocs: ["format": "json"]
                 )
 
-    nonisolated(unsafe) private static let member28: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member77: BridgedMember =                 BridgedMember(
                     kind: .method, name: "to", isStatic: false,
                     parameters: [Parameter(label: nil, name: "format", type: .named("OutputFormat")), Parameter(label: nil, name: "items", type: .list(.any), isInput: true)],
                     returns: .string, generics: [:],
@@ -466,7 +1159,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     parameterDocs: ["format": "json or text"]
                 )
 
-    nonisolated(unsafe) private static let member29: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member78: BridgedMember =                 BridgedMember(
                     kind: .method, name: "table", isStatic: false,
                     parameters: [Parameter(label: nil, name: "items", type: .list(.any), isInput: true)],
                     returns: .list(.string), generics: [:],
@@ -479,7 +1172,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     }
                 )
 
-    nonisolated(unsafe) private static let member30: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member79: BridgedMember =                 BridgedMember(
                     kind: .method, name: "list", isStatic: false,
                     parameters: [Parameter(label: nil, name: "items", type: .list(.any), isInput: true)],
                     returns: .list(.string), generics: [:],
@@ -492,7 +1185,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     }
                 )
 
-    nonisolated(unsafe) private static let member31: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member80: BridgedMember =                 BridgedMember(
                     kind: .method, name: "pwd", isStatic: false,
                     parameters: [],
                     returns: .named("FilePath"), generics: [:],
@@ -505,7 +1198,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     }
                 )
 
-    nonisolated(unsafe) private static let member32: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member81: BridgedMember =                 BridgedMember(
                     kind: .method, name: "with", isStatic: false,
                     parameters: [Parameter(label: "env", name: "variables", type: .dictionary(.string, .string)), Parameter(label: nil, name: "body", type: .functionType([], .parameter("T"), throws: true))],
                     returns: .parameter("T"), generics: ["T": []],
@@ -519,7 +1212,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     parameterDocs: ["body": "what to run with them set", "variables": "the variables to set, as in with(env: [\"EDITOR\": \"vim\"]) { git commit }"]
                 )
 
-    nonisolated(unsafe) private static let member33: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member82: BridgedMember =                 BridgedMember(
                     kind: .method, name: "ls", isStatic: false,
                     parameters: [Parameter(label: nil, name: "paths", type: .named("FilePath"), variadic: true), Parameter(label: "all", name: "all", type: .bool, defaultValue: .literal(.bool(false)), shortFlag: "a")],
                     returns: .list(.named("FileEntry")), generics: [:],
@@ -535,7 +1228,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     parameterDocs: ["all": "include hidden files", "paths": "files or directories to list (default: the current directory)"]
                 )
 
-    nonisolated(unsafe) private static let member34: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member83: BridgedMember =                 BridgedMember(
                     kind: .method, name: "history", isStatic: false,
                     parameters: [],
                     returns: .list(.string), generics: [:],
@@ -548,7 +1241,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     }
                 )
 
-    nonisolated(unsafe) private static let member35: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member84: BridgedMember =                 BridgedMember(
                     kind: .method, name: "readLine", isStatic: false,
                     parameters: [Parameter(label: "strippingNewline", name: "strippingNewline", type: .bool, defaultValue: .literal(.bool(true)))],
                     returns: .optional(.string), generics: [:],
@@ -562,7 +1255,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     parameterDocs: ["strippingNewline": "leave the line's newline off"]
                 )
 
-    nonisolated(unsafe) private static let member36: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member85: BridgedMember =                 BridgedMember(
                     kind: .method, name: "ps", isStatic: false,
                     parameters: [],
                     returns: .list(.named("ProcessEntry")), generics: [:],
