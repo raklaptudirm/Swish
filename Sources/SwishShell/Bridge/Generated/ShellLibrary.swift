@@ -7,7 +7,18 @@ import SwishShellLibrary
 import SystemPackage
 
 extension Bridge {
+    package nonisolated(unsafe) static let shellBridged: [BridgedType] = [
 
+        BridgedType(
+            name: "FileSize", genericParameters: [],
+            conformances: ["Comparable": [:], "CustomStringConvertible": [:], "Encodable": [:], "Equatable": [:], "Hashable": [:]],
+            associatedTypes: [:],
+            parse: { FileSize($0).map { SwiftValue.make($0, as: "FileSize") } }, literal: nil, arrayLiteral: nil,
+            members: [
+                member0, member1, member2, member3, member4, member5, member6, member7, member8, member9, member10, member11, member12, member13, member14, member15, member16, member17, member18, member19, member20, member21, member22, member23
+            ]
+        ),
+    ]
     /// The module's structs, as Swiit source: declared with the prelude.
     package static let shellTypes = #"""
 /// What text `from` can parse.
@@ -62,8 +73,322 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
     /// How the module's enums say how a case is shown, by case name.
     package static let shellEnumStyles: [String: @Sendable (String) -> DisplayStyle?] = ["FileType": { name in FileType.allCases.first { "\($0)" == name }?.displayStyle }, "JobState": { name in JobState.allCases.first { "\($0)" == name }?.displayStyle }]
 
-    package nonisolated(unsafe) static let shellFunctions: [BridgedMember] = [member0, member1, member2, member3, member4, member5, member6, member7, member8, member9]
+    package nonisolated(unsafe) static let shellFunctions: [BridgedMember] = [member24, member25, member26, member27, member28, member29, member30, member31, member32, member33]
     nonisolated(unsafe) private static let member0: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "...", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "minimum", type: .named("FileSize")), Parameter(label: nil, name: "maximum", type: .named("FileSize"))],
+                    returns: .generic("ClosedRange", [.named("FileSize")]), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a closed range that contains both of its bounds.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = (try SwiftValue.unbox(FileSize.self, args["minimum"]!)) ... (try SwiftValue.unbox(FileSize.self, args["maximum"]!))
+                return bridgeBox(result, as: "ClosedRange") { r in ClosedRange<Value>(uncheckedBounds: (lower: SwiftValue.make(r.lowerBound, as: "FileSize"), upper: SwiftValue.make(r.upperBound, as: "FileSize"))) }
+                    }
+                )
+
+    nonisolated(unsafe) private static let member1: BridgedMember =                 BridgedMember(
+                    kind: .method, name: ">", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "lhs", type: .named("FileSize")), Parameter(label: nil, name: "rhs", type: .named("FileSize"))],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a Boolean value indicating whether the value of the first argument is greater than that of the second argument.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) > (try SwiftValue.unbox(FileSize.self, args["rhs"]!))
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member2: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "<=", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "lhs", type: .named("FileSize")), Parameter(label: nil, name: "rhs", type: .named("FileSize"))],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a Boolean value indicating whether the value of the first argument is less than or equal to that of the second argument.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) <= (try SwiftValue.unbox(FileSize.self, args["rhs"]!))
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member3: BridgedMember =                 BridgedMember(
+                    kind: .method, name: ">=", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "lhs", type: .named("FileSize")), Parameter(label: nil, name: "rhs", type: .named("FileSize"))],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a Boolean value indicating whether the value of the first argument is greater than or equal to that of the second argument.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) >= (try SwiftValue.unbox(FileSize.self, args["rhs"]!))
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member4: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "!=", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "lhs", type: .named("FileSize")), Parameter(label: nil, name: "rhs", type: .named("FileSize"))],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a Boolean value indicating whether two values are not equal.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) != (try SwiftValue.unbox(FileSize.self, args["rhs"]!))
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member5: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "..<", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "minimum", type: .named("FileSize")), Parameter(label: nil, name: "maximum", type: .named("FileSize"))],
+                    returns: .generic("Range", [.named("FileSize")]), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a half-open range that contains its lower bound but not its upper bound.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = (try SwiftValue.unbox(FileSize.self, args["minimum"]!)) ..< (try SwiftValue.unbox(FileSize.self, args["maximum"]!))
+                return bridgeBox(result, as: "Range") { r in Range<Value>(uncheckedBounds: (lower: SwiftValue.make(r.lowerBound, as: "FileSize"), upper: SwiftValue.make(r.upperBound, as: "FileSize"))) }
+                    }
+                )
+
+    nonisolated(unsafe) private static let member6: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "bytes", isStatic: false,
+                    parameters: [],
+                    returns: .int, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "How many bytes.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: FileSize = try SwiftValue.unbox(FileSize.self, args["self"]!)
+                let result = receiver.bytes
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member7: BridgedMember =                 BridgedMember(
+                    kind: .initializer, name: "init", isStatic: true,
+                    parameters: [Parameter(label: "bytes", name: "bytes", type: .int)],
+                    returns: .named("FileSize"), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = FileSize(bytes: try Int(swiitValue: args["bytes"]!))
+                return SwiftValue.make(result, as: "FileSize")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member8: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "units", isStatic: true,
+                    parameters: [],
+                    returns: .dictionary(.string, .int), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "The units a size is written in: decimal (`kb`) and binary (`kib`).",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = FileSize.units
+                return bridgeDictionary(Dictionary(uniqueKeysWithValues: result.map { ($0.key.swiitValue, $0.value.swiitValue) }))
+                    }
+                )
+
+    nonisolated(unsafe) private static let member9: BridgedMember =                 BridgedMember(
+                    kind: .initializer, name: "init", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "amount", type: .double), Parameter(label: "multiplier", name: "multiplier", type: .int)],
+                    returns: .named("FileSize"), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "`amount` of a unit worth `multiplier` bytes, which `2.mb` is: a size too large to hold is the largest there is.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = FileSize(try Double(swiitValue: args["amount"]!), multiplier: try Int(swiitValue: args["multiplier"]!))
+                return SwiftValue.make(result, as: "FileSize")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member10: BridgedMember =                 BridgedMember(
+                    kind: .initializer, name: "init", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "amount", type: .double), Parameter(label: "unit", name: "unit", type: .string)],
+                    returns: .optional(.named("FileSize")), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "`1.5` of a unit (`mb`), or nil if there's no such unit or the size is too large.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = FileSize(try Double(swiitValue: args["amount"]!), unit: try String(swiitValue: args["unit"]!))
+                return (result.map { SwiftValue.make($0, as: "FileSize") } ?? .nothing)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member11: BridgedMember =                 BridgedMember(
+                    kind: .initializer, name: "init", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "text", type: .string)],
+                    returns: .optional(.named("FileSize")), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "`1024`, `1.5mb`, `1.5 MB`, `2kib`; nil for anything else.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = FileSize(try String(swiitValue: args["text"]!))
+                return (result.map { SwiftValue.make($0, as: "FileSize") } ?? .nothing)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member12: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "description", isStatic: false,
+                    parameters: [],
+                    returns: .string, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "A textual representation of this instance.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: FileSize = try SwiftValue.unbox(FileSize.self, args["self"]!)
+                let result = receiver.description
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member13: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "<", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "lhs", type: .named("FileSize")), Parameter(label: nil, name: "rhs", type: .named("FileSize"))],
+                    returns: .bool, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Returns a Boolean value indicating whether the value of the first argument is less than that of the second argument.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) < (try SwiftValue.unbox(FileSize.self, args["rhs"]!))
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member14: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "+", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "lhs", type: .named("FileSize")), Parameter(label: nil, name: "rhs", type: .named("FileSize"))],
+                    returns: .named("FileSize"), generics: [:],
+                    isThrowing: true, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = try (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) + (try SwiftValue.unbox(FileSize.self, args["rhs"]!))
+                return SwiftValue.make(result, as: "FileSize")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member15: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "-", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "lhs", type: .named("FileSize")), Parameter(label: nil, name: "rhs", type: .named("FileSize"))],
+                    returns: .named("FileSize"), generics: [:],
+                    isThrowing: true, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = try (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) - (try SwiftValue.unbox(FileSize.self, args["rhs"]!))
+                return SwiftValue.make(result, as: "FileSize")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member16: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "-", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "operand", type: .named("FileSize"))],
+                    returns: .named("FileSize"), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = -(try SwiftValue.unbox(FileSize.self, args["operand"]!))
+                return SwiftValue.make(result, as: "FileSize")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member17: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "*", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "lhs", type: .named("FileSize")), Parameter(label: nil, name: "rhs", type: .int)],
+                    returns: .named("FileSize"), generics: [:],
+                    isThrowing: true, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = try (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) * (try Int(swiitValue: args["rhs"]!))
+                return SwiftValue.make(result, as: "FileSize")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member18: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "*", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "lhs", type: .named("FileSize")), Parameter(label: nil, name: "rhs", type: .double)],
+                    returns: .named("FileSize"), generics: [:],
+                    isThrowing: true, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = try (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) * (try Double(swiitValue: args["rhs"]!))
+                return SwiftValue.make(result, as: "FileSize")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member19: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "*", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "lhs", type: .int), Parameter(label: nil, name: "rhs", type: .named("FileSize"))],
+                    returns: .named("FileSize"), generics: [:],
+                    isThrowing: true, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = try (try Int(swiitValue: args["lhs"]!)) * (try SwiftValue.unbox(FileSize.self, args["rhs"]!))
+                return SwiftValue.make(result, as: "FileSize")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member20: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "*", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "lhs", type: .double), Parameter(label: nil, name: "rhs", type: .named("FileSize"))],
+                    returns: .named("FileSize"), generics: [:],
+                    isThrowing: true, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = try (try Double(swiitValue: args["lhs"]!)) * (try SwiftValue.unbox(FileSize.self, args["rhs"]!))
+                return SwiftValue.make(result, as: "FileSize")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member21: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "/", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "lhs", type: .named("FileSize")), Parameter(label: nil, name: "rhs", type: .int)],
+                    returns: .named("FileSize"), generics: [:],
+                    isThrowing: true, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = try (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) / (try Int(swiitValue: args["rhs"]!))
+                return SwiftValue.make(result, as: "FileSize")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member22: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "/", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "lhs", type: .named("FileSize")), Parameter(label: nil, name: "rhs", type: .double)],
+                    returns: .named("FileSize"), generics: [:],
+                    isThrowing: true, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = try (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) / (try Double(swiitValue: args["rhs"]!))
+                return SwiftValue.make(result, as: "FileSize")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member23: BridgedMember =                 BridgedMember(
+                    kind: .method, name: "/", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "lhs", type: .named("FileSize")), Parameter(label: nil, name: "rhs", type: .named("FileSize"))],
+                    returns: .double, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "How many of one fit in the other.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) / (try SwiftValue.unbox(FileSize.self, args["rhs"]!))
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member24: BridgedMember =                 BridgedMember(
                     kind: .method, name: "from", isStatic: false,
                     parameters: [Parameter(label: nil, name: "format", type: .named("InputFormat")), Parameter(label: nil, name: "text", type: .list(.string), isInput: true)],
                     returns: .named("JSON"), generics: [:],
@@ -77,7 +402,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     parameterDocs: ["format": "json"]
                 )
 
-    nonisolated(unsafe) private static let member1: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member25: BridgedMember =                 BridgedMember(
                     kind: .method, name: "to", isStatic: false,
                     parameters: [Parameter(label: nil, name: "format", type: .named("OutputFormat")), Parameter(label: nil, name: "items", type: .list(.any), isInput: true)],
                     returns: .string, generics: [:],
@@ -91,7 +416,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     parameterDocs: ["format": "json or text"]
                 )
 
-    nonisolated(unsafe) private static let member2: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member26: BridgedMember =                 BridgedMember(
                     kind: .method, name: "table", isStatic: false,
                     parameters: [Parameter(label: nil, name: "items", type: .list(.any), isInput: true)],
                     returns: .list(.string), generics: [:],
@@ -104,7 +429,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     }
                 )
 
-    nonisolated(unsafe) private static let member3: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member27: BridgedMember =                 BridgedMember(
                     kind: .method, name: "list", isStatic: false,
                     parameters: [Parameter(label: nil, name: "items", type: .list(.any), isInput: true)],
                     returns: .list(.string), generics: [:],
@@ -117,7 +442,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     }
                 )
 
-    nonisolated(unsafe) private static let member4: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member28: BridgedMember =                 BridgedMember(
                     kind: .method, name: "pwd", isStatic: false,
                     parameters: [],
                     returns: .named("FilePath"), generics: [:],
@@ -130,7 +455,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     }
                 )
 
-    nonisolated(unsafe) private static let member5: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member29: BridgedMember =                 BridgedMember(
                     kind: .method, name: "with", isStatic: false,
                     parameters: [Parameter(label: "env", name: "variables", type: .dictionary(.string, .string)), Parameter(label: nil, name: "body", type: .functionType([], .parameter("T"), throws: true))],
                     returns: .parameter("T"), generics: ["T": []],
@@ -144,7 +469,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     parameterDocs: ["body": "what to run with them set", "variables": "the variables to set, as in with(env: [\"EDITOR\": \"vim\"]) { git commit }"]
                 )
 
-    nonisolated(unsafe) private static let member6: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member30: BridgedMember =                 BridgedMember(
                     kind: .method, name: "ls", isStatic: false,
                     parameters: [Parameter(label: nil, name: "paths", type: .named("FilePath"), variadic: true), Parameter(label: "all", name: "all", type: .bool, defaultValue: .literal(.bool(false)), shortFlag: "a")],
                     returns: .list(.named("FileEntry")), generics: [:],
@@ -160,7 +485,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     parameterDocs: ["all": "include hidden files", "paths": "files or directories to list (default: the current directory)"]
                 )
 
-    nonisolated(unsafe) private static let member7: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member31: BridgedMember =                 BridgedMember(
                     kind: .method, name: "history", isStatic: false,
                     parameters: [],
                     returns: .list(.string), generics: [:],
@@ -173,7 +498,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     }
                 )
 
-    nonisolated(unsafe) private static let member8: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member32: BridgedMember =                 BridgedMember(
                     kind: .method, name: "readLine", isStatic: false,
                     parameters: [Parameter(label: "strippingNewline", name: "strippingNewline", type: .bool, defaultValue: .literal(.bool(true)))],
                     returns: .optional(.string), generics: [:],
@@ -187,7 +512,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     parameterDocs: ["strippingNewline": "leave the line's newline off"]
                 )
 
-    nonisolated(unsafe) private static let member9: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member33: BridgedMember =                 BridgedMember(
                     kind: .method, name: "ps", isStatic: false,
                     parameters: [],
                     returns: .list(.named("ProcessEntry")), generics: [:],

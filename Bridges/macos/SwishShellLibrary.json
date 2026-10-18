@@ -1,6 +1,29 @@
 {
   "members" : [
-
+    "FileSize\tswift.func.op\t!=(_:_:)",
+    "FileSize\tswift.func.op\t*(_:_:)",
+    "FileSize\tswift.func.op\t+(_:_:)",
+    "FileSize\tswift.func.op\t-(_:)",
+    "FileSize\tswift.func.op\t-(_:_:)",
+    "FileSize\tswift.func.op\t...(_:)",
+    "FileSize\tswift.func.op\t...(_:_:)",
+    "FileSize\tswift.func.op\t..<(_:)",
+    "FileSize\tswift.func.op\t..<(_:_:)",
+    "FileSize\tswift.func.op\t\/(_:_:)",
+    "FileSize\tswift.func.op\t<(_:_:)",
+    "FileSize\tswift.func.op\t<=(_:_:)",
+    "FileSize\tswift.func.op\t>(_:_:)",
+    "FileSize\tswift.func.op\t>=(_:_:)",
+    "FileSize\tswift.init\tinit(_:)",
+    "FileSize\tswift.init\tinit(_:multiplier:)",
+    "FileSize\tswift.init\tinit(_:unit:)",
+    "FileSize\tswift.init\tinit(bytes:)",
+    "FileSize\tswift.init\tinit(from:)",
+    "FileSize\tswift.init\tinit(swiitValue:)",
+    "FileSize\tswift.method\tencode(to:)",
+    "FileSize\tswift.property\tbytes",
+    "FileSize\tswift.property\tdescription",
+    "FileSize\tswift.type.property\tunits"
   ],
   "module" : "SwishShellLibrary",
   "platform" : "macos"

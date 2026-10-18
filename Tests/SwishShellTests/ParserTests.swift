@@ -207,13 +207,11 @@ private func syntaxError(_ source: String, bound: Set<String> = []) -> SyntaxErr
     let program = try parse(#"let r = ["name": "x", "size": 1.5.kb]; r.size; [:]"#)
     #expect(program.statements[0] == .declare(name: "r", mutable: false, value: .record([
         RecordEntry(key: .literal(.string("name")), value: .literal(.string("x"))),
-        RecordEntry(key: .literal(.string("size")), value: .literal(.fileSize(FileSize(bytes: 1500)))),
+        RecordEntry(key: .literal(.string("size")), value: .member(.literal(.double(1.5)), "kb")),
     ])))
     #expect(program.statements[1] == .expression(.member(.variable("r"), "size")))
     #expect(program.statements[2] == .expression(.record([])))
     #expect(try parse("2.kib; 1...3").statements.count == 2) // ranges still work
-    // Not a file size, so a command, which says why it isn't one if no program has the name.
-    #expect(try command("1.parsecs")?.notAnExpression == "unknown unit 'parsecs'; file sizes use b, kb, mb, gb, tb, or kib, mib, gib, tib")
     #expect(syntaxError(#"["a": 1, 2]"#) != nil)
 }
 

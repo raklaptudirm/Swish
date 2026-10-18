@@ -1,5 +1,6 @@
 @_spi(Layer) import Swiit
 import SwiitKit
+import SwishShellLibrary
 
 extension Library {
     /// The shell's own: `ls`, `ps`, `pwd`, `with(env:)`, `readLine`, `history`,
@@ -10,7 +11,7 @@ extension Library {
         Library(
             types: Bridge.shellTypes, columns: Bridge.shellColumns,
             enumStyles: Bridge.shellEnumStyles, functions: Bridge.shellFunctions,
-            declarations: shellDeclarations,
+            bridged: Bridge.shellBridged, declarations: shellDeclarations + fileSizeUnits,
             bodies: shell.commandMethods.merging([
                 "help": (shell.help().body, nil),
                 "members": (shell.interpreter.members().body, nil),
@@ -28,6 +29,15 @@ extension Library {
                 "escapingWildcards": (.native { _, arguments in .string(Glob.escape(arguments["text"]?.description ?? "")) }, nil),
             ]) { $1 }.merging(jsonBodies) { $1 }
         )
+    }
+
+    /// `2.mb` and `1.5.gib`: each unit a file size is written in is a property of `Int` and `Double`.
+    private static var fileSizeUnits: String {
+        let units = FileSize.units.sorted { ($0.value, $0.key) < ($1.value, $1.key) }
+        func properties(of number: String, _ amount: String) -> String {
+            units.map { "    var \($0.key): FileSize { FileSize(\(amount), multiplier: \($0.value)) }" }.joined(separator: "\n")
+        }
+        return "\nextension Int {\n\(properties(of: "Int", "Double(self)"))\n}\nextension Double {\n\(properties(of: "Double", "self"))\n}\n"
     }
 
     /// Swish source read after the core's prelude. The checker works from the

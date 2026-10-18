@@ -122,8 +122,8 @@ func f(_ x: String) -> String {
 f(5)
 f("a")kkkk.c......ttt.....tttttt...sssss....kkkk.c......tttttt.....tttttt...ssssssss...c....c......v.n...v.sss.38"abc".reversed()
 "abc".sorted()sssss.............sssss.........39/* a construct from a layer over the core */.description == /* a construct from a layer over the core */.text
-1.5 KB.description
-["a": 1].descriptionppcccc..p................ppcccc..p.......nnnnnn...............sss..n.............40let x: Int? = nil
+1.5.kb.description
+["a": 1].descriptionppcccc..p................ppcccc..p.......nnn..................sss..n.............40let x: Int? = nil
 x ?? 3
 let s: String? = "ab"
 s?.count
@@ -615,24 +615,24 @@ for i in 1 ... 3 {
 fs[0]()
 fs[2]()kkk.vv.........ttt........kkk.v.kk.n...n...vv...vv......v...nn.......vv.n.....vv.n...201/* a construct from a layer over the core */cccc....cccc202(1.0 ... 2.0).contains(1.5)
 ("a" ... "f").contains("c").nnn...nnn...........nnn....sss...sss...........sss.203/* a construct from a layer over the core */
-/* a construct from a layer over the core */ccccc.ff..........................................................................ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss.........................................................................ccccc.......................................................................................................................................................................................................................................................................................................................................................................................................................................................ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss................................................................................204/* a construct from a layer over the core */cccccc.ff.....205/* a construct from a layer over the core */ccccc....cc.ff.ssssssss....cc.ff.ssssssss206let r = (name: "x", size: 2.0 MB)
+/* a construct from a layer over the core */ccccc.ff..........................................................................ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss.........................................................................ccccc.......................................................................................................................................................................................................................................................................................................................................................................................................................................................ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss................................................................................204/* a construct from a layer over the core */cccccc.ff.....205/* a construct from a layer over the core */ccccc....cc.ff.ssssssss....cc.ff.ssssssss206let r = (name: "x", size: 2.mb)
 r.name
 r.size * 2
-r.1kkk.v..........sss........nnnn..v.......v........n..v..207let n = 3
+r.1kkk.v..........sss........n.....v.......v........n..v..207let n = 3
 if n > 2 {
     /* a construct from a layer over the core */
 } else {
     /* a construct from a layer over the core */
-}kkk.v...n..kk.v...n...cccc.......kkkk...cccc........208let r = (name: "x", size: 2.0 MB)
-rkkk.v..........sss........nnnn..v209/* a construct from a layer over the core */
+}kkk.v...n..kk.v...n...cccc.......kkkk...cccc........208let r = (name: "x", size: 2.mb)
+rkkk.v..........sss........n.....v209/* a construct from a layer over the core */
 /* a construct from a layer over the core */cccc...p...............................................................................cccc......210if false {
     /* a construct from a layer over the core */
 } else if true {
     /* a construct from a layer over the core */
 } else {
     /* a construct from a layer over the core */
-}kk.CCCCC...cccc.....kkkk.kk.CCCC...cccc.....kkkk...cccc....211let r = 3 ... 1kkk.v...n...n212let r = (name: "x", size: 2.0 MB)
-r.nopekkk.v..........sss........nnnn..v.....213/* a construct from a layer over the core */cccc...p......................................................................214let j = /* a construct from a layer over the core */
+}kk.CCCCC...cccc.....kkkk.kk.CCCC...cccc.....kkkk...cccc....211let r = 3 ... 1kkk.v...n...n212let r = (name: "x", size: 2.mb)
+r.nopekkk.v..........sss........n.....v.....213/* a construct from a layer over the core */cccc...p......................................................................214let j = /* a construct from a layer over the core */
 j.cancel()
 let r = await j
 r.status.signal
@@ -2005,12 +2005,12 @@ f()kkkk.c......ttt...cccc.......v..640/* a construct from a layer over the co
     return "neg"
 }
 sign(-1).countkkk.vvvv.........ttt..kk.....kk.v...n...kkkkkk.sssss.......kkkkkk.sssss...vvvv..n.......642let xs = [(n: 3, s: "c"), (n: 1, s: "a"), (n: 2, s: "b")]
-/* a construct from a layer over the core */kkk.vv........n.....sss.......n.....sss.......n.....sss...vv...cccccc.ffff.....ccc..643/* a construct from a layer over the core */cccccc.ssssss.ssssssssssssssssssssss.ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss.ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss.ssssssssssssssssssssssss.sssssssssssssssssssssssssss.p..............................................................................6441.5 GB + 500 MB
-1.0 KB.bytes
-10.0 MB / 4
-1.0 MB > 999 KB
-4.0 MB / 2.0 MB
--1.0 KBnnnnnn...nnnnnn..nnnnn........nnnnn...n..nnnn...nnnnnn..nnnn...nnnn...nnnn645let xs = [(n: 3, s: "c"), (n: 1, s: "a"), (n: 2, s: "b")]
+/* a construct from a layer over the core */kkk.vv........n.....sss.......n.....sss.......n.....sss...vv...cccccc.ffff.....ccc..643/* a construct from a layer over the core */cccccc.ssssss.ssssssssssssssssssssss.ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss.ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss.ssssssssssssssssssssssss.sssssssssssssssssssssssssss.p..............................................................................6441.5.gb + 500.mb
+1.kib.bytes
+10.mb / 4
+1.mb > 999.kb
+4.mb / 2.mb
+-1.kbnnn......nnn.....n............nn......n..n......nnn.....n......n......n...645let xs = [(n: 3, s: "c"), (n: 1, s: "a"), (n: 2, s: "b")]
 /* a construct from a layer over the core */kkk.vv........n.....sss.......n.....sss.......n.....sss...vv...cccccc.ff.....cccccccc...cccccc.....ccc..646struct Point {
     var x: Int
     var y: Int = 0

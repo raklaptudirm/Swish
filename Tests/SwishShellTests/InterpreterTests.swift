@@ -334,6 +334,9 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
 @Test func fileSizes() throws {
     #expect(try output("1.5.gb + 500.mb; 1.kib.bytes; 10.mb / 4; 1.mb > 999.kb; 4.mb / 2.mb; -1.kb") == "2.0 GB\n1024\n2.5 MB\ntrue\n2.0\n-1.0 KB\n")
     #expect(try output(#"func f(_ s: FileSize) -> FileSize { s }; f 1.5mb; f 2048"#) == "1.5 MB\n2.0 KB\n")
+    // A unit is a property of a number, so it works on a variable too; one that isn't a unit is a number's missing member.
+    #expect(try output("let n = 3; n.mb; (n * 2).kib; n.mb.bytes") == "3.0 MB\n6.1 KB\n3000000\n")
+    #expect(status("1.parsecs") == 2)
 }
 
 @Test func listsOfRecordsDisplayAsTables() throws {
@@ -428,7 +431,7 @@ private func fixture() throws -> String {
 @Test func formatterFitsTheWidth() {
     var lines: [String] = []
     let formatter = DisplayFormatter(maxWidth: 20) { lines.append($0); return true }
-    formatter.add(.record(Record(["name": .string("a-rather-long-file-name"), "size": .fileSize(FileSize(bytes: 1))])))
+    formatter.add(.record(Record(["name": .string("a-rather-long-file-name"), "size": FileSize(bytes: 1).swiitValue])))
     formatter.finish()
     // The name column shrinks from 23 to 14 so the table fits in 20.
     #expect(lines == ["name            size\n", "a-rather-long…   1 B\n"])
