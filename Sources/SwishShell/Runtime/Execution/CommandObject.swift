@@ -157,7 +157,7 @@ extension Shell {
             var status = value.map(status(of:)) ?? 0
             // A `try?` that caught an error failed; other nils, like a
             // function that returns nothing, didn't.
-            if case .expression(.attempt(_, .optional)) = statement, value == .nothing { status = 1 }
+            if value == .nothing, case .expression(.attempt(_, .optional)) = statement { status = 1 }
             lastStatus = itemErrors && status == 0 ? 1 : status
         }
     }
