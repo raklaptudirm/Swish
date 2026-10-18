@@ -1,6 +1,5 @@
 @_spi(Layer) import Swiit
 import Foundation
-import SwiitKit
 
 extension SourceCursor {
     // MARK: Command mode

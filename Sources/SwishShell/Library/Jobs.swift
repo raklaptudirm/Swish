@@ -1,4 +1,4 @@
-import SwiitKit
+import Swiit
 
 /// How a job is going: its `state`.
 public enum JobState: Comparable, CaseIterable, DisplayStyled {

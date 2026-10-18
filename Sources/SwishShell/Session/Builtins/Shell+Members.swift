@@ -1,6 +1,5 @@
 import Foundation
 @_spi(Layer) import Swiit
-import SwiitKit
 
 extension Interpreter {
     // MARK: Conversions

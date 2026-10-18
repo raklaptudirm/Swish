@@ -1,5 +1,4 @@
 @_spi(Layer) import Swiit
-import SwiitKit
 
 extension Interpreter {
     /// Registers parsed JSON as a type whose values are whatever they parsed

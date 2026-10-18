@@ -1,5 +1,5 @@
 import Foundation
-import SwiitKit
+import Swiit
 
 /// Shows a value as `debugDescription` spells it, but for a person: in the
 /// highlighter's colors, and, when it won't fit on one line, broken over
@@ -43,9 +43,11 @@ package struct PrettyPrinter: Sendable {
             dictionary.count == 0 ? .segments([("[:]", nil)]) : .group(open: [("[", nil)], items: dictionary.sortedForDisplay.map { key, value in
                 ([keySegment(key), (": ", nil)], node(for: value))
             }, close: "]")
-        // A Swift value as its type says it looks: as fields, or in a style.
-        case .object where value.displayShape.fields != nil || value.displayShape.role != nil:
-            value.displayShape.fields.map { node(for: $0) } ?? .segments([(value.description, value.displayShape.role)])
+        // A command's output is laid out as the struct it is; any other Swift value as its type says it looks, in a style.
+        case .object where value.commandOutput != nil:
+            node(for: value.commandOutput!.displayRecord)
+        case .object where value.displayShape.role != nil:
+            .segments([(value.description, value.displayShape.role)])
         case .enumValue(let value):
             node(for: value)
         case .object(let object) where object.displaySegments != nil:

@@ -1,6 +1,5 @@
 @_spi(Layer) import Swiit
 import Foundation
-import SwiitKit
 
 extension SourceCursor {
     // MARK: Quotes and interpolation in a command's words

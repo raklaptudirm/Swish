@@ -1,7 +1,6 @@
 import Swiit
-import SwiitKit
 
-extension Dictionary where Key == String, Value == SwiitKit.Value {
+extension Dictionary where Key == String, Value == Swiit.Value {
     /// A String or list-of-Strings argument as an array; empty if absent.
     package func strings(_ key: String) -> [String] {
         switch self[key] {

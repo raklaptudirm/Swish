@@ -1,5 +1,4 @@
 @_spi(Layer) import Swiit
-import SwiitKit
 import SwishShellLibrary
 
 extension Library {

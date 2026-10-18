@@ -62,7 +62,8 @@ func _swiftTest(_ package: String) throws {
 func _graph(_ module: String, into graphs: String) throws {
     let machine = $(uname -m).text
     let built = $(swift build --show-bin-path).text
-    let search = ["-I", built, "-I", "\(built)/Modules", "-I", ".build/checkouts/swift-system/Sources/CSystem/include"]
+    let search = ["-I", built, "-I", "\(built)/Modules", "-I", ".build/checkouts/swift-system/Sources/CSystem/include",
+                  "-I", ".build/checkouts/swift-syntax/Sources/_SwiftSyntaxCShims/include"]
     if darwin {
         let sdk = $(xcrun --show-sdk-path).text
         let extract = $(xcrun --find swift-symbolgraph-extract).text

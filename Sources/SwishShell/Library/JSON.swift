@@ -1,5 +1,5 @@
 import Foundation
-import SwiitKit
+import Swiit
 
 /// Parsed JSON: whatever it parsed as, a `Value`, which Swish reads by field
 /// and element. Object keys are kept in order, which Foundation's parser

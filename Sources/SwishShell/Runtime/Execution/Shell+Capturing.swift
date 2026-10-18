@@ -1,6 +1,5 @@
 import Swiit
 import Foundation
-import SwiitKit
 
 extension Shell {
     // MARK: Capturing output

@@ -1,6 +1,5 @@
 @_spi(Layer) import Swiit
 import Foundation
-import SwiitKit
 
 /// A builtin that isn't a function: it changes the shell itself, so it
 /// can't be a program, and it takes words, as a program does. One table

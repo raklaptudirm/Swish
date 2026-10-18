@@ -1,6 +1,5 @@
 @testable @_spi(Layer) import Swiit
 @_spi(Shell) @_spi(Layer) @testable import SwishShell
-import SwiitKit
 import Testing
 
 // What each shell construct means, as Swift (Docs/Design/desugaring.md): the

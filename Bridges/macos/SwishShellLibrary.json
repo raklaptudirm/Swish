@@ -105,6 +105,7 @@
     "Output\tswift.property\tcount",
     "Output\tswift.property\tdebugDescription",
     "Output\tswift.property\tdescription",
+    "Output\tswift.property\tdisplayRecord",
     "Output\tswift.property\tendIndex",
     "Output\tswift.property\tfirst",
     "Output\tswift.property\tisEmpty",

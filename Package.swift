@@ -21,7 +21,7 @@ let package = Package(
             name: "SwishShellLibrary",
             dependencies: [
                 .product(name: "SwiitStandardLibrary", package: "Swiit"),
-                .product(name: "SwiitKit", package: "Swiit"),
+                .product(name: "Swiit", package: "Swiit"),
                 .product(name: "SystemPackage", package: "swift-system"),
             ],
             path: "Sources/SwishShell/Library"
@@ -33,7 +33,6 @@ let package = Package(
             dependencies: [
                 .product(name: "Swiit", package: "Swiit"),
                 "SwishShellLibrary",
-                .product(name: "SwiitKit", package: "Swiit"),
                 .product(name: "SystemPackage", package: "swift-system"),
             ],
             exclude: ["Library"]

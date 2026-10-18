@@ -1,7 +1,6 @@
 import Swiit
 @_spi(Shell) @_spi(Layer) @testable import SwishShell
 import Foundation
-import SwiitKit
 
 // What the help tests need from Foundation's AttributedString. In a file of
 // their own: Foundation can't be imported next to Testing here.

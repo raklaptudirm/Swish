@@ -1,6 +1,5 @@
 @_spi(Layer) import Swiit
 import Foundation
-import SwiitKit
 
 /// The shell: a process with a terminal, jobs and a line editor, over an
 /// `Interpreter` that knows none of that. It supplies the interpreter's host

@@ -1,5 +1,5 @@
 import Foundation
-import SwiitKit
+import Swiit
 
 // How the shell shows values in a table: the vocabulary a type uses to say which of its fields a table starts with
 // and what stands out in them. The core knows none of it (the styles themselves, `DisplayStyle`, are its).

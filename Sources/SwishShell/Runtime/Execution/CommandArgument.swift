@@ -1,5 +1,4 @@
 @_spi(Layer) import Swiit
-import SwiitKit
 
 /// One argument to a command: text, or a value like the closure in
 /// `where { $0.size > 1.mb }`.

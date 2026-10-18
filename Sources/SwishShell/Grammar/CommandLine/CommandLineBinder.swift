@@ -1,6 +1,5 @@
 @_spi(Layer) import Swiit
 import Foundation
-import SwiitKit
 
 // A command line bound to a declaration's parameters: which overload the words
 // mean, and what each parameter is given. It looks at parameters and words

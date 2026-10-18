@@ -1,6 +1,5 @@
 import Swiit
 import Foundation
-import SwiitKit
 
 extension Shell {
     /// Runs the read-eval loop until EOF or `exit`.

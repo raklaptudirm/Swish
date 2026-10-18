@@ -1,6 +1,5 @@
 @_spi(Layer) import Swiit
 import Foundation
-import SwiitKit
 
 struct PipelineNode: Equatable, Sendable {
     var commands: [CommandNode]

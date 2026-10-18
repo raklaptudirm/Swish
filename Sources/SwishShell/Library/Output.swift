@@ -1,6 +1,6 @@
 import SwishShellLibrary
 import Foundation
-import SwiitKit
+import Swiit
 
 /// A command's standard output (trailing newlines trimmed) and exit status.
 /// It's a collection of lines: iterating, counting and indexing go by line,
@@ -58,8 +58,10 @@ extension Output: CustomStringConvertible, CustomDebugStringConvertible, SwiitDi
     public var description: String { text }
     public var swiitDescription: String { text }
     /// Shown as its text and status, and nothing at all if it's empty.
-    public var swiitShape: DisplayShape {
-        DisplayShape(isEmpty: text.isEmpty, fields: Record(["text": .string(text), "status": .record(statusRecord)], typeName: "Output"))
+    public var swiitShape: DisplayShape { DisplayShape(isEmpty: text.isEmpty) }
+    /// How a debug form lays it out: its text and status as the fields of a struct.
+    public var displayRecord: Record {
+        Record(["text": .string(text), "status": .record(statusRecord)], typeName: "Output")
     }
     /// One line in a table: its newlines shown as ↵.
     public var swiitCell: String { text.replacingOccurrences(of: "\n", with: "↵") }

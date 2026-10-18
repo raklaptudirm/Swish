@@ -1,6 +1,5 @@
 import Foundation
 @_spi(Layer) import Swiit
-import SwiitKit
 
 /// The process's variables, for `env`.
 struct EnvironmentAccess {

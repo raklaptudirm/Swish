@@ -1,7 +1,6 @@
 import Swiit
 import SwishShellLibrary
 import Foundation
-import SwiitKit
 import SwiitStandardLibrary
 
 extension SwiitHost {

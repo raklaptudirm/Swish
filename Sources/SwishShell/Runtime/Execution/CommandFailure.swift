@@ -1,6 +1,5 @@
 import SwishShellLibrary
 import Swiit
-import SwiitKit
 
 extension RuntimeError {
     /// A command that failed under `try`: what `catch` binds is a

@@ -1,6 +1,5 @@
 @_spi(Layer) import Swiit
 import Foundation
-import SwiitKit
 
 extension Shell {
     /// Runs a task file for `run`: its top level first, with no `args`, then

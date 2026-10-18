@@ -1,6 +1,5 @@
 import Swiit
 @_spi(Shell) @_spi(Layer) @testable import SwishShell
-import SwiitKit
 import Testing
 
 // The library a command statement means (Docs/Design/desugaring.md), called by

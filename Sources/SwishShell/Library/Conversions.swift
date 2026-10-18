@@ -1,5 +1,5 @@
 import SwiitStandardLibrary
-import SwiitKit
+import Swiit
 
 /// What text `from` can parse.
 public enum InputFormat: CaseIterable {

@@ -1,6 +1,5 @@
 @_spi(Layer) import Swiit
 import Foundation
-import SwiitKit
 
 /// A command as it runs: its words expanded, its redirects resolved, and
 /// what the checker decided about it.

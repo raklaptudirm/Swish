@@ -1,7 +1,6 @@
 import SwishShellLibrary
 import Swiit
 import Foundation
-import SwiitKit
 import SwiitStandardLibrary
 
 // The shell's halves of what the interpreter does with environment, words and

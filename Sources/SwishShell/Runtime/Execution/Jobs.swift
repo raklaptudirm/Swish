@@ -1,7 +1,6 @@
 import SwishShellLibrary
 @_spi(Layer) import Swiit
 import Foundation
-import SwiitKit
 import SwiitStandardLibrary
 
 /// A pipeline of processes, one running in the foreground or a job in the

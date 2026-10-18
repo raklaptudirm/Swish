@@ -1,4 +1,4 @@
-import SwiitKit
+import Swiit
 import SwishShellLibrary
 import Testing
 

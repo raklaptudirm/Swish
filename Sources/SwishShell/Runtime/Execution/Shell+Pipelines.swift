@@ -1,6 +1,5 @@
 import Swiit
 import Foundation
-import SwiitKit
 
 struct SpawnFailure: Error {
     let message: String

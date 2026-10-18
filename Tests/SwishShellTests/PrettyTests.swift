@@ -1,6 +1,5 @@
 import Swiit
 @_spi(Shell) @_spi(Layer) @testable import SwishShell
-import SwiitKit
 import SwiitStandardLibrary
 import SwishShellLibrary
 import Testing

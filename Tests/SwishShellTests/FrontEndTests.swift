@@ -1,7 +1,6 @@
 @testable @_spi(Layer) import Swiit
 @_spi(Shell) @_spi(Layer) @testable import SwishShell
 import Foundation
-import SwiitKit
 import Testing
 
 // The shell's syntax under the SwiftSyntax front end. What the hand-written

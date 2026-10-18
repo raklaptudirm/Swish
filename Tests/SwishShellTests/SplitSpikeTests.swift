@@ -1,7 +1,6 @@
 @testable @_spi(Layer) import Swiit
 @_spi(Shell) @_spi(Layer) @testable import SwishShell
 import Foundation
-import SwiitKit
 import Testing
 
 // Spike: after the shell's constructs are rewritten, is what is left Swift that Swiit reads with no plug-in?

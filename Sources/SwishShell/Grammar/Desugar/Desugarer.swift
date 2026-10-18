@@ -1,6 +1,5 @@
 @_spi(Layer) import Swiit
 import Foundation
-import SwiitKit
 
 /// Rewrites the shell's constructs into Swift: what each means is in
 /// Docs/Design/desugaring.md. The checker calls it on each construct as soon
