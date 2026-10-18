@@ -92,7 +92,6 @@ public final class Shell {
         interpreter.owner = self
         interpreter.displayRegistryProvider = { [unowned interpreter] in interpreter.tableRegistry() }
         interpreter.bind("env", to: EnvironmentObject(access: .process))
-        interpreter.objectMembers["Job"] = Dictionary(uniqueKeysWithValues: Job.members.map { ($0.name, $0.type) })
         interpreter.installBuiltinFunctions(libraries: [.shell(for: self)])
         interpreter.installJSON()
         installJobs()

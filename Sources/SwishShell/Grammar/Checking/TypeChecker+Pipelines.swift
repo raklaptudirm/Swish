@@ -232,9 +232,10 @@ extension TypeChecker {
             try checkClosures(&command, expecting: [:])
             return commonReturn(methods)
         }
-        if let members = interpreter.objectMembers[typeName], case .functionType(_, let result, _, _)? = members[name] {
+        // A host object's method, as the host described it.
+        if let description = describe(named: typeName), description.kind == .protocolType, let methods = description.declared.methods[name], methods.count == 1 {
             try checkClosures(&command, expecting: [:])
-            return result
+            return methods[0].returns
         }
         return nil
     }

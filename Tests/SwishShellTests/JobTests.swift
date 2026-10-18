@@ -232,3 +232,9 @@ private func run(_ source: String) throws -> String {
     close(pipe.write)
     #expect(try run("let t = Task { readLine() ?? \"none\" }; print(await t.value)") == "typed\n")
 }
+
+@Test func aJobIsATypeScriptsCanAsk() throws {
+    // A job passes where a `Job` is asked for, with or without what it holds, and its members are checked.
+    #expect(try run("func show(_ job: Job) { print(job.command) }\nlet t = async { 1 }\nshow(t)\nawait t") == "{ 1 }\n")
+    #expect(try run("let jobsNow: [Job] = jobs; print(jobsNow.count)") == "0\n")
+}

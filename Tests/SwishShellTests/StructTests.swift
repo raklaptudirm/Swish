@@ -143,3 +143,12 @@ let es = [Entry(name: "a", size: 1, path: "/x"), Entry(name: "b", size: 22, path
     #expect(status("struct P: Tabular { var x: Int; static let columns = 1 }") != 0)
     #expect(status("enum E: Tabular { case a }") != 0)
 }
+
+@Test func everyKindOfTypeDeclarationStartsAStatement() throws {
+    // `class`, `actor`, `protocol`, `extension` and `typealias` are Swift's, not commands.
+    #expect(try output("class Counter { var n = 1 }\nprint(Counter().n)") == "1\n")
+    #expect(try output("actor Box { var n = 2 }\nprint(\"made\")") == "made\n")
+    #expect(try output("protocol Shape { var sides: Int { get }; func area() -> Double }\nprint(\"declared\")") == "declared\n")
+    #expect(try output("typealias Count = Int\nlet n: Count = 3\nprint(n)") == "3\n")
+    #expect(try output("extension Int { var squared: Int { self * self } }\nprint((3).squared)") == "9\n")
+}

@@ -8,7 +8,7 @@ import SwiitStandardLibrary
 /// background (from `async` or ^Z), or Swish code running as a task of its
 /// own (`async f()`). Jobs in the background are values: `await` brings one
 /// to the foreground and waits for it, and `resume()` and `cancel()` act on it.
-final class Job: CheckedObject, @unchecked Sendable {
+final class Job: SwiitObject, @unchecked Sendable {
     enum State: String {
         case running, stopped, done
     }
@@ -99,7 +99,6 @@ final class Job: CheckedObject, @unchecked Sendable {
     // MARK: SwiitObject
 
     var typeName: String { "Job" }
-    var checkedType: TypeAnnotation { .named("Job") }
 
     /// What a table of jobs starts with: the state shown as it's going.
     static let columns: [DisplayColumn] = ["id", DisplayColumn("state", styledBy: "state"), "command"]
@@ -118,6 +117,17 @@ final class Job: CheckedObject, @unchecked Sendable {
         ("resume", .functionType([], .void), { job in method("resume") { [unowned job] in job.shell.resume(job) } }),
         ("cancel", .functionType([], .void), { job in method("cancel") { [unowned job] in job.shell.cancel(job) } }),
     ]
+    /// What scripts may use of a job, as the protocol the checker knows it by (`describeHostType`).
+    static var declaration: String {
+        members.map { member in
+            if case .functionType(let parameters, let result, _, _) = member.type {
+                let list = parameters.enumerated().map { "_ p\($0.offset): \($0.element)" }.joined(separator: ", ")
+                return "func \(member.name)(\(list))" + (result == .void ? "" : " -> \(result)")
+            }
+            return "var \(member.name): \(member.type) { get }"
+        }.joined(separator: "; ")
+    }
+
     var memberNames: [String] { Job.members.map(\.name) }
 
     func member(_ name: String) -> Value? {
