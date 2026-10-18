@@ -86,11 +86,11 @@ public final class Shell {
         interpreter.host = SwiitHost(process: self)
         // Library functions that ask are lent what was entered before, too.
         interpreter.contextProvider = { [unowned self] in
-            HostContext(history: historyEntries, colorOutput: interpreter.host.output.traits().styled,
-                         display: interpreter.displayRegistryProvider())
+            var context = HostContext(history: historyEntries, colorOutput: interpreter.host.output.traits().styled)
+            context.display = interpreter.tableRegistry()
+            return context
         }
         interpreter.owner = self
-        interpreter.displayRegistryProvider = { [unowned interpreter] in interpreter.tableRegistry() }
         interpreter.bind("env", to: EnvironmentObject(access: .process))
         interpreter.installBuiltinFunctions(libraries: [.shell(for: self)])
         interpreter.installJSON()

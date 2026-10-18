@@ -18,6 +18,15 @@ extension Bridge {
                 member0, member1, member2, member3, member4, member5, member6, member7, member8, member9, member10, member11, member12, member13, member14, member15, member16, member17, member18, member19, member20, member21, member22, member23
             ]
         ),
+        BridgedType(
+            name: "DisplayColumn", genericParameters: [],
+            conformances: ["ExpressibleByStringLiteral": [:]],
+            associatedTypes: [:],
+            parse: nil, literal: { textLiteral(DisplayColumn.self, $0).map { SwiftValue.make($0, as: "DisplayColumn") } }, arrayLiteral: nil,
+            members: [
+                member24, member25, member26
+            ]
+        ),
     ]
     /// The module's structs, as Swiit source: declared with the prelude.
     package static let shellTypes = #"""
@@ -73,7 +82,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
     /// How the module's enums say how a case is shown, by case name.
     package static let shellEnumStyles: [String: @Sendable (String) -> DisplayStyle?] = ["FileType": { name in FileType.allCases.first { "\($0)" == name }?.displayStyle }, "JobState": { name in JobState.allCases.first { "\($0)" == name }?.displayStyle }]
 
-    package nonisolated(unsafe) static let shellFunctions: [BridgedMember] = [member24, member25, member26, member27, member28, member29, member30, member31, member32, member33]
+    package nonisolated(unsafe) static let shellFunctions: [BridgedMember] = [member27, member28, member29, member30, member31, member32, member33, member34, member35, member36]
     nonisolated(unsafe) private static let member0: BridgedMember =                 BridgedMember(
                     kind: .method, name: "...", isStatic: true,
                     parameters: [Parameter(label: nil, name: "minimum", type: .named("FileSize")), Parameter(label: nil, name: "maximum", type: .named("FileSize"))],
@@ -389,6 +398,47 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                 )
 
     nonisolated(unsafe) private static let member24: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "name", isStatic: false,
+                    parameters: [],
+                    returns: .string, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: DisplayColumn = try SwiftValue.unbox(DisplayColumn.self, args["self"]!)
+                let result = receiver.name
+                return result.swiitValue
+                    }
+                )
+
+    nonisolated(unsafe) private static let member25: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "styledBy", isStatic: false,
+                    parameters: [],
+                    returns: .optional(.string), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: DisplayColumn = try SwiftValue.unbox(DisplayColumn.self, args["self"]!)
+                let result = receiver.styledBy
+                return (result.map { $0.swiitValue } ?? .nothing)
+                    }
+                )
+
+    nonisolated(unsafe) private static let member26: BridgedMember =                 BridgedMember(
+                    kind: .initializer, name: "init", isStatic: true,
+                    parameters: [Parameter(label: "stringLiteral", name: "name", type: .string)],
+                    returns: .named("DisplayColumn"), generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "Creates an instance initialized to the given string value.",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = DisplayColumn(stringLiteral: try String(swiitValue: args["name"]!))
+                return SwiftValue.make(result, as: "DisplayColumn")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member27: BridgedMember =                 BridgedMember(
                     kind: .method, name: "from", isStatic: false,
                     parameters: [Parameter(label: nil, name: "format", type: .named("InputFormat")), Parameter(label: nil, name: "text", type: .list(.string), isInput: true)],
                     returns: .named("JSON"), generics: [:],
@@ -402,7 +452,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     parameterDocs: ["format": "json"]
                 )
 
-    nonisolated(unsafe) private static let member25: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member28: BridgedMember =                 BridgedMember(
                     kind: .method, name: "to", isStatic: false,
                     parameters: [Parameter(label: nil, name: "format", type: .named("OutputFormat")), Parameter(label: nil, name: "items", type: .list(.any), isInput: true)],
                     returns: .string, generics: [:],
@@ -416,7 +466,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     parameterDocs: ["format": "json or text"]
                 )
 
-    nonisolated(unsafe) private static let member26: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member29: BridgedMember =                 BridgedMember(
                     kind: .method, name: "table", isStatic: false,
                     parameters: [Parameter(label: nil, name: "items", type: .list(.any), isInput: true)],
                     returns: .list(.string), generics: [:],
@@ -429,7 +479,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     }
                 )
 
-    nonisolated(unsafe) private static let member27: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member30: BridgedMember =                 BridgedMember(
                     kind: .method, name: "list", isStatic: false,
                     parameters: [Parameter(label: nil, name: "items", type: .list(.any), isInput: true)],
                     returns: .list(.string), generics: [:],
@@ -442,7 +492,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     }
                 )
 
-    nonisolated(unsafe) private static let member28: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member31: BridgedMember =                 BridgedMember(
                     kind: .method, name: "pwd", isStatic: false,
                     parameters: [],
                     returns: .named("FilePath"), generics: [:],
@@ -455,7 +505,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     }
                 )
 
-    nonisolated(unsafe) private static let member29: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member32: BridgedMember =                 BridgedMember(
                     kind: .method, name: "with", isStatic: false,
                     parameters: [Parameter(label: "env", name: "variables", type: .dictionary(.string, .string)), Parameter(label: nil, name: "body", type: .functionType([], .parameter("T"), throws: true))],
                     returns: .parameter("T"), generics: ["T": []],
@@ -469,7 +519,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     parameterDocs: ["body": "what to run with them set", "variables": "the variables to set, as in with(env: [\"EDITOR\": \"vim\"]) { git commit }"]
                 )
 
-    nonisolated(unsafe) private static let member30: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member33: BridgedMember =                 BridgedMember(
                     kind: .method, name: "ls", isStatic: false,
                     parameters: [Parameter(label: nil, name: "paths", type: .named("FilePath"), variadic: true), Parameter(label: "all", name: "all", type: .bool, defaultValue: .literal(.bool(false)), shortFlag: "a")],
                     returns: .list(.named("FileEntry")), generics: [:],
@@ -485,7 +535,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     parameterDocs: ["all": "include hidden files", "paths": "files or directories to list (default: the current directory)"]
                 )
 
-    nonisolated(unsafe) private static let member31: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member34: BridgedMember =                 BridgedMember(
                     kind: .method, name: "history", isStatic: false,
                     parameters: [],
                     returns: .list(.string), generics: [:],
@@ -498,7 +548,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     }
                 )
 
-    nonisolated(unsafe) private static let member32: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member35: BridgedMember =                 BridgedMember(
                     kind: .method, name: "readLine", isStatic: false,
                     parameters: [Parameter(label: "strippingNewline", name: "strippingNewline", type: .bool, defaultValue: .literal(.bool(true)))],
                     returns: .optional(.string), generics: [:],
@@ -512,7 +562,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     parameterDocs: ["strippingNewline": "leave the line's newline off"]
                 )
 
-    nonisolated(unsafe) private static let member33: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member36: BridgedMember =                 BridgedMember(
                     kind: .method, name: "ps", isStatic: false,
                     parameters: [],
                     returns: .list(.named("ProcessEntry")), generics: [:],

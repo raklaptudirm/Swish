@@ -9,8 +9,7 @@ extension Library {
     /// `CommandFailure`, `help`, `members`, `select` and `JSON`.
     static func shell(for shell: Shell) -> Library {
         Library(
-            types: Bridge.shellTypes, columns: Bridge.shellColumns,
-            enumStyles: Bridge.shellEnumStyles, functions: Bridge.shellFunctions,
+            types: Bridge.shellTypes, functions: Bridge.shellFunctions,
             bridged: Bridge.shellBridged, declarations: shellDeclarations + fileSizeUnits,
             bodies: shell.commandMethods.merging([
                 "help": (shell.help().body, nil),
@@ -43,6 +42,13 @@ extension Library {
     /// Swish source read after the core's prelude. The checker works from the
     /// signatures; the bodies are in Swift, found by name (`bodies`).
     private static let shellDeclarations = #"""
+    /// A struct that says which of its fields a table shows by default, in
+    /// order. The rest are still there for `filter`, `select` and `get`, and
+    /// `table` shows every one.
+    protocol Tabular {
+        static var columns: [DisplayColumn] { get }
+    }
+
     /// A command or task started in the background, which `await` joins and
     /// `jobs` lists. What scripts may use of it is what the shell's jobs have
     /// (Jobs.swift); a `Job<Int>` is one of these too.

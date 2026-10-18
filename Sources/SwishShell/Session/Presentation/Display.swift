@@ -22,14 +22,12 @@ extension Interpreter {
     /// How types show in a table: every installed library's, the shell's own
     /// (`Job`, `Help`), and the columns of the structs declared in Swish that
     /// say so (`Tabular`).
-    var displayRegistry: DisplayRegistry { displayRegistryProvider() }
+    var displayRegistry: DisplayRegistry { tableRegistry() }
 
     func tableRegistry() -> DisplayRegistry {
         var registry = DisplayRegistry()
-        for library in libraries {
-            registry.columns.merge(library.columns) { first, _ in first }
-            registry.enumStyles.merge(library.enumStyles) { first, _ in first }
-        }
+        registry.columns.merge(Bridge.shellColumns) { first, _ in first }
+        registry.enumStyles.merge(Bridge.shellEnumStyles) { first, _ in first }
         registry.columns.merge(["Job": Job.columns, "Help": Shell.helpColumns]) { first, _ in first }
         for scope in scopes {
             for case .object(let type as StructType) in scope.bindings.values.map(\.value)
