@@ -1,4 +1,4 @@
-import Swiit
+@_spi(Layer) import Swiit
 import Foundation
 
 struct SpawnFailure: Error {
@@ -14,6 +14,8 @@ enum Stage {
     case value(Value)
     /// `[p1, p2] | describe`: a method of each item piped in.
     case method(String, [CommandArgument], redirects: [ResolvedRedirect], environment: [(String, String)])
+    /// A name that may be a method of what flows in, decided when the first item arrives (Shell+Resolving.swift).
+    case deferred(DeferredStage)
 
     var isExternal: Bool {
         if case .external = self { true } else { false }
@@ -22,6 +24,7 @@ enum Stage {
     var redirects: [ResolvedRedirect] {
         switch self {
         case .external(_, _, let redirects, _), .function(_, _, let redirects, _), .method(_, _, let redirects, _): redirects
+        case .deferred(let stage): stage.redirects
         case .value: []
         }
     }
@@ -30,6 +33,7 @@ enum Stage {
     var environment: [(String, String)] {
         switch self {
         case .external(_, _, _, let environment), .function(_, _, _, let environment), .method(_, _, _, let environment): environment
+        case .deferred(let stage): stage.environment
         case .value: []
         }
     }

@@ -1,4 +1,5 @@
 @_spi(Layer) import Swiit
+@_spi(Layer) import SwishShellLibrary
 import Foundation
 
 /// The shell: a process with a terminal, jobs and a line editor, over an
@@ -7,7 +8,6 @@ import Foundation
 public final class Shell {
     /// Whether a pipeline of Swift's own calls runs as those calls (see
     /// `Desugarer`); tests turn it off to compare.
-    var directCalls = true
 
     /// The language.
     let interpreter: Interpreter
@@ -43,6 +43,8 @@ public final class Shell {
     }
     /// Programs on PATH, for highlighting and completion.
     var executableCache: (path: String, time: Date, names: Set<String>)?
+    /// The command lines the last program read has (Front/), to check against the functions they name.
+    var commandUses: [Front.CommandUse] = []
 
     let terminal = STDIN_FILENO
     /// Whether the shell owns the terminal and does job control.
@@ -79,10 +81,9 @@ public final class Shell {
         // The shell writes into pipes itself now; a reader exiting early
         // should end that write with EPIPE, not kill the shell.
         signal(SIGPIPE, SIG_IGN)
-        interpreter = Interpreter(host: SwiitHost(name: "swish"), outputCounter: OutputCounter())
+        interpreter = Interpreter(host: Interpreter.Host(name: "swish"), outputCounter: OutputCounter())
         interpreter.task.host = ShellTask()
-        interpreter.syntax = LayerPlugin(ShellSyntax())
-        interpreter.host = SwiitHost(process: self)
+        interpreter.host = Interpreter.Host(process: self)
         // Library functions that ask are lent what was entered before, too.
         interpreter.contextProvider = { [unowned self] in
             var context = HostContext(history: historyEntries, colorOutput: interpreter.host.output.traits().styled)
@@ -167,7 +168,7 @@ extension Shell {
         // The shell touches the interpreter holding its lock, as tasks do.
         interpreter.withMainTask {
         diagnosticSource = (source, nil)
-        switch interpreter.parse(source) {
+        switch parseSource(source) {
         case .failure(let error):
             reportDiagnostic(.syntax, "\(error)", at: error.range)
             lastStatus = 2
@@ -189,30 +190,14 @@ extension Shell {
     /// decided written in, or nil if it mustn't run.
     func typeCheck(_ program: Program, file: String? = nil) -> Program? {
         let checker = TypeChecker(interpreter: interpreter)
-        // Each shell construct becomes Swift as soon as it is checked, while the checker still has the scopes it was checked in.
-        let desugarer = Desugarer(directCalls: directCalls)
-        checker.rewriteExtension = { desugarer.expression(SwiftExpression($0)).raw }
         do {
             let checked = try checker.check(program)
-            interpreter.staticTypes.merge(checker.declaredGlobals) { $1 }
-            // Spike: what is left is Swift alone, so it can go to the interpreter as source, with no layer's syntax in it.
-            if ProcessInfo.processInfo.environment["SWISH_SPLIT"] != nil {
-                let printed = SwiftPrinter().source(checked)
-                switch interpreter.parseSwift(printed) {
-                case .success(let again):
-                    do {
-                        let rechecked = try TypeChecker(interpreter: interpreter).check(again)
-                        FileHandle.standardError.write(Data("SPLIT OK\n".utf8))
-                        return rechecked
-                    } catch let error as TypeError {
-                        FileHandle.standardError.write(Data("SPLIT RECHECK: \(error.message)\n  \(printed.prefix(200))\n".utf8))
-                    } catch {
-                        preconditionFailure("the checker only throws TypeError")
-                    }
-                case .failure(let error):
-                    FileHandle.standardError.write(Data("SPLIT UNREAD: \(error)\n  \(printed.prefix(200))\n".utf8))
-                }
+            if let message = firstCommandLineError(commandUses, checker: checker) {
+                interpreter.report("error: \(message)")
+                lastStatus = 2
+                return nil
             }
+            interpreter.staticTypes.merge(checker.declaredGlobals) { $1 }
             return checked
         } catch {
             if error.spot ?? error.range != nil, diagnosticSource != nil {

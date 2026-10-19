@@ -1,4 +1,4 @@
-import SwishShellLibrary
+@_spi(Layer) import SwishShellLibrary
 @_spi(Layer) import Swiit
 
 extension TypeAnnotation {

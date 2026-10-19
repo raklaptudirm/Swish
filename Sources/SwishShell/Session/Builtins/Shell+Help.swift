@@ -1,6 +1,6 @@
 @_spi(Layer) import Swiit
 import Foundation
-import SwishShellLibrary
+@_spi(Layer) import SwishShellLibrary
 import SystemPackage
 
 extension Shell {
@@ -196,7 +196,7 @@ extension Shell {
         for scope in interpreter.scopes.reversed() {
             for (name, binding) in scope.bindings where seen.insert(name).inserted {
                 // A name you can't write, like `$json`, is the shell's own.
-                guard SourceCursor.isIdentifier(name), case .function(let set as OverloadSet) = binding.value,
+                guard Lex.isIdentifier(name), case .function(let set as OverloadSet) = binding.value,
                       let first = set.candidates.first else { continue }
                 // One row a name: its overloads' usages, and what each says it does.
                 let source = first.isBuiltin ? "builtin" : "yours"

@@ -1,9 +1,9 @@
-import Swiit
-import SwishShellLibrary
+@_spi(Layer) import Swiit
+@_spi(Layer) import SwishShellLibrary
 import Foundation
 import SwiitStandardLibrary
 
-extension SwiitHost {
+extension Interpreter.Host {
     /// The shell as a host: the process it is. Output goes to the
     /// descriptors (as redirected for a `$(…)`), and a signal asks it to stop.
     init(process shell: Shell) {

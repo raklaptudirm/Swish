@@ -4,7 +4,7 @@ import Foundation
 import Testing
 
 /// What a test host saw, and what it was told to answer: proof that the
-/// interpreter reaches the world only through its `SwiitHost`.
+/// interpreter reaches the world only through its `Interpreter.Host`.
 private final class Recorder {
     /// Everything written, as `out: …` or `err: …`.
     var written: [String] = []
@@ -17,7 +17,7 @@ private final class Recorder {
 private func shellWithRecorder() -> (Shell, Recorder) {
     let shell = Shell()
     let recorder = Recorder()
-    shell.interpreter.host = SwiitHost(
+    shell.interpreter.host = Interpreter.Host(
         name: "swish",
         output: OutputSink(write: { recorder.written.append("out: " + $0); return true }),
         error: OutputSink(write: { recorder.written.append("err: " + $0); return true }),
@@ -106,7 +106,7 @@ private func errorsOfScript(_ lines: [String]) throws -> (errors: String, status
 
 @Test func whatFollowsACommandSubstitutionWithAClosureIsStillRead() throws {
     // SwiftParser takes `$(echo hi | map { … })` for a Swift call that ends at the closure and leaves the rest of the
-    // line out of every statement; the layer reads on from where its own text ended.
+    // line out of every statement; the front end blanks what is inside, so each statement is still found.
     let shell = Shell()
     let cases: [(source: String, statements: Int)] = [
         (#"let a = $(echo hi | map { "x" }); touch /tmp/never; print(a)"#, 3),
@@ -114,7 +114,7 @@ private func errorsOfScript(_ lines: [String]) throws -> (errors: String, status
         (#"print($(echo hi | map { "x" })); print(1)"#, 2),
     ]
     for (source, statements) in cases {
-        switch shell.interpreter.parse(source) {
+        switch shell.parseSource(source) {
         case .success(let program): #expect(program.statements.count == statements, "\(source)")
         case .failure(let error): Issue.record("\(source): \(error)")
         }

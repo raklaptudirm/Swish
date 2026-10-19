@@ -1,7 +1,7 @@
-import Swiit
+@_spi(Layer) import Swiit
 @_spi(Shell) @_spi(Layer) @testable import SwishShell
 import SwiitStandardLibrary
-import SwishShellLibrary
+@_spi(Layer) import SwishShellLibrary
 import Testing
 
 /// Runs `source` in `shell`, returning what it wrote to standard output.
@@ -392,7 +392,7 @@ private func fixture() throws -> String {
     #expect(try output(data + "xs | sorted --by n | get s") == "a\nb\nc\n")
     #expect(try output(data + "xs | sorted -b s | reversed | prefix 2 | get n") == "3\n2\n")
     #expect(try output(data + "xs | reversed | get n; xs | count") == "2\n1\n3\n3\n")
-    #expect(status(data + "xs | sorted") == 2) // tuples aren't Comparable: sort them by a field
+    #expect(errorText(data + "xs | sorted")?.contains("Comparable") == true) // tuples aren't Comparable: sort them by a field
     #expect(try output("printf 'b\\n10\\n9\\na\\n' | sorted; printf '10\\n9\\n9\\n10\\n' | uniqued") == "10\n9\na\nb\n10\n9\n")
     #expect(try output("[3, 1.5, 2] | sorted") == "1.5\n2\n3\n")
     #expect(try output("seq 1000000 | prefix 2; yes | prefix 1") == "1\n2\ny\n")
@@ -435,7 +435,7 @@ private func fixture() throws -> String {
 @Test func formatterFitsTheWidth() {
     var lines: [String] = []
     let formatter = DisplayFormatter(maxWidth: 20) { lines.append($0); return true }
-    formatter.add(.record(Record(["name": .string("a-rather-long-file-name"), "size": FileSize(bytes: 1).swiitValue])))
+    formatter.add(.record(Record(["name": .string("a-rather-long-file-name"), "size": FileSize(bytes: 1).value])))
     formatter.finish()
     // The name column shrinks from 23 to 14 so the table fits in 20.
     #expect(lines == ["name            size\n", "a-rather-long…   1 B\n"])

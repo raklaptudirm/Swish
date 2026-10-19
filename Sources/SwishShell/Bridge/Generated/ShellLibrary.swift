@@ -2,9 +2,9 @@
 // Don't edit: the bridge generator (swiit-bridge) remakes it.
 import Foundation
 @_spi(Layer) import Swiit
-import SwishShellLibrary
+@_spi(Layer) import SwishShellLibrary
 import SystemPackage
-import SwishShellLibrary
+@_spi(Layer) import SwishShellLibrary
 
 extension Bridge {
     package nonisolated(unsafe) static let shellBridged: [BridgedType] = [
@@ -15,7 +15,7 @@ extension Bridge {
             associatedTypes: [:],
             parse: { FileSize($0).map { SwiftValue.make($0, as: "FileSize") } }, literal: nil, arrayLiteral: nil,
             members: [
-                member0, member1, member2, member3, member4, member5, member6, member7, member8, member9, member10, member11, member12, member13, member14, member15, member16, member17, member18, member19, member20, member21, member22, member23
+                member0, member1, member2, member3, member4, member5, member6, member7, member8, member9, member10, member11, member12, member13, member14, member15, member16, member17, member18, member19, member20, member21, member22, member23, member24, member25
             ]
         ),
         BridgedType(
@@ -24,7 +24,7 @@ extension Bridge {
             associatedTypes: [:],
             parse: nil, literal: { textLiteral(DisplayColumn.self, $0).map { SwiftValue.make($0, as: "DisplayColumn") } }, arrayLiteral: nil,
             members: [
-                member24, member25, member26
+                member26, member27, member28
             ]
         ),
         BridgedType(
@@ -33,7 +33,7 @@ extension Bridge {
             associatedTypes: ["Element": .string, "Index": .int],
             parse: nil, literal: nil, arrayLiteral: nil,
             members: [
-                member27, member28, member29, member30, member31, member32, member33, member34, member35, member36, member37, member38, member39, member40, member41, member42, member43, member44, member45, member46, member47, member48, member49, member50, member51, member52, member53, member54, member55, member56, member57, member58, member59, member60, member61, member62, member63, member64, member65, member66, member67, member68, member69, member70, member71, member72, member73, member74, member75
+                member29, member30, member31, member32, member33, member34, member35, member36, member37, member38, member39, member40, member41, member42, member43, member44, member45, member46, member47, member48, member49, member50, member51, member52, member53, member54, member55, member56, member57, member58, member59, member60, member61, member62, member63, member64, member65, member66, member67, member68, member69, member70, member71, member72, member73, member74, member75, member76, member77, member78, member79
             ]
         ),
         BridgedType(
@@ -42,7 +42,7 @@ extension Bridge {
             associatedTypes: [:],
             parse: nil, literal: nil, arrayLiteral: nil,
             members: [
-                member76
+                member80
             ]
         ),
     ]
@@ -105,7 +105,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
     /// How the module's enums say how a case is shown, by case name.
     package static let shellEnumStyles: [String: @Sendable (String) -> DisplayStyle?] = ["FileType": { name in FileType.allCases.first { "\($0)" == name }?.displayStyle }, "JobState": { name in JobState.allCases.first { "\($0)" == name }?.displayStyle }]
 
-    package nonisolated(unsafe) static let shellFunctions: [BridgedMember] = [member77, member78, member79, member80, member81, member82, member83, member84, member85, member86]
+    package nonisolated(unsafe) static let shellFunctions: [BridgedMember] = [member81, member82, member83, member84, member85, member86, member87, member88, member89, member90]
     nonisolated(unsafe) private static let member0: BridgedMember =                 BridgedMember(
                     kind: .method, name: "...", isStatic: true,
                     parameters: [Parameter(label: nil, name: "minimum", type: .named("FileSize")), Parameter(label: nil, name: "maximum", type: .named("FileSize"))],
@@ -128,7 +128,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let result = (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) > (try SwiftValue.unbox(FileSize.self, args["rhs"]!))
-                return result.swiitValue
+                return result.value
                     }
                 )
 
@@ -141,7 +141,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let result = (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) <= (try SwiftValue.unbox(FileSize.self, args["rhs"]!))
-                return result.swiitValue
+                return result.value
                     }
                 )
 
@@ -154,7 +154,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let result = (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) >= (try SwiftValue.unbox(FileSize.self, args["rhs"]!))
-                return result.swiitValue
+                return result.value
                     }
                 )
 
@@ -167,7 +167,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let result = (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) != (try SwiftValue.unbox(FileSize.self, args["rhs"]!))
-                return result.swiitValue
+                return result.value
                     }
                 )
 
@@ -194,7 +194,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: FileSize = try SwiftValue.unbox(FileSize.self, args["self"]!)
                 let result = receiver.bytes
-                return result.swiitValue
+                return result.value
                     }
                 )
 
@@ -206,7 +206,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "",
                     body: .native { shell, args in
                         _ = shell
-                        let result = FileSize(bytes: try Int(swiitValue: args["bytes"]!))
+                        let result = FileSize(bytes: try Int(args["bytes"]!))
                 return SwiftValue.make(result, as: "FileSize")
                     }
                 )
@@ -220,7 +220,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let result = FileSize.units
-                return bridgeDictionary(Dictionary(uniqueKeysWithValues: result.map { ($0.key.swiitValue, $0.value.swiitValue) }))
+                return bridgeDictionary(Dictionary(uniqueKeysWithValues: result.map { ($0.key.value, $0.value.value) }))
                     }
                 )
 
@@ -232,7 +232,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "`amount` of a unit worth `multiplier` bytes, which `2.mb` is: a size too large to hold is the largest there is.",
                     body: .native { shell, args in
                         _ = shell
-                        let result = FileSize(try Double(swiitValue: args["amount"]!), multiplier: try Int(swiitValue: args["multiplier"]!))
+                        let result = FileSize(try Double(args["amount"]!), multiplier: try Int(args["multiplier"]!))
                 return SwiftValue.make(result, as: "FileSize")
                     }
                 )
@@ -245,7 +245,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "`1.5` of a unit (`mb`), or nil if there's no such unit or the size is too large.",
                     body: .native { shell, args in
                         _ = shell
-                        let result = FileSize(try Double(swiitValue: args["amount"]!), unit: try String(swiitValue: args["unit"]!))
+                        let result = FileSize(try Double(args["amount"]!), unit: try String(args["unit"]!))
                 return (result.map { SwiftValue.make($0, as: "FileSize") } ?? .nothing)
                     }
                 )
@@ -258,7 +258,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "`1024`, `1.5mb`, `1.5 MB`, `2kib`; nil for anything else.",
                     body: .native { shell, args in
                         _ = shell
-                        let result = FileSize(try String(swiitValue: args["text"]!))
+                        let result = FileSize(try String(args["text"]!))
                 return (result.map { SwiftValue.make($0, as: "FileSize") } ?? .nothing)
                     }
                 )
@@ -273,7 +273,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: FileSize = try SwiftValue.unbox(FileSize.self, args["self"]!)
                 let result = receiver.description
-                return result.swiitValue
+                return result.value
                     }
                 )
 
@@ -286,7 +286,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let result = (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) < (try SwiftValue.unbox(FileSize.self, args["rhs"]!))
-                return result.swiitValue
+                return result.value
                     }
                 )
 
@@ -337,7 +337,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "",
                     body: .native { shell, args in
                         _ = shell
-                        let result = try (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) * (try Int(swiitValue: args["rhs"]!))
+                        let result = try (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) * (try Int(args["rhs"]!))
                 return SwiftValue.make(result, as: "FileSize")
                     }
                 )
@@ -350,7 +350,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "",
                     body: .native { shell, args in
                         _ = shell
-                        let result = try (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) * (try Double(swiitValue: args["rhs"]!))
+                        let result = try (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) * (try Double(args["rhs"]!))
                 return SwiftValue.make(result, as: "FileSize")
                     }
                 )
@@ -363,7 +363,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "",
                     body: .native { shell, args in
                         _ = shell
-                        let result = try (try Int(swiitValue: args["lhs"]!)) * (try SwiftValue.unbox(FileSize.self, args["rhs"]!))
+                        let result = try (try Int(args["lhs"]!)) * (try SwiftValue.unbox(FileSize.self, args["rhs"]!))
                 return SwiftValue.make(result, as: "FileSize")
                     }
                 )
@@ -376,7 +376,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "",
                     body: .native { shell, args in
                         _ = shell
-                        let result = try (try Double(swiitValue: args["lhs"]!)) * (try SwiftValue.unbox(FileSize.self, args["rhs"]!))
+                        let result = try (try Double(args["lhs"]!)) * (try SwiftValue.unbox(FileSize.self, args["rhs"]!))
                 return SwiftValue.make(result, as: "FileSize")
                     }
                 )
@@ -389,7 +389,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "",
                     body: .native { shell, args in
                         _ = shell
-                        let result = try (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) / (try Int(swiitValue: args["rhs"]!))
+                        let result = try (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) / (try Int(args["rhs"]!))
                 return SwiftValue.make(result, as: "FileSize")
                     }
                 )
@@ -402,7 +402,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "",
                     body: .native { shell, args in
                         _ = shell
-                        let result = try (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) / (try Double(swiitValue: args["rhs"]!))
+                        let result = try (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) / (try Double(args["rhs"]!))
                 return SwiftValue.make(result, as: "FileSize")
                     }
                 )
@@ -416,11 +416,38 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let result = (try SwiftValue.unbox(FileSize.self, args["lhs"]!)) / (try SwiftValue.unbox(FileSize.self, args["rhs"]!))
-                return result.swiitValue
+                return result.value
                     }
                 )
 
     nonisolated(unsafe) private static let member24: BridgedMember =                 BridgedMember(
+                    kind: .initializer, name: "init", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "swiitValue", type: .any)],
+                    returns: .named("FileSize"), generics: [:],
+                    isThrowing: true, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = try FileSize(args["swiitValue"]!)
+                return SwiftValue.make(result, as: "FileSize")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member25: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "value", isStatic: false,
+                    parameters: [],
+                    returns: .any, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: FileSize = try SwiftValue.unbox(FileSize.self, args["self"]!)
+                let result = receiver.value
+                return result
+                    }
+                )
+
+    nonisolated(unsafe) private static let member26: BridgedMember =                 BridgedMember(
                     kind: .property, name: "name", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
@@ -430,11 +457,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: DisplayColumn = try SwiftValue.unbox(DisplayColumn.self, args["self"]!)
                 let result = receiver.name
-                return result.swiitValue
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member25: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member27: BridgedMember =                 BridgedMember(
                     kind: .property, name: "styledBy", isStatic: false,
                     parameters: [],
                     returns: .optional(.string), generics: [:],
@@ -444,11 +471,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: DisplayColumn = try SwiftValue.unbox(DisplayColumn.self, args["self"]!)
                 let result = receiver.styledBy
-                return (result.map { $0.swiitValue } ?? .nothing)
+                return (result.map { $0.value } ?? .nothing)
                     }
                 )
 
-    nonisolated(unsafe) private static let member26: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member28: BridgedMember =                 BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "stringLiteral", name: "name", type: .string)],
                     returns: .named("DisplayColumn"), generics: [:],
@@ -456,12 +483,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "Creates an instance initialized to the given string value.",
                     body: .native { shell, args in
                         _ = shell
-                        let result = DisplayColumn(stringLiteral: try String(swiitValue: args["name"]!))
+                        let result = DisplayColumn(stringLiteral: try String(args["name"]!))
                 return SwiftValue.make(result, as: "DisplayColumn")
                     }
                 )
 
-    nonisolated(unsafe) private static let member27: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member29: BridgedMember =                 BridgedMember(
                     kind: .method, name: "map", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.string], .parameter("T"), throws: true))],
                     returns: .list(.parameter("T")), generics: ["T": []],
@@ -470,12 +497,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result: [Value] = try receiver.map({ (a0: String) throws -> Value in try bridgeClosure(shell, args["transform"]!)([a0.swiitValue]) })
+                let result: [Value] = try receiver.map({ (a0: String) throws -> Value in try bridgeClosure(shell, args["transform"]!)([a0.value]) })
                 return .list(result)
                     }
                 )
 
-    nonisolated(unsafe) private static let member28: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member30: BridgedMember =                 BridgedMember(
                     kind: .property, name: "last", isStatic: false,
                     parameters: [],
                     returns: .optional(.string), generics: [:],
@@ -485,11 +512,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
                 let result = receiver.last
-                return (result.map { $0.swiitValue } ?? .nothing)
+                return (result.map { $0.value } ?? .nothing)
                     }
                 )
 
-    nonisolated(unsafe) private static let member29: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member31: BridgedMember =                 BridgedMember(
                     kind: .method, name: "firstIndex", isStatic: false,
                     parameters: [Parameter(label: "of", name: "element", type: .string)],
                     returns: .optional(.int), generics: [:],
@@ -498,12 +525,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result = receiver.firstIndex(of: try String(swiitValue: args["element"]!))
-                return (result.map { $0.swiitValue } ?? .nothing)
+                let result = receiver.firstIndex(of: try String(args["element"]!))
+                return (result.map { $0.value } ?? .nothing)
                     }
                 )
 
-    nonisolated(unsafe) private static let member30: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member32: BridgedMember =                 BridgedMember(
                     kind: .method, name: "firstIndex", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.string], .bool, throws: true))],
                     returns: .optional(.int), generics: [:],
@@ -512,12 +539,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result = try receiver.firstIndex(where: { (a0: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["predicate"]!)([a0.swiitValue])) })
-                return (result.map { $0.swiitValue } ?? .nothing)
+                let result = try receiver.firstIndex(where: { (a0: String) throws -> Bool in try Bool(try bridgeClosure(shell, args["predicate"]!)([a0.value])) })
+                return (result.map { $0.value } ?? .nothing)
                     }
                 )
 
-    nonisolated(unsafe) private static let member31: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member33: BridgedMember =                 BridgedMember(
                     kind: .method, name: "last", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.string], .bool, throws: true))],
                     returns: .optional(.string), generics: [:],
@@ -526,12 +553,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result = try receiver.last(where: { (a0: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["predicate"]!)([a0.swiitValue])) })
-                return (result.map { $0.swiitValue } ?? .nothing)
+                let result = try receiver.last(where: { (a0: String) throws -> Bool in try Bool(try bridgeClosure(shell, args["predicate"]!)([a0.value])) })
+                return (result.map { $0.value } ?? .nothing)
                     }
                 )
 
-    nonisolated(unsafe) private static let member32: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member34: BridgedMember =                 BridgedMember(
                     kind: .method, name: "lastIndex", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.string], .bool, throws: true))],
                     returns: .optional(.int), generics: [:],
@@ -540,12 +567,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result = try receiver.lastIndex(where: { (a0: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["predicate"]!)([a0.swiitValue])) })
-                return (result.map { $0.swiitValue } ?? .nothing)
+                let result = try receiver.lastIndex(where: { (a0: String) throws -> Bool in try Bool(try bridgeClosure(shell, args["predicate"]!)([a0.value])) })
+                return (result.map { $0.value } ?? .nothing)
                     }
                 )
 
-    nonisolated(unsafe) private static let member33: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member35: BridgedMember =                 BridgedMember(
                     kind: .method, name: "lastIndex", isStatic: false,
                     parameters: [Parameter(label: "of", name: "element", type: .string)],
                     returns: .optional(.int), generics: [:],
@@ -554,12 +581,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result = receiver.lastIndex(of: try String(swiitValue: args["element"]!))
-                return (result.map { $0.swiitValue } ?? .nothing)
+                let result = receiver.lastIndex(of: try String(args["element"]!))
+                return (result.map { $0.value } ?? .nothing)
                     }
                 )
 
-    nonisolated(unsafe) private static let member34: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member36: BridgedMember =                 BridgedMember(
                     kind: .method, name: "shuffled", isStatic: false,
                     parameters: [],
                     returns: .list(.string), generics: [:],
@@ -569,11 +596,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
                 let result: [String] = receiver.shuffled()
-                return .list(result.map { $0.swiitValue })
+                return .list(result.map { $0.value })
                     }
                 )
 
-    nonisolated(unsafe) private static let member35: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member37: BridgedMember =                 BridgedMember(
                     kind: .method, name: "!=", isStatic: true,
                     parameters: [Parameter(label: nil, name: "lhs", type: .named("Output")), Parameter(label: nil, name: "rhs", type: .named("Output"))],
                     returns: .bool, generics: [:],
@@ -582,11 +609,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let result = (try SwiftValue.unbox(Output.self, args["lhs"]!)) != (try SwiftValue.unbox(Output.self, args["rhs"]!))
-                return result.swiitValue
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member36: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member38: BridgedMember =                 BridgedMember(
                     kind: .method, name: "filter", isStatic: false,
                     parameters: [Parameter(label: nil, name: "isIncluded", type: .functionType([.string], .bool, throws: true))],
                     returns: .list(.string), generics: [:],
@@ -595,12 +622,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result: [String] = try receiver.filter({ (a0: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["isIncluded"]!)([a0.swiitValue])) })
-                return .list(result.map { $0.swiitValue })
+                let result: [String] = try receiver.filter({ (a0: String) throws -> Bool in try Bool(try bridgeClosure(shell, args["isIncluded"]!)([a0.value])) })
+                return .list(result.map { $0.value })
                     }
                 )
 
-    nonisolated(unsafe) private static let member37: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member39: BridgedMember =                 BridgedMember(
                     kind: .method, name: "forEach", isStatic: false,
                     parameters: [Parameter(label: nil, name: "body", type: .functionType([.string], .void, throws: true))],
                     returns: .void, generics: [:],
@@ -609,12 +636,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                try receiver.forEach({ (a0: String) throws -> Void in _ = try bridgeClosure(shell, args["body"]!)([a0.swiitValue]) })
+                try receiver.forEach({ (a0: String) throws -> Void in _ = try bridgeClosure(shell, args["body"]!)([a0.value]) })
                 return .nothing
                     }
                 )
 
-    nonisolated(unsafe) private static let member38: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member40: BridgedMember =                 BridgedMember(
                     kind: .method, name: "first", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.string], .bool, throws: true))],
                     returns: .optional(.string), generics: [:],
@@ -623,12 +650,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result = try receiver.first(where: { (a0: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["predicate"]!)([a0.swiitValue])) })
-                return (result.map { $0.swiitValue } ?? .nothing)
+                let result = try receiver.first(where: { (a0: String) throws -> Bool in try Bool(try bridgeClosure(shell, args["predicate"]!)([a0.value])) })
+                return (result.map { $0.value } ?? .nothing)
                     }
                 )
 
-    nonisolated(unsafe) private static let member39: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member41: BridgedMember =                 BridgedMember(
                     kind: .method, name: "min", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.string, .string], .bool, throws: true))],
                     returns: .optional(.string), generics: [:],
@@ -637,12 +664,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result = try receiver.min(by: { (a0: String, a1: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0.swiitValue, a1.swiitValue])) })
-                return (result.map { $0.swiitValue } ?? .nothing)
+                let result = try receiver.min(by: { (a0: String, a1: String) throws -> Bool in try Bool(try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0.value, a1.value])) })
+                return (result.map { $0.value } ?? .nothing)
                     }
                 )
 
-    nonisolated(unsafe) private static let member40: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member42: BridgedMember =                 BridgedMember(
                     kind: .method, name: "max", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.string, .string], .bool, throws: true))],
                     returns: .optional(.string), generics: [:],
@@ -651,12 +678,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result = try receiver.max(by: { (a0: String, a1: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0.swiitValue, a1.swiitValue])) })
-                return (result.map { $0.swiitValue } ?? .nothing)
+                let result = try receiver.max(by: { (a0: String, a1: String) throws -> Bool in try Bool(try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0.value, a1.value])) })
+                return (result.map { $0.value } ?? .nothing)
                     }
                 )
 
-    nonisolated(unsafe) private static let member41: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member43: BridgedMember =                 BridgedMember(
                     kind: .method, name: "min", isStatic: false,
                     parameters: [],
                     returns: .optional(.string), generics: [:],
@@ -666,11 +693,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
                 let result = receiver.min()
-                return (result.map { $0.swiitValue } ?? .nothing)
+                return (result.map { $0.value } ?? .nothing)
                     }
                 )
 
-    nonisolated(unsafe) private static let member42: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member44: BridgedMember =                 BridgedMember(
                     kind: .method, name: "max", isStatic: false,
                     parameters: [],
                     returns: .optional(.string), generics: [:],
@@ -680,11 +707,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
                 let result = receiver.max()
-                return (result.map { $0.swiitValue } ?? .nothing)
+                return (result.map { $0.value } ?? .nothing)
                     }
                 )
 
-    nonisolated(unsafe) private static let member43: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member45: BridgedMember =                 BridgedMember(
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.parameter("PossiblePrefix.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.string, .parameter("PossiblePrefix.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["PossiblePrefix.Element": []],
@@ -693,12 +720,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result = try receiver.starts(with: try bridgeSequence(args["possiblePrefix"]!), by: { (a0: String, a1: Value) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["areEquivalent"]!)([a0.swiitValue, a1])) })
-                return result.swiitValue
+                let result = try receiver.starts(with: try bridgeSequence(args["possiblePrefix"]!), by: { (a0: String, a1: Value) throws -> Bool in try Bool(try bridgeClosure(shell, args["areEquivalent"]!)([a0.value, a1])) })
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member44: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member46: BridgedMember =                 BridgedMember(
                     kind: .method, name: "starts", isStatic: false,
                     parameters: [Parameter(label: "with", name: "possiblePrefix", type: .someSequence(.string))],
                     returns: .bool, generics: [:],
@@ -707,12 +734,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result = receiver.starts(with: try bridgeSequence(args["possiblePrefix"]!).map { try String(swiitValue: $0) })
-                return result.swiitValue
+                let result = receiver.starts(with: try bridgeSequence(args["possiblePrefix"]!).map { try String($0) })
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member45: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member47: BridgedMember =                 BridgedMember(
                     kind: .method, name: "elementsEqual", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.parameter("OtherSequence.Element"))), Parameter(label: "by", name: "areEquivalent", type: .functionType([.string, .parameter("OtherSequence.Element")], .bool, throws: true))],
                     returns: .bool, generics: ["OtherSequence.Element": []],
@@ -721,12 +748,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result = try receiver.elementsEqual(try bridgeSequence(args["other"]!), by: { (a0: String, a1: Value) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["areEquivalent"]!)([a0.swiitValue, a1])) })
-                return result.swiitValue
+                let result = try receiver.elementsEqual(try bridgeSequence(args["other"]!), by: { (a0: String, a1: Value) throws -> Bool in try Bool(try bridgeClosure(shell, args["areEquivalent"]!)([a0.value, a1])) })
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member46: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member48: BridgedMember =                 BridgedMember(
                     kind: .method, name: "uniqued", isStatic: false,
                     parameters: [],
                     returns: .list(.string), generics: [:],
@@ -736,11 +763,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
                 let result: [String] = receiver.uniqued()
-                return .list(result.map { $0.swiitValue })
+                return .list(result.map { $0.value })
                     }
                 )
 
-    nonisolated(unsafe) private static let member47: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member49: BridgedMember =                 BridgedMember(
                     kind: .method, name: "compactMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.string], .optional(.parameter("ElementOfResult")), throws: true))],
                     returns: .list(.parameter("ElementOfResult")), generics: ["ElementOfResult": []],
@@ -749,12 +776,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result: [Value] = try receiver.compactMap({ (a0: String) throws -> Value? in bridgeOptional(try bridgeClosure(shell, args["transform"]!)([a0.swiitValue])) { $0 } })
+                let result: [Value] = try receiver.compactMap({ (a0: String) throws -> Value? in bridgeOptional(try bridgeClosure(shell, args["transform"]!)([a0.value])) { $0 } })
                 return .list(result)
                     }
                 )
 
-    nonisolated(unsafe) private static let member48: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member50: BridgedMember =                 BridgedMember(
                     kind: .method, name: "sorted", isStatic: false,
                     parameters: [],
                     returns: .list(.string), generics: [:],
@@ -764,11 +791,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
                 let result: [String] = receiver.sorted()
-                return .list(result.map { $0.swiitValue })
+                return .list(result.map { $0.value })
                     }
                 )
 
-    nonisolated(unsafe) private static let member49: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member51: BridgedMember =                 BridgedMember(
                     kind: .method, name: "sorted", isStatic: false,
                     parameters: [Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.string, .string], .bool, throws: true))],
                     returns: .list(.string), generics: [:],
@@ -777,12 +804,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result: [String] = try receiver.sorted(by: { (a0: String, a1: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0.swiitValue, a1.swiitValue])) })
-                return .list(result.map { $0.swiitValue })
+                let result: [String] = try receiver.sorted(by: { (a0: String, a1: String) throws -> Bool in try Bool(try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0.value, a1.value])) })
+                return .list(result.map { $0.value })
                     }
                 )
 
-    nonisolated(unsafe) private static let member50: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member52: BridgedMember =                 BridgedMember(
                     kind: .method, name: "lexicographicallyPrecedes", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.string)), Parameter(label: "by", name: "areInIncreasingOrder", type: .functionType([.string, .string], .bool, throws: true))],
                     returns: .bool, generics: [:],
@@ -791,12 +818,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result = try receiver.lexicographicallyPrecedes(try bridgeSequence(args["other"]!).map { try String(swiitValue: $0) }, by: { (a0: String, a1: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0.swiitValue, a1.swiitValue])) })
-                return result.swiitValue
+                let result = try receiver.lexicographicallyPrecedes(try bridgeSequence(args["other"]!).map { try String($0) }, by: { (a0: String, a1: String) throws -> Bool in try Bool(try bridgeClosure(shell, args["areInIncreasingOrder"]!)([a0.value, a1.value])) })
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member51: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member53: BridgedMember =                 BridgedMember(
                     kind: .method, name: "lexicographicallyPrecedes", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.string))],
                     returns: .bool, generics: [:],
@@ -805,12 +832,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result = receiver.lexicographicallyPrecedes(try bridgeSequence(args["other"]!).map { try String(swiitValue: $0) })
-                return result.swiitValue
+                let result = receiver.lexicographicallyPrecedes(try bridgeSequence(args["other"]!).map { try String($0) })
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member52: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member54: BridgedMember =                 BridgedMember(
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.string], .bool, throws: true))],
                     returns: .bool, generics: [:],
@@ -819,12 +846,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result = try receiver.contains(where: { (a0: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["predicate"]!)([a0.swiitValue])) })
-                return result.swiitValue
+                let result = try receiver.contains(where: { (a0: String) throws -> Bool in try Bool(try bridgeClosure(shell, args["predicate"]!)([a0.value])) })
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member53: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member55: BridgedMember =                 BridgedMember(
                     kind: .method, name: "allSatisfy", isStatic: false,
                     parameters: [Parameter(label: nil, name: "predicate", type: .functionType([.string], .bool, throws: true))],
                     returns: .bool, generics: [:],
@@ -833,12 +860,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result = try receiver.allSatisfy({ (a0: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["predicate"]!)([a0.swiitValue])) })
-                return result.swiitValue
+                let result = try receiver.allSatisfy({ (a0: String) throws -> Bool in try Bool(try bridgeClosure(shell, args["predicate"]!)([a0.value])) })
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member54: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member56: BridgedMember =                 BridgedMember(
                     kind: .method, name: "contains", isStatic: false,
                     parameters: [Parameter(label: nil, name: "element", type: .string)],
                     returns: .bool, generics: [:],
@@ -847,12 +874,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result = receiver.contains(try String(swiitValue: args["element"]!))
-                return result.swiitValue
+                let result = receiver.contains(try String(args["element"]!))
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member55: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member57: BridgedMember =                 BridgedMember(
                     kind: .method, name: "count", isStatic: false,
                     parameters: [Parameter(label: "where", name: "predicate", type: .functionType([.string], .bool, throws: true))],
                     returns: .int, generics: [:],
@@ -861,12 +888,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result = try receiver.count(where: { (a0: String) throws -> Bool in try Bool(swiitValue: try bridgeClosure(shell, args["predicate"]!)([a0.swiitValue])) })
-                return result.swiitValue
+                let result = try receiver.count(where: { (a0: String) throws -> Bool in try Bool(try bridgeClosure(shell, args["predicate"]!)([a0.value])) })
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member56: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member58: BridgedMember =                 BridgedMember(
                     kind: .method, name: "reduce", isStatic: false,
                     parameters: [Parameter(label: nil, name: "initialResult", type: .parameter("Result")), Parameter(label: nil, name: "nextPartialResult", type: .functionType([.parameter("Result"), .string], .parameter("Result"), throws: true))],
                     returns: .parameter("Result"), generics: ["Result": []],
@@ -875,12 +902,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result = try receiver.reduce(args["initialResult"]!, { (a0: Value, a1: String) throws -> Value in try bridgeClosure(shell, args["nextPartialResult"]!)([a0, a1.swiitValue]) })
+                let result = try receiver.reduce(args["initialResult"]!, { (a0: Value, a1: String) throws -> Value in try bridgeClosure(shell, args["nextPartialResult"]!)([a0, a1.value]) })
                 return result
                     }
                 )
 
-    nonisolated(unsafe) private static let member57: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member59: BridgedMember =                 BridgedMember(
                     kind: .method, name: "flatMap", isStatic: false,
                     parameters: [Parameter(label: nil, name: "transform", type: .functionType([.string], .someSequence(.parameter("SegmentOfResult.Element")), throws: true))],
                     returns: .list(.parameter("SegmentOfResult.Element")), generics: ["SegmentOfResult.Element": []],
@@ -889,12 +916,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result: [Value] = try receiver.flatMap({ (a0: String) throws -> [Value] in try bridgeSequence(try bridgeClosure(shell, args["transform"]!)([a0.swiitValue])) })
+                let result: [Value] = try receiver.flatMap({ (a0: String) throws -> [Value] in try bridgeSequence(try bridgeClosure(shell, args["transform"]!)([a0.value])) })
                 return .list(result)
                     }
                 )
 
-    nonisolated(unsafe) private static let member58: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member60: BridgedMember =                 BridgedMember(
                     kind: .method, name: "elementsEqual", isStatic: false,
                     parameters: [Parameter(label: nil, name: "other", type: .someSequence(.string))],
                     returns: .bool, generics: [:],
@@ -903,12 +930,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result = receiver.elementsEqual(try bridgeSequence(args["other"]!).map { try String(swiitValue: $0) })
-                return result.swiitValue
+                let result = receiver.elementsEqual(try bridgeSequence(args["other"]!).map { try String($0) })
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member59: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member61: BridgedMember =                 BridgedMember(
                     kind: .method, name: "randomElement", isStatic: false,
                     parameters: [],
                     returns: .optional(.string), generics: [:],
@@ -918,11 +945,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
                 let result = receiver.randomElement()
-                return (result.map { $0.swiitValue } ?? .nothing)
+                return (result.map { $0.value } ?? .nothing)
                     }
                 )
 
-    nonisolated(unsafe) private static let member60: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member62: BridgedMember =                 BridgedMember(
                     kind: .property, name: "isEmpty", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
@@ -932,11 +959,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
                 let result = receiver.isEmpty
-                return result.swiitValue
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member61: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member63: BridgedMember =                 BridgedMember(
                     kind: .property, name: "first", isStatic: false,
                     parameters: [],
                     returns: .optional(.string), generics: [:],
@@ -946,11 +973,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
                 let result = receiver.first
-                return (result.map { $0.swiitValue } ?? .nothing)
+                return (result.map { $0.value } ?? .nothing)
                     }
                 )
 
-    nonisolated(unsafe) private static let member62: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member64: BridgedMember =                 BridgedMember(
                     kind: .property, name: "underestimatedCount", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
@@ -960,11 +987,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
                 let result = receiver.underestimatedCount
-                return result.swiitValue
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member63: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member65: BridgedMember =                 BridgedMember(
                     kind: .property, name: "count", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
@@ -974,11 +1001,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
                 let result = receiver.count
-                return result.swiitValue
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member64: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member66: BridgedMember =                 BridgedMember(
                     kind: .method, name: "index", isStatic: false,
                     parameters: [Parameter(label: nil, name: "i", type: .int), Parameter(label: "offsetBy", name: "distance", type: .int), Parameter(label: "limitedBy", name: "limit", type: .int)],
                     returns: .optional(.int), generics: [:],
@@ -987,12 +1014,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
-                let result = receiver.index(try Int(swiitValue: args["i"]!), offsetBy: try Int(swiitValue: args["distance"]!), limitedBy: try Int(swiitValue: args["limit"]!))
-                return (result.map { $0.swiitValue } ?? .nothing)
+                let result = receiver.index(try Int(args["i"]!), offsetBy: try Int(args["distance"]!), limitedBy: try Int(args["limit"]!))
+                return (result.map { $0.value } ?? .nothing)
                     }
                 )
 
-    nonisolated(unsafe) private static let member65: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member67: BridgedMember =                 BridgedMember(
                     kind: .property, name: "text", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
@@ -1002,11 +1029,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
                 let result = receiver.text
-                return result.swiitValue
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member66: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member68: BridgedMember =                 BridgedMember(
                     kind: .property, name: "code", isStatic: false,
                     parameters: [],
                     returns: .optional(.int), generics: [:],
@@ -1016,11 +1043,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
                 let result = receiver.code
-                return (result.map { $0.swiitValue } ?? .nothing)
+                return (result.map { $0.value } ?? .nothing)
                     }
                 )
 
-    nonisolated(unsafe) private static let member67: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member69: BridgedMember =                 BridgedMember(
                     kind: .property, name: "signal", isStatic: false,
                     parameters: [],
                     returns: .optional(.int), generics: [:],
@@ -1030,11 +1057,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
                 let result = receiver.signal
-                return (result.map { $0.swiitValue } ?? .nothing)
+                return (result.map { $0.value } ?? .nothing)
                     }
                 )
 
-    nonisolated(unsafe) private static let member68: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member70: BridgedMember =                 BridgedMember(
                     kind: .property, name: "lines", isStatic: false,
                     parameters: [],
                     returns: .list(.string), generics: [:],
@@ -1044,11 +1071,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
                 let result: [String] = receiver.lines
-                return .list(result.map { $0.swiitValue })
+                return .list(result.map { $0.value })
                     }
                 )
 
-    nonisolated(unsafe) private static let member69: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member71: BridgedMember =                 BridgedMember(
                     kind: .initializer, name: "init", isStatic: true,
                     parameters: [Parameter(label: "text", name: "text", type: .string), Parameter(label: "code", name: "code", type: .optional(.int)), Parameter(label: "signal", name: "signal", type: .optional(.int), defaultValue: .literal(.nothing))],
                     returns: .named("Output"), generics: [:],
@@ -1056,12 +1083,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "",
                     body: .native { shell, args in
                         _ = shell
-                        let result = Output(text: try String(swiitValue: args["text"]!), code: (args["code"]! == .nothing ? nil : try Int(swiitValue: args["code"]!)), signal: (args["signal"]! == .nothing ? nil : try Int(swiitValue: args["signal"]!)))
+                        let result = Output(text: try String(args["text"]!), code: (args["code"]! == .nothing ? nil : try Int(args["code"]!)), signal: (args["signal"]! == .nothing ? nil : try Int(args["signal"]!)))
                 return SwiftValue.make(result, as: "Output")
                     }
                 )
 
-    nonisolated(unsafe) private static let member70: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member72: BridgedMember =                 BridgedMember(
                     kind: .property, name: "succeeded", isStatic: false,
                     parameters: [],
                     returns: .bool, generics: [:],
@@ -1071,11 +1098,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
                 let result = receiver.succeeded
-                return result.swiitValue
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member71: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member73: BridgedMember =                 BridgedMember(
                     kind: .property, name: "status", isStatic: false,
                     parameters: [],
                     returns: .named("Status"), generics: [:],
@@ -1089,7 +1116,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     }
                 )
 
-    nonisolated(unsafe) private static let member72: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member74: BridgedMember =                 BridgedMember(
                     kind: .property, name: "startIndex", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
@@ -1099,11 +1126,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
                 let result = receiver.startIndex
-                return result.swiitValue
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member73: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member75: BridgedMember =                 BridgedMember(
                     kind: .property, name: "endIndex", isStatic: false,
                     parameters: [],
                     returns: .int, generics: [:],
@@ -1113,11 +1140,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
                 let result = receiver.endIndex
-                return result.swiitValue
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member74: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member76: BridgedMember =                 BridgedMember(
                     kind: .property, name: "description", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
@@ -1127,11 +1154,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
                 let result = receiver.description
-                return result.swiitValue
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member75: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member77: BridgedMember =                 BridgedMember(
                     kind: .property, name: "debugDescription", isStatic: false,
                     parameters: [],
                     returns: .string, generics: [:],
@@ -1141,11 +1168,38 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                         _ = shell
                         let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
                 let result = receiver.debugDescription
-                return result.swiitValue
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member76: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member78: BridgedMember =                 BridgedMember(
+                    kind: .initializer, name: "init", isStatic: true,
+                    parameters: [Parameter(label: nil, name: "swiitValue", type: .any)],
+                    returns: .named("Output"), generics: [:],
+                    isThrowing: true, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let result = try Output(args["swiitValue"]!)
+                return SwiftValue.make(result, as: "Output")
+                    }
+                )
+
+    nonisolated(unsafe) private static let member79: BridgedMember =                 BridgedMember(
+                    kind: .property, name: "value", isStatic: false,
+                    parameters: [],
+                    returns: .any, generics: [:],
+                    isThrowing: false, isRethrowing: false, isMutating: false,
+                    discardableResult: false, summary: "",
+                    body: .native { shell, args in
+                        _ = shell
+                        let receiver: Output = try SwiftValue.unbox(Output.self, args["self"]!)
+                let result = receiver.value
+                return result
+                    }
+                )
+
+    nonisolated(unsafe) private static let member80: BridgedMember =                 BridgedMember(
                     kind: .method, name: "styled", isStatic: false,
                     parameters: [Parameter(label: nil, name: "styles", type: .named("TextStyle"), variadic: true)],
                     returns: .string, generics: [:],
@@ -1153,13 +1207,13 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "The text in colors or emphasis, plain where color is off.",
                     body: .native { shell, args in
                         _ = shell
-                        let receiver: String = try String(swiitValue: args["self"]!)
+                        let receiver: String = try String(args["self"]!)
                 let result = receiver.styled(try bridgeList(args["styles"]!).map { try bridgeCase(TextStyle.self, $0) }, in: shell.context)
-                return result.swiitValue
+                return result.value
                     }
                 )
 
-    nonisolated(unsafe) private static let member77: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member81: BridgedMember =                 BridgedMember(
                     kind: .method, name: "from", isStatic: false,
                     parameters: [Parameter(label: nil, name: "format", type: .named("InputFormat")), Parameter(label: nil, name: "text", type: .list(.string), isInput: true)],
                     returns: .named("JSON"), generics: [:],
@@ -1167,13 +1221,13 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "Parses text into values.",
                     body: .native { shell, args in
                         _ = shell
-                        let result = try SwishShellLibrary.from(try bridgeCase(InputFormat.self, args["format"]!), try bridgeList(args["text"]!).map { try String(swiitValue: $0) })
+                        let result = try SwishShellLibrary.from(try bridgeCase(InputFormat.self, args["format"]!), try bridgeList(args["text"]!).map { try String($0) })
                 return result.value
                     },
                     parameterDocs: ["format": "json"]
                 )
 
-    nonisolated(unsafe) private static let member78: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member82: BridgedMember =                 BridgedMember(
                     kind: .method, name: "to", isStatic: false,
                     parameters: [Parameter(label: nil, name: "format", type: .named("OutputFormat")), Parameter(label: nil, name: "items", type: .list(.any), isInput: true)],
                     returns: .string, generics: [:],
@@ -1182,12 +1236,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let result = try SwishShellLibrary.to(try bridgeCase(OutputFormat.self, args["format"]!), try bridgeList(args["items"]!).map { $0 }, in: shell.context)
-                return result.swiitValue
+                return result.value
                     },
                     parameterDocs: ["format": "json or text"]
                 )
 
-    nonisolated(unsafe) private static let member79: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member83: BridgedMember =                 BridgedMember(
                     kind: .method, name: "table", isStatic: false,
                     parameters: [Parameter(label: nil, name: "items", type: .list(.any), isInput: true)],
                     returns: .list(.string), generics: [:],
@@ -1196,24 +1250,24 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let result: [String] = SwishShellLibrary.table(try bridgeList(args["items"]!).map { $0 }, in: shell.context)
-                return .list(result.map { $0.swiitValue })
+                return .list(result.map { $0.value })
                     }
                 )
 
-    nonisolated(unsafe) private static let member80: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member84: BridgedMember =                 BridgedMember(
                     kind: .method, name: "list", isStatic: false,
                     parameters: [Parameter(label: nil, name: "items", type: .list(.any), isInput: true)],
                     returns: .list(.string), generics: [:],
                     isThrowing: false, isRethrowing: false, isMutating: false,
-                    discardableResult: false, summary: "Shows each record as a list of fields.",
+                    discardableResult: false, summary: "Shows each record as a list of fields. @_",
                     body: .native { shell, args in
                         _ = shell
                         let result: [String] = SwishShellLibrary.list(try bridgeList(args["items"]!).map { $0 }, in: shell.context)
-                return .list(result.map { $0.swiitValue })
+                return .list(result.map { $0.value })
                     }
                 )
 
-    nonisolated(unsafe) private static let member81: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member85: BridgedMember =                 BridgedMember(
                     kind: .method, name: "pwd", isStatic: false,
                     parameters: [],
                     returns: .named("FilePath"), generics: [:],
@@ -1226,7 +1280,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     }
                 )
 
-    nonisolated(unsafe) private static let member82: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member86: BridgedMember =                 BridgedMember(
                     kind: .method, name: "with", isStatic: false,
                     parameters: [Parameter(label: "env", name: "variables", type: .dictionary(.string, .string)), Parameter(label: nil, name: "body", type: .functionType([], .parameter("T"), throws: true))],
                     returns: .parameter("T"), generics: ["T": []],
@@ -1234,13 +1288,13 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "Runs a closure with environment variables set, then puts them back.",
                     body: .native { shell, args in
                         _ = shell
-                        let result = try SwishShellLibrary.with(env: try Dictionary(uniqueKeysWithValues: bridgeDictionary(args["variables"]!).map { (try String(swiitValue: $0.key), try String(swiitValue: $0.value)) }), { () throws -> Value in try bridgeClosure(shell, args["body"]!)([]) })
+                        let result = try SwishShellLibrary.with(env: try Dictionary(uniqueKeysWithValues: bridgeDictionary(args["variables"]!).map { (try String($0.key), try String($0.value)) }), { () throws -> Value in try bridgeClosure(shell, args["body"]!)([]) })
                 return result
                     },
                     parameterDocs: ["body": "what to run with them set", "variables": "the variables to set, as in with(env: [\"EDITOR\": \"vim\"]) { git commit }"]
                 )
 
-    nonisolated(unsafe) private static let member83: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member87: BridgedMember =                 BridgedMember(
                     kind: .method, name: "ls", isStatic: false,
                     parameters: [Parameter(label: nil, name: "paths", type: .named("FilePath"), variadic: true), Parameter(label: "all", name: "all", type: .bool, defaultValue: .literal(.bool(false)), shortFlag: "a")],
                     returns: .list(.named("FileEntry")), generics: [:],
@@ -1248,7 +1302,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "Lists directory contents.",
                     body: .native { shell, args in
                         _ = shell
-                        let partial = SwishShellLibrary.ls((args["paths"] == nil ? [] : try bridgeList(args["paths"]!).map { try SwiftValue.unbox(FilePath.self, $0) }), all: try Bool(swiitValue: args["all"]!))
+                        let partial = SwishShellLibrary.ls((args["paths"] == nil ? [] : try bridgeList(args["paths"]!).map { try SwiftValue.unbox(FilePath.self, $0) }), all: try Bool(args["all"]!))
                 for error in partial.errors { shell.reportItemError("\("ls"): \(error)") }
                 let result: [FileEntry] = partial.value
                 return .list(result.map { bridgeRecord(shell, $0, patches: ["type": .enumeration("FileType"), "size": .boxed("FileSize"), "modified": .boxed("Date"), "created": .boxed("Date"), "accessed": .boxed("Date"), "path": .boxed("FilePath"), "target": .boxed("FilePath")]) })
@@ -1256,7 +1310,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     parameterDocs: ["all": "include hidden files", "paths": "files or directories to list (default: the current directory)"]
                 )
 
-    nonisolated(unsafe) private static let member84: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member88: BridgedMember =                 BridgedMember(
                     kind: .method, name: "history", isStatic: false,
                     parameters: [],
                     returns: .list(.string), generics: [:],
@@ -1265,11 +1319,11 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     body: .native { shell, args in
                         _ = shell
                         let result: [String] = SwishShellLibrary.history(in: shell.context)
-                return .list(result.map { $0.swiitValue })
+                return .list(result.map { $0.value })
                     }
                 )
 
-    nonisolated(unsafe) private static let member85: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member89: BridgedMember =                 BridgedMember(
                     kind: .method, name: "readLine", isStatic: false,
                     parameters: [Parameter(label: "strippingNewline", name: "strippingNewline", type: .bool, defaultValue: .literal(.bool(true)))],
                     returns: .optional(.string), generics: [:],
@@ -1277,13 +1331,13 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "A line of standard input, or nil at its end.",
                     body: .native { shell, args in
                         _ = shell
-                        let result = SwishShellLibrary.readLine(strippingNewline: try Bool(swiitValue: args["strippingNewline"]!))
-                return (result.map { $0.swiitValue } ?? .nothing)
+                        let result = SwishShellLibrary.readLine(strippingNewline: try Bool(args["strippingNewline"]!))
+                return (result.map { $0.value } ?? .nothing)
                     },
                     parameterDocs: ["strippingNewline": "leave the line's newline off"]
                 )
 
-    nonisolated(unsafe) private static let member86: BridgedMember =                 BridgedMember(
+    nonisolated(unsafe) private static let member90: BridgedMember =                 BridgedMember(
                     kind: .method, name: "ps", isStatic: false,
                     parameters: [],
                     returns: .list(.named("ProcessEntry")), generics: [:],

@@ -1,4 +1,4 @@
-import SwishShellLibrary
+@_spi(Layer) import SwishShellLibrary
 @_spi(Layer) import Swiit
 import Foundation
 import SwiitStandardLibrary
@@ -7,7 +7,7 @@ import SwiitStandardLibrary
 /// background (from `async` or ^Z), or Swish code running as a task of its
 /// own (`async f()`). Jobs in the background are values: `await` brings one
 /// to the foreground and waits for it, and `resume()` and `cancel()` act on it.
-final class Job: SwiitObject, @unchecked Sendable {
+final class Job: ObjectDetails, @unchecked Sendable {
     enum State: String {
         case running, stopped, done
     }
@@ -95,7 +95,7 @@ final class Job: SwiitObject, @unchecked Sendable {
         }, as: "Flow")
     }
 
-    // MARK: SwiitObject
+    // MARK: HostObject
 
     var typeName: String { "Job" }
 

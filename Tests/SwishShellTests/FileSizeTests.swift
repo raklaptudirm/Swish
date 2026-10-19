@@ -1,5 +1,5 @@
-import Swiit
-import SwishShellLibrary
+@_spi(Layer) import Swiit
+@_spi(Layer) import SwishShellLibrary
 import Testing
 
 @Test func formatsFileSizes() {
@@ -8,7 +8,7 @@ import Testing
     #expect(FileSize(bytes: 123_456_789).description == "123 MB")
     #expect(FileSize(bytes: -2000).description == "-2.0 KB")
     // As a value it shows the same.
-    #expect(FileSize(bytes: 1234).swiitValue.description == "1.2 KB")
+    #expect(FileSize(bytes: 1234).value.description == "1.2 KB")
 }
 
 @Test func fileSizesParseAndDoArithmetic() throws {

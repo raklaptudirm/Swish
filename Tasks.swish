@@ -57,8 +57,9 @@ func _swiftTest(_ package: String) throws {
     try swift test --package-path $package $flags
 }
 
-/// Writes a module's symbol graph into `graphs`. SystemPackage is found
-/// among what `swift build` built, with the C module it imports.
+/// Writes a module's symbol graph into `graphs`, with the symbols the module marks SPI: the shell's library is Swiit's SPI
+/// client, and what it declares is read from there. SystemPackage is found among what `swift build` built, with the C
+/// module it imports.
 func _graph(_ module: String, into graphs: String) throws {
     let machine = $(uname -m).text
     let built = $(swift build --show-bin-path).text
@@ -67,8 +68,8 @@ func _graph(_ module: String, into graphs: String) throws {
     if darwin {
         let sdk = $(xcrun --show-sdk-path).text
         let extract = $(xcrun --find swift-symbolgraph-extract).text
-        try $extract -module-name $module -target "\(machine)-apple-macosx14.0" -sdk $sdk $search -output-dir $graphs
+        try $extract -module-name $module -include-spi-symbols -target "\(machine)-apple-macosx14.0" -sdk $sdk $search -output-dir $graphs
     } else {
-        try swift-symbolgraph-extract -module-name $module -target "\(machine)-unknown-linux-gnu" $search -output-dir $graphs
+        try swift-symbolgraph-extract -module-name $module -include-spi-symbols -target "\(machine)-unknown-linux-gnu" $search -output-dir $graphs
     }
 }

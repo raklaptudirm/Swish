@@ -1,4 +1,4 @@
-import Swiit
+@_spi(Layer) import Swiit
 import Foundation
 
 extension Shell {

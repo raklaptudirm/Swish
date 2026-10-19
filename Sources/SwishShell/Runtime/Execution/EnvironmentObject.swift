@@ -29,7 +29,7 @@ extension EnvironmentAccess {
 /// `env`: the variables of the programs the shell runs. `env.HOME` is a
 /// `String?`, nil when unset; `env.PAGER = "less"` sets one and `= nil` removes
 /// it. It is a dynamic object, so the core knows nothing of it.
-final class EnvironmentObject: DynamicObject, @unchecked Sendable {
+final class EnvironmentObject: DynamicObject, ObjectDetails, @unchecked Sendable {
     let access: EnvironmentAccess
 
     init(access: EnvironmentAccess) {
@@ -37,9 +37,9 @@ final class EnvironmentObject: DynamicObject, @unchecked Sendable {
     }
 
     var typeName: String { "Environment" }
-    var readType: TypeAnnotation { .optional(.string) }
+    var readType: ValueType { .optional(.string) }
     // Anything with a text form is a value: `env.PORT = 8080`.
-    var writeType: TypeAnnotation { .optional(.any) }
+    var writeType: ValueType { .optional(.any) }
     var memberNames: [String] { access.all().map(\.name) }
     var description: String { "Environment" }
 

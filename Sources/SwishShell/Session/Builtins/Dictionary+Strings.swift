@@ -1,4 +1,4 @@
-import Swiit
+@_spi(Layer) import Swiit
 
 extension Dictionary where Key == String, Value == Swiit.Value {
     /// A String or list-of-Strings argument as an array; empty if absent.

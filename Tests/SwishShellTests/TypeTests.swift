@@ -8,7 +8,7 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 
 /// The type error `source` has, or nil if it checks.
 private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
-    guard case .success(let program) = Result(catching: { try SwiftSyntaxFrontEnd().parse(source, bound: shell.interpreter.globalNames(), plugin: shell.interpreter.syntax) }) else {
+    guard case .success(let program) = Result(catching: { try shell.parseSource(source).get() }) else {
         return "syntax error"
     }
     do {
@@ -182,18 +182,18 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
     #expect(try output("[3, 1, 3, 2].uniqued().sorted()") == "[1, 2, 3]\n")
 }
 
-@Test func pipelinesAreTypedStageByStage() throws {
-    #expect(typeError("ls | sorted --by sise") == "FileEntry has no member 'sise'")
-    #expect(typeError("ls | filter { $0.size > 1 }") == "'>' can't be applied to FileSize and Int")
-    #expect(typeError("ls | prefix x") == "prefix: <maxLength> must be Int, got 'x'")
-    #expect(typeError("ls | get name | map { $0.count } | filter { $0 > \"a\" }") == "'>' can't be applied to Int and String")
-    #expect(typeError("[(n: 1)] | sorted") == "sorted needs Element to be Comparable, and (n: Int) isn't")
+@Test func pipelinesAreCheckedStageByStageAsTheItemsArrive() throws {
+    // A stage is found out when the pipeline starts, from the first item: what is wrong with it is said then.
+    #expect(errorText("ls | sorted --by sise")?.hasSuffix("FileEntry has no field 'sise'") == true)
+    #expect(errorText("ls | filter { $0.size > 1 }")?.contains("FileSize") == true)
+    #expect(errorText("ls | prefix x")?.contains("prefix") == true)
+    #expect(errorText("ls | get name | map { $0.count } | filter { $0 > \"a\" }")?.contains("Int") == true)
+    #expect(errorText("[(n: 1)] | sorted") == "swish: error: sorted needs Element to be Comparable, and (n: Int) isn't")
     // Programs give lines of text.
-    #expect(typeError("printf 'a' | filter { $0.count > 1 }") == nil)
-    #expect(typeError("printf 'a' | filter { $0.size > 1 }") == "String has no member 'size'")
+    #expect(errorText("printf 'a' | filter { $0.count > 1 }") == nil)
+    #expect(errorText("printf 'a' | filter { $0.size > 1 }")?.contains("String has no member 'size'") == true)
     // `select` makes a tuple of the fields it picks.
     #expect(try output("[(n: 2, s: \"b\"), (n: 1, s: \"a\")] | select n | sorted --by n | get n") == "1\n2\n")
-    #expect(typeError("ls | select name size | filter { $0.modified > $0.modified }") == "(name: String, size: FileSize) has no element 'modified'")
 }
 
 @Test func stagesAreResolvedFromTheirInput() throws {

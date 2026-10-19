@@ -50,7 +50,7 @@ extension Shell {
         // blank, so line numbers do too.
         if source.hasPrefix("#!") { source = String(source.drop { $0 != "\n" }) }
         diagnosticSource = (source, path)
-        switch interpreter.parse(source) {
+        switch parseSource(source) {
         case .failure(let error):
             if error.range != nil { reportDiagnostic(.syntax, "\(error)", at: error.range) }
             else { interpreter.report("\(path): syntax error: \(error)") }

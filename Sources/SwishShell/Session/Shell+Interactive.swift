@@ -1,4 +1,4 @@
-import Swiit
+@_spi(Layer) import Swiit
 import Foundation
 
 extension Shell {
@@ -17,7 +17,7 @@ extension Shell {
         // These run while a line is read, when the lock is let go: they take it.
         editor.isComplete = { [unowned self] text in
             interpreter.withMainTask {
-                if case .failure(let error) = interpreter.parse(text), error.incomplete { return false }
+                if case .failure(let error) = parseSource(text), error.incomplete { return false }
                 return true
             }
         }
@@ -41,7 +41,7 @@ extension Shell {
             case .line(let line):
                 pending = pending.isEmpty ? line : pending + "\n" + line
                 diagnosticSource = (pending, nil)
-                switch interpreter.parse(pending) {
+                switch parseSource(pending) {
                 case .failure(let error) where error.incomplete:
                     continue
                 case .failure(let error):
@@ -64,7 +64,7 @@ extension Shell {
         while let line = nextLine() {
             pending = pending.isEmpty ? line : pending + "\n" + line
             diagnosticSource = (pending, nil)
-            switch interpreter.parse(pending) {
+            switch parseSource(pending) {
             case .failure(let error) where error.incomplete:
                 continue
             case .failure(let error):

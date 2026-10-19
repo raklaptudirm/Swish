@@ -11,6 +11,7 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../Swiit"),
+        .package(url: "https://github.com/swiftlang/swift-syntax.git", from: "602.0.0"),
         .package(url: "https://github.com/apple/swift-system.git", from: "1.4.0"),
     ],
     targets: [
@@ -34,6 +35,8 @@ let package = Package(
                 .product(name: "Swiit", package: "Swiit"),
                 "SwishShellLibrary",
                 .product(name: "SystemPackage", package: "swift-system"),
+                .product(name: "SwiftSyntax", package: "swift-syntax"),
+                .product(name: "SwiftParser", package: "swift-syntax"),
             ],
             exclude: ["Library"]
         ),

@@ -6,12 +6,12 @@ import Glibc
 import Musl
 #endif
 import Foundation
-import Swiit
+@_spi(Layer) import Swiit
 import SystemPackage
 
 /// What kind of entry `ls` found: `ls | filter { $0.type == .directory }`.
 /// In this order, so `ls | sorted --by type` puts files first.
-public enum FileType: String, CaseIterable, Comparable, Codable {
+@_spi(Layer) public enum FileType: String, CaseIterable, Comparable, Codable {
     case file, directory, symlink, other
 
     public static func < (lhs: FileType, rhs: FileType) -> Bool {
@@ -20,7 +20,7 @@ public enum FileType: String, CaseIterable, Comparable, Codable {
 }
 
 extension FileType: DisplayStyled {
-    public var displayStyle: DisplayStyle? {
+    @_spi(Layer) public var displayStyle: DisplayStyle? {
         switch self {
         case .directory: .boldBlue
         case .symlink: .cyan
@@ -30,7 +30,7 @@ extension FileType: DisplayStyled {
 }
 
 /// An entry `ls` lists.
-public struct FileEntry: Encodable, Equatable, Hashable {
+@_spi(Layer) public struct FileEntry: Encodable, Equatable, Hashable {
     public let name: String
     public let type: FileType
     public let size: FileSize
@@ -44,13 +44,13 @@ public struct FileEntry: Encodable, Equatable, Hashable {
 }
 
 extension FileEntry: Tabular {
-    public static let columns: [DisplayColumn] = [DisplayColumn("name", styledBy: "type"), "type", "size", "modified"]
+    @_spi(Layer) public static let columns: [DisplayColumn] = [DisplayColumn("name", styledBy: "type"), "type", "size", "modified"]
 }
 
 /// Lists directory contents.
 /// - Parameter paths: files or directories to list (default: the current directory)
 /// - Parameter all: include hidden files
-public func ls(@Rest _ paths: [FilePath] = [], @Flag all: Bool = false) -> Partial<[FileEntry]> {
+@_spi(Layer) public func ls(@Rest _ paths: [FilePath] = [], @Flag all: Bool = false) -> Partial<[FileEntry]> {
     var entries: [FileEntry] = []
     var errors: [any Error] = []
     for path in (paths.isEmpty ? [FilePath(".")] : paths).map(\.string) {

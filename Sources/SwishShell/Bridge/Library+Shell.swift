@@ -1,5 +1,5 @@
 @_spi(Layer) import Swiit
-import SwishShellLibrary
+@_spi(Layer) import SwishShellLibrary
 
 extension Library {
     /// The shell's own: `ls`, `ps`, `pwd`, `with(env:)`, `readLine`, `history`,
@@ -15,6 +15,7 @@ extension Library {
                 "members": (shell.interpreter.members().body, nil),
                 "Sequence.select": selectBody,
                 "capture": (shell.captureBody, nil),
+                "captureThrowing": (shell.captureThrowingBody, nil),
                 "startTask": (.native { [unowned shell] interpreter, arguments in
                     guard case .string(let source)? = arguments["source"], let body = arguments["body"] else { return .nothing }
                     return .object(try shell.startTask(source: source) { try interpreter.call(body, with: []) })
@@ -24,6 +25,11 @@ extension Library {
                     return .nothing
                 }, nil),
                 "exitStatus": (.native { [unowned shell] _, arguments in shell.statusValue(shell.status(of: arguments["value"] ?? .nothing)) }, nil),
+                "exitShell": (.native { [unowned shell] _, arguments in
+                    _ = try shell.run([arguments["command"] ?? .nothing], from: nil, display: true)
+                    throw RuntimeError("exit did not leave")
+                }, nil),
+                "shellText": (.native { interpreter, arguments in .string(try interpreter.describing(arguments["value"] ?? .nothing)) }, nil),
                 "escapingWildcards": (.native { _, arguments in .string(Glob.escape(arguments["text"]?.description ?? "")) }, nil),
             ]) { $1 }.merging(jsonBodies) { $1 }
         )
@@ -91,6 +97,12 @@ extension Library {
         init(_ pattern: String) { self.pattern = pattern }
     }
 
+    /// `exit 1` as a statement: runs it, and what follows never does (a `guard`'s `else` may end in it).
+    func exitShell(_ command: Command) -> Never
+
+    /// A value as a command's word has it: an optional's value, not `Optional(…)`.
+    func shellText(_ value: Any?) -> String
+
     /// Text with its wildcards escaped, to stand for itself in a `Glob`.
     func escapingWildcards(_ text: String) -> String
 
@@ -99,28 +111,6 @@ extension Library {
     struct Spread {
         let value: Any
         init(_ value: Any) { self.value = value }
-    }
-
-    /// What the checker decided about a stage of a pipeline, written in the
-    /// rewritten program: a `method` ("sequence", "item" or "bridged", the
-    /// last on a `receiver` of a bridged `type` whose generic parameters are
-    /// the `bindings`, spelled as types), the `overload` a call takes, and why
-    /// it `notAnExpression`. A field it does not use is empty (-1 for the overload).
-    struct StageHint {
-        let method: String
-        let type: String
-        let receiver: String
-        let bindings: [String: String]
-        let overload: Int
-        let notAnExpression: String
-        init(method: String = "", type: String = "", receiver: String = "", bindings: [String: String] = [:], overload: Int = -1, notAnExpression: String = "") {
-            self.method = method
-            self.type = type
-            self.receiver = receiver
-            self.bindings = bindings
-            self.overload = overload
-            self.notAnExpression = notAnExpression
-        }
     }
 
     /// A program or function with its words, to run by hand: what a command
@@ -136,7 +126,6 @@ extension Library {
         /// A call's arguments, as a tuple: `sorted(by: "size")` after a `|`.
         var arguments: Any? = nil
         /// What the checker decided about it as a stage of a pipeline.
-        var hint: Any? = nil
 
         init(_ words: Any...) { self.words = words }
 
@@ -186,13 +175,6 @@ extension Library {
         func calling(_ arguments: Any) -> Command {
             var command = self
             command.arguments = arguments
-            return command
-        }
-
-        /// What the checker decided about it as a stage.
-        func checked(_ hint: Any) -> Command {
-            var command = self
-            command.hint = hint
             return command
         }
 
@@ -253,7 +235,7 @@ extension Library {
 
     /// Runs `body` as a task of its own, as `async f()` does: a `Job`, which
     /// `await` joins for what `body` gives. `source` is how `jobs` shows it.
-    func startTask<T>(_ source: String, _ body: () -> T) -> Job<T>
+    func startTask<T>(_ source: String, _ body: () throws -> T) -> Job<T>
 
     /// Shows a value as a pipeline at the end of a statement does: its items,
     /// one a line, or as a table when they are records.
@@ -262,6 +244,9 @@ extension Library {
     /// Runs the block with its output gathered, as `$(…)` does. Throwing,
     /// a status other than 0 throws a `CommandFailure`.
     func capture(throwing: Bool = false, _ body: () -> Void) -> Output
+
+    /// `try $(…)`: the same, and a status other than 0 throws a `CommandFailure`, which the program must handle.
+    func captureThrowing(_ body: () -> Void) throws -> Output
 
     /// A member `members` describes.
     struct Member: Equatable, Hashable, Encodable {

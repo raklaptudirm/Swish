@@ -7,7 +7,7 @@ import Testing
 // begins and ends. A program built from pieces that each print one marker must print every marker, in order, whatever
 // surrounds each piece: a statement the boundary loses is a script that does half its work and says nothing.
 
-private struct Generator {
+struct Generator {
     var state: UInt64
     mutating func next(_ bound: Int) -> Int {
         state = state &* 6364136223846793005 &+ 1442695040888963407
@@ -16,7 +16,7 @@ private struct Generator {
 }
 
 /// A statement (or a few, on one line) that prints `m<k>` once.
-private func piece(_ k: Int, _ choice: Int) -> String {
+func piece(_ k: Int, _ choice: Int) -> String {
     let m = "m\(k)"
     let pieces = [
         "print(\"\(m)\")",
@@ -65,9 +65,9 @@ private func piece(_ k: Int, _ choice: Int) -> String {
     return pieces[choice % pieces.count]
 }
 
-private let pieceCount = 41
+let pieceCount = 41
 
-private func wrap(_ body: String, in context: Int) -> String {
+func wrap(_ body: String, in context: Int) -> String {
     switch context % 8 {
     case 0: body
     case 1: "func main() {\n\(body)\n}\nmain()"
@@ -80,7 +80,7 @@ private func wrap(_ body: String, in context: Int) -> String {
     }
 }
 
-private let separators = ["; ", "\n", "\n\n", " ;\n", ";\n", "\n  "]
+let separators = ["; ", "\n", "\n\n", " ;\n", ";\n", "\n  "]
 
 private func run(_ source: String) throws -> String {
     let shell = Shell()

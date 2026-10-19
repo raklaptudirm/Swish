@@ -11,7 +11,7 @@ private func checkError(_ source: String) -> String? {
     let shell = Shell()
     let program: Program
     do {
-        program = try SwiftSyntaxFrontEnd().parse(source, bound: shell.interpreter.globalNames(), plugin: shell.interpreter.syntax)
+        program = try shell.parseSource(source).get()
     } catch {
         return "syntax error: \(error)"
     }

@@ -1,5 +1,5 @@
-import SwishShellLibrary
-import Swiit
+@_spi(Layer) import SwishShellLibrary
+@_spi(Layer) import Swiit
 
 extension RuntimeError {
     /// A command that failed under `try`: what `catch` binds is a

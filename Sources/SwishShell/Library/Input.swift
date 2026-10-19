@@ -1,9 +1,9 @@
 import Foundation
-import Swiit
+@_spi(Layer) import Swiit
 
 /// A line of standard input, or nil at its end.
 /// - Parameter strippingNewline: leave the line's newline off
-public func readLine(strippingNewline: Bool = true) -> String? {
+@_spi(Layer) public func readLine(strippingNewline: Bool = true) -> String? {
     // A wait: other tasks run meanwhile, and a task in the background waits
     // for its turn at the input.
     Waiting.forInput { readLineNow(strippingNewline: strippingNewline) }

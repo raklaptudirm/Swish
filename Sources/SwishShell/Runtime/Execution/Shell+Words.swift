@@ -1,5 +1,5 @@
-import SwishShellLibrary
-import Swiit
+@_spi(Layer) import SwishShellLibrary
+@_spi(Layer) import Swiit
 import Foundation
 import SwiitStandardLibrary
 
@@ -7,6 +7,8 @@ import SwiitStandardLibrary
 // statuses: a command's words and redirects expanded, and a status read as an
 // exit code or the signal that ended the command.
 extension Interpreter {
+    var shell: Shell { owner as! Shell }
+
     /// A status as an exit code, or the signal that ended the command.
     func exitCode(_ status: Int32) -> (code: Int?, signal: Int?) {
         if status > 128 && status == shell.lastSignalStatus { return (nil, Int(status - 128)) }

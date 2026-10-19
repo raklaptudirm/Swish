@@ -1,5 +1,5 @@
 import Foundation
-import Swiit
+@_spi(Layer) import Swiit
 
 /// Shows a value as `debugDescription` spells it, but for a person: in the
 /// highlighter's colors, and, when it won't fit on one line, broken over
@@ -50,12 +50,12 @@ package struct PrettyPrinter: Sendable {
             .segments([(value.description, value.displayShape.role)])
         case .enumValue(let value):
             node(for: value)
-        case .object(let object) where object.displaySegments != nil:
-            .segments(object.displaySegments!)
+        case .object(let object) where object.objectDisplaySegments != nil:
+            .segments(object.objectDisplaySegments!)
         case .object(let type as EnumType):
             .segments([("enum", DisplayStyle.keyword), (" ", nil), (type.name, DisplayStyle.type)])
         case .object(let object):
-            object.fields.map { node(for: $0) } ?? .segments([(object.debugDescription, nil)])
+            object.objectFields.map { node(for: $0) } ?? .segments([(object.debugDescription, nil)])
         @unknown default:
             .segments([(value.debugDescription, nil)])
         }

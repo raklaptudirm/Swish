@@ -146,8 +146,10 @@ private func completion(_ text: String, in shell: Shell = Shell()) -> (start: In
 
 @Test func highlightSpansFollowTheParse() {
     let source = #"if x > 1 { echo "hi \(x)" --flag } // note"#
-    let spans = SwiftSyntaxFrontEnd().highlight(source, bound: ["x": .variable], plugin: LayerPlugin(ShellSyntax()))
-    func kinds(_ text: String) -> [SpanKind] {
+    let shell = Shell()
+    shell.execute("let x = 2")
+    let spans = shell.highlightSpans(source)
+    func kinds(_ text: String) -> [HighlightKind] {
         let chars = Array(source)
         return spans.filter { String(chars[$0.range]) == text }.map(\.kind)
     }
@@ -162,7 +164,7 @@ private func completion(_ text: String, in shell: Shell = Shell()) -> (start: In
 }
 
 @Test func unfinishedInputStillHighlights() {
-    let spans = SwiftSyntaxFrontEnd().highlight(#"echo "unterminated"#, bound: [:], plugin: LayerPlugin(ShellSyntax()))
+    let spans = Shell().highlightSpans(#"echo "unterminated"#)
     #expect(spans.map(\.kind) == [.command, .string])
 }
 
@@ -187,6 +189,6 @@ private func completion(_ text: String, in shell: Shell = Shell()) -> (start: In
 @Test func redirectOperatorsHighlight() {
     let source = "sort < in e>o > out o+e>> log"
     let chars = Array(source)
-    let marked = SwiftSyntaxFrontEnd().highlight(source, bound: [:], plugin: LayerPlugin(ShellSyntax())).filter { $0.kind == .punctuation }.map { String(chars[$0.range]) }
+    let marked = Shell().highlightSpans(source).filter { $0.kind == .punctuation }.map { String(chars[$0.range]) }
     #expect(marked == ["<", "e>o", ">", "o+e>>"])
 }

@@ -1,5 +1,5 @@
 import Foundation
-import Swiit
+@_spi(Layer) import Swiit
 
 /// Lays out a stream of items as it arrives. Records become table rows:
 /// the first 100, or whatever arrives in the first 200ms, decide the
@@ -47,8 +47,8 @@ package final class DisplayFormatter {
             return true
         case .list(let elements):
             return elements.allSatisfy { add($0) }
-        case .object(let object) where object.fields != nil:
-            return add(.record(object.fields!))
+        case .object(let object) where object.objectFields != nil:
+            return add(.record(object.objectFields!))
         case .record(let record):
             if columns != nil { return emit(row(record)) }
             pending.append(record)

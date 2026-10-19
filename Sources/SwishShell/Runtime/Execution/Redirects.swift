@@ -1,10 +1,12 @@
-import Swiit
+@_spi(Layer) import Swiit
 import Foundation
 
 /// A redirect with its file name worked out.
+enum RedirectMode: Equatable, Sendable { case read, write, append }
+
 struct ResolvedRedirect {
     enum Action {
-        case open(String, Redirect.Mode)
+        case open(String, RedirectMode)
         /// Whatever the command's descriptor `n` is at this point, as in `2>&1`.
         case duplicate(Int32)
     }

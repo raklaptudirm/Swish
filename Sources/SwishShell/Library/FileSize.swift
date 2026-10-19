@@ -1,11 +1,11 @@
 import Foundation
-import Swiit
+@_spi(Layer) import Swiit
 
 /// An amount of bytes, shown in decimal units as Finder shows them (`532 B`,
 /// `1.2 KB`, `123 MB`) and written `1.5.mb` in Swiit (each unit is a property of `Int` and `Double`). It adds and subtracts,
 /// scales by a number, and divides by another size for a ratio. Encodes as
 /// its byte count.
-public struct FileSize: Codable, Hashable, Comparable, Sendable, LosslessStringConvertible {
+@_spi(Layer) public struct FileSize: Codable, Hashable, Comparable, Sendable, LosslessStringConvertible {
     /// How many bytes.
     public var bytes: Int
 
@@ -101,14 +101,14 @@ public struct FileSize: Codable, Hashable, Comparable, Sendable, LosslessStringC
 }
 
 extension FileSize: SwiitDisplayed {
-    public var swiitDescription: String { description }
+    @_spi(Layer) public var swiitDescription: String { description }
     /// A number: in the constant color, and a column of them lines up on the right.
-    public var swiitShape: DisplayShape { DisplayShape(role: .constant, isNumeric: true) }
+    @_spi(Layer) public var swiitShape: DisplayShape { DisplayShape(role: .constant, isNumeric: true) }
 }
 
-extension FileSize: SwiitConvertible {
-    public static var swiitType: SwiitType { .named("FileSize") }
-    public init(swiitValue: Value) throws {
+extension FileSize: ValueConvertible {
+    @_spi(Layer) public static var valueType: ValueType { .named("FileSize") }
+    @_spi(Layer) public init(_ swiitValue: Value) throws {
         if case .object(let box as SwiftValue) = swiitValue, let size = box.value as? FileSize {
             self = size
         } else if case .int(let bytes) = swiitValue {
@@ -117,5 +117,5 @@ extension FileSize: SwiitConvertible {
             throw SwiitError("expected a FileSize, not \(swiitValue)")
         }
     }
-    public var swiitValue: Value { SwiftValue.make(self, as: "FileSize") }
+    @_spi(Layer) public var value: Value { SwiftValue.make(self, as: "FileSize") }
 }

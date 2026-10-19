@@ -1,5 +1,5 @@
-import SwishShellLibrary
-import Swiit
+@_spi(Layer) import SwishShellLibrary
+@_spi(Layer) import Swiit
 import Foundation
 
 /// An interactive line editor: syntax highlighting, completion, history

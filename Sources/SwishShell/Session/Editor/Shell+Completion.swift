@@ -66,7 +66,7 @@ extension Shell {
                 let set = interpreter.sequenceMethods[name] ?? bridgedStage("Flow", name, receiver: .flow)
                 described[name] = set?.candidates.first?.documentation.map { String($0.summary.prefix { $0 != "\n" }) } ?? "sequence method"
             }
-            for keyword in SourceCursor.lineStarts {
+            for keyword in Reader.lineStarts {
                 described[keyword] = "keyword"
             }
         }
@@ -183,7 +183,7 @@ private struct CompletionContext {
         start = wordStart ?? characters.endIndex
         // A command after `if` or `foreign`, or after `NAME=value`, is
         // still in command position.
-        while let first = words.first, SourceCursor.beforeCommand.contains(first) || first.contains("=") {
+        while let first = words.first, Reader.beforeCommand.contains(first) || first.contains("=") {
             words.removeFirst()
         }
     }

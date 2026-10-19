@@ -1,11 +1,11 @@
-import SwishShellLibrary
+@_spi(Layer) import SwishShellLibrary
 import Foundation
-import Swiit
+@_spi(Layer) import Swiit
 
 /// A command's standard output (trailing newlines trimmed) and exit status.
 /// It's a collection of lines: iterating, counting and indexing go by line,
 /// and where a String is wanted it's the whole text.
-public struct Output: Sendable, Hashable, RandomAccessCollection, StandsForText {
+@_spi(Layer) public struct Output: Sendable, Hashable, RandomAccessCollection, StandsForText {
     /// All of it, as one String.
     public let text: String
     /// The exit code, or nil if a signal ended the command.
@@ -42,7 +42,7 @@ public struct Output: Sendable, Hashable, RandomAccessCollection, StandsForText 
 }
 
 /// How a command exited: `output.status`.
-public struct Status: Sendable, Hashable, Encodable {
+@_spi(Layer) public struct Status: Sendable, Hashable, Encodable {
     public let code: Int?
     public let signal: Int?
     public let succeeded: Bool
@@ -55,47 +55,47 @@ public struct Status: Sendable, Hashable, Encodable {
 }
 
 extension Output: CustomStringConvertible, CustomDebugStringConvertible, SwiitDisplayed {
-    public var description: String { text }
-    public var swiitDescription: String { text }
+    @_spi(Layer) public var description: String { text }
+    @_spi(Layer) public var swiitDescription: String { text }
     /// Shown as its text and status, and nothing at all if it's empty.
-    public var swiitShape: DisplayShape { DisplayShape(isEmpty: text.isEmpty) }
+    @_spi(Layer) public var swiitShape: DisplayShape { DisplayShape(isEmpty: text.isEmpty) }
     /// How a debug form lays it out: its text and status as the fields of a struct.
-    public var displayRecord: Record {
+    @_spi(Layer) public var displayRecord: Record {
         Record(["text": .string(text), "status": .record(statusRecord)], typeName: "Output")
     }
     /// One line in a table: its newlines shown as ↵.
-    public var swiitCell: String { text.replacingOccurrences(of: "\n", with: "↵") }
+    @_spi(Layer) public var swiitCell: String { text.replacingOccurrences(of: "\n", with: "↵") }
     /// The record `output.status` is, with every field there.
-    public var statusRecord: Record {
+    @_spi(Layer) public var statusRecord: Record {
         Record([
             "code": code.map(Value.int) ?? .nothing,
             "signal": signal.map(Value.int) ?? .nothing,
             "succeeded": .bool(succeeded),
         ], typeName: "Status")
     }
-    public var debugDescription: String {
+    @_spi(Layer) public var debugDescription: String {
         "Output(text: \(Value.quoted(text)), status: \(statusRecord.debugDescription))"
     }
-    public var swiitDebugDescription: String { debugDescription }
+    @_spi(Layer) public var swiitDebugDescription: String { debugDescription }
 }
 
 extension Value {
     /// What `$(…)` gives: a command's output, held as the Swift value it is.
-    public static func output(_ output: Output) -> Value {
+    @_spi(Layer) public static func output(_ output: Output) -> Value {
         SwiftValue.make(output, as: "Output")
     }
 
     /// The command output it holds, if it's one.
-    public var commandOutput: Output? {
+    @_spi(Layer) public var commandOutput: Output? {
         if case .object(let box as SwiftValue) = self { box.value as? Output } else { nil }
     }
 }
 
-extension Output: SwiitConvertible {
-    public static var swiitType: SwiitType { .named("Output") }
-    public init(swiitValue: Value) throws {
+extension Output: ValueConvertible {
+    @_spi(Layer) public static var valueType: ValueType { .named("Output") }
+    @_spi(Layer) public init(_ swiitValue: Value) throws {
         guard let value = swiitValue.commandOutput else { throw SwiitError("expected an Output, not \(swiitValue)") }
         self = value
     }
-    public var swiitValue: Value { .output(self) }
+    @_spi(Layer) public var value: Value { .output(self) }
 }

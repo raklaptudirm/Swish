@@ -1,5 +1,5 @@
 @_spi(Layer) import Swiit
-import SwishShellLibrary
+@_spi(Layer) import SwishShellLibrary
 import Foundation
 
 // What a command and a pipeline are in Swift: the prelude's `Command` and
@@ -11,85 +11,6 @@ import Foundation
 //
 // Here is how they run: through the same machinery as a command typed at the
 // prompt.
-
-/// What the checker decided about a stage, as the rewritten program says it
-/// (`StageHint` in Library+Shell.swift): written as a call by the rewrite, and
-/// read back when the command runs.
-struct StageHint {
-    var resolution: StageResolution?
-    var overload: Int?
-    var notAnExpression: String?
-
-    var isEmpty: Bool { resolution == nil && overload == nil && notAnExpression == nil }
-
-    /// The arguments of the `StageHint(…)` that says it.
-    var arguments: [SwiftArgument] {
-        func text(_ label: String, _ value: String) -> SwiftArgument { SwiftArgument(label: label, value: .text(value)) }
-        var arguments: [SwiftArgument] = []
-        switch resolution {
-        case .sequenceMethod?: arguments.append(text("method", "sequence"))
-        case .itemMethod?: arguments.append(text("method", "item"))
-        case .bridged(let type, let receiver, let bindings)?:
-            arguments += [text("method", "bridged"), text("type", type), text("receiver", "\(receiver)")]
-            if !bindings.isEmpty {
-                arguments.append(SwiftArgument(label: "bindings", value: .record(bindings.sorted { $0.key < $1.key }.map {
-                    (key: $0.key, value: SwiftExpression.text($0.value.description))
-                })))
-            }
-        case nil: break
-        }
-        if let overload { arguments.append(SwiftArgument(label: "overload", value: .integer(overload))) }
-        if let notAnExpression { arguments.append(text("notAnExpression", notAnExpression)) }
-        return arguments
-    }
-
-    init(resolution: StageResolution? = nil, overload: Int? = nil, notAnExpression: String? = nil) {
-        self.resolution = resolution
-        self.overload = overload
-        self.notAnExpression = notAnExpression
-    }
-
-    /// A `StageHint` value read back.
-    init?(_ value: Value, interpreter: Interpreter) {
-        guard case .record(let record) = value, record.typeName == "StageHint" else { return nil }
-        func string(_ key: String) -> String? {
-            if case .string(let text)? = record[key], !text.isEmpty { text } else { nil }
-        }
-        switch string("method") {
-        case "sequence"?: resolution = .sequenceMethod
-        case "item"?: resolution = .itemMethod
-        case "bridged"?:
-            guard let type = string("type"), let receiver = StageReceiver(string("receiver")) else { return nil }
-            var bindings: [String: ValueType] = [:]
-            if case .dictionary(let written)? = record["bindings"] {
-                for (key, value) in written.dictionary { bindings[key.description] = StageHint.type(spelled: value.description, interpreter) }
-            }
-            resolution = .bridged(type: type, receiver: receiver, bindings: bindings)
-        default: break
-        }
-        if case .int(let number)? = record["overload"], number >= 0 { overload = number }
-        notAnExpression = string("notAnExpression")
-    }
-
-    /// A type as it is written: read by the front end, as `x as! T` says it.
-    static func type(spelled text: String, _ interpreter: Interpreter) -> ValueType {
-        if case .success(let program) = interpreter.parse("0 as! \(text)"),
-           case .expression(.cast(_, let type, _))? = program.statements.first { return ValueType(type) }
-        return .unknown
-    }
-}
-
-extension StageReceiver {
-    init?(_ text: String?) {
-        switch text {
-        case "collected"?: self = .collected
-        case "each"?: self = .each
-        case "flow"?: self = .flow
-        case "value"?: self = .value
-        default: return nil
-        }
-    }
-}
 
 extension Shell {
     /// The Swift bodies of `Command`'s and `Pipeline`'s methods that run them.
@@ -118,6 +39,16 @@ extension Shell {
             }, nil)
         }
         return bodies
+    }
+
+    /// `captureThrowing { … }`: as `capture(throwing: true)`.
+    var captureThrowingBody: FunctionBody {
+        .native { [unowned self] interpreter, arguments in
+            var arguments = arguments
+            arguments["throwing"] = .bool(true)
+            guard case .native(let body) = captureBody else { return .nothing }
+            return try body(interpreter, arguments)
+        }
     }
 
     /// `capture { … }`: the block, run with its output gathered.
@@ -252,15 +183,13 @@ extension Shell {
             spec.environment = variables.dictionary.map { ($0.key.description, $0.value.description) }.sorted { $0.0 < $1.0 }
         }
         // `(by: "size")`: the tuple's elements, as arguments; a position is no label.
-        if case .record(let tuple)? = record["arguments"] {
+        if case .record(let tuple)? = record["arguments"], tuple.typeName == nil {
             spec.call = tuple.keys.map { key in
                 Argument(label: Int(key) == nil ? key : nil, value: .literal(tuple[key] ?? .nothing))
             }
-        }
-        if let value = record["hint"], let hint = StageHint(value, interpreter: interpreter) {
-            spec.resolution = hint.resolution
-            spec.overload = hint.overload
-            spec.notAnExpression = hint.notAnExpression
+        } else if let single = record["arguments"], single != .nothing {
+            // `(x)` is x, not a tuple of one.
+            spec.call = [Argument(label: nil, value: .literal(single))]
         }
         return spec
     }
@@ -269,7 +198,7 @@ extension Shell {
         guard case .record(let record) = value, case .int(let fd)? = record["fd"], case .string(let mode)? = record["mode"] else {
             throw RuntimeError("\(value.typeName) isn't a Redirection")
         }
-        let modes: [String: Redirect.Mode] = ["read": .read, "write": .write, "append": .append]
+        let modes: [String: RedirectMode] = ["read": .read, "write": .write, "append": .append]
         guard let open = modes[mode] else {
             guard mode == "send", case .int(let other)? = record["other"] else { throw RuntimeError("no redirection '\(mode)'") }
             return ResolvedRedirect(fd: Int32(fd), action: .duplicate(Int32(other)))

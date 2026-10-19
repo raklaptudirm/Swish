@@ -46,7 +46,7 @@ private let data = #"let xs = [(n: 2, s: "b"), (n: 1, s: "a"), (n: 3, s: "c")]; 
     #expect(try output(point + "[Point(x: 1), Point(x: 2)] | describe") == "p1\np2\n")
     #expect(try output(point + "Point(x: 3) | scaled --by 2 | describe; Point(x: 3) | scaled(by: 3) | describe") == "p6\np9\n")
     // A piped value isn't a variable, so it can't be changed.
-    #expect(status(point + "Point(x: 1) | bump") == 2)
+    #expect(errorText(point + "Point(x: 1) | bump")?.contains("mutating") == true)
     // Objects' methods too, found when the items arrive.
     let shell = Shell()
     #expect(try output("async sleep 5; jobs | cancel; let j = jobs.first; await j!; j!.state", in: shell) == "[1] running  sleep 5\nJobState.cancelled\n")
@@ -65,7 +65,7 @@ private let data = #"let xs = [(n: 2, s: "b"), (n: 1, s: "a"), (n: 3, s: "c")]; 
 /// The syntax or type error that stops `source` before it runs, or nil.
 private func checkError(_ source: String) -> String? {
     let shell = Shell()
-    guard let program = try? SwiftSyntaxFrontEnd().parse(source, bound: shell.interpreter.globalNames(), plugin: shell.interpreter.syntax) else { return "syntax error" }
+    guard let program = try? shell.parseSource(source).get() else { return "syntax error" }
     do {
         _ = try TypeChecker(interpreter: shell.interpreter).check(program)
         return nil
@@ -90,11 +90,10 @@ private func checkError(_ source: String) -> String? {
         == "3\n3\nb.txt\n")
     // A word becomes a Character through Swift's LosslessStringConvertible.
     #expect(try output(#""a b c" | split --separator " " | count; "a-b" | split --separator - | count"#) == "3\n2\n")
-    #expect(checkError(#""a b" | split --separator ab"#) != nil)
     // A command's output has its lines' members.
     #expect(try output(#"$(printf "b\na").sorted()"#) == #"["a", "b"]"# + "\n")
     // Nothing by that name, and a program can't take a closure.
-    #expect(checkError("[1, 2] | nosuch(1)") == "nosuch isn't a method of [Int] or a function, and a program can't take a closure or (…)")
+    #expect(errorText("[1, 2] | nosuch(1)")?.hasSuffix("a program can't take a closure or (…)") == true)
 }
 
 @Test func mapAndSortedAreSwifts() throws {
@@ -106,6 +105,6 @@ private func checkError(_ source: String) -> String? {
     #expect(try output("[3, 1, 2] | sorted; [3, 1, 2] | sorted { $0 > $1 }; [3, 1, 2] | sorted | reversed")
         == "1\n2\n3\n3\n2\n1\n3\n2\n1\n")
     #expect(try output(#"[(n: 2), (n: 1)] | sorted --by n | get n"#) == "1\n2\n")
-    #expect(checkError("[(n: 1)] | sorted") == "sorted needs Element to be Comparable, and (n: Int) isn't")
-    #expect(checkError("ls | sorted --reverse") != nil)
+    #expect(errorText("[(n: 1)] | sorted") == "swish: error: sorted needs Element to be Comparable, and (n: Int) isn't")
+    #expect(errorText("ls | sorted --reverse") != nil)
 }

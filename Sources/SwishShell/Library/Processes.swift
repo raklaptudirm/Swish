@@ -6,7 +6,7 @@ import Glibc
 import Musl
 #endif
 import Foundation
-import Swiit
+@_spi(Layer) import Swiit
 import SystemPackage
 
 /// A user's name, or their number if they have none.
@@ -15,7 +15,7 @@ package func userName(_ uid: uid_t) -> String {
 }
 
 /// A process `ps` lists.
-public struct ProcessEntry: Encodable, Equatable, Hashable {
+@_spi(Layer) public struct ProcessEntry: Encodable, Equatable, Hashable {
     public var pid: Int
     public var ppid: Int
     public var name: String
@@ -27,11 +27,11 @@ public struct ProcessEntry: Encodable, Equatable, Hashable {
 }
 
 extension ProcessEntry: Tabular {
-    public static let columns: [DisplayColumn] = ["pid", "name", "user", "memory", "cpuTime"]
+    @_spi(Layer) public static let columns: [DisplayColumn] = ["pid", "name", "user", "memory", "cpuTime"]
 }
 
 /// Lists running processes. Memory and CPU time are only known for your own processes.
-public func ps() -> [ProcessEntry] {
+@_spi(Layer) public func ps() -> [ProcessEntry] {
     // The system always says; if it somehow doesn't, there's nothing to list.
     (try? runningProcesses()) ?? []
 }

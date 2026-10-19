@@ -1,5 +1,5 @@
 @_spi(Layer) import Swiit
-import SwishShellLibrary
+@_spi(Layer) import SwishShellLibrary
 import Foundation
 import SwiitStandardLibrary
 
@@ -65,16 +65,31 @@ extension Shell {
 
         var stream: ValueStream? = input >= 0 ? .lines(from: input, in: interpreter) : nil
         var upstreamIsExternal = input >= 0
-        for stage in stages {
+        var single: Value?
+        for var stage in stages {
+            if case .deferred(let deferred) = stage {
+                if let upstream = stream {
+                    let resolved = try resolve(deferred, upstream: upstream, single: single)
+                    stage = resolved.stage
+                    stream = resolved.upstream
+                } else {
+                    stage = try deferred.fallback()
+                }
+            }
+            single = nil
             switch stage {
             case .value(let value):
                 stream = .elements(of: value)
+                single = value
             case .function(let set, let args, _, _):
                 stream = try functionStream(set, args, upstream: stream, upstreamIsExternal: upstreamIsExternal)
             case .method(let name, let args, _, _):
                 stream = methodStream(name, args, upstream: stream ?? .empty)
-            case .external:
-                preconditionFailure("external stages don't run in-process")
+            case .external(let argv, _, _, _):
+                // A name that might have been a method, and was a program after all (Shell+Resolving.swift).
+                throw RuntimeError("\(argv[0]) isn't a method of what flows into it, and a program can't run here")
+            case .deferred:
+                preconditionFailure("a deferred stage is resolved above")
             }
             upstreamIsExternal = false
         }

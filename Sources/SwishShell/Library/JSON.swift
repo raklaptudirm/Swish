@@ -1,10 +1,10 @@
 import Foundation
-import Swiit
+@_spi(Layer) import Swiit
 
 /// Parsed JSON: whatever it parsed as, a `Value`, which Swish reads by field
 /// and element. Object keys are kept in order, which Foundation's parser
 /// doesn't do and which tables need: key order is column order.
-public struct JSON: WrapsValue {
+@_spi(Layer) public struct JSON: WrapsValue {
     public let value: Value
 
     public init(_ value: Value) {
@@ -61,7 +61,7 @@ public struct JSON: WrapsValue {
         case .function:
             throw SwiitError("to json: a function has no JSON form")
         case .object(let object):
-            if let fields = object.fields { return try text(.record(fields), indent: indent) }
+            if let fields = object.objectFields { return try text(.record(fields), indent: indent) }
             // What stands for text is its text; else a Swift value is as Swift
             // encodes it (a file size is its bytes).
             if let box = object as? SwiftValue {
