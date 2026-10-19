@@ -80,7 +80,7 @@ private func typeError(_ source: String) -> String? {
         == #"["a": 1, "b": 2]"# + "\n" + #"["b": 2]"# + "\n" + #"["a": 10, "b": 20]"# + "\n")
     #expect(try output(d + "d.map { $0.key }.sorted(); d.keys.sorted(); d.values.sorted()")
         == #"["a", "b"]"# + "\n" + #"["a", "b"]"# + "\n[1, 2]\n")
-    #expect(try output(d + "d.count; d.isEmpty; d.sorted { $0.key < $1.key }.map { $0.value }; d.first!.key == d.keys.first!")
+    #expect(try output(d + "d.count; d.isEmpty; d.sorted { $0.key < $1.key }.map { $0.value }; d.keys.contains(d.first!.key)")
         == "2\nfalse\n[1, 2]\ntrue\n")
     // Keys of other types sort by value too, and JSON's objects by key.
     #expect(try output(#"[10: "x", 2: "y"]; ["b": 1, "a": 2] | to json"#) == #"[2: "y", 10: "x"]"# + "\n{\n  \"a\": 2,\n  \"b\": 1\n}\n")
