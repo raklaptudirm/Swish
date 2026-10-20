@@ -3,15 +3,10 @@ import SwiftParser
 import SwiftSyntax
 
 // Spike: the front end the shell owns. Source text that is Swift's with the shell's in it goes in;
-// Swift comes out,
-// which a
-// plain Swift front end reads. The loop: parse the text as Swift (with the insides of `$(…)`
-// blanked), take the first
-// place
-// at or after the cursor where a form of the shell's may start, and read it; if it is one, replace
-// it with the Swift it
-// means, move the cursor past that, and parse again, so that everything before the cursor is Swift
-// by the time anything
+// Swift comes out, which a plain Swift front end reads. The loop: parse the text as Swift (with the
+// insides of `$(…)` blanked), take the first place at or after the cursor where a form of the
+// shell's may start, and read it; if it is one, replace it with the Swift it means, move the cursor
+// past that, and parse again, so that everything before the cursor is Swift by the time anything
 // after it is asked about.
 
 final class Front {
@@ -81,8 +76,7 @@ final class Front {
     struct Cured {
         var text: String
         /// What the source is, for coloring it: the shell's forms and the Swift between them, in
-        /// the source's
-        /// characters.
+        /// the source's characters.
         var spans: [HighlightSpan]
     }
 
@@ -94,11 +88,9 @@ final class Front {
         try cureWithSpans(source, names: inherited, asExpression: asExpression).text
     }
 
-    /// The program the source is, with every form of the shell's in it read.
-    /// `asExpression`: the text is one expression (an argument, a closure, an interpolation), not a
-    /// program: it is not
-    /// read
-    /// as a statement itself, only the forms inside it are.
+    /// The program the source is, with every form of the shell's in it read. `asExpression`: the
+    /// text is one expression (an argument, a closure, an interpolation), not a program: it is not
+    /// read as a statement itself, only the forms inside it are.
     func cureWithSpans(
         _ source: String,
         names inherited: Names? = nil,

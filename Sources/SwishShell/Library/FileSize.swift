@@ -1,12 +1,10 @@
 import Foundation
 import Swiit
 
-/// An amount of bytes, shown in decimal units as Finder shows them (`532 B`,
-/// `1.2 KB`, `123 MB`) and written `1.5.mb` in Swiit (each unit is a property of `Int` and
-/// `Double`). It adds and
-/// subtracts,
-/// scales by a number, and divides by another size for a ratio. Encodes as
-/// its byte count.
+/// An amount of bytes, shown in decimal units as Finder shows them (`532 B`, `1.2 KB`, `123 MB`)
+/// and written `1.5.mb` in Swiit (each unit is a property of `Int` and `Double`). It adds and
+/// subtracts, scales by a number, and divides by another size for a ratio. Encodes as its byte
+/// count.
 struct FileSize: Codable, Hashable, Comparable, Sendable, LosslessStringConvertible {
     /// How many bytes.
     public var bytes: Int

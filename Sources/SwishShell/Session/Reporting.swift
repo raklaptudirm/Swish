@@ -16,8 +16,7 @@ extension Shell {
     }
 
     /// Reports a problem with one item, like a file `ls` couldn't read, without stopping; the
-    /// statement's status
-    /// becomes a failure.
+    /// statement's status becomes a failure.
     func reportItemError(_ message: String) {
         report(message)
         task.itemErrors += 1

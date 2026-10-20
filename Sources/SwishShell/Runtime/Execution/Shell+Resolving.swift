@@ -2,16 +2,10 @@ import Foundation
 import Swiit
 
 // Spike: what a stage is, decided from what flows into it, when it flows. The front end emits
-// `Command("sorted")` and
-// nothing
-// about the type; here the first item says what the items are, and the forms are looked up in the
-// order the checker
-// looked
-// (the items as they come, the prelude's sequence methods, the items collected, a method of each
-// item, each item's
-// Swift
-// members), then a function, then a program. Binding the stage's words to a candidate decides
-// whether it fits.
+// `Command("sorted")` and nothing about the type; here the first item says what the items are, and
+// the forms are looked up in the order the checker looked (the items as they come, the prelude's
+// sequence methods, the items collected, a method of each item, each item's Swift members), then a
+// function, then a program. Binding the stage's words to a candidate decides whether it fits.
 
 /// What a stage is called on: the items collected, the items as they come, each item, or the one
 /// value.
@@ -32,8 +26,7 @@ private struct ConstraintFailure: Error { var message: String }
 
 extension Shell {
     /// The stage `deferred` is, fed by `upstream`, and the stream to read in its place (the first
-    /// item put back).
-    /// `single`: the one value the pipeline started from, when it isn't a sequence.
+    /// item put back). `single`: the one value the pipeline started from, when it isn't a sequence.
     func resolve(
         _ deferred: DeferredStage,
         upstream: ValueStream,
@@ -126,8 +119,7 @@ extension Shell {
             return (stage, replay)
         }
         // Something was a method of that name and its words did not fit: that says what is wrong,
-        // unless the name is
-        // also a function or a program, which then is what it is.
+        // unless the name is also a function or a program, which then is what it is.
         let fallback = try? deferred.fallback()
         if let firstFailure {
             switch fallback {
@@ -143,9 +135,7 @@ extension Shell {
 
 extension Shell {
     /// Whether a call with these arguments could mean the function: by their labels, and whether
-    /// each converts to the
-    /// type its
-    /// parameter has (a one-letter text to a `Character`).
+    /// each converts to the type its parameter has (a one-letter text to a `Character`).
     func accepts(_ symbol: Symbol, _ arguments: [(label: String?, value: Value)]) -> Bool {
         guard let parameters = symbol.function?.parameters else { return false }
         var next = 0

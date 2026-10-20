@@ -5,11 +5,9 @@ import Testing
 @testable import SwishShell
 
 // Swish's text is Swift's with the shell's in it (`$(…)`, commands, `async`), and SwiftParser is
-// what finds where each
-// begins and ends. A program built from pieces that each print one marker must print every marker,
-// in order, whatever
-// surrounds each piece: a statement the boundary loses is a script that does half its work and says
-// nothing.
+// what finds where each begins and ends. A program built from pieces that each print one marker
+// must print every marker, in order, whatever surrounds each piece: a statement the boundary loses
+// is a script that does half its work and says nothing.
 
 struct Generator {
     var state: UInt64
@@ -126,10 +124,8 @@ private let programs = ProcessInfo.processInfo.environment["SWISH_FUZZ"].flatMap
 
 @Test func blocksNestedInTheBlocksOfALayerStillReadTheirFirstCommand() throws {
     // A command-style call's closure, or a task's, holding another: each window of the source that
-    // is read ends
-    // mid-block
-    // until the last, and the layer's "ran out of text" must win over what SwiftParser makes of the
-    // unfinished text.
+    // is read ends mid-block until the last, and the layer's "ran out of text" must win over what
+    // SwiftParser makes of the unfinished text.
     #expect(
         try run("let t = async {\nlet u = async {\necho m0\necho m1\n}\nawait u\n}\nawait t\n")
             == "m0\nm1\n"

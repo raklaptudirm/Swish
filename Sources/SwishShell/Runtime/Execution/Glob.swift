@@ -1,11 +1,10 @@
 import Foundation
 import Swiit
 
-/// Filename patterns: `*`, `[a-z]`, and `**` for any depth of directories.
-/// `?` isn't a wildcard, as in fish, so `curl https://x.com/?q=1` needs no
-/// quotes; `[…]` matches a single character instead. A backslash makes the next character literal,
-/// which is how
-/// quoted and interpolated text stays literal inside a pattern.
+/// Filename patterns: `*`, `[a-z]`, and `**` for any depth of directories. `?` isn't a wildcard, as
+/// in fish, so `curl https://x.com/?q=1` needs no quotes; `[…]` matches a single character instead.
+/// A backslash makes the next character literal, which is how quoted and interpolated text stays
+/// literal inside a pattern.
 enum Glob {
     /// Makes every character of `text` literal in a pattern.
     static func escape(_ text: String) -> String {

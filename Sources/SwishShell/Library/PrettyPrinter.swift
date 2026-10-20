@@ -57,8 +57,7 @@ struct PrettyPrinter: Sendable {
                 ?? .segments([(value.debugDescription, nil)])
         case .object:
             // A command's output is laid out as the struct it is; any other Swift value as its type
-            // says it looks, in a
-            // style.
+            // says it looks, in a style.
             if let output = value.commandOutput { return node(for: output.displayValue) }
             if let role = value.displayShape.role { return .segments([(value.description, role)]) }
             guard let object = try? value.unboxed((any HostObject).self) else {

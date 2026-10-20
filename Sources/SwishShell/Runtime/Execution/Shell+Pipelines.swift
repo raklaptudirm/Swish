@@ -14,8 +14,7 @@ enum Stage {
         environment: [(String, String)]
     )
     /// A Swish function, which runs in the shell's own process; or a method of what flows in, as in
-    /// `[p1, p2] |
-    /// describe`.
+    /// `[p1, p2] | describe`.
     case function(
         Callee,
         [CommandArgument],

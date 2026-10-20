@@ -22,8 +22,7 @@ extension Shell {
 }
 
 /// Copies an `OutputCollector`'s output to a descriptor, as it arrives, on a thread of its own,
-/// until the output ends
-/// or it is stopped.
+/// until the output ends or it is stopped.
 final class Relay: @unchecked Sendable {
     private let finished = DispatchSemaphore(value: 0)
     private let lock = NSLock()
@@ -124,8 +123,7 @@ final class OutputCollector: @unchecked Sendable {
     }
 
     /// Writes all of it to `fd`, what is collected already and what comes: a task awaited from the
-    /// foreground shows its
-    /// output.
+    /// foreground shows its output.
     func relay(to fd: Int32) -> Relay { Relay(self, to: fd) }
 
     /// All of it, once it ends.

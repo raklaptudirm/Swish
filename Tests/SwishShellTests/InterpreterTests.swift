@@ -427,8 +427,7 @@ private let streaming = """
             == "1.5 MB\n2.0 KB\n"
     )
     // A unit is a property of a number, so it works on a variable too; one that isn't a unit is a
-    // number's missing
-    // member.
+    // number's missing member.
     #expect(try output("let n = 3; n.mb; (n * 2).kib; n.mb.bytes") == "3.0 MB\n6.1 KB\n3000000\n")
     #expect(status("1.parsecs") == 2)
 }

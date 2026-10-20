@@ -334,8 +334,7 @@ extension Shell {
     }
 
     /// A function as Swift declares it: `greet(_ name: String, times: Int) -> String`. What a pipe
-    /// feeds is marked
-    /// `@input`.
+    /// feeds is marked `@input`.
     func signature(of symbol: Symbol) -> String {
         guard let function = symbol.function else { return symbol.name }
         let parameters = function.parameters.map { parameter -> String in

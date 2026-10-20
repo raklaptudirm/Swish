@@ -3,11 +3,8 @@ import Swiit
 import SystemPackage
 
 // What the shell adds to the language, told to the interpreter through its public interface: Swift
-// types it holds as
-// they
-// are (a size, a column, a command's output), and the declarations of its own functions and types,
-// whose bodies are in
-// Swift.
+// types it holds as they are (a size, a column, a command's output), and the declarations of its
+// own functions and types, whose bodies are in Swift.
 
 extension Shell {
     /// Teaches the interpreter the shell's own: `ls`, `ps`, `pwd`, `from`, `to`, `help`, and the

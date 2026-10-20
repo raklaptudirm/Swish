@@ -32,8 +32,7 @@ extension Shell {
             let environment = command.environment
             let rest = Array(arguments.dropFirst())
             // A function if one has that name, else a program; or a method of what flows in, which
-            // is found when the
-            // first item arrives (Shell+Resolving.swift).
+            // is found when the first item arrives (Shell+Resolving.swift).
             func function(_ callee: Callee?) throws -> Stage {
                 guard let callee else { throw RuntimeError("\(name): not found") }
                 return .function(callee, rest, redirects: redirects, environment: environment)

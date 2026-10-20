@@ -73,9 +73,8 @@ extension Shell {
 
 extension Shell {
     /// The first command line in the program that its function would not take, as `f 1 --bogus`
-    /// against `func f(…)`:
-    /// found
-    /// before anything runs, from the function's parameters and the words alone.
+    /// against `func f(…)`: found before anything runs, from the function's parameters and the
+    /// words alone.
     func firstCommandLineError(
         _ uses: [Front.CommandUse],
         declared declarations: Interpreter.Declarations

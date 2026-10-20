@@ -67,9 +67,7 @@ func kebabCase(_ label: String) -> String {
 }
 
 /// What the shell knows about a function's parameters that Swift's declaration can't say: which one
-/// a pipe feeds, and
-/// the short
-/// flag of an option. Keyed `function.parameter`.
+/// a pipe feeds, and the short flag of an option. Keyed `function.parameter`.
 enum CommandMarks {
     struct Marks: Sendable {
         var isInput = false

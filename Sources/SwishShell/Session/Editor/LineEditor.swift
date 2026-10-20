@@ -181,10 +181,8 @@ final class LineEditor {
     private static let indentation = "    "
 
     /// A new line after the cursor, indented as the line it follows is, and a level deeper if that
-    /// one opens a block
-    /// (`{`, `(`, `[`, or a `case …:`). Text pasted arrives with its own indentation, so with more
-    /// input waiting there
-    /// is none.
+    /// one opens a block (`{`, `(`, `[`, or a `case …:`). Text pasted arrives with its own
+    /// indentation, so with more input waiting there is none.
     private func insertNewline() {
         guard !inputPending() else { return insert(["\n"]) }
         let line = buffer[lineStart(from: cursor)..<cursor]

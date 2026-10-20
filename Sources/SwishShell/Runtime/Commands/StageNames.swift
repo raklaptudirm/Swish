@@ -2,16 +2,15 @@ import Foundation
 import Swiit
 
 // Which names can be a stage after a `|`: a member of what flows in. Known from the types, without
-// a value in hand, for
-// highlighting and completion, and for telling a method's name from a program's.
+// a value in hand, for highlighting and completion, and for telling a method's name from a
+// program's.
 
 struct StageNames {
     /// Every member of Swift's own types a stage could call: one that reads its receiver without
     /// changing it.
     var all: Set<String> = []
     /// Those that are methods: a bare one, with nothing piped in, has nothing to work on (a
-    /// property's name could be a
-    /// program's).
+    /// property's name could be a program's).
     var methods: Set<String> = []
     /// The methods of the items as they come, which return the items as they come.
     var flow: Set<String> = []
@@ -68,8 +67,7 @@ extension Shell {
     }
 
     /// Whether some type has a member called `name` that a stage could call: a Swift type's, a
-    /// struct's in scope, or a
-    /// job's.
+    /// struct's in scope, or a job's.
     func isMemberName(_ name: String) -> Bool {
         if stageNames.all.contains(name) || Job.members.contains(where: { $0.name == name }) {
             return true
@@ -83,8 +81,7 @@ extension Shell {
     }
 
     /// Whether `name` is a method some type has that a stage could call, and that makes no sense
-    /// without something
-    /// piped in.
+    /// without something piped in.
     func isStageMethod(_ name: String) -> Bool {
         stageNames.methods.contains(name)
     }
@@ -110,9 +107,7 @@ extension Shell {
     }
 
     /// What `name` is after a `|`: a method of the items as they come (a `Flow`'s), or what every
-    /// sequence has, or one
-    /// of any
-    /// type's. In the order the stage looks.
+    /// sequence has, or one of any type's. In the order the stage looks.
     func stageMethods(named name: String) -> Callee? {
         stageCallee(name, of: .named("Flow", [.any]), receiver: .flow)
             ?? stageCallee(name, of: .list(.any), receiver: .collected)
@@ -120,9 +115,7 @@ extension Shell {
     }
 
     /// Every Swift type's stage members named `name`, as one callee: what's known of a stage while
-    /// typing, before the
-    /// type of
-    /// what's piped into it is.
+    /// typing, before the type of what's piped into it is.
     func stageFunctions(named name: String) -> Callee? {
         let candidates = interpreter.types().filter(\.isBuiltin).sorted { $0.name < $1.name }
             .flatMap {

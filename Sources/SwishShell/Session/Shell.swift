@@ -70,8 +70,7 @@ public final class Shell: @unchecked Sendable {
     lazy var stageNames: StageNames = computeStageNames()
 
     /// The enums the program being checked declares, which a word for one can't be read against
-    /// yet.
-    /// What the functions a script declared say of their parameters (`@input`, `@flag`), by
+    /// yet. What the functions a script declared say of their parameters (`@input`, `@flag`), by
     /// `function.parameter`.
     var scriptMarks: [String: CommandMarks.Marks] = [:]
 
@@ -83,9 +82,8 @@ public final class Shell: @unchecked Sendable {
         interactive ? editor.history.entries : History(path: History.defaultPath).entries
     }
 
-    /// Tasks still running end with the shell: they're cancelled, and waited
-    /// for, as the scope that starts a task closes it
-    /// (https://github.com/raklaptudirm/Swiit/blob/main/Docs/async.md).
+    /// Tasks still running end with the shell: they're cancelled, and waited for, as the scope that
+    /// starts a task closes it (https://github.com/raklaptudirm/Swiit/blob/main/Docs/async.md).
     deinit {
         finishTasks()
     }
@@ -264,8 +262,7 @@ extension Shell {
         stoppedBySignal = nil
         var handled = false
         // Only the prompt shows values; running code prints what it prints. A script goes on with
-        // the next statement
-        // after an error in one.
+        // the next statement after an error in one.
         let observer: ((Interpreter.Observation) throws -> Void)? =
             atPrompt ? { [unowned self] in present($0) } : nil
         let onError: ((Diagnostic) -> Bool)? =
@@ -340,8 +337,7 @@ final class ShellTask {
     /// running something with `2>`.
     var stderrFD = STDERR_FILENO
     /// Problems with single items reported so far (a file `ls` couldn't read), and how many the
-    /// last statement had
-    /// seen.
+    /// last statement had seen.
     var itemErrors = 0
     var itemErrorsSeen = 0
     /// The status the last statement gave, kept as statements run

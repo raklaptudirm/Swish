@@ -304,9 +304,8 @@ private func run(_ source: String) throws -> String {
     #expect(try onLargeStack { try shell.capturing { shell.execute("print(await t)") } } == "5\n")
 }
 
-// A task in the background reads the input only once it's awaited, and its
-// reads let other tasks run (https://github.com/raklaptudirm/Swiit/blob/main/Docs/async.md, step
-// 6).
+// A task in the background reads the input only once it's awaited, and its reads let other tasks
+// run (https://github.com/raklaptudirm/Swiit/blob/main/Docs/async.md, step 6).
 
 @Test func aBackgroundTaskReadsTheInputWhenAwaited() throws {
     let saved = dup(STDIN_FILENO)

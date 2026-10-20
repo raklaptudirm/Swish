@@ -3,15 +3,12 @@ import SwiftParser
 import SwiftSyntax
 
 // What a script's functions say about their parameters that Swift's declaration can't: `@input`
-// takes what is piped in,
-// `@flag("n")` gives an option a short name. These are the shell's, so the front end reads them and
-// leaves Swift
-// without them.
+// takes what is piped in, `@flag("n")` gives an option a short name. These are the shell's, so the
+// front end reads them and leaves Swift without them.
 
 extension Shell {
     /// The source with those marks blanked (the same length, so every position stands), and what
-    /// they said, by
-    /// `function.parameter`.
+    /// they said, by `function.parameter`.
     func removingMarks(from swift: String) -> (source: String, marks: [String: CommandMarks.Marks])
     {
         guard swift.contains("@input") || swift.contains("@flag") else { return (swift, [:]) }

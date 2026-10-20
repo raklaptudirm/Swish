@@ -12,9 +12,7 @@ func currentProcessID() -> Int {
 }
 
 /// What `source` says when it fails, as written to the shell's error output (its first line), or
-/// nil if it ran without
-/// a word:
-/// a failure of a pipeline's stage is found when the pipeline starts.
+/// nil if it ran without a word: a failure of a pipeline's stage is found when the pipeline starts.
 func errorText(_ source: String, in shell: Shell = Shell()) -> String? {
     guard let pipe = makePipe() else { return nil }
     let collector = OutputCollector(reading: pipe.read)

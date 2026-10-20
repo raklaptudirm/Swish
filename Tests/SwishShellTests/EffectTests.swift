@@ -3,9 +3,8 @@ import Testing
 
 @testable import SwishShell
 
-// The shell's waits (`$(…)`, commands, `await job`) are blocking calls, not
-// effects: a function that runs commands is an ordinary function, and only
-// Swift's own `async` needs `await`
+// The shell's waits (`$(…)`, commands, `await job`) are blocking calls, not effects: a function
+// that runs commands is an ordinary function, and only Swift's own `async` needs `await`
 // (https://github.com/raklaptudirm/Swiit/blob/main/Docs/async.md).
 
 private func effect(of name: String, after source: String) throws -> Bool? {

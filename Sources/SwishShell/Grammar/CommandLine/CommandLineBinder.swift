@@ -123,8 +123,7 @@ extension Shell {
     }
 
     /// `bind(commandLine:to:excludingInput:)`, deciding and not making: the same flags,
-    /// positionals, collections and
-    /// errors.
+    /// positionals, collections and errors.
     func bindWords(
         _ words: [CommandWordShape],
         to allParameters: [CommandParameter],

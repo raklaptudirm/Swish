@@ -15,8 +15,7 @@ struct BoundCall {
     var written: [(label: String?, value: Value)]?
 
     /// What the call is made with, in the order the parameters are declared. `input` is what a pipe
-    /// feeds the parameter
-    /// that takes it.
+    /// feeds the parameter that takes it.
     func arguments(input: (name: String, value: Value)? = nil) -> [(label: String?, value: Value)] {
         if let written { return written }
         var made: [(label: String?, value: Value)] = []
@@ -37,9 +36,8 @@ extension Shell {
     // MARK: Command-mode calls
 
     /// For an option a function doesn't have, when a program of the same name is on PATH: that the
-    /// function is Swish's,
-    /// and how to run the program. (It is never run in its place: a function is what was asked
-    /// for.)
+    /// function is Swish's, and how to run the program. (It is never run in its place: a function
+    /// is what was asked for.)
     func programHint(_ name: String) -> String {
         executableNames().contains(name)
             ? "; this is Swish's \(name): ^\(name) runs the program" : ""
@@ -192,8 +190,7 @@ extension Shell {
         of function: String
     ) throws -> Value {
         // Checking a program before it runs: an enum it declares has no cases yet, so the word is
-        // read against what was
-        // declared.
+        // read against what was declared.
         if case .named(let name, _) = type.optionalWrapped ?? type, let declared = staticEnums[name]
         {
             let bare = text.hasPrefix(".") ? String(text.dropFirst()) : text
@@ -214,9 +211,7 @@ extension Shell {
     }
 
     /// Whether a word can be a value of `type` at all: a Swift type text can be, an enum, or one of
-    /// Swish's own that's
-    /// read
-    /// from text.
+    /// Swish's own that's read from text.
     func takesWords(_ type: ValueType) -> Bool {
         type == .named("Output") || interpreter.acceptsWords(as: type)
     }

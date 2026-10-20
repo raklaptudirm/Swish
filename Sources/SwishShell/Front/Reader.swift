@@ -1,16 +1,10 @@
 import Foundation
 
 // Spike: the shell's grammar, read by the shell. A `Reader` stands on the text of one source at the
-// start of a form of
-// the
-// shell's (a command, a pipeline, `$(…)`, `$name`, `async …`) and reads it as characters; where the
-// form holds Swift
-// (an
-// argument, `\(…)`, a closure, the program in `$(…)`) it finds the extent with the lexical scanner
-// and has the front
-// end cure
-// that text in turn. What it gives back is Swift: the form as the calls it means, which a plain
-// Swift front end reads.
+// start of a form of the shell's (a command, a pipeline, `$(…)`, `$name`, `async …`) and reads it
+// as characters; where the form holds Swift (an argument, `\(…)`, a closure, the program in `$(…)`)
+// it finds the extent with the lexical scanner and has the front end cure that text in turn. What
+// it gives back is Swift: the form as the calls it means, which a plain Swift front end reads.
 
 struct Failure: Error, CustomStringConvertible {
     var message: String
@@ -139,9 +133,7 @@ struct Reader {
         "class", "actor", "protocol", "extension", "typealias",
     ]
     /// The keywords a line can begin with: a statement's, a unit's (`if make { … }`), or an
-    /// expression's (`await job`).
-    /// Completion
-    /// offers them where a command could go.
+    /// expression's (`await job`). Completion offers them where a command could go.
     static let lineStarts = statementKeywords.subtracting(["catch"])
         .union(["if", "for", "while", "switch", "try", "async", "await"])
     /// The words a command can follow directly and still be in command position.
@@ -158,9 +150,7 @@ struct Reader {
     }
 
     /// The Swift in a slice of this text, cured; its highlighting joins this reader's. `prefix`:
-    /// characters put before
-    /// the slice
-    /// that are not in the text.
+    /// characters put before the slice that are not in the text.
     mutating func cureSlice(
         _ slice: String,
         from start: Int,
@@ -243,9 +233,7 @@ struct Reader {
     // MARK: Chains
 
     /// Commands joined by `&&` and `||`, with Swift between them or not; nil (having looked ahead)
-    /// when there is no
-    /// command in
-    /// it, which is Swift's.
+    /// when there is no command in it, which is Swift's.
     mutating func parseCommandChain(condition: Bool) throws -> Chain? {
         let start = self
         var operands: [Operand] = []
@@ -366,8 +354,8 @@ struct Reader {
     }
 
     /// Whether the unit ahead is a command rather than an expression (see the grammar's rules in
-    /// `commandAhead` of the
-    /// interpreter's old plug-in): an expression if one parses there and the unit ends after it.
+    /// `commandAhead` of the interpreter's old plug-in): an expression if one parses there and the
+    /// unit ends after it.
     mutating func commandAhead(boolIsCommand: Bool = false) -> UnitStart {
         let saved = self
         defer { self = saved }

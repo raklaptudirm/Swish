@@ -1,8 +1,6 @@
-// swift-format-ignore-file
-// The shell's own declarations, in Swift, read after the language's prelude: the checker works from
-// the signatures, and
-// the bodies are in Swift too, found by name (Library/Install.swift). Not compiled: it is embedded
-// in the target.
+// swift-format-ignore-file The shell's own declarations, in Swift, read after the language's
+// prelude: the checker works from the signatures, and the bodies are in Swift too, found by name
+// (Library/Install.swift). Not compiled: it is embedded in the target.
 
 /// What text `from` can parse.
 enum InputFormat: Equatable, Hashable {
@@ -14,9 +12,8 @@ enum OutputFormat: Equatable, Hashable {
     case json, text
 }
 
-/// What kind of entry `ls` found: `ls | filter { $0.type == .directory }`. In this order, so `ls |
-/// sorted --by type`
-/// puts files first.
+/// What kind of entry `ls` found: `ls | filter { $0.type == .directory }`. In this order, so
+/// `ls | sorted --by type` puts files first.
 enum FileType: Equatable, Hashable, Comparable {
     case file, directory, symlink, other
 }
@@ -27,8 +24,7 @@ enum JobState: Equatable, Hashable, Comparable {
 }
 
 /// What `String.styled` can make text (the shell's: the core knows only `DisplayStyle`), each with
-/// its terminal code as
-/// its raw value.
+/// its terminal code as its raw value.
 enum TextStyle: Equatable, Hashable {
     case bold, dim, italic, underline, red, green, yellow, blue, magenta, cyan, white, gray
 }
@@ -158,28 +154,32 @@ struct Command {
     /// `< file`, `0< file`.
     func reading(_ fd: Int, from path: Any) -> Command {
         var command = self
-        command.redirections = command.redirections + [Redirection(fd: fd, mode: "read", path: path, other: 0)]
+        command.redirections =
+            command.redirections + [Redirection(fd: fd, mode: "read", path: path, other: 0)]
         return command
     }
 
     /// `> file`, `e> file`.
     func writing(_ fd: Int, to path: Any) -> Command {
         var command = self
-        command.redirections = command.redirections + [Redirection(fd: fd, mode: "write", path: path, other: 0)]
+        command.redirections =
+            command.redirections + [Redirection(fd: fd, mode: "write", path: path, other: 0)]
         return command
     }
 
     /// `>> file`, `e>> file`.
     func appending(_ fd: Int, to path: Any) -> Command {
         var command = self
-        command.redirections = command.redirections + [Redirection(fd: fd, mode: "append", path: path, other: 0)]
+        command.redirections =
+            command.redirections + [Redirection(fd: fd, mode: "append", path: path, other: 0)]
         return command
     }
 
     /// `e>o`: a descriptor to wherever another one goes at this point.
     func sending(_ fd: Int, to other: Int) -> Command {
         var command = self
-        command.redirections = command.redirections + [Redirection(fd: fd, mode: "send", path: nil, other: other)]
+        command.redirections =
+            command.redirections + [Redirection(fd: fd, mode: "send", path: nil, other: other)]
         return command
     }
 
@@ -381,8 +381,11 @@ extension Sequence {
         // Ties keep their order.
         let items = Array(self)
         let keys = items.map(key)
-        return keys.enumerated().sorted { first, second in
-            first.element != second.element ? first.element < second.element : first.offset < second.offset
-        }.map { items[$0.offset] }
+        return keys.enumerated()
+            .sorted { first, second in
+                first.element != second.element
+                    ? first.element < second.element : first.offset < second.offset
+            }
+            .map { items[$0.offset] }
     }
 }

@@ -118,8 +118,7 @@ struct InlineMarkdown {
     }
 
     /// Emphasized text: where its words are, where reading goes on after its closer, and how many
-    /// marks it has (1
-    /// italic, 2 bold).
+    /// marks it has (1 italic, 2 bold).
     private struct Emphasis {
         var inner: Range<Int>
         var next: Int
@@ -156,13 +155,9 @@ struct InlineMarkdown {
 
 extension AttributedString {
     /// Text written in Markdown, as documentation is: its code, strong text, emphasis and links as
-    /// styles, which show
-    /// where
-    /// there are colors, and the plain words anywhere else. Only the inline syntax, which is what a
-    /// description is made
-    /// of;
-    /// see `InlineMarkdown`. (Foundation on Linux does not parse Markdown, so documentation's is
-    /// read here.)
+    /// styles, which show where there are colors, and the plain words anywhere else. Only the
+    /// inline syntax, which is what a description is made of; see `InlineMarkdown`. (Foundation on
+    /// Linux does not parse Markdown, so documentation's is read here.)
     init(documentation text: String) {
         self = InlineMarkdown(Array(text)).parse(0..<text.count, style: nil)
     }

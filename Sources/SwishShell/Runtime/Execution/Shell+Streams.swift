@@ -14,9 +14,7 @@ final class ValueStream {
     static var empty: ValueStream { ValueStream { nil } }
 
     /// A list flows as its elements, as does a Swift sequence (a Set, a range of Ints, a command's
-    /// output, a flow);
-    /// nothing
-    /// as no items, anything else as a single item.
+    /// output, a flow); nothing as no items, anything else as a single item.
     static func elements(of value: Value) -> ValueStream {
         if value.kind == .nothing { return .empty }
         if let flow = value.flow { return ValueStream { try flow.read() } }
@@ -259,9 +257,7 @@ extension Shell {
     // MARK: Methods
 
     /// A method of what flows in: of each item (`[p1, p2] | describe`), of the items collected, of
-    /// the one value the
-    /// pipeline
-    /// started from, or of the items as they come, lazily.
+    /// the one value the pipeline started from, or of the items as they come, lazily.
     private func methodStream(
         _ callee: Callee,
         _ args: [CommandArgument],
@@ -315,9 +311,7 @@ extension Shell {
             }
         case .flow:
             // Lazily: the stage reads upstream only as its own reader is asked, and the Flow it
-            // gives is read as the
-            // next
-            // stage asks.
+            // gives is read as the next stage asks.
             let flow = Value(boxing: Flow<Value> { try upstream.next() }, as: "Flow")
             let result = try apply(to: flow)
             if let produced = result.flow { return ValueStream { try produced.read() } }

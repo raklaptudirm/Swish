@@ -2,9 +2,8 @@ import Foundation
 import Swiit
 
 // How the shell shows values in a table: the vocabulary a type uses to say which of its fields a
-// table starts with
-// and what stands out in them. The core knows none of it (the styles themselves, `DisplayStyle`,
-// are its).
+// table starts with and what stands out in them. The core knows none of it (the styles themselves,
+// `DisplayStyle`, are its).
 
 /// A column a table shows, and what styles it: the value of another field
 /// (or of itself), if that is a `DisplayStyled` enum, as a file's name is

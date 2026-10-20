@@ -47,9 +47,8 @@ extension Shell {
         scriptDirectory =
             URL(fileURLWithPath: path).standardizedFileURL.deletingLastPathComponent().path
         // Read and checked whole, so doc comments reach their functions and a mistake anywhere
-        // stops the script before
-        // any
-        // of it runs; then run a statement at a time, so a runtime error only abandons its own.
+        // stops the script before any of it runs; then run a statement at a time, so a runtime
+        // error only abandons its own.
         var source = String(decoding: data, as: UTF8.self)
         // `#!/usr/bin/env swish`, so it runs as a program; the line stays,
         // blank, so line numbers do too.

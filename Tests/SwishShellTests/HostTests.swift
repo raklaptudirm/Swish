@@ -136,9 +136,8 @@ private func errorsOfScript(
 
 @Test func whatFollowsACommandSubstitutionWithAClosureIsStillRead() throws {
     // SwiftParser takes `$(echo hi | map { … })` for a Swift call that ends at the closure and
-    // leaves the rest of the
-    // line out of every statement; the front end blanks what is inside, so each statement is still
-    // found.
+    // leaves the rest of the line out of every statement; the front end blanks what is inside, so
+    // each statement is still found.
     let shell = Shell()
     let cases: [(source: String, statements: Int)] = [
         (#"let a = $(echo hi | map { "x" }); touch /tmp/never; print(a)"#, 3),
@@ -162,8 +161,7 @@ private func errorsOfScript(
 
 @Test func anUnknownOptionSaysWhichSideOfAShadowedCommandItIs() throws {
     // `ps` is Swish's function, not the program: a flag it lacks says how to reach the program, and
-    // never runs it
-    // instead.
+    // never runs it instead.
     let (shell, recorder) = shellWithRecorder()
     #expect(shell.execute("ps -ax") != 0)
     #expect(

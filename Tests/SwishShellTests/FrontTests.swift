@@ -5,10 +5,8 @@ import Testing
 @testable import SwishShell
 
 // The shell's own front end (Front/): text that is Swift's with the shell's in it goes in, Swift
-// comes out. What a unit
-// is
-// (a command or an expression), and what each form of the shell's means, is read from the Swift
-// that comes out.
+// comes out. What a unit is (a command or an expression), and what each form of the shell's means,
+// is read from the Swift that comes out.
 
 private func front(
     variables: Set<String> = [],
@@ -30,8 +28,7 @@ private func cure(
 }
 
 /// What each top-level line comes to: "command" where the shell's reading made one, "expression"
-/// where it is Swift's as
-/// typed.
+/// where it is Swift's as typed.
 private func modes(
     _ source: String,
     variables: Set<String> = [],

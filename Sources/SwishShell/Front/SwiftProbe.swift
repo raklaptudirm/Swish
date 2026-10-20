@@ -3,11 +3,9 @@ import SwiftParser
 import SwiftSyntax
 
 // Spike: what the shell asks of Swift's grammar, answered by SwiftParser's tree: where an
-// expression ends, whether one
-// is
-// there at all, and which names the text around declares. The text is the shell's with Swift in it,
-// so a probe reads a
-// stretch of it as Swift and says how far Swift gets.
+// expression ends, whether one is there at all, and which names the text around declares. The text
+// is the shell's with Swift in it, so a probe reads a stretch of it as Swift and says how far Swift
+// gets.
 
 /// What a name refers to where the reader is, which decides the mode of a statement starting with
 /// it.
@@ -27,8 +25,7 @@ struct NameDeclaration {
 }
 
 /// The names there are where a stretch of the text is: those the interpreter has, and those the
-/// text declares, each in
-/// its scope.
+/// text declares, each in its scope.
 struct Names {
     var base: [String: NameRole]
     var declarations: [NameDeclaration] = []
@@ -330,9 +327,8 @@ struct Probe {
 
 enum SwiftProbe {
     /// The expression starting at `start`: where it ends, and where it stops being Swift. The
-    /// expression stops before a
-    /// single `|` (the shell's pipe) and, when `logical`, before `&&` and `||`.
-    /// `text` has its substitutions blanked.
+    /// expression stops before a single `|` (the shell's pipe) and, when `logical`, before `&&` and
+    /// `||`. `text` has its substitutions blanked.
     static func expression(
         in text: Text,
         at start: Int,
@@ -351,8 +347,7 @@ enum SwiftProbe {
         }
         var endByte = expr.endPositionBeforeTrailingTrivia.utf8Offset
         // A sequence of operands and operators, as SwiftParser leaves it unfolded: cut at the first
-        // operator that is
-        // the shell's.
+        // operator that is the shell's.
         var sequenceOwner: ExprSyntax = expr
         if let attempt = expr.as(TryExprSyntax.self) { sequenceOwner = attempt.expression }
         if let sequence = sequenceOwner.as(SequenceExprSyntax.self) {

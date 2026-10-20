@@ -295,8 +295,8 @@ extension Shell {
     func awaitJob(_ job: Job) throws -> Output {
         if let task = job.task {
             // Awaiting brings a task to the foreground, and what it printed with it: what it has
-            // printed so far, and
-            // the rest as it prints. (A task that gives an Output keeps it for the value.)
+            // printed so far, and the rest as it prints. (A task that gives an Output keeps it for
+            // the value.)
             var relay: Relay?
             if !job.givesOutput, !job.relayed {
                 job.relayed = true

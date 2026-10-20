@@ -26,9 +26,8 @@ extension DisplayFormatter {
 
 extension Shell {
     /// How types show in a table: the shell's own (`Job`, `Help`, `FileEntry`), and the columns of
-    /// the structs declared
-    /// in
-    /// Swish that say so (`Tabular`), found when a table of one is laid out.
+    /// the structs declared in Swish that say so (`Tabular`), found when a table of one is laid
+    /// out.
     var displayRegistry: DisplayRegistry { tableRegistry() }
 
     func tableRegistry() -> DisplayRegistry {

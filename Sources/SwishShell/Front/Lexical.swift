@@ -1,10 +1,8 @@
 import Foundation
 
 // Spike: the shell's own text, read by the shell. Nothing here knows the interpreter: this is the
-// lexical level of
-// Swift's
-// text with the shell's in it (strings and their interpolations, comments, brackets), enough to
-// find where a form ends.
+// lexical level of Swift's text with the shell's in it (strings and their interpolations, comments,
+// brackets), enough to find where a form ends.
 
 /// The characters of a source, and what its bytes are (SwiftParser's positions are bytes).
 struct Text {
@@ -80,8 +78,7 @@ enum Lex {
     }
 
     /// Past a double-quoted string starting at `start`, its interpolations (`\(…)`, and `$(…)` as a
-    /// command's word has
-    /// it) included.
+    /// command's word has it) included.
     static func skipString(_ chars: [Character], from start: Int) -> Int {
         var i = start + 1
         while i < chars.count {
@@ -135,8 +132,7 @@ enum Lex {
     }
 
     /// Each outermost `$(…)` of the code: from the `$` to the `)` that closes it, or to the end
-    /// when it is left open.
-    /// Strings are skipped, except for the code in their interpolations.
+    /// when it is left open. Strings are skipped, except for the code in their interpolations.
     static func substitutions(in chars: [Character]) -> (ranges: [Range<Int>], unclosed: Bool) {
         let found = scan(chars)
         return (found.substitutions, found.unclosed)
@@ -218,9 +214,8 @@ enum Lex {
     }
 
     /// The code with what is inside each `$(…)` replaced by blanks (newlines stay), so SwiftParser
-    /// reads the call `$()`
-    /// and
-    /// leaves the shell's text to the reader; the same length, so positions agree.
+    /// reads the call `$()` and leaves the shell's text to the reader; the same length, so
+    /// positions agree.
     static func blankingSubstitutions(_ chars: [Character]) -> [Character] {
         let found = substitutions(in: chars)
         guard !found.ranges.isEmpty else { return chars }
@@ -238,10 +233,8 @@ enum Lex {
     }
 
     /// The code with what is inside each outermost `{ … }` replaced by blanks: the statements in a
-    /// closure's body are
-    /// read
-    /// in their turn, so what a stretch of code is (where it ends) is asked with the bodies left
-    /// out.
+    /// closure's body are read in their turn, so what a stretch of code is (where it ends) is asked
+    /// with the bodies left out.
     static func blankingBlocks(_ chars: [Character]) -> [Character] {
         var blanked = chars
         var i = 0
