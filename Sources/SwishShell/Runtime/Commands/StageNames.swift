@@ -1,3 +1,4 @@
+import Foundation
 import Swiit
 
 // Which names can be a stage after a `|`: a member of what flows in. Known from the types, without a value in hand, for
@@ -14,8 +15,29 @@ struct StageNames {
     var sequence: Set<String> = []
 }
 
+/// The names are the same for every shell in the process, once its types are registered, and costly to find.
+private final class StageNameCache: @unchecked Sendable {
+    static let shared = StageNameCache()
+    private let lock = NSLock()
+    private var cached: (types: Int, names: StageNames)?
+
+    func names(types: Int, compute: () -> StageNames) -> StageNames {
+        lock.lock()
+        defer { lock.unlock() }
+        if let cached, cached.types == types { return cached.names }
+        let names = compute()
+        cached = (types, names)
+        return names
+    }
+}
+
 extension Shell {
     func computeStageNames() -> StageNames {
+        let count = interpreter.types().count
+        return StageNameCache.shared.names(types: count) { findStageNames() }
+    }
+
+    private func findStageNames() -> StageNames {
         var names = StageNames()
         func add(_ symbol: Symbol) {
             if let function = symbol.function {
