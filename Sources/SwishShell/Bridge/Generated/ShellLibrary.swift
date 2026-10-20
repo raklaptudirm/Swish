@@ -2,12 +2,10 @@
 // Don't edit: the bridge generator (swiit-bridge) remakes it.
 import Foundation
 @_spi(Layer) import Swiit
-@_spi(Layer) import SwishShellLibrary
 import SystemPackage
-@_spi(Layer) import SwishShellLibrary
 
 extension Bridge {
-    package nonisolated(unsafe) static let shellBridged: [BridgedType] = [
+    nonisolated(unsafe) static let shellBridged: [BridgedType] = [
 
         BridgedType(
             name: "FileSize", genericParameters: [],
@@ -47,7 +45,7 @@ extension Bridge {
         ),
     ]
     /// The module's structs, as Swiit source: declared with the prelude.
-    package static let shellTypes = #"""
+    static let shellTypes = #"""
 /// What text `from` can parse.
 enum InputFormat: Equatable, Hashable {
     case json
@@ -100,12 +98,12 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
 """#
 
     /// How the module's structs say which columns a table starts with.
-    package static let shellColumns: [String: [DisplayColumn]] = ["FileEntry": FileEntry.columns, "ProcessEntry": ProcessEntry.columns]
+    static let shellColumns: [String: [DisplayColumn]] = ["FileEntry": FileEntry.columns, "ProcessEntry": ProcessEntry.columns]
 
     /// How the module's enums say how a case is shown, by case name.
-    package static let shellEnumStyles: [String: @Sendable (String) -> DisplayStyle?] = ["FileType": { name in FileType.allCases.first { "\($0)" == name }?.displayStyle }, "JobState": { name in JobState.allCases.first { "\($0)" == name }?.displayStyle }]
+    static let shellEnumStyles: [String: @Sendable (String) -> DisplayStyle?] = ["FileType": { name in FileType.allCases.first { "\($0)" == name }?.displayStyle }, "JobState": { name in JobState.allCases.first { "\($0)" == name }?.displayStyle }]
 
-    package nonisolated(unsafe) static let shellFunctions: [BridgedMember] = [member81, member82, member83, member84, member85, member86, member87, member88, member89, member90]
+    nonisolated(unsafe) static let shellFunctions: [BridgedMember] = [member81, member82, member83, member84, member85, member86, member87, member88, member89, member90]
     nonisolated(unsafe) private static let member0: BridgedMember =                 BridgedMember(
                     kind: .method, name: "...", isStatic: true,
                     parameters: [Parameter(label: nil, name: "minimum", type: .named("FileSize")), Parameter(label: nil, name: "maximum", type: .named("FileSize"))],
@@ -1221,7 +1219,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "Parses text into values.",
                     body: .native { shell, args in
                         _ = shell
-                        let result = try SwishShellLibrary.from(try bridgeCase(InputFormat.self, args["format"]!), try bridgeList(args["text"]!).map { try String($0) })
+                        let result = try SwishShell.from(try bridgeCase(InputFormat.self, args["format"]!), try bridgeList(args["text"]!).map { try String($0) })
                 return result.value
                     },
                     parameterDocs: ["format": "json"]
@@ -1235,7 +1233,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "Converts the input to text: json, or text for how it would be displayed.",
                     body: .native { shell, args in
                         _ = shell
-                        let result = try SwishShellLibrary.to(try bridgeCase(OutputFormat.self, args["format"]!), try bridgeList(args["items"]!).map { $0 }, in: shell.context)
+                        let result = try SwishShell.to(try bridgeCase(OutputFormat.self, args["format"]!), try bridgeList(args["items"]!).map { $0 }, in: shell.context)
                 return result.value
                     },
                     parameterDocs: ["format": "json or text"]
@@ -1249,7 +1247,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "Lays records out as a table with every field.",
                     body: .native { shell, args in
                         _ = shell
-                        let result: [String] = SwishShellLibrary.table(try bridgeList(args["items"]!).map { $0 }, in: shell.context)
+                        let result: [String] = SwishShell.table(try bridgeList(args["items"]!).map { $0 }, in: shell.context)
                 return .list(result.map { $0.value })
                     }
                 )
@@ -1262,7 +1260,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "Shows each record as a list of fields. @_",
                     body: .native { shell, args in
                         _ = shell
-                        let result: [String] = SwishShellLibrary.list(try bridgeList(args["items"]!).map { $0 }, in: shell.context)
+                        let result: [String] = SwishShell.list(try bridgeList(args["items"]!).map { $0 }, in: shell.context)
                 return .list(result.map { $0.value })
                     }
                 )
@@ -1275,7 +1273,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "The working directory.",
                     body: .native { shell, args in
                         _ = shell
-                        let result = SwishShellLibrary.pwd()
+                        let result = SwishShell.pwd()
                 return SwiftValue.make(result, as: "FilePath")
                     }
                 )
@@ -1288,7 +1286,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "Runs a closure with environment variables set, then puts them back.",
                     body: .native { shell, args in
                         _ = shell
-                        let result = try SwishShellLibrary.with(env: try Dictionary(uniqueKeysWithValues: bridgeDictionary(args["variables"]!).map { (try String($0.key), try String($0.value)) }), { () throws -> Value in try bridgeClosure(shell, args["body"]!)([]) })
+                        let result = try SwishShell.with(env: try Dictionary(uniqueKeysWithValues: bridgeDictionary(args["variables"]!).map { (try String($0.key), try String($0.value)) }), { () throws -> Value in try bridgeClosure(shell, args["body"]!)([]) })
                 return result
                     },
                     parameterDocs: ["body": "what to run with them set", "variables": "the variables to set, as in with(env: [\"EDITOR\": \"vim\"]) { git commit }"]
@@ -1302,7 +1300,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "Lists directory contents.",
                     body: .native { shell, args in
                         _ = shell
-                        let partial = SwishShellLibrary.ls((args["paths"] == nil ? [] : try bridgeList(args["paths"]!).map { try SwiftValue.unbox(FilePath.self, $0) }), all: try Bool(args["all"]!))
+                        let partial = SwishShell.ls((args["paths"] == nil ? [] : try bridgeList(args["paths"]!).map { try SwiftValue.unbox(FilePath.self, $0) }), all: try Bool(args["all"]!))
                 for error in partial.errors { shell.reportItemError("\("ls"): \(error)") }
                 let result: [FileEntry] = partial.value
                 return .list(result.map { bridgeRecord(shell, $0, patches: ["type": .enumeration("FileType"), "size": .boxed("FileSize"), "modified": .boxed("Date"), "created": .boxed("Date"), "accessed": .boxed("Date"), "path": .boxed("FilePath"), "target": .boxed("FilePath")]) })
@@ -1318,7 +1316,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "What you've entered at the prompt, oldest first.",
                     body: .native { shell, args in
                         _ = shell
-                        let result: [String] = SwishShellLibrary.history(in: shell.context)
+                        let result: [String] = SwishShell.history(in: shell.context)
                 return .list(result.map { $0.value })
                     }
                 )
@@ -1331,7 +1329,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "A line of standard input, or nil at its end.",
                     body: .native { shell, args in
                         _ = shell
-                        let result = SwishShellLibrary.readLine(strippingNewline: try Bool(args["strippingNewline"]!))
+                        let result = SwishShell.readLine(strippingNewline: try Bool(args["strippingNewline"]!))
                 return (result.map { $0.value } ?? .nothing)
                     },
                     parameterDocs: ["strippingNewline": "leave the line's newline off"]
@@ -1345,7 +1343,7 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
                     discardableResult: false, summary: "Lists running processes. Memory and CPU time are only known for your own processes.",
                     body: .native { shell, args in
                         _ = shell
-                        let result: [ProcessEntry] = SwishShellLibrary.ps()
+                        let result: [ProcessEntry] = SwishShell.ps()
                 return .list(result.map { bridgeRecord(shell, $0, patches: ["memory": .boxed("FileSize")]) })
                     }
                 )

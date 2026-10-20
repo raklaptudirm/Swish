@@ -5,7 +5,7 @@ import Foundation
 /// the first 100, or whatever arrives in the first 200ms, decide the
 /// columns and widths, and later rows are truncated to fit. Other items
 /// are written one per line.
-package final class DisplayFormatter {
+final class DisplayFormatter {
     private let write: (String) -> Bool
     private let useViews: Bool
     private let maxWidth: Int
@@ -26,7 +26,7 @@ package final class DisplayFormatter {
     }
 
     /// `useViews: false` shows every column, as `table` does.
-    package init(
+    init(
         maxWidth: Int = .max, styled: Bool = false, useViews: Bool = true, header: Bool = true,
         columnCap: Int = 40, registry: DisplayRegistry = DisplayRegistry(), write: @escaping (String) -> Bool
     ) {
@@ -41,7 +41,7 @@ package final class DisplayFormatter {
 
     /// False once the reader is gone.
     @discardableResult
-    package func add(_ item: Value) -> Bool {
+    func add(_ item: Value) -> Bool {
         switch item {
         case .nothing:
             return true
@@ -68,7 +68,7 @@ package final class DisplayFormatter {
     }
 
     @discardableResult
-    package func finish() -> Bool {
+    func finish() -> Bool {
         flush()
     }
 
@@ -137,7 +137,7 @@ package final class DisplayFormatter {
     /// is styled by a field whose value is an enum that says how its cases
     /// are shown (a file's name by its type, a job's state by itself). Else
     /// it's plain.
-    package static func style(of value: Value, key: String, in record: Record, registry: DisplayRegistry) -> DisplayStyle? {
+    static func style(of value: Value, key: String, in record: Record, registry: DisplayRegistry) -> DisplayStyle? {
         guard let typeName = record.typeName, let column = registry.columns[typeName]?.first(where: { $0.name == key }) else { return nil }
         if let fixed = column.style { return fixed }
         guard let source = column.styledBy,
@@ -165,7 +165,7 @@ package final class DisplayFormatter {
     }
 
     /// `name  value` lines, with keys aligned.
-    package static func keyValueLines(_ record: Record, styled: Bool = false, registry: DisplayRegistry = DisplayRegistry()) -> [String] {
+    static func keyValueLines(_ record: Record, styled: Bool = false, registry: DisplayRegistry = DisplayRegistry()) -> [String] {
         let width = record.keys.map(\.count).max() ?? 0
         return record.map { key, value in
             key.styled(DisplayStyle.label, styled) + String(repeating: " ", count: width - key.count + 2)
@@ -174,7 +174,7 @@ package final class DisplayFormatter {
     }
 
     /// A value as one table cell: one line, nested values summarized.
-    package static func cell(_ value: Value) -> String {
+    static func cell(_ value: Value) -> String {
         switch value {
         case .string(let text):
             text.replacingOccurrences(of: "\n", with: "↵")

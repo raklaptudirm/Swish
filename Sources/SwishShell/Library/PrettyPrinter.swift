@@ -5,11 +5,11 @@ import Foundation
 /// highlighter's colors, and, when it won't fit on one line, broken over
 /// lines with each element or field on its own, the way you'd format it as
 /// Swift. A string of several lines is a `"""` literal then.
-package struct PrettyPrinter: Sendable {
-    package var width = 80
-    package var styled = false
+struct PrettyPrinter: Sendable {
+    var width = 80
+    var styled = false
 
-    package init(width: Int = 80, styled: Bool = false) {
+    init(width: Int = 80, styled: Bool = false) {
         self.width = width
         self.styled = styled
     }
@@ -24,7 +24,7 @@ package struct PrettyPrinter: Sendable {
         case group(open: [Segment], items: [(label: [Segment], node: Node)], close: String)
     }
 
-    package func format(_ value: Value) -> String {
+    func format(_ value: Value) -> String {
         render(node(for: value), indent: 0, used: 0, trailing: 0)
     }
 

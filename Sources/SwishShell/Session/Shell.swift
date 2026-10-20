@@ -1,5 +1,4 @@
 @_spi(Layer) import Swiit
-@_spi(Layer) import SwishShellLibrary
 import Foundation
 
 /// The shell: a process with a terminal, jobs and a line editor, over an

@@ -1,6 +1,5 @@
 @_spi(Layer) import Swiit
 import Foundation
-@_spi(Layer) import SwishShellLibrary
 import SystemPackage
 
 extension Shell {

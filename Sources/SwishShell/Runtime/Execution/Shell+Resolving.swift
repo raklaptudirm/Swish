@@ -1,5 +1,4 @@
 @_spi(Layer) import Swiit
-@_spi(Layer) import SwishShellLibrary
 import Foundation
 
 // Spike: what a stage is, decided from what flows into it, when it flows. The front end emits `Command("sorted")` and nothing

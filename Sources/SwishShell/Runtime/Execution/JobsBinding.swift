@@ -1,5 +1,4 @@
 @_spi(Layer) import Swiit
-@_spi(Layer) import SwishShellLibrary
 
 extension Shell {
     /// `jobs`, the jobs in the background oldest first, and what `await` waits

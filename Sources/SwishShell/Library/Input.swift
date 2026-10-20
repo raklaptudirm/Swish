@@ -3,7 +3,7 @@ import Foundation
 
 /// A line of standard input, or nil at its end.
 /// - Parameter strippingNewline: leave the line's newline off
-@_spi(Layer) public func readLine(strippingNewline: Bool = true) -> String? {
+func readLine(strippingNewline: Bool = true) -> String? {
     // A wait: other tasks run meanwhile, and a task in the background waits
     // for its turn at the input.
     Waiting.forInput { readLineNow(strippingNewline: strippingNewline) }

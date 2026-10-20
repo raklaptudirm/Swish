@@ -10,12 +10,12 @@ import Foundation
 import SystemPackage
 
 /// A user's name, or their number if they have none.
-package func userName(_ uid: uid_t) -> String {
+func userName(_ uid: uid_t) -> String {
     getpwuid(uid).map { String(cString: $0.pointee.pw_name) } ?? String(uid)
 }
 
 /// A process `ps` lists.
-@_spi(Layer) public struct ProcessEntry: Encodable, Equatable, Hashable {
+struct ProcessEntry: Encodable, Equatable, Hashable {
     public var pid: Int
     public var ppid: Int
     public var name: String
@@ -27,11 +27,11 @@ package func userName(_ uid: uid_t) -> String {
 }
 
 extension ProcessEntry: Tabular {
-    @_spi(Layer) public static let columns: [DisplayColumn] = ["pid", "name", "user", "memory", "cpuTime"]
+    static let columns: [DisplayColumn] = ["pid", "name", "user", "memory", "cpuTime"]
 }
 
 /// Lists running processes. Memory and CPU time are only known for your own processes.
-@_spi(Layer) public func ps() -> [ProcessEntry] {
+func ps() -> [ProcessEntry] {
     // The system always says; if it somehow doesn't, there's nothing to list.
     (try? runningProcesses()) ?? []
 }
@@ -40,14 +40,14 @@ extension ProcessEntry: Tabular {
 /// Every process, by pid. sysctl lists every process without privileges;
 /// proc_pidinfo adds detail, but only for processes we're allowed to
 /// inspect.
-private func runningProcesses() throws(Errno) -> [ProcessEntry] {
+private func runningProcesses() throws(SystemPackage.Errno) -> [ProcessEntry] {
     var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_ALL]
     var size = 0
-    guard sysctl(&mib, 3, nil, &size, nil, 0) == 0 else { throw Errno(rawValue: errno) }
+    guard sysctl(&mib, 3, nil, &size, nil, 0) == 0 else { throw SystemPackage.Errno(rawValue: errno) }
     let stride = MemoryLayout<kinfo_proc>.stride
     var processes = [kinfo_proc](repeating: kinfo_proc(), count: size / stride + 64)
     size = processes.count * stride
-    guard sysctl(&mib, 3, &processes, &size, nil, 0) == 0 else { throw Errno(rawValue: errno) }
+    guard sysctl(&mib, 3, &processes, &size, nil, 0) == 0 else { throw SystemPackage.Errno(rawValue: errno) }
     var timebase = mach_timebase_info()
     mach_timebase_info(&timebase)
     let secondsPerTick = Double(timebase.numer) / Double(timebase.denom) / 1e9
@@ -73,12 +73,12 @@ private func runningProcesses() throws(Errno) -> [ProcessEntry] {
 }
 #else
 /// Every process, by pid, from /proc.
-private func runningProcesses() throws(Errno) -> [ProcessEntry] {
+private func runningProcesses() throws(SystemPackage.Errno) -> [ProcessEntry] {
     let names: [String]
     do {
         names = try FileManager.default.contentsOfDirectory(atPath: "/proc")
     } catch {
-        throw Errno(rawValue: ENOENT)
+        throw SystemPackage.Errno(rawValue: ENOENT)
     }
     let pageSize = Int64(sysconf(Int32(_SC_PAGESIZE)))
     let ticksPerSecond = Double(sysconf(Int32(_SC_CLK_TCK)))

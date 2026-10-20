@@ -11,7 +11,7 @@ import SystemPackage
 
 /// What kind of entry `ls` found: `ls | filter { $0.type == .directory }`.
 /// In this order, so `ls | sorted --by type` puts files first.
-@_spi(Layer) public enum FileType: String, CaseIterable, Comparable, Codable {
+enum FileType: String, CaseIterable, Comparable, Codable {
     case file, directory, symlink, other
 
     public static func < (lhs: FileType, rhs: FileType) -> Bool {
@@ -20,7 +20,7 @@ import SystemPackage
 }
 
 extension FileType: DisplayStyled {
-    @_spi(Layer) public var displayStyle: DisplayStyle? {
+    var displayStyle: DisplayStyle? {
         switch self {
         case .directory: .boldBlue
         case .symlink: .cyan
@@ -30,7 +30,7 @@ extension FileType: DisplayStyled {
 }
 
 /// An entry `ls` lists.
-@_spi(Layer) public struct FileEntry: Encodable, Equatable, Hashable {
+struct FileEntry: Encodable, Equatable, Hashable {
     public let name: String
     public let type: FileType
     public let size: FileSize
@@ -44,13 +44,13 @@ extension FileType: DisplayStyled {
 }
 
 extension FileEntry: Tabular {
-    @_spi(Layer) public static let columns: [DisplayColumn] = [DisplayColumn("name", styledBy: "type"), "type", "size", "modified"]
+    static let columns: [DisplayColumn] = [DisplayColumn("name", styledBy: "type"), "type", "size", "modified"]
 }
 
 /// Lists directory contents.
 /// - Parameter paths: files or directories to list (default: the current directory)
 /// - Parameter all: include hidden files
-@_spi(Layer) public func ls(@Rest _ paths: [FilePath] = [], @Flag all: Bool = false) -> Partial<[FileEntry]> {
+func ls(@Rest _ paths: [FilePath] = [], @Flag all: Bool = false) -> Partial<[FileEntry]> {
     var entries: [FileEntry] = []
     var errors: [any Error] = []
     for path in (paths.isEmpty ? [FilePath(".")] : paths).map(\.string) {
@@ -116,9 +116,9 @@ struct FileStatus {
 
     /// The path's status, not following a symlink; the error number if
     /// there's none.
-    init(_ path: String) throws(Errno) {
+    init(_ path: String) throws(SystemPackage.Errno) {
         var info = stat()
-        guard lstat(path, &info) == 0 else { throw Errno(rawValue: errno) }
+        guard lstat(path, &info) == 0 else { throw SystemPackage.Errno(rawValue: errno) }
         mode = info.st_mode
         size = Int64(info.st_size)
         owner = info.st_uid

@@ -1,7 +1,6 @@
 @_spi(Layer) import Swiit
 @_spi(Shell) @_spi(Layer) @testable import SwishShell
 import SwiitStandardLibrary
-@_spi(Layer) import SwishShellLibrary
 import Testing
 
 /// Runs `source` in `shell`, returning what it wrote to standard output.

@@ -1,4 +1,3 @@
-@_spi(Layer) import SwishShellLibrary
 @_spi(Layer) import Swiit
 import Foundation
 import SwiitStandardLibrary

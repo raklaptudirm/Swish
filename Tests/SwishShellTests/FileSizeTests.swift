@@ -1,5 +1,5 @@
 @_spi(Layer) import Swiit
-@_spi(Layer) import SwishShellLibrary
+@testable import SwishShell
 import Testing
 
 @Test func formatsFileSizes() {

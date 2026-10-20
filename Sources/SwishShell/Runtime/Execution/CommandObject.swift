@@ -1,5 +1,4 @@
 @_spi(Layer) import Swiit
-@_spi(Layer) import SwishShellLibrary
 import Foundation
 
 // What a command and a pipeline are in Swift: the prelude's `Command` and

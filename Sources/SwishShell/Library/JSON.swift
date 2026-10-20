@@ -4,7 +4,7 @@ import Foundation
 /// Parsed JSON: whatever it parsed as, a `Value`, which Swish reads by field
 /// and element. Object keys are kept in order, which Foundation's parser
 /// doesn't do and which tables need: key order is column order.
-@_spi(Layer) public struct JSON: WrapsValue {
+struct JSON: WrapsValue {
     public let value: Value
 
     public init(_ value: Value) {
