@@ -14,7 +14,9 @@ extension Shell {
                 result: .named("Output"),
                 isHandle: { $0.cast(to: Job.self) != nil },
                 // `async f()`'s job holds what `f` gives, which awaiting it gives.
-                resultOf: { if case .named("Job", let held) = $0, held.count == 1 { held[0] } else { nil } }
+                resultOf: {
+                    if case .named("Job", let held) = $0, held.count == 1 { held[0] } else { nil }
+                }
             ) { [unowned self] value, throwing in
                 let job: Job
                 if let value {
@@ -23,7 +25,9 @@ extension Shell {
                     }
                     job = object
                 } else {
-                    guard let latest = jobs.last else { throw RuntimeError("there are no jobs to await") }
+                    guard let latest = jobs.last else {
+                        throw RuntimeError("there are no jobs to await")
+                    }
                     job = latest
                 }
                 // A task's value, unless it was `async $(…)`.

@@ -1,6 +1,7 @@
 import Swiit
 
-/// A parameter of a command: what Swiit says of it, and what the shell adds, which Swiit knows nothing of.
+/// A parameter of a command: what Swiit says of it, and what the shell adds, which Swiit knows
+/// nothing of.
 struct CommandParameter {
     var label: String?
     var name: String
@@ -26,7 +27,9 @@ struct CommandParameter {
         isVariadic = parameter.isVariadic
         defaultValue = parameter.defaultValue
         documentation = parameter.documentation
-        let marks = table["\(function).\(parameter.name)"] ?? CommandMarks.table["\(function).\(parameter.name)"]
+        let marks =
+            table["\(function).\(parameter.name)"]
+            ?? CommandMarks.table["\(function).\(parameter.name)"]
         isInput = marks?.isInput ?? false
         shortFlag = marks?.shortFlag
     }
@@ -63,7 +66,8 @@ func kebabCase(_ label: String) -> String {
     }
 }
 
-/// What the shell knows about a function's parameters that Swift's declaration can't say: which one a pipe feeds, and
+/// What the shell knows about a function's parameters that Swift's declaration can't say: which one
+/// a pipe feeds, and
 /// the short
 /// flag of an option. Keyed `function.parameter`.
 enum CommandMarks {
@@ -85,7 +89,8 @@ enum CommandMarks {
     ]
 }
 
-/// A function the shell can call as a command: the overloads of its name, and how the value it is a member of is given.
+/// A function the shell can call as a command: the overloads of its name, and how the value it is a
+/// member of is given.
 struct Callee {
     /// The name of the function, or of the method.
     var name: String
@@ -95,7 +100,8 @@ struct Callee {
     var receiver: StageReceiver?
     /// What messages and help call it, when that is not its name: a script's `main` is the script.
     var shownName: String?
-    /// What a script's own functions mark their parameters with (`@input`, `@flag("n")`), by `function.parameter`.
+    /// What a script's own functions mark their parameters with (`@input`, `@flag("n")`), by
+    /// `function.parameter`.
     var marks: [String: CommandMarks.Marks] = [:]
 
     var label: String { shownName ?? name }

@@ -23,23 +23,30 @@ extension Shell {
                 throw RuntimeError("a closure can't be a command name")
             }
             if let call = command.call {
-                guard !command.external else { throw RuntimeError("a program can't be called with (…)") }
+                guard !command.external else {
+                    throw RuntimeError("a program can't be called with (…)")
+                }
                 arguments += call.map(CommandArgument.call)
             }
             let redirects = command.redirects
             let environment = command.environment
             let rest = Array(arguments.dropFirst())
-            // A function if one has that name, else a program; or a method of what flows in, which is found when the
+            // A function if one has that name, else a program; or a method of what flows in, which
+            // is found when the
             // first item arrives (Shell+Resolving.swift).
             func function(_ callee: Callee?) throws -> Stage {
                 guard let callee else { throw RuntimeError("\(name): not found") }
                 return .function(callee, rest, redirects: redirects, environment: environment)
             }
             func fallback() throws -> Stage {
-                if !command.external, let callee = commandFunctions(named: name) { return try function(callee) }
+                if !command.external, let callee = commandFunctions(named: name) {
+                    return try function(callee)
+                }
                 return try program(arguments, name, command, redirects, environment)
             }
-            if !command.external, (input != nil || !stages.isEmpty), isMemberName(name) || isStageMethod(name) {
+            if !command.external, (input != nil || !stages.isEmpty),
+                isMemberName(name) || isStageMethod(name)
+            {
                 stages.append(
                     .deferred(
                         DeferredStage(
@@ -68,7 +75,9 @@ extension Shell {
     ) throws -> Stage {
         let argv = try arguments.map { argument -> String in
             guard case .text(let text) = argument else {
-                throw RuntimeError("\(name) isn't a method or a function, and a program can't take a closure or (…)")
+                throw RuntimeError(
+                    "\(name) isn't a method or a function, and a program can't take a closure or (…)"
+                )
             }
             return text
         }
@@ -81,6 +90,11 @@ extension Shell {
                 environment: environment
             )
         }
-        return .external(argv, skipBuiltins: command.external, redirects: redirects, environment: environment)
+        return .external(
+            argv,
+            skipBuiltins: command.external,
+            redirects: redirects,
+            environment: environment
+        )
     }
 }

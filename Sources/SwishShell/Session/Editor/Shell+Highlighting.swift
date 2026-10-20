@@ -17,7 +17,10 @@ extension Shell {
                 switch span.kind {
                 case .keyword, .punctuation: DisplayStyle.keyword.escape
                 case .command:
-                    commandStyle(String(characters[range]), piped: Shell.isPiped(characters, before: range.lowerBound))
+                    commandStyle(
+                        String(characters[range]),
+                        piped: Shell.isPiped(characters, before: range.lowerBound)
+                    )
                 case .flag: DisplayStyle.flag.escape
                 case .string: DisplayStyle.string.escape
                 case .number, .constant: DisplayStyle.constant.escape
@@ -34,7 +37,8 @@ extension Shell {
     private static func isPiped(_ characters: [Character], before index: Int) -> Bool {
         var before = index - 1
         while before >= 0, characters[before].isWhitespace { before -= 1 }
-        return before >= 0 && characters[before] == "|" && (before == 0 || characters[before - 1] != "|")
+        return before >= 0 && characters[before] == "|"
+            && (before == 0 || characters[before - 1] != "|")
     }
 
     private func commandStyle(_ word: String, piped: Bool) -> String? {
@@ -66,7 +70,9 @@ extension Shell {
     /// highlighter asks on every keystroke.
     func executableNames() -> Set<String> {
         let path = env("PATH") ?? ""
-        if let cache = executableCache, cache.path == path, Date().timeIntervalSince(cache.time) < 10 {
+        if let cache = executableCache, cache.path == path,
+            Date().timeIntervalSince(cache.time) < 10
+        {
             return cache.names
         }
         var names: Set<String> = []

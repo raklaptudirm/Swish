@@ -20,11 +20,15 @@ private func status(_ source: String) -> Int32 {
 @Test func aCommandRunsAndGivesItsStatus() throws {
     #expect(try output(#"let s = Command("echo", "hi").run(); print(s.succeeded)"#) == "hi\ntrue\n")
     #expect(
-        try output(#"let s = Command("sh", "-c", "exit 3").run(); print(s.code); print(s.succeeded)"#)
+        try output(
+            #"let s = Command("sh", "-c", "exit 3").run(); print(s.code); print(s.succeeded)"#
+        )
             == "Optional(3)\nfalse\n"
     )
     #expect(
-        try output(#"let s = Command("sh", "-c", "kill -TERM $$").run(); print(s.signal); print(s.code == nil)"#)
+        try output(
+            #"let s = Command("sh", "-c", "kill -TERM $$").run(); print(s.signal); print(s.code == nil)"#
+        )
             == "Optional(15)\ntrue\n"
     )
 }
@@ -38,7 +42,9 @@ private func status(_ source: String) -> Int32 {
 
 @Test func aCommandsOutputIsWhatSubstitutionGives() throws {
     #expect(
-        try output(#"let o = Command("echo", "hi").output(); print(o.text); print(o.status.succeeded)"#) == "hi\ntrue\n"
+        try output(
+            #"let o = Command("echo", "hi").output(); print(o.text); print(o.status.succeeded)"#
+        ) == "hi\ntrue\n"
     )
     #expect(
         try output(
@@ -50,7 +56,9 @@ private func status(_ source: String) -> Int32 {
 @Test func theWordsAreTakenAsTheyAre() throws {
     // No `~`, `$name` or glob: that is what `Words` will do.
     #expect(
-        try output(#"Command("echo", "*.swift", "$HOME", "~").run(); print(Command("echo", "a b").words.count)"#)
+        try output(
+            #"Command("echo", "*.swift", "$HOME", "~").run(); print(Command("echo", "a b").words.count)"#
+        )
             == "*.swift $HOME ~\n2\n"
     )
 }
@@ -58,14 +66,19 @@ private func status(_ source: String) -> Int32 {
 @Test func andAndOrRunOnTheStatusLeftToRight() throws {
     #expect(try output(#"Command("true").run().and { Command("echo", "yes").run() }"#) == "yes\n")
     #expect(try output(#"Command("false").run().and { Command("echo", "no").run() }"#) == "")
-    #expect(try output(#"Command("false").run().or { Command("echo", "fallback").run() }"#) == "fallback\n")
+    #expect(
+        try output(#"Command("false").run().or { Command("echo", "fallback").run() }"#)
+            == "fallback\n"
+    )
     #expect(try output(#"Command("true").run().or { Command("echo", "never").run() }"#) == "")
 }
 
 @Test func theStatusChainMeansWhatAndAndOrMean() throws {
     // The same statuses as the shell's own `&&` and `||`, for every combination.
     // (`^name` is the program; a bare `true` is a Bool, which would take a `||` for its own.)
-    let commands = [("^true", ["true"]), ("^false", ["false"]), ("sh -c 'exit 3'", ["sh", "-c", "exit 3"])]
+    let commands = [
+        ("^true", ["true"]), ("^false", ["false"]), ("sh -c 'exit 3'", ["sh", "-c", "exit 3"]),
+    ]
     func command(_ words: [String]) -> String {
         "Command(" + words.map { "\"\($0)\"" }.joined(separator: ", ") + ").run()"
     }
@@ -73,7 +86,9 @@ private func status(_ source: String) -> Int32 {
         for (b, bWords) in commands {
             for (c, cWords) in commands {
                 let shellWay = status("\(a) && \(b) || \(c)")
-                let swiftWay = status("\(command(aWords)).and { \(command(bWords)) }.or { \(command(cWords)) }")
+                let swiftWay = status(
+                    "\(command(aWords)).and { \(command(bWords)) }.or { \(command(cWords)) }"
+                )
                 #expect(shellWay == swiftWay, "\(a) && \(b) || \(c)")
             }
         }

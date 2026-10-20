@@ -33,15 +33,21 @@ extension Shell {
 extension Shell {
     /// Reads, checks and runs a file's top level, then `finish`, unless a
     /// `try!` stopped it. A top-level `defer` runs when it's all over.
-    func runFile(at path: String, arguments: [String], then finish: @escaping (Reading) -> Void) -> Int32 {
+    func runFile(
+        at path: String,
+        arguments: [String],
+        then finish: @escaping (Reading) -> Void
+    ) -> Int32 {
         guard let data = FileManager.default.contents(atPath: path) else {
             report("\(path): \(errorMessage(errno).lowercased())")
             return 127
         }
         interpreter["args"] = Value(arguments.map { Value($0) })
         interpreter.file = URL(fileURLWithPath: path).standardizedFileURL.path
-        scriptDirectory = URL(fileURLWithPath: path).standardizedFileURL.deletingLastPathComponent().path
-        // Read and checked whole, so doc comments reach their functions and a mistake anywhere stops the script before
+        scriptDirectory =
+            URL(fileURLWithPath: path).standardizedFileURL.deletingLastPathComponent().path
+        // Read and checked whole, so doc comments reach their functions and a mistake anywhere
+        // stops the script before
         // any
         // of it runs; then run a statement at a time, so a runtime error only abandons its own.
         var source = String(decoding: data, as: UTF8.self)
@@ -57,15 +63,20 @@ extension Shell {
         case .success(let read):
             reading = read
         }
-        // What the script is for (`main`, a task) runs after its statements, and before its top-level defers.
-        runReportingErrors(reading, then: { [unowned self] in if !scriptStopped { finish(reading) } })
+        // What the script is for (`main`, a task) runs after its statements, and before its
+        // top-level defers.
+        runReportingErrors(
+            reading,
+            then: { [unowned self] in if !scriptStopped { finish(reading) } }
+        )
         return lastStatus
     }
 
     /// A function the file declared at its top level.
     func topLevelFunction(_ name: String, in reading: Reading) -> Callee? {
         let functions = reading.declared.symbols.filter { $0.name == name && $0.function != nil }
-        return functions.isEmpty ? nil : Callee(name: name, overloads: functions, receiver: nil, marks: scriptMarks)
+        return functions.isEmpty
+            ? nil : Callee(name: name, overloads: functions, receiver: nil, marks: scriptMarks)
     }
 
     /// Calls a script's function with command-line `arguments`, under `name`

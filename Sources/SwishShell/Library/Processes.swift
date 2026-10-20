@@ -44,11 +44,15 @@ func ps() -> [ProcessEntry] {
 private func runningProcesses() throws(SystemPackage.Errno) -> [ProcessEntry] {
     var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_ALL]
     var size = 0
-    guard sysctl(&mib, 3, nil, &size, nil, 0) == 0 else { throw SystemPackage.Errno(rawValue: errno) }
+    guard sysctl(&mib, 3, nil, &size, nil, 0) == 0 else {
+        throw SystemPackage.Errno(rawValue: errno)
+    }
     let stride = MemoryLayout<kinfo_proc>.stride
     var processes = [kinfo_proc](repeating: kinfo_proc(), count: size / stride + 64)
     size = processes.count * stride
-    guard sysctl(&mib, 3, &processes, &size, nil, 0) == 0 else { throw SystemPackage.Errno(rawValue: errno) }
+    guard sysctl(&mib, 3, &processes, &size, nil, 0) == 0 else {
+        throw SystemPackage.Errno(rawValue: errno)
+    }
     var timebase = mach_timebase_info()
     mach_timebase_info(&timebase)
     let secondsPerTick = Double(timebase.numer) / Double(timebase.denom) / 1e9
@@ -61,12 +65,23 @@ private func runningProcesses() throws(SystemPackage.Errno) -> [ProcessEntry] {
                 String(decoding: $0.prefix { $0 != 0 }, as: UTF8.self)
             }
             var bsd = proc_bsdinfo()
-            if proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &bsd, Int32(MemoryLayout<proc_bsdinfo>.size)) > 0 {
-                let full = withUnsafeBytes(of: bsd.pbi_name) { String(decoding: $0.prefix { $0 != 0 }, as: UTF8.self) }
+            if proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &bsd, Int32(MemoryLayout<proc_bsdinfo>.size))
+                > 0
+            {
+                let full = withUnsafeBytes(of: bsd.pbi_name) {
+                    String(decoding: $0.prefix { $0 != 0 }, as: UTF8.self)
+                }
                 if !full.isEmpty { name = full }
             }
             var task = proc_taskinfo()
-            let hasTask = proc_pidinfo(pid, PROC_PIDTASKINFO, 0, &task, Int32(MemoryLayout<proc_taskinfo>.size)) > 0
+            let hasTask =
+                proc_pidinfo(
+                    pid,
+                    PROC_PIDTASKINFO,
+                    0,
+                    &task,
+                    Int32(MemoryLayout<proc_taskinfo>.size)
+                ) > 0
             return ProcessEntry(
                 pid: Int(pid),
                 ppid: Int(process.kp_eproc.e_ppid),
@@ -74,7 +89,8 @@ private func runningProcesses() throws(SystemPackage.Errno) -> [ProcessEntry] {
                 user: userName(process.kp_eproc.e_ucred.cr_uid),
                 memory: hasTask ? FileSize(bytes: Int(task.pti_resident_size)) : nil,
                 cpuTime: hasTask
-                    ? (Double(task.pti_total_user + task.pti_total_system) * secondsPerTick * 100).rounded() / 100
+                    ? (Double(task.pti_total_user + task.pti_total_system) * secondsPerTick * 100)
+                        .rounded() / 100
                     : nil,
                 threads: hasTask ? Int(task.pti_threadnum) : nil
             )
@@ -99,11 +115,14 @@ private func runningProcesses() throws(SystemPackage.Errno) -> [ProcessEntry] {
                 let open = stat.firstIndex(of: "("), let close = stat.lastIndex(of: ")")
             else { return nil }
             let fields = stat[stat.index(after: close)...].split(separator: " ")
-            func field(_ number: Int) -> Int64? { fields.count > number - 3 ? Int64(fields[number - 3]) : nil }
+            func field(_ number: Int) -> Int64? {
+                fields.count > number - 3 ? Int64(fields[number - 3]) : nil
+            }
             var name = String(stat[stat.index(after: open)..<close])
             // The name is cut to 15 characters; the program's is whole.
             if let command = try? Data(contentsOf: URL(fileURLWithPath: "/proc/\(pid)/cmdline")),
-                let program = command.split(separator: 0).first, let path = String(bytes: program, encoding: .utf8),
+                let program = command.split(separator: 0).first,
+                let path = String(bytes: program, encoding: .utf8),
                 let last = path.split(separator: "/").last, last.hasPrefix(name)
             {
                 name = String(last)

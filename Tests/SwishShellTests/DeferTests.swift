@@ -9,11 +9,18 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 
 @Test func deferRunsWhenTheBlockEnds() throws {
     // Last deferred first, after the rest of the block.
-    #expect(try output("func f() { defer { echo one }; defer { echo two }; echo body }; f()") == "body\ntwo\none\n")
-    // On return, and when an error leaves the block.
-    #expect(try output("func f() -> Int { defer { echo cleanup }; return 1 }; f()") == "cleanup\n1\n")
     #expect(
-        try output("func f() throws { defer { echo cleanup }; try $(false) }; do { try f() } catch { echo caught }")
+        try output("func f() { defer { echo one }; defer { echo two }; echo body }; f()")
+            == "body\ntwo\none\n"
+    )
+    // On return, and when an error leaves the block.
+    #expect(
+        try output("func f() -> Int { defer { echo cleanup }; return 1 }; f()") == "cleanup\n1\n"
+    )
+    #expect(
+        try output(
+            "func f() throws { defer { echo cleanup }; try $(false) }; do { try f() } catch { echo caught }"
+        )
             == "cleanup\ncaught\n"
     )
     // Each time round a loop.
@@ -42,6 +49,8 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
     let script2 = Shell()
     let printed = try onLargeStack { try script2.capturing { _ = script2.runScript(at: script) } }
     #expect(printed == "at \(script)\nmain\ndeferred\n")
-    #expect(try output("test -e \(directory)/marker && echo left || echo gone", in: shell) == "gone\n")
+    #expect(
+        try output("test -e \(directory)/marker && echo left || echo gone", in: shell) == "gone\n"
+    )
     #expect(try output("#filePath") == "\"<prompt>\"\n")
 }

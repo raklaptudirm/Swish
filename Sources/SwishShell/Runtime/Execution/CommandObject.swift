@@ -12,7 +12,8 @@ import Swiit
 // prompt.
 
 extension Shell {
-    /// The Swift bodies of `Command`'s and `Pipeline`'s methods that run them, by the names the prelude gives them.
+    /// The Swift bodies of `Command`'s and `Pipeline`'s methods that run them, by the names the
+    /// prelude gives them.
     var commandMethods: [String: @Sendable ([String: Value]) throws -> Value] {
         let methods: [String: ([Value], Value?) throws -> Value] = [
             // As a statement: its output goes where the shell's does.
@@ -22,24 +23,40 @@ extension Shell {
             "check": { [unowned self] in try check($0, from: $1) },
             "output": { [unowned self] in .output(try output($0, from: $1)) },
             "start": { [unowned self] in
-                Value(try startJob(try stages($0, from: $1), source: source($0, from: $1), capture: false))
+                Value(
+                    try startJob(
+                        try stages($0, from: $1),
+                        source: source($0, from: $1),
+                        capture: false
+                    )
+                )
             },
             "startCapturing": { [unowned self] in
-                Value(try startJob(try stages($0, from: $1), source: source($0, from: $1), capture: true))
+                Value(
+                    try startJob(
+                        try stages($0, from: $1),
+                        source: source($0, from: $1),
+                        capture: true
+                    )
+                )
             },
         ]
         var bodies: [String: @Sendable ([String: Value]) throws -> Value] = [:]
         for (name, method) in methods {
             nonisolated(unsafe) let method = method
             // A command alone, or a pipeline's commands and what it is fed.
-            bodies["Command." + name] = { arguments in try method([arguments["self"] ?? .null], nil) }
+            bodies["Command." + name] = { arguments in try method([arguments["self"] ?? .null], nil)
+            }
             bodies["Pipeline." + name] = { arguments in
                 guard let pipeline = arguments["self"],
                     let commands = pipeline.field("commands")?.cast(to: [Value].self)
                 else {
                     throw RuntimeError("not a Pipeline")
                 }
-                return try method(commands, pipeline.field("input").flatMap { $0.kind == .nothing ? nil : $0 })
+                return try method(
+                    commands,
+                    pipeline.field("input").flatMap { $0.kind == .nothing ? nil : $0 }
+                )
             }
         }
         return bodies
@@ -54,14 +71,17 @@ extension Shell {
 
     /// `capture { … }`: the block, run with its output gathered.
     func captureBody(_ arguments: [String: Value]) throws -> Value {
-        guard let body = arguments["body"], body.kind == .function else { throw RuntimeError("capture needs a block") }
+        guard let body = arguments["body"], body.kind == .function else {
+            throw RuntimeError("capture needs a block")
+        }
         // What runs in it leaves the status it ends with.
         let before = lastStatus
         lastStatus = 0
         // Its statements run as statements, which say how they went.
         let text = try capturing {
             let result = try self.callBlock(body)
-            // A block of one expression gives its value rather than running a statement, so says its status here.
+            // A block of one expression gives its value rather than running a statement, so says
+            // its status here.
             if result.kind != .nothing { self.lastStatus = self.status(of: result) }
         }
         let status = lastStatus
@@ -69,7 +89,11 @@ extension Shell {
         let output = output(text, status: status)
         // Without `try`, failing is just what `.status` says.
         if arguments["throwing"]?.cast(to: Bool.self) == true && status != 0 {
-            throw RuntimeError.commandFailure("$(…) failed with status \(status)", status: status, output: output)
+            throw RuntimeError.commandFailure(
+                "$(…) failed with status \(status)",
+                status: status,
+                output: output
+            )
         }
         return .output(output)
     }
@@ -84,7 +108,11 @@ extension Shell {
     }
 
     func run(_ commands: [Value], from input: Value?, display: Bool) throws -> Int32 {
-        try runPipeline(try stages(commands, from: input), source: source(commands, from: input), display: display)
+        try runPipeline(
+            try stages(commands, from: input),
+            source: source(commands, from: input),
+            display: display
+        )
     }
 
     /// As `try make`: failing throws a `CommandFailure`.
@@ -155,7 +183,9 @@ extension Shell {
     /// The commands as a person would type them, for messages and `jobs`.
     func source(_ commands: [Value], from input: Value?) -> String {
         let typed = commands.map { command -> String in
-            guard let words = command.field("words")?.cast(to: [Value].self) else { return command.description }
+            guard let words = command.field("words")?.cast(to: [Value].self) else {
+                return command.description
+            }
             return (command.field("isExternal")?.cast(to: Bool.self) == true ? "^" : "")
                 + words.map(Shell.shellWord).joined(separator: " ")
         }
@@ -178,7 +208,8 @@ extension Shell {
 
     /// A `Command` as it runs: its words expanded, its redirects resolved.
     func spec(_ command: Value) throws -> CommandSpec {
-        guard command.kind == .structure, let words = command.field("words")?.cast(to: [Value].self) else {
+        guard command.kind == .structure, let words = command.field("words")?.cast(to: [Value].self)
+        else {
             throw RuntimeError("\(command.typeName) isn't a Command")
         }
         var spec = CommandSpec(arguments: try words.flatMap(arguments))
@@ -187,12 +218,15 @@ extension Shell {
             spec.redirects = try redirections.map(redirect)
         }
         if let variables = command.field("variables")?.entries {
-            spec.environment = variables.map { ($0.key.description, $0.value.description) }.sorted { $0.0 < $1.0 }
+            spec.environment = variables.map { ($0.key.description, $0.value.description) }
+                .sorted { $0.0 < $1.0 }
         }
         // `(by: "size")`: the tuple's elements, as arguments; a position is no label.
         if let call = command.field("arguments"), call.kind != .nothing {
             if call.kind == .tuple, let tuple = call.fields {
-                spec.call = tuple.entries.map { (label: Int($0.key) == nil ? $0.key : nil, value: $0.value) }
+                spec.call = tuple.entries.map {
+                    (label: Int($0.key) == nil ? $0.key : nil, value: $0.value)
+                }
             } else {
                 // `(x)` is x, not a tuple of one.
                 spec.call = [(label: nil, value: call)]
@@ -202,7 +236,8 @@ extension Shell {
     }
 
     private func redirect(_ value: Value) throws -> ResolvedRedirect {
-        guard let fd = value.field("fd")?.cast(to: Int.self), let mode = value.field("mode")?.cast(to: String.self)
+        guard let fd = value.field("fd")?.cast(to: Int.self),
+            let mode = value.field("mode")?.cast(to: String.self)
         else {
             throw RuntimeError("\(value.typeName) isn't a Redirection")
         }

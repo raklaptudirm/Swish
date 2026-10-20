@@ -13,7 +13,11 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
             "func makeCounter() -> () -> Int { var n = 0; return { n += 1; return n } }; let c = makeCounter(); c(); c()"
         ) == "1\n2\n"
     )
-    #expect(try output("func f() -> Int { var n = 0; let inc = { n += 1 }; inc(); inc(); return n }; f()") == "2\n")
+    #expect(
+        try output(
+            "func f() -> Int { var n = 0; let inc = { n += 1 }; inc(); inc(); return n }; f()"
+        ) == "2\n"
+    )
     // A nested function reaches itself when called after its maker returned.
     #expect(
         try output(

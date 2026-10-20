@@ -21,12 +21,16 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
 
 @Test func declarationsAndInference() {
     #expect(
-        typeError("let xs: [Int] = []; let d: [String: Int] = [:]; let t: (Int, name: String) = (1, name: \"x\")")
+        typeError(
+            "let xs: [Int] = []; let d: [String: Int] = [:]; let t: (Int, name: String) = (1, name: \"x\")"
+        )
             == nil
     )
     #expect(typeError("let xs = []")?.hasPrefix("an empty list needs a type") == true)
     #expect(typeError("let x = nil")?.hasPrefix("'nil' needs a type") == true)
-    #expect(typeError(#"let xs = [1, "x"]"#)?.hasPrefix("a list's elements must have one type") == true)
+    #expect(
+        typeError(#"let xs = [1, "x"]"#)?.hasPrefix("a list's elements must have one type") == true
+    )
     #expect(typeError(#"let xs: [Any] = [1, "x", nil]"#) == nil)
     #expect(typeError(#"let d = ["a": 1, "b": "x"]"#)?.contains("write a tuple") == true)
     // Later entries at the prompt know what earlier ones declared.
@@ -45,25 +49,46 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
 @Test func functionsReturnWhatTheySay() throws {
     #expect(try output("func f() { 42 }; f()") == "")
     #expect(typeError("func f() -> Int { \"no\" }") == "f's result must be Int, not String")
-    #expect(typeError("func f(_ b: Bool) -> Int { if b { return 1 } }") == "f must return Int on every path")
+    #expect(
+        typeError("func f(_ b: Bool) -> Int { if b { return 1 } }")
+            == "f must return Int on every path"
+    )
     #expect(typeError("func f(_ b: Bool) -> Int { if b { return 1 } else { return 2 } }") == nil)
-    #expect(typeError("func f() { return 1 }")?.hasPrefix("a function without '->' returns nothing") == true)
-    #expect(typeError("func f(_ x: Int) -> Int { x }; f(\"s\")") == "f: 'x' must be Int, not String")
-    #expect(typeError("func f(_ x: Int) -> Int { x }; f(1) + \"s\"") == "'+' can't be applied to Int and String")
+    #expect(
+        typeError("func f() { return 1 }")?.hasPrefix("a function without '->' returns nothing")
+            == true
+    )
+    #expect(
+        typeError("func f(_ x: Int) -> Int { x }; f(\"s\")") == "f: 'x' must be Int, not String"
+    )
+    #expect(
+        typeError("func f(_ x: Int) -> Int { x }; f(1) + \"s\"")
+            == "'+' can't be applied to Int and String"
+    )
 }
 
 @Test func tuplesAndDictionaries() throws {
-    #expect(try output(#"let t = (name: "x", 2); t.name; t.1; t"#) == "\"x\"\n2\n(name: \"x\", 2)\n")
+    #expect(
+        try output(#"let t = (name: "x", 2); t.name; t.1; t"#) == "\"x\"\n2\n(name: \"x\", 2)\n"
+    )
     #expect(try output(#"[(n: 5, s: "a"), (n: 1, s: "b")] | sorted --by n | get s"#) == "b\na\n")
     #expect(
-        try output(#"var d = ["a": 1]; d["b"] = 2; d["a"]; d["a"]! + 1; d.keys.sorted()"#) == "1\n2\n[\"a\", \"b\"]\n"
+        try output(#"var d = ["a": 1]; d["b"] = 2; d["a"]; d["a"]! + 1; d.keys.sorted()"#)
+            == "1\n2\n[\"a\", \"b\"]\n"
     )
-    #expect(typeError(#"let t = (name: "x", 2); t.nope"#) == "(name: String, Int) has no element 'nope'")
+    #expect(
+        typeError(#"let t = (name: "x", 2); t.nope"#) == "(name: String, Int) has no element 'nope'"
+    )
 }
 
 @Test func optionalsMustBeUnwrapped() throws {
-    #expect(try output("let x: Int? = nil; x ?? 3; let s: String? = \"ab\"; s?.count; s!.count") == "3\n2\n2\n")
-    #expect(typeError("let s: String? = \"ab\"; s.count")?.hasPrefix("String? might be nil") == true)
+    #expect(
+        try output("let x: Int? = nil; x ?? 3; let s: String? = \"ab\"; s?.count; s!.count")
+            == "3\n2\n2\n"
+    )
+    #expect(
+        typeError("let s: String? = \"ab\"; s.count")?.hasPrefix("String? might be nil") == true
+    )
     #expect(typeError("let s = \"ab\"; s!")?.hasPrefix("'!' unwraps an optional") == true)
     let shell = Shell()
     _ = try output("let x: Int? = nil; x!", in: shell)
@@ -84,7 +109,8 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
             == "cannot use mutating method 'move' on 'p': it's a 'let' constant"
     )
     #expect(
-        typeError(point + "var p = Point(x: 1); p.id = 2") == "cannot assign to 'id': it's a 'let' property of Point"
+        typeError(point + "var p = Point(x: 1); p.id = 2")
+            == "cannot assign to 'id': it's a 'let' property of Point"
     )
     let kind = "enum Kind { case file, dir }; "
     #expect(typeError(kind + "let k: Kind = .file; k == .dir") == nil)
@@ -109,7 +135,9 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
     // The static type decides, as in Swift: `a` is an Any, though it holds an Int.
     #expect(try output(g + "let a: Any = 5; g(a); g(5)") == "\"any\"\n\"int\"\n")
     #expect(
-        try output(#"func f(_ x: Int) -> String { "int" }; func f(_ x: Double) -> String { "double" }; f(5); f(5.5)"#)
+        try output(
+            #"func f(_ x: Int) -> String { "int" }; func f(_ x: Double) -> String { "double" }; f(5); f(5.5)"#
+        )
             == "\"int\"\n\"double\"\n"
     )
     #expect(
@@ -119,11 +147,18 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
 }
 
 @Test func functionsAreValues() throws {
-    #expect(try output("func double(_ x: Int) -> Int { x * 2 }; [1, 2].map(double).map { $0 + 1 }") == "[3, 5]\n")
+    #expect(
+        try output("func double(_ x: Int) -> Int { x * 2 }; [1, 2].map(double).map { $0 + 1 }")
+            == "[3, 5]\n"
+    )
     // An overloaded name is picked by the type wanted.
-    let conv = #"func conv(_ x: Int) -> String { "int" }; func conv(_ x: String) -> String { "string" }; "#
+    let conv =
+        #"func conv(_ x: Int) -> String { "int" }; func conv(_ x: String) -> String { "string" }; "#
     #expect(try output(conv + "let f: (String) -> String = conv; f(\"a\")") == "\"string\"\n")
-    #expect(try output("func apply(_ f: (Int) -> Int, _ x: Int) -> Int { f(x) }; apply({ $0 * 3 }, 2)") == "6\n")
+    #expect(
+        try output("func apply(_ f: (Int) -> Int, _ x: Int) -> Int { f(x) }; apply({ $0 * 3 }, 2)")
+            == "6\n"
+    )
     #expect(
         typeError("func apply(_ f: (Int) -> Int) -> Int { f(1) }; apply({ $0 + \"a\" })")
             == "'+' can't be applied to Int and String"
@@ -139,7 +174,10 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
 @Test func throwingNeedsTryAndAHandler() throws {
     let risky = "func risky(_ fail: Bool) throws -> Int { if fail { try $(false) }; return 1 }\n"
     #expect(
-        try output(risky + "try risky(false); do { try risky(true) } catch { echo caught }; (try? risky(true)) ?? 0")
+        try output(
+            risky
+                + "try risky(false); do { try risky(true) } catch { echo caught }; (try? risky(true)) ?? 0"
+        )
             == "1\ncaught\n0\n"
     )
     #expect(typeError(risky + "risky(false)") == "'risky' can throw, but isn't marked with 'try'")
@@ -148,28 +186,41 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
             .hasPrefix("this can throw, but safe isn't 'throws'") == true
     )
     #expect(typeError(risky + "func safe() -> Int { (try? risky(false)) ?? 0 }") == nil)
-    #expect(typeError("func build() { try $(swift build) }")?.contains("build isn't 'throws'") == true)
+    #expect(
+        typeError("func build() { try $(swift build) }")?.contains("build isn't 'throws'") == true
+    )
     #expect(typeError("func build() { try false }")?.contains("build isn't 'throws'") == true)
     // Closures throw if their body does; passing one on makes the call throw.
-    #expect(typeError(risky + "[true].map { try risky($0) }") == "'map' can throw, but isn't marked with 'try'")
+    #expect(
+        typeError(risky + "[true].map { try risky($0) }")
+            == "'map' can throw, but isn't marked with 'try'"
+    )
     #expect(typeError(risky + "let r = try [false].map { try risky($0) }") == nil)
     #expect(
-        typeError(risky + "func apply(_ f: (Bool) -> Int) -> Int { f(true) }; apply({ try risky($0) })")
+        typeError(
+            risky + "func apply(_ f: (Bool) -> Int) -> Int { f(true) }; apply({ try risky($0) })"
+        )
             == "apply: 'f' must be (Bool) -> Int, not (Bool) throws -> Int"
     )
     #expect(typeError(risky + "func apply(_ f: (Bool) throws -> Int) rethrows -> Int { 0 }") == nil)
     #expect(
         typeError(
-            risky + "func apply(_ f: (Bool) throws -> Int) throws -> Int { try f(true) }; try apply({ try risky($0) })"
+            risky
+                + "func apply(_ f: (Bool) throws -> Int) throws -> Int { try f(true) }; try apply({ try risky($0) })"
         ) == nil
     )
 }
 
 @Test func tryOnAVoidCallTellsSuccessFromFailure() throws {
     let funcs = "func build() throws { try $(true) }; func fail() throws { try $(false) }; "
-    #expect(try output(funcs + "(try? build()) != nil; (try? fail()) != nil; try? build()") == "true\nfalse\n")
     #expect(
-        try output(funcs + "if try? build() { echo yes }; if try? fail() { echo no } else { echo failed }")
+        try output(funcs + "(try? build()) != nil; (try? fail()) != nil; try? build()")
+            == "true\nfalse\n"
+    )
+    #expect(
+        try output(
+            funcs + "if try? build() { echo yes }; if try? fail() { echo no } else { echo failed }"
+        )
             == "yes\nfailed\n"
     )
     #expect(typeError("let x: Int? = 1; if x { echo y }") == "a condition must be a Bool, not Int?")
@@ -179,55 +230,85 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
 
 @Test func protocolsAreDeclaredAndChecked() throws {
     #expect(try output("struct P: Equatable { var x: Int }; P(x: 1) == P(x: 1)") == "true\n")
-    #expect(typeError("struct P { var x: Int }; P(x: 1) == P(x: 1)")?.hasPrefix("'==' needs Equatable values") == true)
+    #expect(
+        typeError("struct P { var x: Int }; P(x: 1) == P(x: 1)")?
+            .hasPrefix("'==' needs Equatable values") == true
+    )
     #expect(
         typeError("struct P: Equatable { var f: (Int) -> Int }")
             == "P can't be Equatable: its 'f' is (Int) -> Int, which isn't"
     )
     #expect(
-        typeError("struct P: Comparable { var x: Int }")?.hasPrefix("P can't be Comparable without a '<' of its own")
+        typeError("struct P: Comparable { var x: Int }")?
+            .hasPrefix("P can't be Comparable without a '<' of its own")
             == true
     )
     #expect(typeError("struct P: Frobbable {}")?.hasPrefix("syntax error") == true)
     // An enum without associated values is Equatable anyway; one with them says so.
     #expect(typeError("enum K { case a, b }; K.a == .b") == nil)
-    #expect(typeError("enum R { case ok, failed(Int) }; R.ok == .ok")?.hasPrefix("'==' needs Equatable values") == true)
+    #expect(
+        typeError("enum R { case ok, failed(Int) }; R.ok == .ok")?
+            .hasPrefix("'==' needs Equatable values") == true
+    )
     #expect(typeError("enum R: Equatable { case ok, failed(Int) }; R.ok == .ok") == nil)
     #expect(typeError("enum L: Int, Comparable { case low, high }; L.low < .high") == nil)
 }
 
 @Test func keyPaths() throws {
     #expect(
-        try output(#"let xs = [(n: 2, s: "b"), (n: 1, s: "a")]; xs.sorted(by: \.n).map(\.s); xs.map(\.n)"#)
+        try output(
+            #"let xs = [(n: 2, s: "b"), (n: 1, s: "a")]; xs.sorted(by: \.n).map(\.s); xs.map(\.n)"#
+        )
             == "[\"a\", \"b\"]\n[2, 1]\n"
     )
-    #expect(typeError(#"let xs = [(n: 2, s: "b")]; xs.sorted(by: \.m)"#) == "(n: Int, s: String) has no element 'm'")
+    #expect(
+        typeError(#"let xs = [(n: 2, s: "b")]; xs.sorted(by: \.m)"#)
+            == "(n: Int, s: String) has no element 'm'"
+    )
     #expect(typeError("let k = \\.size")?.hasPrefix("\\.size needs a type here") == true)
     #expect(typeError("let k = \\FileEntry.size") == nil)
 }
 
 @Test func builtinsHaveTypes() throws {
     // `ls` gives FileEntries, `ps` ProcessEntries: fields are checked.
-    #expect(typeError("let files = ls(); files.filter { $0.type == .directory }.map(\\.name)") == nil)
+    #expect(
+        typeError("let files = ls(); files.filter { $0.type == .directory }.map(\\.name)") == nil
+    )
     #expect(typeError("ls().filter { $0.sise > 1.kb }") == "FileEntry has no member 'sise'")
     #expect(typeError("ls().map { $0.size } + [1]") != nil)
     // Generic constraints: sorting needs Comparable items, or a field that is.
-    #expect(typeError("[(n: 1)].sorted()") == "sorted needs Element to be Comparable, and (n: Int) isn't")
+    #expect(
+        typeError("[(n: 1)].sorted()")
+            == "sorted needs Element to be Comparable, and (n: Int) isn't"
+    )
     #expect(try output("[3, 1, 3, 2].uniqued().sorted()") == "[1, 2, 3]\n")
 }
 
 @Test func pipelinesAreCheckedStageByStageAsTheItemsArrive() throws {
-    // A stage is found out when the pipeline starts, from the first item: what is wrong with it is said then.
+    // A stage is found out when the pipeline starts, from the first item: what is wrong with it is
+    // said then.
     #expect(errorText("ls | sorted --by sise")?.hasSuffix("FileEntry has no field 'sise'") == true)
     #expect(errorText("ls | filter { $0.size > 1 }")?.contains("FileSize") == true)
     #expect(errorText("ls | prefix x")?.contains("prefix") == true)
-    #expect(errorText("ls | get name | map { $0.count } | filter { $0 > \"a\" }")?.contains("Int") == true)
-    #expect(errorText("[(n: 1)] | sorted") == "swish: error: sorted needs Element to be Comparable, and (n: Int) isn't")
+    #expect(
+        errorText("ls | get name | map { $0.count } | filter { $0 > \"a\" }")?.contains("Int")
+            == true
+    )
+    #expect(
+        errorText("[(n: 1)] | sorted")
+            == "swish: error: sorted needs Element to be Comparable, and (n: Int) isn't"
+    )
     // Programs give lines of text.
     #expect(errorText("printf 'a' | filter { $0.count > 1 }") == nil)
-    #expect(errorText("printf 'a' | filter { $0.size > 1 }")?.contains("String has no member 'size'") == true)
+    #expect(
+        errorText("printf 'a' | filter { $0.size > 1 }")?.contains("String has no member 'size'")
+            == true
+    )
     // `select` makes a tuple of the fields it picks.
-    #expect(try output("[(n: 2, s: \"b\"), (n: 1, s: \"a\")] | select n | sorted --by n | get n") == "1\n2\n")
+    #expect(
+        try output("[(n: 2, s: \"b\"), (n: 1, s: \"a\")] | select n | sorted --by n | get n")
+            == "1\n2\n"
+    )
 }
 
 @Test func stagesAreResolvedFromTheirInput() throws {
@@ -250,11 +331,16 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
 // MARK: Phase 4: Any and JSON
 
 @Test func anyNeedsACast() throws {
-    #expect(try output("let x: Any = 5; x as? Int; x as? String; x is Int; (x as! Int) + 1") == "5\ntrue\n6\n")
+    #expect(
+        try output("let x: Any = 5; x as? Int; x as? String; x is Int; (x as! Int) + 1")
+            == "5\ntrue\n6\n"
+    )
     #expect(typeError("let x: Any = 5; x.count")?.hasPrefix("an Any has no members") == true)
     #expect(typeError("let x: Any = 5; x + 1") == "'+' can't be applied to Any and Int")
     #expect(typeError("let x: Any = [1]; x[0]")?.hasPrefix("an Any can't be indexed") == true)
-    #expect(typeError("let x = 5; x as String")?.hasPrefix("'as' can't make a Int a String") == true)
+    #expect(
+        typeError("let x = 5; x as String")?.hasPrefix("'as' can't make a Int a String") == true
+    )
     #expect(typeError("let x = 5; let y = x as Any") == nil)
     let shell = Shell()
     _ = try output(#"let a: Any = "s"; a as! Int"#, in: shell)
@@ -264,7 +350,8 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
 }
 
 @Test func jsonIsReadByFieldAndElement() throws {
-    let json = #"let j = try from(.json, ['{"server": {"port": 8080}, "tags": ["a", "b"], "on": true}']); "#
+    let json =
+        #"let j = try from(.json, ['{"server": {"port": 8080}, "tags": ["a", "b"], "on": true}']); "#
     #expect(
         try output(
             json
@@ -275,7 +362,8 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
     // A missing field and a JSON null are both nil, so isNull is true for either.
     #expect(try output(json + "j.server?.port?.string == nil; j.nothing?.isNull") == "true\ntrue\n")
     #expect(typeError(json + "j.server + 1") != nil)  // a JSON? isn't a number
-    // The `!` is part of the chain, as in Swift: the chain is still optional, and `(…)!` unwraps all of it.
+    // The `!` is part of the chain, as in Swift: the chain is still optional, and `(…)!` unwraps
+    // all of it.
     #expect(typeError(json + "(j.server?.port?.int)! + 1") == nil)
     #expect(typeError(json + "j.server?.port?.int! + 1") != nil)
     // A document of records flows through a pipeline as JSON items.
@@ -283,5 +371,8 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
 }
 
 @Test func optionalSubscripts() throws {
-    #expect(try output("let xs: [Int]? = [1, 2]; xs?[1]; let none: [Int]? = nil; none?[0] == nil") == "2\ntrue\n")
+    #expect(
+        try output("let xs: [Int]? = [1, 2]; xs?[1]; let none: [Int]? = nil; none?[0] == nil")
+            == "2\ntrue\n"
+    )
 }

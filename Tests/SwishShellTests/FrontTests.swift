@@ -4,29 +4,44 @@ import Testing
 
 @testable import SwishShell
 
-// The shell's own front end (Front/): text that is Swift's with the shell's in it goes in, Swift comes out. What a unit
+// The shell's own front end (Front/): text that is Swift's with the shell's in it goes in, Swift
+// comes out. What a unit
 // is
-// (a command or an expression), and what each form of the shell's means, is read from the Swift that comes out.
+// (a command or an expression), and what each form of the shell's means, is read from the Swift
+// that comes out.
 
-private func front(variables: Set<String> = [], functions: Set<String> = [], tests: ((String) -> Bool)? = nil) -> Front
-{
+private func front(
+    variables: Set<String> = [],
+    functions: Set<String> = [],
+    tests: ((String) -> Bool)? = nil
+) -> Front {
     var roles: [String: NameRole] = [:]
     for name in variables { roles[name] = .variable }
     for name in functions { roles[name] = .function }
     return Front(bound: Names(roles: roles))
 }
 
-private func cure(_ source: String, variables: Set<String> = [], functions: Set<String> = []) throws -> String {
+private func cure(
+    _ source: String,
+    variables: Set<String> = [],
+    functions: Set<String> = []
+) throws -> String {
     try front(variables: variables, functions: functions).cure(source)
 }
 
-/// What each top-level line comes to: "command" where the shell's reading made one, "expression" where it is Swift's as
+/// What each top-level line comes to: "command" where the shell's reading made one, "expression"
+/// where it is Swift's as
 /// typed.
-private func modes(_ source: String, variables: Set<String> = [], functions: Set<String> = []) throws -> [String] {
+private func modes(
+    _ source: String,
+    variables: Set<String> = [],
+    functions: Set<String> = []
+) throws -> [String] {
     try source.split(separator: ";")
         .map { unit in
             let cured = try cure(String(unit), variables: variables, functions: functions)
-            return cured.contains("Command(") || cured.contains("Pipeline(") ? "command" : "expression"
+            return cured.contains("Command(") || cured.contains("Pipeline(")
+                ? "command" : "expression"
         }
 }
 
@@ -42,12 +57,16 @@ private func failure(_ source: String, variables: Set<String> = []) -> Failure? 
 // MARK: Command or expression
 
 @Test func bareWordsAreCommands() throws {
-    #expect(try modes("ls -la; git status; ./run.sh; ~/bin/x; $EDITOR notes") == Array(repeating: "command", count: 5))
+    #expect(
+        try modes("ls -la; git status; ./run.sh; ~/bin/x; $EDITOR notes")
+            == Array(repeating: "command", count: 5)
+    )
 }
 
 @Test func literalsAndBracketsAreExpressions() throws {
     #expect(
-        try modes(#"1 + 2; "hi"; 'raw'; (1); [1]; !true; -1; true; nil"#) == Array(repeating: "expression", count: 9)
+        try modes(#"1 + 2; "hi"; 'raw'; (1); [1]; !true; -1; true; nil"#)
+            == Array(repeating: "expression", count: 9)
     )
 }
 
@@ -75,12 +94,21 @@ private func failure(_ source: String, variables: Set<String> = []) -> Failure? 
 }
 
 @Test func functionNamesStartCommandsUnlessCalled() throws {
-    #expect(try modes("greet Rak --loud; greet(\"Rak\")", functions: ["greet"]) == ["command", "expression"])
-    #expect(try cure("func greet() {}\ngreet Rak") == "func greet() {}\nCommand(\"greet\", \"Rak\").run()")
+    #expect(
+        try modes("greet Rak --loud; greet(\"Rak\")", functions: ["greet"]) == [
+            "command", "expression",
+        ]
+    )
+    #expect(
+        try cure("func greet() {}\ngreet Rak")
+            == "func greet() {}\nCommand(\"greet\", \"Rak\").run()"
+    )
 }
 
 @Test func controlFlowStatementsAreSwifts() throws {
-    #expect(try cure("for x in [1] { echo hi }") == #"for x in [1] { Command("echo", "hi").run() }"#)
+    #expect(
+        try cure("for x in [1] { echo hi }") == #"for x in [1] { Command("echo", "hi").run() }"#
+    )
     #expect(
         try cure("if true { echo a } else { echo b }")
             == #"if true { Command("echo", "a").run() } else { Command("echo", "b").run() }"#
@@ -97,7 +125,8 @@ private func failure(_ source: String, variables: Set<String> = []) -> Failure? 
 
 @Test func interpolationInWords() throws {
     #expect(
-        try cure(#"echo "hi \(name)!""#, variables: ["name"]) == #"Command("echo", "hi \(shellText(name))!").run()"#
+        try cure(#"echo "hi \(name)!""#, variables: ["name"])
+            == #"Command("echo", "hi \(shellText(name))!").run()"#
     )
     #expect(try cure(#"echo \(xs)"#, variables: ["xs"]) == #"Command("echo", Spread(xs)).run()"#)
 }
@@ -113,7 +142,10 @@ private func failure(_ source: String, variables: Set<String> = []) -> Failure? 
 }
 
 @Test func tildeOnlyAtWordStart() throws {
-    #expect(try cure("echo ~/x a~b") == "Command(\"echo\", \"\\(shellText(env[\"HOME\"]!))/x\", \"a~b\").run()")
+    #expect(
+        try cure("echo ~/x a~b")
+            == "Command(\"echo\", \"\\(shellText(env[\"HOME\"]!))/x\", \"a~b\").run()"
+    )
 }
 
 @Test func onlyUnquotedWildcardsGlob() throws {
@@ -122,7 +154,9 @@ private func failure(_ source: String, variables: Set<String> = []) -> Failure? 
 }
 
 @Test func emptyBracesAreAWord() throws {
-    #expect(try cure("find . -exec rm {} ;") == #"Command("find", ".", "-exec", "rm", "{}").run() ;"#)
+    #expect(
+        try cure("find . -exec rm {} ;") == #"Command("find", ".", "-exec", "rm", "{}").run() ;"#
+    )
 }
 
 // MARK: Redirects, environment, chains
@@ -132,7 +166,10 @@ private func failure(_ source: String, variables: Set<String> = []) -> Failure? 
         try cure("sort < in e>o > out")
             == #"Command("sort").reading(0, from: "in").sending(2, to: 1).writing(1, to: "out").run()"#
     )
-    #expect(try cure("make o+e>> log") == #"Command("make").appending(1, to: "log").sending(2, to: 1).run()"#)
+    #expect(
+        try cure("make o+e>> log")
+            == #"Command("make").appending(1, to: "log").sending(2, to: 1).run()"#
+    )
 }
 
 @Test func posixRedirectsNameTheSwishSpelling() {
@@ -188,7 +225,8 @@ private func failure(_ source: String, variables: Set<String> = []) -> Failure? 
 
 @Test func closuresAsCommandArguments() throws {
     #expect(
-        try cure("ls | where { $0.size > 1 }") == #"Pipeline(Command("ls"), Command("where", { $0.size > 1 })).run()"#
+        try cure("ls | where { $0.size > 1 }")
+            == #"Pipeline(Command("ls"), Command("where", { $0.size > 1 })).run()"#
     )
     // A closure naming no parameter takes what the stage gives it.
     #expect(
@@ -199,7 +237,8 @@ private func failure(_ source: String, variables: Set<String> = []) -> Failure? 
 
 @Test func aBraceEndsACommandInAConditionOnly() throws {
     #expect(
-        try cure("if make { echo a }") == #"if (Command("make").runQuietly()).succeeded { Command("echo", "a").run() }"#
+        try cure("if make { echo a }")
+            == #"if (Command("make").runQuietly()).succeeded { Command("echo", "a").run() }"#
     )
     #expect(try cure("echo {a}") == #"Command("echo", { _ in Command("a").run() }).run()"#)
 }
@@ -216,17 +255,27 @@ private func failure(_ source: String, variables: Set<String> = []) -> Failure? 
 @Test func substitutionStartsAnExpression() throws {
     #expect(try cure("let a = $(echo hi)") == #"let a = capture({ Command("echo", "hi").run() })"#)
     #expect(try cure("$(echo x).text") == #"capture({ Command("echo", "x").run() }).text"#)
-    #expect(try cure("let a = try $(echo hi)") == #"let a = try captureThrowing({ Command("echo", "hi").run() })"#)
+    #expect(
+        try cure("let a = try $(echo hi)")
+            == #"let a = try captureThrowing({ Command("echo", "hi").run() })"#
+    )
 }
 
 @Test func tryDoesNotReachIntoClosures() throws {
-    #expect(try cure("try xs.map { $(echo \\($0)) }", variables: ["xs"]).contains("capture(") == true)
+    #expect(
+        try cure("try xs.map { $(echo \\($0)) }", variables: ["xs"]).contains("capture(") == true
+    )
 }
 
 @Test func asyncStartsCommandsAndTasks() throws {
     #expect(try cure("let j = async sleep 1") == #"let j = Command("sleep", "1").start()"#)
-    #expect(try cure("let j = async $(echo hi)") == #"let j = Command("echo", "hi").startCapturing()"#)
-    #expect(try cure("let t = async { work() }", functions: ["work"]) == #"let t = startTask("{ work() }") { work() }"#)
+    #expect(
+        try cure("let j = async $(echo hi)") == #"let j = Command("echo", "hi").startCapturing()"#
+    )
+    #expect(
+        try cure("let t = async { work() }", functions: ["work"])
+            == #"let t = startTask("{ work() }") { work() }"#
+    )
 }
 
 // MARK: Errors and unfinished input

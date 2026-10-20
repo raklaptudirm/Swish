@@ -33,7 +33,10 @@ let interpreter = Thread {
         exit(status)
     default:
         FileHandle.standardError.write(
-            Data("usage: swish [-c command | script [arguments…] | --tasks file [task [arguments…]]]\n".utf8)
+            Data(
+                "usage: swish [-c command | script [arguments…] | --tasks file [task [arguments…]]]\n"
+                    .utf8
+            )
         )
         exit(2)
     }

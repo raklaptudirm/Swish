@@ -20,7 +20,9 @@ private func underline(_ text: String) -> String { "\u{1B}[4m\(text)\(reset)" }
 
 @Test func codeSpansAreWhatsBetweenEqualRunsOfBackticks() {
     // Double backticks are how DocC links a symbol, and can hold a backtick.
-    #expect(documentation("see ``Foo`` and ``a`b``").colored == "see \(code("Foo")) and \(code("a`b"))")
+    #expect(
+        documentation("see ``Foo`` and ``a`b``").colored == "see \(code("Foo")) and \(code("a`b"))"
+    )
     // Nothing inside is read: no emphasis, no escapes.
     #expect(documentation("`**x** \\n`").plain == "**x** \\n")
     // One space off each end if there's one on both, so a span can start or end with a backtick.
@@ -30,7 +32,9 @@ private func underline(_ text: String) -> String { "\u{1B}[4m\(text)\(reset)" }
 }
 
 @Test func stylesNestAndEscapesWriteTheCharacter() {
-    #expect(documentation("**the `x` of it**").colored == "\(bold("the "))\(code("x"))\(bold(" of it"))")
+    #expect(
+        documentation("**the `x` of it**").colored == "\(bold("the "))\(code("x"))\(bold(" of it"))"
+    )
     #expect(documentation("_a **b** c_").colored == "\(italic("a "))\(bold("b"))\(italic(" c"))")
     #expect(documentation("\\*not\\* \\`code\\` \\[x\\](y)").plain == "*not* `code` [x](y)")
     #expect(documentation("[`code` link](u)").colored == "\(code("code"))\(underline(" link"))")

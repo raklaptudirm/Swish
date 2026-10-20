@@ -23,7 +23,8 @@ extension Shell {
                 : commandCandidates(prefix: name, externalOnly: external)
             if external {
                 candidates = candidates.map {
-                    var candidate = $0; candidate.replacement = "^" + candidate.replacement; return candidate
+                    var candidate = $0; candidate.replacement = "^" + candidate.replacement;
+                    return candidate
                 }
             }
         } else if ["help", "which"].contains(context.words[0]) && context.quote == nil
@@ -33,9 +34,14 @@ extension Shell {
             candidates = commandCandidates(prefix: word, externalOnly: false)
                 .filter { !["variable", "keyword"].contains($0.description) }
         } else if word.hasPrefix("-") && context.quote == nil,
-            let functions = stageCallee(context.words[0], of: .named("Flow", [.any]), receiver: .flow)
+            let functions = stageCallee(
+                context.words[0],
+                of: .named("Flow", [.any]),
+                receiver: .flow
+            )
                 ?? stageCallee(context.words[0], of: .list(.any), receiver: .collected)
-                ?? commandFunctions(named: context.words[0]) ?? stageFunctions(named: context.words[0])
+                ?? commandFunctions(named: context.words[0])
+                ?? stageFunctions(named: context.words[0])
         {
             candidates = flagCandidates(for: functions, prefix: word)
         } else {
@@ -57,22 +63,28 @@ extension Shell {
         var described: [String: String] = [:]
         if !externalOnly {
             for (name, _) in interpreter.names() { described[name] = "variable" }
-            for (name, symbols) in Dictionary(grouping: interpreter.symbols().filter { $0.function != nil }, by: \.name)
-            {
+            for (name, symbols) in Dictionary(
+                grouping: interpreter.symbols().filter { $0.function != nil },
+                by: \.name
+            ) {
                 let summary = symbols.compactMap(\.summary).first { !$0.isEmpty }
                 described[name] = summary.map { String($0.prefix { $0 != "\n" }) } ?? "function"
             }
-            for builtin in Shell.shellBuiltins.values where builtin.works { described[builtin.name] = "shell builtin" }
+            for builtin in Shell.shellBuiltins.values where builtin.works {
+                described[builtin.name] = "shell builtin"
+            }
             for name in stageNames.methods {
                 let callee =
                     stageCallee(name, of: .named("Flow", [.any]), receiver: .flow)
                     ?? stageCallee(name, of: .list(.any), receiver: .collected)
                 guard let callee,
                     stageNames.flow.contains(name)
-                        || interpreter.symbols(named: name, of: .list(.any)).contains(where: { $0.function != nil })
+                        || interpreter.symbols(named: name, of: .list(.any))
+                            .contains(where: { $0.function != nil })
                 else { continue }
                 described[name] =
-                    callee.overloads.compactMap(\.summary).first.map { String($0.prefix { $0 != "\n" }) }
+                    callee.overloads.compactMap(\.summary).first
+                    .map { String($0.prefix { $0 != "\n" }) }
                     ?? "sequence method"
             }
             for keyword in Reader.lineStarts {
@@ -84,7 +96,11 @@ extension Shell {
             candidates[name] = LineEditor.Candidate(replacement: escaped(name), display: name)
         }
         for (name, description) in described where name.hasPrefix(prefix) {
-            candidates[name] = LineEditor.Candidate(replacement: escaped(name), display: name, description: description)
+            candidates[name] = LineEditor.Candidate(
+                replacement: escaped(name),
+                display: name,
+                description: description
+            )
         }
         return candidates.keys.sorted().map { candidates[$0]! }
     }
@@ -93,12 +109,18 @@ extension Shell {
         var candidates: [String: LineEditor.Candidate] = [:]
         func add(_ flag: String, _ description: String) {
             guard flag.hasPrefix(prefix), candidates[flag] == nil else { return }
-            candidates[flag] = LineEditor.Candidate(replacement: flag, display: flag, description: description)
+            candidates[flag] = LineEditor.Candidate(
+                replacement: flag,
+                display: flag,
+                description: description
+            )
         }
         for parameters in callee.parameters {
             for parameter in parameters {
                 guard let label = parameter.label else { continue }
-                let description = parameter.documentation ?? (parameter.type.isBool ? "switch" : "<\(parameter.type)>")
+                let description =
+                    parameter.documentation
+                    ?? (parameter.type.isBool ? "switch" : "<\(parameter.type)>")
                 if parameter.type.isBool, parameter.defaultValue == Value(true) {
                     add("--no-" + kebabCase(label), description)
                 }
@@ -112,20 +134,34 @@ extension Shell {
         return candidates.keys.sorted().map { candidates[$0]! }
     }
 
-    private func pathCandidates(for word: String, quote: Character?, executablesOnly: Bool) -> [LineEditor.Candidate] {
+    private func pathCandidates(
+        for word: String,
+        quote: Character?,
+        executablesOnly: Bool
+    ) -> [LineEditor.Candidate] {
         let home = env("HOME") ?? "~"
         let expanded = word.hasPrefix("~") ? home + word.dropFirst() : word
         let typedDirectory = word.lastIndex(of: "/").map { String(word[...$0]) } ?? ""
         let directory = expanded.lastIndex(of: "/").map { String(expanded[...$0]) } ?? ""
-        let partial = expanded.lastIndex(of: "/").map { String(expanded[expanded.index(after: $0)...]) } ?? expanded
-        let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.isEmpty ? "." : directory)) ?? []
+        let partial =
+            expanded.lastIndex(of: "/").map { String(expanded[expanded.index(after: $0)...]) }
+            ?? expanded
+        let names =
+            (try? FileManager.default.contentsOfDirectory(
+                atPath: directory.isEmpty ? "." : directory
+            )) ?? []
 
         var candidates: [LineEditor.Candidate] = []
-        for name in names.sorted() where name.hasPrefix(partial) && (partial.hasPrefix(".") || !name.hasPrefix(".")) {
+        for name in names.sorted()
+        where name.hasPrefix(partial) && (partial.hasPrefix(".") || !name.hasPrefix(".")) {
             var isDirectory: ObjCBool = false
             let path = directory + name
-            guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else { continue }
-            if executablesOnly && !isDirectory.boolValue && !FileManager.default.isExecutableFile(atPath: path) {
+            guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else {
+                continue
+            }
+            if executablesOnly && !isDirectory.boolValue
+                && !FileManager.default.isExecutableFile(atPath: path)
+            {
                 continue
             }
             let text = typedDirectory + name

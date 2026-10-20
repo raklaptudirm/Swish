@@ -54,7 +54,11 @@ final class Job: HostObject, @unchecked Sendable {
         if let result = task?.result, case .failure = result { status = 1 }
         var text = capture?.finish() ?? ""
         while text.last == "\n" { text.removeLast() }
-        output = Output(text: text, code: signal == nil ? Int(status) : nil, signal: signal.map(Int.init))
+        output = Output(
+            text: text,
+            code: signal == nil ? Int(status) : nil,
+            signal: signal.map(Int.init)
+        )
         state = .done
         capture = nil
     }
@@ -101,7 +105,9 @@ final class Job: HostObject, @unchecked Sendable {
     var typeName: String { "Job" }
 
     /// What a table of jobs starts with: the state shown as it's going.
-    static let columns: [DisplayColumn] = ["id", DisplayColumn("state", styledBy: "state"), "command"]
+    static let columns: [DisplayColumn] = [
+        "id", DisplayColumn("state", styledBy: "state"), "command",
+    ]
 
     /// A job's members: each one's type as Swift writes it, for the checker, and its value.
     static let members: [(name: String, type: String, value: @Sendable (Job) -> Value)] = [
@@ -120,8 +126,14 @@ final class Job: HostObject, @unchecked Sendable {
         ("output", "Output?", { $0.output.map { Value.output($0) } ?? .null }),
         // A method, as it's not data: a table or `to json` of jobs can't read it.
         ("lines", "() -> Flow<String>", { job in method("lines") { [unowned job] in job.lines } }),
-        ("resume", "() -> Void", { job in method("resume") { [unowned job] in job.shell.resume(job) } }),
-        ("cancel", "() -> Void", { job in method("cancel") { [unowned job] in job.shell.cancel(job) } }),
+        (
+            "resume", "() -> Void",
+            { job in method("resume") { [unowned job] in job.shell.resume(job) } }
+        ),
+        (
+            "cancel", "() -> Void",
+            { job in method("cancel") { [unowned job] in job.shell.cancel(job) } }
+        ),
     ]
     /// What scripts may use of a job, as the protocol the checker knows it by.
     static var declaration: String {
@@ -234,7 +246,9 @@ extension Shell {
 
         var input: Int32 = -1
         for (index, stage) in stages.enumerated() {
-            guard case .external(let argv, _, let redirects, let environment) = stage else { continue }
+            guard case .external(let argv, _, let redirects, let environment) = stage else {
+                continue
+            }
             let isLast = index == stages.count - 1
             var next: (read: Int32, write: Int32)?
             if !isLast {
@@ -280,7 +294,8 @@ extension Shell {
     /// stopped again with ^Z, it goes back to `jobs` and the line is left.
     func awaitJob(_ job: Job) throws -> Output {
         if let task = job.task {
-            // Awaiting brings a task to the foreground, and what it printed with it: what it has printed so far, and
+            // Awaiting brings a task to the foreground, and what it printed with it: what it has
+            // printed so far, and
             // the rest as it prints. (A task that gives an Output keeps it for the value.)
             var relay: Relay?
             if !job.givesOutput, !job.relayed {
@@ -299,7 +314,11 @@ extension Shell {
             if case .failure(let error) = result, !job.givesOutput {
                 // How it ended is the awaiting task's error, not a reason for it to stop too.
                 if error.kind == .runtime {
-                    throw ScriptError(error.message, status: error.status, isReported: error.isReported)
+                    throw ScriptError(
+                        error.message,
+                        status: error.status,
+                        isReported: error.isReported
+                    )
                 }
                 if error.kind == .cancelled { throw RuntimeError("\(job.source) was cancelled") }
                 throw RuntimeError("\(job.source) stopped: \(error)")

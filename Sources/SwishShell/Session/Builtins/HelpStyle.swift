@@ -15,7 +15,9 @@ enum HelpStyle {
     static func usage(_ text: String) -> [AttributedString] {
         var segments: [AttributedString] = []
         var first = true
-        for (index, word) in text.split(separator: " ", omittingEmptySubsequences: false).enumerated() {
+        for (index, word) in text.split(separator: " ", omittingEmptySubsequences: false)
+            .enumerated()
+        {
             if index > 0 { segments.append(.init(" ")) }
             segments += usageWord(String(word), isName: first && !word.isEmpty)
             if !word.isEmpty { first = false }
@@ -30,7 +32,8 @@ enum HelpStyle {
         var current = ""
         func flush() {
             guard !current.isEmpty else { return }
-            let style: DisplayStyle? = current.hasPrefix("-") ? .flag : current.hasPrefix("<") ? .variable : nil
+            let style: DisplayStyle? =
+                current.hasPrefix("-") ? .flag : current.hasPrefix("<") ? .variable : nil
             segments.append(.init(current, style))
             current = ""
         }
@@ -61,6 +64,7 @@ extension DisplayStyle {
     /// not with `NO_COLOR` set or `TERM=dumb`.
     static func enabled(for fd: Int32) -> Bool {
         func variable(_ name: String) -> String? { getenv(name).map { String(cString: $0) } }
-        return isatty(fd) != 0 && variable("NO_COLOR").map(\.isEmpty) != false && variable("TERM") != "dumb"
+        return isatty(fd) != 0 && variable("NO_COLOR").map(\.isEmpty) != false
+            && variable("TERM") != "dumb"
     }
 }

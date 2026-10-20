@@ -3,7 +3,8 @@ import Swiit
 
 /// Filename patterns: `*`, `[a-z]`, and `**` for any depth of directories.
 /// `?` isn't a wildcard, as in fish, so `curl https://x.com/?q=1` needs no
-/// quotes; `[…]` matches a single character instead. A backslash makes the next character literal, which is how
+/// quotes; `[…]` matches a single character instead. A backslash makes the next character literal,
+/// which is how
 /// quoted and interpolated text stays literal inside a pattern.
 enum Glob {
     /// Makes every character of `text` literal in a pattern.
@@ -28,7 +29,9 @@ enum Glob {
             case "*":
                 return true
             case "[":
-                if let close = characters[(index + 1)...].firstIndex(of: "]"), close > index + 1 { return true }
+                if let close = characters[(index + 1)...].firstIndex(of: "]"), close > index + 1 {
+                    return true
+                }
             default:
                 break
             }
@@ -41,7 +44,8 @@ enum Glob {
     /// match a leading dot, and `**` doesn't enter hidden directories.
     static func expand(_ pattern: String) -> [String] {
         let wantsDirectories = pattern.hasSuffix("/")
-        let segments = pattern.split(separator: "/", omittingEmptySubsequences: true).map(String.init)
+        let segments = pattern.split(separator: "/", omittingEmptySubsequences: true)
+            .map(String.init)
         var paths = [pattern.hasPrefix("/") ? "/" : ""]
         for (index, segment) in segments.enumerated() {
             let isLast = index == segments.count - 1
@@ -81,7 +85,8 @@ enum Glob {
     }
 
     private static func entries(of directory: String) -> [String] {
-        (try? FileManager.default.contentsOfDirectory(atPath: directory.isEmpty ? "." : directory)) ?? []
+        (try? FileManager.default.contentsOfDirectory(atPath: directory.isEmpty ? "." : directory))
+            ?? []
     }
 
     private static func join(_ base: String, _ name: String) -> String {
@@ -106,7 +111,9 @@ enum Glob {
     /// characters, `[a-z]` or `[!a-z]` one, `\` makes the next literal. A
     /// leading dot has to be matched by a dot.
     static func matches(_ pattern: [Character], _ name: [Character]) -> Bool {
-        if name.first == ".", pattern.first != "." && !(pattern.first == "\\" && pattern.dropFirst().first == ".") {
+        if name.first == ".",
+            pattern.first != "." && !(pattern.first == "\\" && pattern.dropFirst().first == ".")
+        {
             return false
         }
         // Where to go back to after a mismatch: just after the last `*`,
@@ -138,7 +145,11 @@ enum Glob {
 
     /// Whether the pattern element at `index` matches `character`, and the
     /// index after it.
-    private static func matchOne(_ pattern: [Character], at index: Int, _ character: Character) -> (Bool, Int) {
+    private static func matchOne(
+        _ pattern: [Character],
+        at index: Int,
+        _ character: Character
+    ) -> (Bool, Int) {
         switch pattern[index] {
         case "\\" where index + 1 < pattern.count:
             return (pattern[index + 1] == character, index + 2)
@@ -174,10 +185,12 @@ enum Glob {
 
     private static func isDirectory(_ path: String) -> Bool {
         var isDirectory: ObjCBool = false
-        return FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) && isDirectory.boolValue
+        return FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
+            && isDirectory.boolValue
     }
 
     private static func isSymlink(_ path: String) -> Bool {
-        (try? FileManager.default.attributesOfItem(atPath: path))?[.type] as? FileAttributeType == .typeSymbolicLink
+        (try? FileManager.default.attributesOfItem(atPath: path))?[.type] as? FileAttributeType
+            == .typeSymbolicLink
     }
 }

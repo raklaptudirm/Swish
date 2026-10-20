@@ -21,14 +21,44 @@ struct ResourceLimit {
     let unit: UInt64
 
     static let all: [ResourceLimit] = [
-        ResourceLimit(flag: "c", name: "core file size (KiB)", resource: resource(RLIMIT_CORE), unit: 1024),
-        ResourceLimit(flag: "d", name: "data segment size (KiB)", resource: resource(RLIMIT_DATA), unit: 1024),
-        ResourceLimit(flag: "f", name: "file size (KiB)", resource: resource(RLIMIT_FSIZE), unit: 1024),
+        ResourceLimit(
+            flag: "c",
+            name: "core file size (KiB)",
+            resource: resource(RLIMIT_CORE),
+            unit: 1024
+        ),
+        ResourceLimit(
+            flag: "d",
+            name: "data segment size (KiB)",
+            resource: resource(RLIMIT_DATA),
+            unit: 1024
+        ),
+        ResourceLimit(
+            flag: "f",
+            name: "file size (KiB)",
+            resource: resource(RLIMIT_FSIZE),
+            unit: 1024
+        ),
         ResourceLimit(flag: "n", name: "open files", resource: resource(RLIMIT_NOFILE), unit: 1),
-        ResourceLimit(flag: "s", name: "stack size (KiB)", resource: resource(RLIMIT_STACK), unit: 1024),
-        ResourceLimit(flag: "t", name: "cpu time (seconds)", resource: resource(RLIMIT_CPU), unit: 1),
+        ResourceLimit(
+            flag: "s",
+            name: "stack size (KiB)",
+            resource: resource(RLIMIT_STACK),
+            unit: 1024
+        ),
+        ResourceLimit(
+            flag: "t",
+            name: "cpu time (seconds)",
+            resource: resource(RLIMIT_CPU),
+            unit: 1
+        ),
         ResourceLimit(flag: "u", name: "processes", resource: resource(processLimit), unit: 1),
-        ResourceLimit(flag: "v", name: "virtual memory (KiB)", resource: resource(RLIMIT_AS), unit: 1024),
+        ResourceLimit(
+            flag: "v",
+            name: "virtual memory (KiB)",
+            resource: resource(RLIMIT_AS),
+            unit: 1024
+        ),
     ]
 
     /// The soft (or hard) limit, in units; nil for unlimited.
@@ -101,7 +131,8 @@ func replaceProcess(with path: String, _ argv: [String]) -> Errno {
         _ = signal(caught, SIG_DFL)
     }
     let arguments = argv.map { strdup($0) } + [nil]
-    let environment = ProcessInfo.processInfo.environment.map { strdup("\($0.key)=\($0.value)") } + [nil]
+    let environment =
+        ProcessInfo.processInfo.environment.map { strdup("\($0.key)=\($0.value)") } + [nil]
     execve(path, arguments, environment)
     return Errno(errno)
 }

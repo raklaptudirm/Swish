@@ -15,14 +15,17 @@ extension Shell {
         }
     ) -> String? {
         if let path = environment["SWISH_CONFIG"] { return path.isEmpty ? nil : path }
-        let directories = [XDG.configHome(environment)].compactMap { $0 } + XDG.configDirectories(environment)
+        let directories =
+            [XDG.configHome(environment)].compactMap { $0 } + XDG.configDirectories(environment)
         return directories.map { $0 + "/swish/config.swish" }.first(where: exists)
     }
 
     /// Runs the config file, if there is one. Its errors are reported, and
     /// the shell starts anyway.
     func loadConfig() {
-        guard let path = Shell.configPath(environment: ProcessInfo.processInfo.environment) else { return }
+        guard let path = Shell.configPath(environment: ProcessInfo.processInfo.environment) else {
+            return
+        }
         _ = sourceFile(path, arguments: [])
         lastStatus = 0
     }
@@ -33,11 +36,15 @@ extension Shell {
     func customPrompt() throws -> String? {
         let overloads = interpreter.symbols(named: "prompt").compactMap { $0.function }
         guard !overloads.isEmpty else { return nil }
-        let withStatus = overloads.first { $0.parameters.map(\.label) == ["status"] && $0.parameters[0].type == .int }
+        let withStatus = overloads.first {
+            $0.parameters.map(\.label) == ["status"] && $0.parameters[0].type == .int
+        }
         guard let function = withStatus ?? overloads.first(where: { $0.parameters.isEmpty }),
             function.returns == .string
         else {
-            throw RuntimeError("declare it as `func prompt() -> String` or `func prompt(status: Int) -> String`")
+            throw RuntimeError(
+                "declare it as `func prompt() -> String` or `func prompt(status: Int) -> String`"
+            )
         }
         let status = lastStatus
         defer { lastStatus = status }  // Drawing the prompt isn't a command.

@@ -27,7 +27,11 @@ extension Interpreter.Host {
 extension OutputSink.Traits {
     /// What the descriptor is: a terminal of some width, or a file or pipe.
     init(fd: Int32) {
-        self.init(isTerminal: isatty(fd) != 0, width: terminalWidth(fd), styled: DisplayStyle.enabled(for: fd))
+        self.init(
+            isTerminal: isatty(fd) != 0,
+            width: terminalWidth(fd),
+            styled: DisplayStyle.enabled(for: fd)
+        )
     }
 }
 
@@ -49,6 +53,8 @@ extension DisplayFormatter {
 func terminalWidth(_ fd: Int32) -> Int? {
     var size = winsize()
     // TIOCGWINSZ is a UInt on macOS and an Int32 on Linux.
-    guard isatty(fd) != 0, ioctl(fd, UInt(TIOCGWINSZ), &size) == 0, size.ws_col > 0 else { return nil }
+    guard isatty(fd) != 0, ioctl(fd, UInt(TIOCGWINSZ), &size) == 0, size.ws_col > 0 else {
+        return nil
+    }
     return Int(size.ws_col)
 }

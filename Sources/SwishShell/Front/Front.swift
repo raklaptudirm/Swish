@@ -2,12 +2,16 @@ import Foundation
 import SwiftParser
 import SwiftSyntax
 
-// Spike: the front end the shell owns. Source text that is Swift's with the shell's in it goes in; Swift comes out,
+// Spike: the front end the shell owns. Source text that is Swift's with the shell's in it goes in;
+// Swift comes out,
 // which a
-// plain Swift front end reads. The loop: parse the text as Swift (with the insides of `$(…)` blanked), take the first
+// plain Swift front end reads. The loop: parse the text as Swift (with the insides of `$(…)`
+// blanked), take the first
 // place
-// at or after the cursor where a form of the shell's may start, and read it; if it is one, replace it with the Swift it
-// means, move the cursor past that, and parse again, so that everything before the cursor is Swift by the time anything
+// at or after the cursor where a form of the shell's may start, and read it; if it is one, replace
+// it with the Swift it
+// means, move the cursor past that, and parse again, so that everything before the cursor is Swift
+// by the time anything
 // after it is asked about.
 
 final class Front {
@@ -15,7 +19,8 @@ final class Front {
 
     /// What the names the interpreter has are.
     let bound: Names
-    /// Command lines whose words are all written out, for checking against the function they name before anything runs.
+    /// Command lines whose words are all written out, for checking against the function they name
+    /// before anything runs.
     struct CommandUse {
         var name: String
         var words: [String]
@@ -26,7 +31,8 @@ final class Front {
     func record(use: CommandUse) { uses.append(use) }
     private(set) var units: [(kind: UnitKind, source: String)] = []
 
-    /// How many parameters the closure given to a command takes, when the command is a function that says (nil: one).
+    /// How many parameters the closure given to a command takes, when the command is a function
+    /// that says (nil: one).
     var closureArity: (String) -> Int? = { _ in nil }
 
     init(bound: Names) { self.bound = bound }
@@ -62,29 +68,42 @@ final class Front {
         var kind: SiteKind
     }
 
-    /// Highlights what is not the shell's: Swift source (with the shell's blanked), as colored spans.
+    /// Highlights what is not the shell's: Swift source (with the shell's blanked), as colored
+    /// spans.
     var swiftHighlight: (String) -> [HighlightSpan] = { _ in [] }
-    /// Whether a name is a method of what could flow into it and nothing a command could be by itself.
+    /// Whether a name is a method of what could flow into it and nothing a command could be by
+    /// itself.
     var isMethodWithoutInput: (String) -> Bool = { _ in false }
-    /// Reading goes on past a form that can't be read (a line half typed), keeping what was read of it.
+    /// Reading goes on past a form that can't be read (a line half typed), keeping what was read of
+    /// it.
     var recovering = false
 
     struct Cured {
         var text: String
-        /// What the source is, for coloring it: the shell's forms and the Swift between them, in the source's
+        /// What the source is, for coloring it: the shell's forms and the Swift between them, in
+        /// the source's
         /// characters.
         var spans: [HighlightSpan]
     }
 
-    func cure(_ source: String, names inherited: Names? = nil, asExpression: Bool = false) throws -> String {
+    func cure(
+        _ source: String,
+        names inherited: Names? = nil,
+        asExpression: Bool = false
+    ) throws -> String {
         try cureWithSpans(source, names: inherited, asExpression: asExpression).text
     }
 
     /// The program the source is, with every form of the shell's in it read.
-    /// `asExpression`: the text is one expression (an argument, a closure, an interpolation), not a program: it is not
+    /// `asExpression`: the text is one expression (an argument, a closure, an interpolation), not a
+    /// program: it is not
     /// read
     /// as a statement itself, only the forms inside it are.
-    func cureWithSpans(_ source: String, names inherited: Names? = nil, asExpression: Bool = false) throws -> Cured {
+    func cureWithSpans(
+        _ source: String,
+        names inherited: Names? = nil,
+        asExpression: Bool = false
+    ) throws -> Cured {
         var chars = Array(source)
         var cursor = 0
         let base = inherited ?? bound
@@ -97,7 +116,9 @@ final class Front {
             // The Swift between the forms, read as Swift with the forms blanked.
             var blank = Array(source)
             for form in forms {
-                for index in form where index < blank.count && blank[index] != "\n" { blank[index] = " " }
+                for index in form where index < blank.count && blank[index] != "\n" {
+                    blank[index] = " "
+                }
             }
             let swift = swiftHighlight(String(blank))
             return Cured(text: String(chars), spans: spans + swift)
@@ -111,16 +132,26 @@ final class Front {
             var found: (start: Int, end: Int, replacement: String)?
             let content = chars.firstIndex { !$0.isWhitespace }.map { text.byteOf[$0] } ?? 0
             let raws = Lex.rawStrings(in: chars)
-                .map { Site(byte: text.byteOf[$0.lowerBound], kind: .rawString(end: $0.upperBound)) }
+                .map {
+                    Site(byte: text.byteOf[$0.lowerBound], kind: .rawString(end: $0.upperBound))
+                }
             var retry = false
-            for site in (sites(in: tree) + raws).sorted(by: { ($0.byte, $0.kind.order) < ($1.byte, $1.kind.order) })
+            for site in (sites(in: tree) + raws)
+                .sorted(by: { ($0.byte, $0.kind.order) < ($1.byte, $1.kind.order) })
             where site.byte >= cursorByte {
                 if asExpression, site.byte == content, site.kind.order < 2 { continue }
                 let start = text.character(atByte: site.byte)
                 var read: (end: Int, replacement: String, spans: [HighlightSpan])?
                 var partial: (end: Int, spans: [HighlightSpan]) = (start, [])
                 do {
-                    read = try self.read(site, at: start, text: text, blanked: blanked, names: names, partial: &partial)
+                    read = try self.read(
+                        site,
+                        at: start,
+                        text: text,
+                        blanked: blanked,
+                        names: names,
+                        partial: &partial
+                    )
                 } catch is Failure where recovering {
                     // What was read of it before the problem is colored, and the rest is Swift's.
                     spans += partial.spans.map {
@@ -151,7 +182,9 @@ final class Front {
             if retry { continue }
             guard var found else { return finish() }
             // The spaces after a form belong to what follows it.
-            while found.end > found.start + 1, chars[found.end - 1] == " " || chars[found.end - 1] == "\t" {
+            while found.end > found.start + 1,
+                chars[found.end - 1] == " " || chars[found.end - 1] == "\t"
+            {
                 found.end -= 1
             }
             chars.replaceSubrange(found.start..<found.end, with: Array(found.replacement))
@@ -176,7 +209,8 @@ final class Front {
             if reader.peek() == "$", let next = reader.peek(1), Lex.isDigit(next) { return false }
             let word = reader.identifier()
             if let word, word != "try",
-                Reader.statementKeywords.union(["if", "for", "while", "switch", "let", "var"]).contains(word)
+                Reader.statementKeywords.union(["if", "for", "while", "switch", "let", "var"])
+                    .contains(word)
             {
                 return false
             }
@@ -185,7 +219,8 @@ final class Front {
                 if word == "_", info.isAssignment { return false }
                 if word == "async", info.isAsyncDeclaration { return false }
                 if let word,
-                    [.variable, .member, .type, .staticMember].contains(names.role(of: word, at: reader.here)),
+                    [.variable, .member, .type, .staticMember]
+                        .contains(names.role(of: word, at: reader.here)),
                     info.isAssignment
                 {
                     return false
@@ -195,12 +230,15 @@ final class Front {
         }
         switch site.kind {
         case .statement(let info):
-            guard isStarting(info), let chain = try reader.parseCommandChain(condition: false) else { return nil }
+            guard isStarting(info), let chain = try reader.parseCommandChain(condition: false)
+            else { return nil }
             return (reader.pos, reader.emit(chain, statement: true), reader.spans)
         case .condition(let isGuard):
             reader.conditionDepth = 1
             reader.guardCondition = isGuard
-            guard isStarting(nil), let chain = try reader.parseCommandChain(condition: true) else { return nil }
+            guard isStarting(nil), let chain = try reader.parseCommandChain(condition: true) else {
+                return nil
+            }
             return (reader.pos, reader.emit(chain, statement: false), reader.spans)
         case .substitution(let underTry), .dollarName(let underTry):
             reader.tryDepth = underTry ? 1 : 0
@@ -210,7 +248,10 @@ final class Front {
             let content = text.slice((start + 1)..<max(start + 1, end - 1))
             var hashes = "#"
             while content.contains("\"" + hashes) { hashes += "#" }
-            return (end, hashes + "\"" + content + "\"" + hashes, [HighlightSpan(range: start..<end, kind: .string)])
+            return (
+                end, hashes + "\"" + content + "\"" + hashes,
+                [HighlightSpan(range: start..<end, kind: .string)]
+            )
         case .async(let underTry):
             reader.tryDepth = underTry ? 1 : 0
             let expression = try reader.parseAsync()
@@ -238,7 +279,12 @@ private final class SiteFinder: SyntaxVisitor {
         case .decl(let decl):
             info.isAsyncDeclaration = decl.is(VariableDeclSyntax.self)
         }
-        sites.append(Front.Site(byte: node.positionAfterSkippingLeadingTrivia.utf8Offset, kind: .statement(info)))
+        sites.append(
+            Front.Site(
+                byte: node.positionAfterSkippingLeadingTrivia.utf8Offset,
+                kind: .statement(info)
+            )
+        )
         return .visitChildren
     }
 
@@ -265,19 +311,29 @@ private final class SiteFinder: SyntaxVisitor {
         case .dollarIdentifier:
             let text = token.text
             if text == "$" {
-                if let next = token.nextToken(viewMode: .sourceAccurate), next.tokenKind == .leftParen,
+                if let next = token.nextToken(viewMode: .sourceAccurate),
+                    next.tokenKind == .leftParen,
                     next.positionAfterSkippingLeadingTrivia == token.endPositionBeforeTrailingTrivia
                 {
-                    sites.append(Front.Site(byte: byte, kind: .substitution(underTry: SiteFinder.underTry(token))))
+                    sites.append(
+                        Front.Site(
+                            byte: byte,
+                            kind: .substitution(underTry: SiteFinder.underTry(token))
+                        )
+                    )
                 }
             }
         case .identifier(let text):
             if text == "async" {
                 if token.parent?.is(DeclReferenceExprSyntax.self) == true {
-                    sites.append(Front.Site(byte: byte, kind: .async(underTry: SiteFinder.underTry(token))))
+                    sites.append(
+                        Front.Site(byte: byte, kind: .async(underTry: SiteFinder.underTry(token)))
+                    )
                 }
             } else if text.hasPrefix("$"), text.count > 1, Int(text.dropFirst()) == nil {
-                sites.append(Front.Site(byte: byte, kind: .dollarName(underTry: SiteFinder.underTry(token))))
+                sites.append(
+                    Front.Site(byte: byte, kind: .dollarName(underTry: SiteFinder.underTry(token)))
+                )
             }
         default: break
         }

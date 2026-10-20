@@ -1,6 +1,8 @@
 // swift-format-ignore-file
-// The shell's own declarations, in Swift, read after the language's prelude: the checker works from the signatures, and
-// the bodies are in Swift too, found by name (Library/Install.swift). Not compiled: it is embedded in the target.
+// The shell's own declarations, in Swift, read after the language's prelude: the checker works from
+// the signatures, and
+// the bodies are in Swift too, found by name (Library/Install.swift). Not compiled: it is embedded
+// in the target.
 
 /// What text `from` can parse.
 enum InputFormat: Equatable, Hashable {
@@ -12,7 +14,8 @@ enum OutputFormat: Equatable, Hashable {
     case json, text
 }
 
-/// What kind of entry `ls` found: `ls | filter { $0.type == .directory }`. In this order, so `ls | sorted --by type`
+/// What kind of entry `ls` found: `ls | filter { $0.type == .directory }`. In this order, so `ls |
+/// sorted --by type`
 /// puts files first.
 enum FileType: Equatable, Hashable, Comparable {
     case file, directory, symlink, other
@@ -23,7 +26,8 @@ enum JobState: Equatable, Hashable, Comparable {
     case running, stopped, done, cancelled
 }
 
-/// What `String.styled` can make text (the shell's: the core knows only `DisplayStyle`), each with its terminal code as
+/// What `String.styled` can make text (the shell's: the core knows only `DisplayStyle`), each with
+/// its terminal code as
 /// its raw value.
 enum TextStyle: Equatable, Hashable {
     case bold, dim, italic, underline, red, green, yellow, blue, magenta, cyan, white, gray
@@ -104,7 +108,8 @@ struct Glob {
     init(_ pattern: String) { self.pattern = pattern }
 }
 
-/// `exit 1` as a statement: runs it, and what follows never does (a `guard`'s `else` may end in it).
+/// `exit 1` as a statement: runs it, and what follows never does (a `guard`'s `else` may end in
+/// it).
 func exitShell(_ command: Command) -> Never
 
 /// A value as a command's word has it: an optional's value, not `Optional(…)`.
@@ -252,7 +257,8 @@ func displayItems(_ value: Any)
 /// a status other than 0 throws a `CommandFailure`.
 func capture(throwing: Bool = false, _ body: () -> Void) -> Output
 
-/// `try $(…)`: the same, and a status other than 0 throws a `CommandFailure`, which the program must handle.
+/// `try $(…)`: the same, and a status other than 0 throws a `CommandFailure`, which the program
+/// must handle.
 func captureThrowing(_ body: () -> Void) throws -> Output
 
 /// A member `members` describes.

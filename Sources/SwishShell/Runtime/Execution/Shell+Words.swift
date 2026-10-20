@@ -20,14 +20,17 @@ extension Shell {
     /// The functions a command name refers to, if it was declared with `func`.
     func commandFunctions(named name: String) -> Callee? {
         let functions = interpreter.symbols(named: name).filter { $0.function != nil }
-        return functions.isEmpty ? nil : Callee(name: name, overloads: functions, receiver: nil, marks: scriptMarks)
+        return functions.isEmpty
+            ? nil : Callee(name: name, overloads: functions, receiver: nil, marks: scriptMarks)
     }
 
     /// The paths a pattern matches; without a wildcard, itself.
     func expand(_ pattern: String) throws -> [String] {
         guard Glob.hasWildcards(pattern) else { return [Glob.unescape(pattern)] }
         let matches = Glob.expand(pattern)
-        guard !matches.isEmpty else { throw RuntimeError("no matches for \(Glob.unescape(pattern))") }
+        guard !matches.isEmpty else {
+            throw RuntimeError("no matches for \(Glob.unescape(pattern))")
+        }
         return matches
     }
 }

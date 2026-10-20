@@ -27,7 +27,9 @@ extension Shell {
     private func listTasks(_ reading: Reading) {
         var seen: Set<String> = []
         let tasks: [(name: String, summary: String)] = reading.declared.symbols.compactMap {
-            guard $0.function != nil, !$0.name.hasPrefix("_"), seen.insert($0.name).inserted else { return nil }
+            guard $0.function != nil, !$0.name.hasPrefix("_"), seen.insert($0.name).inserted else {
+                return nil
+            }
             return ($0.name, $0.summary?.firstSentence ?? "")
         }
         guard !tasks.isEmpty else {

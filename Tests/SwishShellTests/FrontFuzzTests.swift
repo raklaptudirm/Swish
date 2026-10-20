@@ -15,15 +15,19 @@ import Testing
         let choices = (0..<pieces).map { _ in generator.next(pieceCount) }
         let separator = separators[generator.next(separators.count)]
         let context = generator.next(8)
-        let body = choices.enumerated().map { piece($0.offset, $0.element) }.joined(separator: separator)
+        let body = choices.enumerated().map { piece($0.offset, $0.element) }
+            .joined(separator: separator)
         let outer = generator.next(8)
-        let source = generator.next(3) == 0 ? wrap(wrap(body, in: context), in: outer) : wrap(body, in: context)
+        let source =
+            generator.next(3) == 0
+            ? wrap(wrap(body, in: context), in: outer) : wrap(body, in: context)
         let expected = (0..<pieces).map { "m\($0)\n" }.joined()
         let front = probe.makeFront()
         guard let cured = try? front.cure(source) else { continue }
         ran += 1
         let shell = Shell()
-        let actual = (try? onLargeStack { try shell.capturing { shell.execute(cured) } }) ?? "<threw>"
+        let actual =
+            (try? onLargeStack { try shell.capturing { shell.execute(cured) } }) ?? "<threw>"
         if actual == expected {
             matched += 1
         } else {

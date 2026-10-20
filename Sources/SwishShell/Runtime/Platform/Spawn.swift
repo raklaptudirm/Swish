@@ -104,7 +104,9 @@ func spawnProcess(
     var defaults = sigset_t()
     var empty = sigset_t()
     sigemptyset(&defaults)
-    for signal in [SIGINT, SIGQUIT, SIGTSTP, SIGTTIN, SIGTTOU, SIGCHLD, SIGPIPE] { sigaddset(&defaults, signal) }
+    for signal in [SIGINT, SIGQUIT, SIGTSTP, SIGTTIN, SIGTTOU, SIGCHLD, SIGPIPE] {
+        sigaddset(&defaults, signal)
+    }
     sigemptyset(&empty)
     posix_spawnattr_setsigdefault(&attributes, &defaults)
     posix_spawnattr_setsigmask(&attributes, &empty)
@@ -127,13 +129,16 @@ func spawnProcess(
     #endif
     posix_spawnattr_setflags(&attributes, Int16(flags))
 
-    for (target, source) in descriptors { posix_spawn_file_actions_adddup2(&actions, source, target) }
+    for (target, source) in descriptors {
+        posix_spawn_file_actions_adddup2(&actions, source, target)
+    }
 
     let arguments = argv.map { strdup($0) } + [nil]
     defer { arguments.forEach { free($0) } }
     // The environment as it is now (`withEnvironment` may have just set
     // some); Glibc only declares `environ` for _GNU_SOURCE.
-    let environment = ProcessInfo.processInfo.environment.map { strdup("\($0.key)=\($0.value)") } + [nil]
+    let environment =
+        ProcessInfo.processInfo.environment.map { strdup("\($0.key)=\($0.value)") } + [nil]
     defer { environment.forEach { free($0) } }
     var pid: pid_t = 0
     error = posix_spawn(&pid, path, &actions, &attributes, arguments, environment)
@@ -159,11 +164,16 @@ func spawnProcess(
 /// glibcs don't have it.
 nonisolated(unsafe) private let addTerminalAction:
     (@convention(c) (UnsafeMutablePointer<posix_spawn_file_actions_t>, Int32) -> Int32)? = {
-        guard let symbol = dlsym(UnsafeMutableRawPointer(bitPattern: 0), "posix_spawn_file_actions_addtcsetpgrp_np")
+        guard
+            let symbol = dlsym(
+                UnsafeMutableRawPointer(bitPattern: 0),
+                "posix_spawn_file_actions_addtcsetpgrp_np"
+            )
         else { return nil }
         return unsafeBitCast(
             symbol,
-            to: (@convention(c) (UnsafeMutablePointer<posix_spawn_file_actions_t>, Int32) -> Int32).self
+            to: (@convention(c) (UnsafeMutablePointer<posix_spawn_file_actions_t>, Int32) -> Int32)
+                .self
         )
     }()
 #endif

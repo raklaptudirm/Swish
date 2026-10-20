@@ -16,7 +16,8 @@ private func fileType(_ name: String) -> Value {
     let status = Output(text: "hi", code: 0)
     let values: [Value] = [
         .null, Value(3), Value("tab\there"), Value([Value(1), Value("x"), .null]),
-        Value(struct: nil, fields: ["k": Value("v")]), Value(struct: nil, fields: [(name: String, value: Value)]()),
+        Value(struct: nil, fields: ["k": Value("v")]),
+        Value(struct: nil, fields: [(name: String, value: Value)]()),
         .output(status), status.status.value, fileType("directory"),
     ]
     for value in values {
@@ -27,7 +28,8 @@ private func fileType(_ name: String) -> Value {
 @Test func whatDoesNotFitBreaksOverLines() {
     let value = Value(
         ValueDictionary([
-            (Value("name"), Value("swish")), (Value("tags"), Value([Value("shell"), Value("swift")])),
+            (Value("name"), Value("swish")),
+            (Value("tags"), Value([Value("shell"), Value("swift")])),
         ])
     )
     #expect(
@@ -70,6 +72,9 @@ private func fileType(_ name: String) -> Value {
 
 @Test func colorsFollowTheHighlighter() {
     let styled = PrettyPrinter(width: .max, styled: true)
-    #expect(styled.format(Value([Value(1), Value("x")])) == "[\u{1B}[95m1\u{1B}[0m, \u{1B}[33m\"x\"\u{1B}[0m]")
+    #expect(
+        styled.format(Value([Value(1), Value("x")]))
+            == "[\u{1B}[95m1\u{1B}[0m, \u{1B}[33m\"x\"\u{1B}[0m]"
+    )
     #expect(styled.format(fileType("file")) == "\u{1B}[93mFileType\u{1B}[0m.file")
 }

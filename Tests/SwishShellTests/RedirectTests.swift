@@ -37,10 +37,15 @@ private func scratch() throws -> String {
 }
 
 @Test func globMatching() {
-    func matches(_ pattern: String, _ name: String) -> Bool { Glob.matches(Array(pattern), Array(name)) }
+    func matches(_ pattern: String, _ name: String) -> Bool {
+        Glob.matches(Array(pattern), Array(name))
+    }
     #expect(matches("*.txt", "a.txt") && matches("a*b*c", "aXbYbc") && matches("*", "x"))
     #expect(!matches("*.txt", "a.md") && !matches("a*b", "ac"))
-    #expect(matches("[a-c]x", "bx") && !matches("[!a-c]x", "bx") && matches("[^a-c]x", "dx") && matches("[]]", "]"))
+    #expect(
+        matches("[a-c]x", "bx") && !matches("[!a-c]x", "bx") && matches("[^a-c]x", "dx")
+            && matches("[]]", "]")
+    )
     #expect(matches("?", "?") && !matches("?", "a"))  // `?` is literal
     #expect(matches(#"\*"#, "*") && !matches(#"\*"#, "a"))
     // A leading dot is matched only by a dot.
@@ -60,7 +65,10 @@ private func scratch() throws -> String {
 @Test func globsInCommands() throws {
     let d = try scratch()
     #expect(try output("echo \(d)/*.txt") == "\(d)/a.txt \(d)/b.txt\n")
-    #expect(try output("let dir = \"\(d)/with space\"; echo \"$dir\"/*.txt") == "\(d)/with space/z.txt\n")
+    #expect(
+        try output("let dir = \"\(d)/with space\"; echo \"$dir\"/*.txt")
+            == "\(d)/with space/z.txt\n"
+    )
     #expect(try output("echo '\(d)/*.txt'") == "\(d)/*.txt\n")
     #expect(try output("ls \(d)/*.md | get name") == "\(d)/c.md\n")  // builtins get the paths too
     #expect(try output("test [ = [ && echo ok") == "ok\n")
@@ -80,13 +88,22 @@ private func scratch() throws -> String {
 @Test func redirectOrderMatters() throws {
     let d = try scratch()
     // Both into the file.
-    #expect(try output("sh -c 'echo out; echo err >&2' > \(d)/both e>o; cat \(d)/both") == "out\nerr\n")
+    #expect(
+        try output("sh -c 'echo out; echo err >&2' > \(d)/both e>o; cat \(d)/both") == "out\nerr\n"
+    )
     // Only output into the file; errors go where output went before: the pipe.
-    #expect(try output("sh -c 'echo out; echo err >&2' e>o > \(d)/only | tr a-z A-Z; cat \(d)/only") == "ERR\nout\n")
-    #expect(try output("sh -c 'echo out; echo err >&2' o+e> \(d)/amp; cat \(d)/amp") == "out\nerr\n")
+    #expect(
+        try output("sh -c 'echo out; echo err >&2' e>o > \(d)/only | tr a-z A-Z; cat \(d)/only")
+            == "ERR\nout\n"
+    )
+    #expect(
+        try output("sh -c 'echo out; echo err >&2' o+e> \(d)/amp; cat \(d)/amp") == "out\nerr\n"
+    )
     #expect(try output("sh -c 'echo err >&2' e> \(d)/e; cat \(d)/e") == "err\n")
     #expect(
-        try output("sh -c 'echo err >&2' e> \(d)/e2; sh -c 'echo more >&2' e>> \(d)/e2; cat \(d)/e2") == "err\nmore\n"
+        try output(
+            "sh -c 'echo err >&2' e> \(d)/e2; sh -c 'echo more >&2' e>> \(d)/e2; cat \(d)/e2"
+        ) == "err\nmore\n"
     )
 }
 
@@ -107,14 +124,18 @@ private func scratch() throws -> String {
 
 @Test func swishFunctionsAndBuiltinsRedirect() throws {
     let d = try scratch()
-    let funcs = "func greet() { echo hi }; func double(@input _ n: Int) -> Int { n * 2 }; func boom() -> Int { 1 / 0 };"
+    let funcs =
+        "func greet() { echo hi }; func double(@input _ n: Int) -> Int { n * 2 }; func boom() -> Int { 1 / 0 };"
     #expect(try output(funcs + "greet > \(d)/g; cat \(d)/g") == "hi\n")
     #expect(try output(funcs + "seq 3 > \(d)/n; double < \(d)/n") == "2\n4\n6\n")
     #expect(try output(funcs + "seq 2 | double > \(d)/d; cat \(d)/d") == "2\n4\n")
     #expect(try output("pwd > \(d)/p; cat \(d)/p").hasPrefix("/"))
     // A table written to a file looks as it would on screen, without color.
     let header = try output("ls \(d)/*.txt > \(d)/l; head -1 \(d)/l")
-    #expect(header.hasPrefix("name ") && header.hasSuffix("type  size  modified\n") && !header.contains("\u{1B}"))
+    #expect(
+        header.hasPrefix("name ") && header.hasSuffix("type  size  modified\n")
+            && !header.contains("\u{1B}")
+    )
     // A function's errors follow its `e>`.
     let shell = Shell()
     #expect(try output(funcs + "boom e> \(d)/err", in: shell) == "")
@@ -124,6 +145,8 @@ private func scratch() throws -> String {
 
 @Test func onlyTheEndsOfASwishRunRedirect() {
     let shell = Shell()
-    _ = try? shell.capturing { shell.execute("func f(@input _ x: Int) -> Int { x }; seq 2 | f > /dev/null | f") }
+    _ = try? shell.capturing {
+        shell.execute("func f(@input _ x: Int) -> Int { x }; seq 2 | f > /dev/null | f")
+    }
     #expect(shell.lastStatus == 1)
 }

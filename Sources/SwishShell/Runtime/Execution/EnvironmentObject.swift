@@ -25,7 +25,8 @@ extension EnvironmentAccess {
     nonisolated(unsafe) static let process = EnvironmentAccess(
         get: { env($0) },
         all: {
-            ProcessInfo.processInfo.environment.sorted(by: { $0.key < $1.key }).map { (name: $0.key, value: $0.value) }
+            ProcessInfo.processInfo.environment.sorted(by: { $0.key < $1.key })
+                .map { (name: $0.key, value: $0.value) }
         },
         set: { name, value in
             if let value { setenv(name, value, 1) } else { unsetenv(name) }
@@ -64,7 +65,9 @@ final class EnvironmentObject: DynamicObject, @unchecked Sendable {
 
     func write(_ name: String, _ value: Value) throws {
         guard !name.isEmpty, !name.contains("=") else {
-            throw RuntimeError("an environment variable's name must be a String without '=', not \(name)")
+            throw RuntimeError(
+                "an environment variable's name must be a String without '=', not \(name)"
+            )
         }
         access.set(name, value.kind == .nothing ? nil : value.description)
     }

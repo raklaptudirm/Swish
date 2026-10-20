@@ -40,7 +40,8 @@ extension Shell {
         ShellBuiltin(
             name: "cd",
             usage: "cd [<dir> | -]",
-            summary: "Changes the working directory: to <dir>, back to the previous one (-), or home.",
+            summary:
+                "Changes the working directory: to <dir>, back to the previous one (-), or home.",
             action: .run { $0.cd($1) }
         ),
         ShellBuiltin(
@@ -232,7 +233,10 @@ extension Shell {
                 let width = ResourceLimit.all.map(\.name.count).max()!
                 for limit in ResourceLimit.all {
                     let name = limit.name.padding(toLength: width, withPad: " ", startingAt: 0)
-                    writeAll(stdoutFD, "\(name)  (-\(limit.flag))  \(shown(try limit.current(hard: hard)))\n")
+                    writeAll(
+                        stdoutFD,
+                        "\(name)  (-\(limit.flag))  \(shown(try limit.current(hard: hard)))\n"
+                    )
                 }
                 return 0
             }
@@ -283,7 +287,8 @@ extension Shell {
             return 2
         }
         let resolved =
-            path.hasPrefix("/") ? path : (scriptDirectory ?? FileManager.default.currentDirectoryPath) + "/" + path
+            path.hasPrefix("/")
+            ? path : (scriptDirectory ?? FileManager.default.currentDirectoryPath) + "/" + path
         return sourceFile(resolved, arguments: Array(args.dropFirst()))
     }
 
@@ -305,7 +310,8 @@ extension Shell {
         var status: Int32 = 0
         for name in args {
             if let methods = stageCallee(name, of: .named("Flow", [.any]), receiver: .flow)
-                ?? (stageNames.sequence.contains(name) ? stageCallee(name, of: .list(.any), receiver: .collected) : nil)
+                ?? (stageNames.sequence.contains(name)
+                    ? stageCallee(name, of: .list(.any), receiver: .collected) : nil)
             {
                 for method in methods.overloads {
                     writeAll(stdoutFD, "\(name): sequence method \(signature(of: method))\n")

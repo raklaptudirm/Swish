@@ -27,7 +27,9 @@ extension Shell {
 
     /// The bodies of the JSON functions the declarations name.
     var jsonBodies: [String: @Sendable ([String: Value]) throws -> Value] {
-        func view(_ read: @escaping @Sendable (Value) -> Value) -> @Sendable ([String: Value]) throws -> Value {
+        func view(
+            _ read: @escaping @Sendable (Value) -> Value
+        ) -> @Sendable ([String: Value]) throws -> Value {
             { arguments in read(arguments["value"] ?? .null) }
         }
         return [
@@ -39,7 +41,9 @@ extension Shell {
                     return value.field(name) ?? .null
                 case .dictionary: return value.entries?[key] ?? .null
                 case .list:
-                    guard let index = key.cast(to: Int.self), let items = value.cast(to: [Value].self) else {
+                    guard let index = key.cast(to: Int.self),
+                        let items = value.cast(to: [Value].self)
+                    else {
                         return .null
                     }
                     return items.indices.contains(index) ? items[index] : .null
@@ -49,7 +53,9 @@ extension Shell {
             "jsonString": view { $0.kind == .string ? $0 : .null },
             "jsonInt": view {
                 if $0.kind == .int { return $0 }
-                if let d = $0.cast(to: Double.self), d == d.rounded(), abs(d) < 9e15 { return Value(Int(d)) }
+                if let d = $0.cast(to: Double.self), d == d.rounded(), abs(d) < 9e15 {
+                    return Value(Int(d))
+                }
                 return .null
             },
             "jsonDouble": view {
@@ -62,7 +68,9 @@ extension Shell {
             "jsonObject": view {
                 switch $0.kind {
                 case .structure, .tuple:
-                    $0.fields.map { Value(ValueDictionary($0.entries.map { (Value($0.key), $0.value) })) } ?? .null
+                    $0.fields.map {
+                        Value(ValueDictionary($0.entries.map { (Value($0.key), $0.value) }))
+                    } ?? .null
                 case .dictionary: $0
                 default: .null
                 }

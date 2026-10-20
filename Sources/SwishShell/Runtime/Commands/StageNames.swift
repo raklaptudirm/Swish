@@ -1,13 +1,16 @@
 import Foundation
 import Swiit
 
-// Which names can be a stage after a `|`: a member of what flows in. Known from the types, without a value in hand, for
+// Which names can be a stage after a `|`: a member of what flows in. Known from the types, without
+// a value in hand, for
 // highlighting and completion, and for telling a method's name from a program's.
 
 struct StageNames {
-    /// Every member of Swift's own types a stage could call: one that reads its receiver without changing it.
+    /// Every member of Swift's own types a stage could call: one that reads its receiver without
+    /// changing it.
     var all: Set<String> = []
-    /// Those that are methods: a bare one, with nothing piped in, has nothing to work on (a property's name could be a
+    /// Those that are methods: a bare one, with nothing piped in, has nothing to work on (a
+    /// property's name could be a
     /// program's).
     var methods: Set<String> = []
     /// The methods of the items as they come, which return the items as they come.
@@ -16,7 +19,8 @@ struct StageNames {
     var sequence: Set<String> = []
 }
 
-/// The names are the same for every shell in the process, once its types are registered, and costly to find.
+/// The names are the same for every shell in the process, once its types are registered, and costly
+/// to find.
 private final class StageNameCache: @unchecked Sendable {
     static let shared = StageNameCache()
     private let lock = NSLock()
@@ -54,31 +58,39 @@ extension Shell {
         }
         // What every sequence has.
         interpreter.symbols(of: .list(.any)).forEach(add)
-        names.sequence = Set(interpreter.symbols(of: .named("Sequence")).filter { $0.function != nil }.map(\.name))
+        names.sequence = Set(
+            interpreter.symbols(of: .named("Sequence")).filter { $0.function != nil }.map(\.name)
+        )
         for symbol in interpreter.symbols(of: .named("Flow", [.any])) {
             if case .named("Flow", _)? = symbol.function?.returns { names.flow.insert(symbol.name) }
         }
         return names
     }
 
-    /// Whether some type has a member called `name` that a stage could call: a Swift type's, a struct's in scope, or a
+    /// Whether some type has a member called `name` that a stage could call: a Swift type's, a
+    /// struct's in scope, or a
     /// job's.
     func isMemberName(_ name: String) -> Bool {
-        if stageNames.all.contains(name) || Job.members.contains(where: { $0.name == name }) { return true }
+        if stageNames.all.contains(name) || Job.members.contains(where: { $0.name == name }) {
+            return true
+        }
         return interpreter.types()
             .contains { type in
                 !type.isBuiltin
-                    && interpreter.symbols(named: name, of: .named(type.name)).contains { $0.function != nil }
+                    && interpreter.symbols(named: name, of: .named(type.name))
+                        .contains { $0.function != nil }
             }
     }
 
-    /// Whether `name` is a method some type has that a stage could call, and that makes no sense without something
+    /// Whether `name` is a method some type has that a stage could call, and that makes no sense
+    /// without something
     /// piped in.
     func isStageMethod(_ name: String) -> Bool {
         stageNames.methods.contains(name)
     }
 
-    /// The members of a type named `name`, as a callee a stage can call on a receiver made as `receiver` says.
+    /// The members of a type named `name`, as a callee a stage can call on a receiver made as
+    /// `receiver` says.
     func stageCallee(
         _ name: String,
         of type: ValueType,
@@ -87,7 +99,9 @@ extension Shell {
     ) -> Callee? {
         let members = interpreter.symbols(named: name, of: type)
             .filter { symbol in
-                if let function = symbol.function { return includingMutating || !function.isMutating }
+                if let function = symbol.function {
+                    return includingMutating || !function.isMutating
+                }
                 if case .variable = symbol.declaration { return true }
                 return false
             }
@@ -95,7 +109,8 @@ extension Shell {
         return Callee(name: name, overloads: members, receiver: receiver)
     }
 
-    /// What `name` is after a `|`: a method of the items as they come (a `Flow`'s), or what every sequence has, or one
+    /// What `name` is after a `|`: a method of the items as they come (a `Flow`'s), or what every
+    /// sequence has, or one
     /// of any
     /// type's. In the order the stage looks.
     func stageMethods(named name: String) -> Callee? {
@@ -104,7 +119,8 @@ extension Shell {
             ?? stageFunctions(named: name)
     }
 
-    /// Every Swift type's stage members named `name`, as one callee: what's known of a stage while typing, before the
+    /// Every Swift type's stage members named `name`, as one callee: what's known of a stage while
+    /// typing, before the
     /// type of
     /// what's piped into it is.
     func stageFunctions(named name: String) -> Callee? {
@@ -112,6 +128,7 @@ extension Shell {
             .flatMap {
                 stageCallee(name, of: .named($0.name), receiver: .collected)?.overloads ?? []
             }
-        return candidates.isEmpty ? nil : Callee(name: name, overloads: candidates, receiver: .collected)
+        return candidates.isEmpty
+            ? nil : Callee(name: name, overloads: candidates, receiver: .collected)
     }
 }

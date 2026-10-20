@@ -21,7 +21,8 @@ extension Shell {
     }
 }
 
-/// Copies an `OutputCollector`'s output to a descriptor, as it arrives, on a thread of its own, until the output ends
+/// Copies an `OutputCollector`'s output to a descriptor, as it arrives, on a thread of its own,
+/// until the output ends
 /// or it is stopped.
 final class Relay: @unchecked Sendable {
     private let finished = DispatchSemaphore(value: 0)
@@ -37,7 +38,11 @@ final class Relay: @unchecked Sendable {
                     chunk.withUnsafeBufferPointer { buffer in
                         var written = 0
                         while written < buffer.count {
-                            let count = write(fd, buffer.baseAddress! + written, buffer.count - written)
+                            let count = write(
+                                fd,
+                                buffer.baseAddress! + written,
+                                buffer.count - written
+                            )
                             if count > 0 {
                                 written += count
                             } else if count == -1 && errno == EINTR {
@@ -105,8 +110,10 @@ final class OutputCollector: @unchecked Sendable {
         }
     }
 
-    /// What was collected from `offset` on, waiting up to `timeout` seconds for some; and whether the output has ended.
-    func bytes(from offset: Int, waitingUpTo timeout: TimeInterval) -> (bytes: [UInt8], ended: Bool) {
+    /// What was collected from `offset` on, waiting up to `timeout` seconds for some; and whether
+    /// the output has ended.
+    func bytes(from offset: Int, waitingUpTo timeout: TimeInterval) -> (bytes: [UInt8], ended: Bool)
+    {
         condition.withLock {
             let deadline = Date(timeIntervalSinceNow: timeout)
             while bytes.count <= offset && !ended {
@@ -116,7 +123,8 @@ final class OutputCollector: @unchecked Sendable {
         }
     }
 
-    /// Writes all of it to `fd`, what is collected already and what comes: a task awaited from the foreground shows its
+    /// Writes all of it to `fd`, what is collected already and what comes: a task awaited from the
+    /// foreground shows its
     /// output.
     func relay(to fd: Int32) -> Relay { Relay(self, to: fd) }
 

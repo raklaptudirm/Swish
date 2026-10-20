@@ -5,7 +5,8 @@ import Testing
 
 // The shell's waits (`$(…)`, commands, `await job`) are blocking calls, not
 // effects: a function that runs commands is an ordinary function, and only
-// Swift's own `async` needs `await` (https://github.com/raklaptudirm/Swiit/blob/main/Docs/async.md).
+// Swift's own `async` needs `await`
+// (https://github.com/raklaptudirm/Swiit/blob/main/Docs/async.md).
 
 private func effect(of name: String, after source: String) throws -> Bool? {
     let shell = Shell()
@@ -13,7 +14,10 @@ private func effect(of name: String, after source: String) throws -> Bool? {
     return shell.interpreter.symbols(named: name).first?.function?.isAsync
 }
 
-private func run(_ source: String, in shell: Shell = Shell()) throws -> (output: String, status: Int32) {
+private func run(
+    _ source: String,
+    in shell: Shell = Shell()
+) throws -> (output: String, status: Int32) {
     let output = try onLargeStack { try shell.capturing { shell.execute(source) } }
     return (output, shell.lastStatus)
 }
@@ -24,14 +28,18 @@ private func run(_ source: String, in shell: Shell = Shell()) throws -> (output:
     #expect(try effect(of: "f", after: "func f() async -> Int { 1 }") == true)
     // Called by name or through a value, with no `await`; passed to Swift as any closure is.
     #expect(try run("func build() { echo hi }; build(); let f = build; f()").output == "hi\nhi\n")
-    #expect(try run(#"print(["a", "b"].map { x in $(echo \(x)).text })"#).output == "[\"a\", \"b\"]\n")
+    #expect(
+        try run(#"print(["a", "b"].map { x in $(echo \(x)).text })"#).output == "[\"a\", \"b\"]\n"
+    )
     // `async $(…)` is what runs it in the background; `await` joins it.
     #expect(try run("let j = async $(echo hi); print((await j).text)").output == "hi\n")
 }
 
 @Test func becomingAsyncIsRefusedWhileCallersDontAwait() throws {
     let shell = Shell()
-    #expect(try run("func fetch() -> Int { 1 }; func use() -> Int { fetch() }", in: shell).status == 0)
+    #expect(
+        try run("func fetch() -> Int { 1 }; func use() -> Int { fetch() }", in: shell).status == 0
+    )
     #expect(try run("func fetch() async -> Int { 2 }", in: shell).status == 2)
     // Redeclaring its caller with an `await` too is fine.
     #expect(

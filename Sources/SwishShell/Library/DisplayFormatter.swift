@@ -88,7 +88,8 @@ final class DisplayFormatter {
 
     private func layout(for sample: [Fields]) -> [Column] {
         var keys: [String]
-        if useViews, let typeName = sample.first?.typeName, let view = registry.columns(for: typeName),
+        if useViews, let typeName = sample.first?.typeName,
+            let view = registry.columns(for: typeName),
             sample.allSatisfy({ $0.typeName == typeName })
         {
             keys = view.map(\.name)
@@ -103,13 +104,18 @@ final class DisplayFormatter {
         var widths = keys.map { key in
             min(
                 columnCap,
-                max(header ? key.count : 0, sample.map { DisplayFormatter.cell($0[key] ?? .null).count }.max() ?? 0)
+                max(
+                    header ? key.count : 0,
+                    sample.map { DisplayFormatter.cell($0[key] ?? .null).count }.max() ?? 0
+                )
             )
         }
         // Shrink the widest columns until the table fits, down to 6 each;
         // if that isn't enough, leave off columns from the right, keeping
         // room for the `…` that says so.
-        func tableWidth() -> Int { widths.reduce(0, +) + 2 * (widths.count - 1) + (droppedColumns ? 3 : 0) }
+        func tableWidth() -> Int {
+            widths.reduce(0, +) + 2 * (widths.count - 1) + (droppedColumns ? 3 : 0)
+        }
         while tableWidth() > maxWidth,
             let widest = widths.indices.max(by: { widths[$0] < widths[$1] }), widths[widest] > 6
         {
@@ -142,7 +148,12 @@ final class DisplayFormatter {
                     return pad(
                         DisplayFormatter.cell(value),
                         column,
-                        DisplayFormatter.style(of: value, key: column.key, in: record, registry: registry)
+                        DisplayFormatter.style(
+                            of: value,
+                            key: column.key,
+                            in: record,
+                            registry: registry
+                        )
                     )
                 }
                 .joined(separator: "  ")
@@ -153,7 +164,12 @@ final class DisplayFormatter {
     /// is styled by a field whose value is an enum that says how its cases
     /// are shown (a file's name by its type, a job's state by itself). Else
     /// it's plain.
-    static func style(of value: Value, key: String, in record: Fields, registry: DisplayRegistry) -> DisplayStyle? {
+    static func style(
+        of value: Value,
+        key: String,
+        in record: Fields,
+        registry: DisplayRegistry
+    ) -> DisplayStyle? {
         guard let typeName = record.typeName,
             let column = registry.columns(for: typeName)?.first(where: { $0.name == key })
         else { return nil }
@@ -191,8 +207,10 @@ final class DisplayFormatter {
     ) -> [String] {
         let width = record.keys.map(\.count).max() ?? 0
         return record.map { key, value in
-            key.styled(DisplayStyle.label, styled) + String(repeating: " ", count: width - key.count + 2)
-                + cell(value).styled(style(of: value, key: key, in: record, registry: registry), styled)
+            key.styled(DisplayStyle.label, styled)
+                + String(repeating: " ", count: width - key.count + 2)
+                + cell(value)
+                .styled(style(of: value, key: key, in: record, registry: registry), styled)
         }
     }
 

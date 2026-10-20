@@ -35,7 +35,10 @@ private func shellWithRecorder() -> (Shell, Recorder) {
         EnvironmentObject(
             access: EnvironmentAccess(
                 get: { recorder.variables[$0] },
-                all: { recorder.variables.sorted { $0.key < $1.key }.map { (name: $0.key, value: $0.value) } },
+                all: {
+                    recorder.variables.sorted { $0.key < $1.key }
+                        .map { (name: $0.key, value: $0.value) }
+                },
                 set: { recorder.variables[$0] = $1 }
             )
         )
@@ -56,7 +59,9 @@ private func shellWithRecorder() -> (Shell, Recorder) {
 @Test func theEnvironmentIsTheHosts() {
     let (shell, recorder) = shellWithRecorder()
     recorder.variables = ["GREETING": "hi"]
-    shell.enter(#"let a = env.GREETING; let b = env["MISSING"]; a; b; env.NEW = "x"; env.GREETING = nil; env.NEW"#)
+    shell.enter(
+        #"let a = env.GREETING; let b = env["MISSING"]; a; b; env.NEW = "x"; env.GREETING = nil; env.NEW"#
+    )
     // Reads, writes and removals went to the host's variables, and the process was left alone.
     #expect(recorder.written == ["out: \"hi\"\n", "out: \"x\"\n"])
     #expect(recorder.variables == ["NEW": "x"])
@@ -91,10 +96,13 @@ private func shellWithRecorder() -> (Shell, Recorder) {
 }
 
 /// Runs a file of these lines in a shell whose errors are recorded, and gives the errors.
-private func errorsOfScript(_ lines: [String]) throws -> (errors: String, status: Int32, path: String) {
+private func errorsOfScript(
+    _ lines: [String]
+) throws -> (errors: String, status: Int32, path: String) {
     let (shell, recorder) = shellWithRecorder()
     let path = NSTemporaryDirectory() + "diagnostic-\(UUID().uuidString).swish"
-    try (lines.joined(separator: "\n") + "\n").write(toFile: path, atomically: true, encoding: .utf8)
+    try (lines.joined(separator: "\n") + "\n")
+        .write(toFile: path, atomically: true, encoding: .utf8)
     defer { try? FileManager.default.removeItem(atPath: path) }
     let status = try onLargeStack { shell.runScript(at: path) }
     return (recorder.written.filter { $0.hasPrefix("err: ") }.joined(), status, path)
@@ -103,7 +111,11 @@ private func errorsOfScript(_ lines: [String]) throws -> (errors: String, status
 @Test func anErrorShowsTheLineItIsInWithThePlaceMarked() throws {
     // A run-time error: the statement it happened in, in the file, with the line and column.
     let runtime = try errorsOfScript(["print(1)", "let xs = [1, 2]", "print(xs[7])", "print(2)"])
-    #expect(runtime.errors.contains("error: index 7 is out of range for a list of 2\n --> \(runtime.path):3:1\n"))
+    #expect(
+        runtime.errors.contains(
+            "error: index 7 is out of range for a list of 2\n --> \(runtime.path):3:1\n"
+        )
+    )
     #expect(runtime.errors.contains("3 | print(xs[7])\n  | ^^^^^^^^^^^^"))
     // Inside a function: where it was called from too.
     let called = try errorsOfScript([
@@ -123,8 +135,10 @@ private func errorsOfScript(_ lines: [String]) throws -> (errors: String, status
 }
 
 @Test func whatFollowsACommandSubstitutionWithAClosureIsStillRead() throws {
-    // SwiftParser takes `$(echo hi | map { … })` for a Swift call that ends at the closure and leaves the rest of the
-    // line out of every statement; the front end blanks what is inside, so each statement is still found.
+    // SwiftParser takes `$(echo hi | map { … })` for a Swift call that ends at the closure and
+    // leaves the rest of the
+    // line out of every statement; the front end blanks what is inside, so each statement is still
+    // found.
     let shell = Shell()
     let cases: [(source: String, statements: Int)] = [
         (#"let a = $(echo hi | map { "x" }); touch /tmp/never; print(a)"#, 3),
@@ -147,17 +161,24 @@ private func errorsOfScript(_ lines: [String]) throws -> (errors: String, status
 }
 
 @Test func anUnknownOptionSaysWhichSideOfAShadowedCommandItIs() throws {
-    // `ps` is Swish's function, not the program: a flag it lacks says how to reach the program, and never runs it
+    // `ps` is Swish's function, not the program: a flag it lacks says how to reach the program, and
+    // never runs it
     // instead.
     let (shell, recorder) = shellWithRecorder()
     #expect(shell.execute("ps -ax") != 0)
     #expect(
-        recorder.written.contains { $0.contains("unknown option -a in -ax; this is Swish's ps: ^ps runs the program") }
+        recorder.written.contains {
+            $0.contains("unknown option -a in -ax; this is Swish's ps: ^ps runs the program")
+        }
     )
 }
 
 @Test func anInvalidEscapeSaysWhatToWriteInstead() throws {
     let (shell, recorder) = shellWithRecorder()
     #expect(shell.execute(#"print("a\|b")"#) != 0)
-    #expect(recorder.written.contains { $0.contains(#"write \\ for a backslash, or use single quotes"#) })
+    #expect(
+        recorder.written.contains {
+            $0.contains(#"write \\ for a backslash, or use single quotes"#)
+        }
+    )
 }

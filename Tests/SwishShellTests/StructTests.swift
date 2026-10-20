@@ -29,16 +29,24 @@ private let point = """
     """
 
 @Test func structsAreTypedRecords() throws {
-    #expect(try output(point + "Point(x: 3, y: 4); Point(x: 1)") == "Point(x: 3, y: 4)\nPoint(x: 1, y: 0)\n")
+    #expect(
+        try output(point + "Point(x: 3, y: 4); Point(x: 1)")
+            == "Point(x: 3, y: 4)\nPoint(x: 1, y: 0)\n"
+    )
     // Fields, computed properties and methods, with members in scope.
     #expect(
-        try output(point + "let p = Point(x: 3, y: 4); p.x; p.lengthSquared; p.describe()") == "3\n25\n\"(3, 4)\"\n"
+        try output(point + "let p = Point(x: 3, y: 4); p.x; p.lengthSquared; p.describe()")
+            == "3\n25\n\"(3, 4)\"\n"
     )
     // Records underneath: tables, filters, JSON; and values like Swift's.
-    #expect(try output(point + "[Point(x: 5), Point(x: 1)] | filter { $0.x > 1 }") == "x  y\n5  0\n")
+    #expect(
+        try output(point + "[Point(x: 5), Point(x: 1)] | filter { $0.x > 1 }") == "x  y\n5  0\n"
+    )
     #expect(try output(point + "Point(x: 1) | to json | tr -d ' \\n'") == #"{"x":1,"y":0}"#)
     #expect(
-        try output("struct P: Equatable { var x: Int; var y = 0 }; P(x: 1) == P(x: 1, y: 0); P(x: 1) != P(x: 2)")
+        try output(
+            "struct P: Equatable { var x: Int; var y = 0 }; P(x: 1) == P(x: 1, y: 0); P(x: 1) != P(x: 2)"
+        )
             == "true\ntrue\n"
     )
     #expect(try output(point + "Point(x: 1) == Point(x: 1, y: 0)") == "")  // `==` needs Equatable
@@ -53,7 +61,9 @@ private let point = """
     // Inside a struct held by another.
     let line = point + "struct Line { var start: Point; var end: Point }\n"
     #expect(
-        try output(line + "var l = Line(start: Point(x: 0), end: Point(x: 5)); l.end.move(by: 2); l.end")
+        try output(
+            line + "var l = Line(start: Point(x: 0), end: Point(x: 5)); l.end.move(by: 2); l.end"
+        )
             == "Point(x: 7, y: 2)\n"
     )
     #expect(
@@ -61,13 +71,17 @@ private let point = """
             == ""
     )
     // A method that isn't mutating can't change self.
-    #expect(status("struct C { var n: Int; func bump() { n += 1 } }; var c = C(n: 1); c.bump()") == 2)
+    #expect(
+        status("struct C { var n: Int; func bump() { n += 1 } }; var c = C(n: 1); c.bump()") == 2
+    )
 }
 
 @Test func assigningToPartsOfValues() throws {
     #expect(try output("var xs = [1, 2, 3]; xs[1] = 20; xs[0] += 5; xs") == "[6, 20, 3]\n")
     #expect(
-        try output(#"var r = ["a": 1]; r["b"] = 2; r["a"] = 3; var t = (a: 1, b: 2); t.a *= 3; r; t"#)
+        try output(
+            #"var r = ["a": 1]; r["b"] = 2; r["a"] = 3; var t = (a: 1, b: 2); t.a *= 3; r; t"#
+        )
             == #"["a": 3, "b": 2]"# + "\n" + "(a: 3, b: 2)\n"
     )
     #expect(try output("var n = 10; n -= 3; n /= 7; n") == "1\n")
@@ -93,7 +107,10 @@ private let point = """
         }
 
         """
-    #expect(try output(temp + "Temp(fahrenheit: 212); Temp(celsius: 20).fahrenheit") == "Temp(celsius: 100.0)\n68.0\n")
+    #expect(
+        try output(temp + "Temp(fahrenheit: 212); Temp(celsius: 20).fahrenheit")
+            == "Temp(celsius: 100.0)\n68.0\n"
+    )
     // An init replaces the memberwise one, and must set everything.
     #expect(status(temp + "Temp(celsius: 1, extra: 2)") == 2)
     #expect(status("struct S { var a: Int; init() {} }; S()") == 1)
@@ -104,9 +121,15 @@ private let point = """
 @Test func structsAsTypes() throws {
     #expect(try output(point + "func far(_ p: Point) -> Int { p.x }; far(Point(x: 7))") == "7\n")
     #expect(status(point + #"func far(_ p: Point) -> Int { p.x }; far(["x": 1])"#) == 2)
-    #expect(try output(point + "func origin() -> Point { Point(x: 0) }; origin()") == "Point(x: 0, y: 0)\n")
+    #expect(
+        try output(point + "func origin() -> Point { Point(x: 0) }; origin()")
+            == "Point(x: 0, y: 0)\n"
+    )
     // Defaults for `let`s with a value aren't in the memberwise init.
-    #expect(try output("struct V { let major = 1; var minor: Int }; V(minor: 2)") == "V(major: 1, minor: 2)\n")
+    #expect(
+        try output("struct V { let major = 1; var minor: Int }; V(minor: 2)")
+            == "V(major: 1, minor: 2)\n"
+    )
     #expect(try output("struct S { var a: Int }; S") == "struct S\n")
 }
 
@@ -131,10 +154,14 @@ private let counted = """
             == "Counter(n: 0)\n2\nCounter(n: 6)\n3\n"
     )
     #expect(
-        try output(counted + "Counter.zero.bumped(); let f = Counter.make; f(1)") == "Counter(n: 2)\nCounter(n: 2)\n"
+        try output(counted + "Counter.zero.bumped(); let f = Counter.make; f(1)")
+            == "Counter(n: 2)\nCounter(n: 2)\n"
     )
     // A static var is assigned through its type, a let isn't.
-    #expect(try output(counted + "Counter.made += 5; Counter.made = Counter.made * 2; Counter.made") == "10\n")
+    #expect(
+        try output(counted + "Counter.made += 5; Counter.made = Counter.made * 2; Counter.made")
+            == "10\n"
+    )
     #expect(status(counted + "Counter.step = 3") != 0)
     #expect(status(counted + #"Counter.made = "x""#) != 0)
     #expect(status(counted + "Counter.nope") != 0)
@@ -161,8 +188,13 @@ private let entry = """
 @Test func aStructSaysWhichColumnsATableStartsWith() throws {
     // The columns it lists, in its order; `table` shows every field, and the rest are still there.
     #expect(try output(entry + "es") == "size  name\n   1  a\n  22  b\n")
-    #expect(try output(entry + "es | table") == "name  size  path\na        1  /x\nb       22  /y\n")
-    #expect(try output(entry + "es | filter { $0.size > 1 } | select name path") == "name  path\nb     /y\n")
+    #expect(
+        try output(entry + "es | table") == "name  size  path\na        1  /x\nb       22  /y\n"
+    )
+    #expect(
+        try output(entry + "es | filter { $0.size > 1 } | select name path")
+            == "name  path\nb     /y\n"
+    )
     // Tabular is asked of a struct, and needs the static member that says it.
     #expect(status("struct P: Tabular { var x: Int }") != 0)
     #expect(status("struct P: Tabular { var x: Int; static let columns = 1 }") != 0)
@@ -174,9 +206,14 @@ private let entry = """
     #expect(try output("class Counter { var n = 1 }\nprint(Counter().n)") == "1\n")
     #expect(try output("actor Box { var n = 2 }\nprint(\"made\")") == "made\n")
     #expect(
-        try output("protocol Shape { var sides: Int { get }; func area() -> Double }\nprint(\"declared\")")
+        try output(
+            "protocol Shape { var sides: Int { get }; func area() -> Double }\nprint(\"declared\")"
+        )
             == "declared\n"
     )
     #expect(try output("typealias Count = Int\nlet n: Count = 3\nprint(n)") == "3\n")
-    #expect(try output("extension Int { var squared: Int { self * self } }\nprint((3).squared)") == "9\n")
+    #expect(
+        try output("extension Int { var squared: Int { self * self } }\nprint((3).squared)")
+            == "9\n"
+    )
 }

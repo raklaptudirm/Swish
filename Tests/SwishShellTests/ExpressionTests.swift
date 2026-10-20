@@ -13,7 +13,8 @@ private func checkError(_ source: String) -> String? {
     switch shell.prepare(source) {
     case .success: return nil
     case .failure(let diagnostic):
-        return diagnostic.kind == .syntax ? "syntax error: \(diagnostic.message)" : "error: \(diagnostic.message)"
+        return diagnostic.kind == .syntax
+            ? "syntax error: \(diagnostic.message)" : "error: \(diagnostic.message)"
     }
 }
 
@@ -61,13 +62,16 @@ private func checkError(_ source: String) -> String? {
     #expect(try output(#"let none: [String] = []; printf "%s|" a $none b; echo"#) == "a|b|\n")
     // Into a function's command line, filling its parameters in turn.
     #expect(
-        try output(#"func two(_ a: String, _ b: String) { echo "\(a)+\(b)" }; let ab = ["p", "q"]; two $ab"#) == "p+q\n"
+        try output(
+            #"func two(_ a: String, _ b: String) { echo "\(a)+\(b)" }; let ab = ["p", "q"]; two $ab"#
+        ) == "p+q\n"
     )
 }
 
 @Test func conditionalExpressions() throws {
     #expect(
-        try output(#"let n = 5; n > 3 ? "big" : "small"; let s = n > 9 ? "big" : "small"; s"#) == "\"big\"\n\"small\"\n"
+        try output(#"let n = 5; n > 3 ? "big" : "small"; let s = n > 9 ? "big" : "small"; s"#)
+            == "\"big\"\n\"small\"\n"
     )
     // Right-associative, and inside other expressions.
     #expect(
@@ -93,16 +97,25 @@ private func checkError(_ source: String) -> String? {
         ) == "\"odd, big\"\n-1\n\"negative\"\n\"positive\"\n"
     )
     // The type is both branches': nil makes an optional, a context gives Double or an enum.
-    #expect(try output("let m = 1 > 2 ? 1 : nil; m ?? 0; let d: Double = true ? 1 : 2.5; d") == "0\n1.0\n")
+    #expect(
+        try output("let m = 1 > 2 ? 1 : nil; m ?? 0; let d: Double = true ? 1 : 2.5; d")
+            == "0\n1.0\n"
+    )
     // A `?` without space around it is still optional chaining, try? and Int?.
-    #expect(try output("let o: Int? = 3; o?.description; let t = try? $(true); t != nil") == "\"3\"\ntrue\n")
+    #expect(
+        try output("let o: Int? = 3; o?.description; let t = try? $(true); t != nil")
+            == "\"3\"\ntrue\n"
+    )
 
     #expect(
         checkError(#"let z = true ? 1 : "a""#)
             == "error: an if expression's branches must have one type, not Int and String"
     )
     #expect(checkError("let z = 3 ? 1 : 2") == "error: a condition must be a Bool, not Int")
-    #expect(checkError("let z = if true { 1 }")?.hasPrefix("syntax error: an if expression needs an else") == true)
+    #expect(
+        checkError("let z = if true { 1 }")?
+            .hasPrefix("syntax error: an if expression needs an else") == true
+    )
     // A command is an expression too, whose value is how it ended.
     #expect(
         checkError("let z = if true { ls } else { 2 }")

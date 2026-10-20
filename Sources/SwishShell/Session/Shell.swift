@@ -40,7 +40,8 @@ public final class Shell: @unchecked Sendable {
     }
     /// Programs on PATH, for highlighting and completion.
     var executableCache: (path: String, time: Date, names: Set<String>)?
-    /// The command lines the last program read has (Front/), to check against the functions they name.
+    /// The command lines the last program read has (Front/), to check against the functions they
+    /// name.
     var commandUses: [Front.CommandUse] = []
 
     let terminal = STDIN_FILENO
@@ -53,7 +54,8 @@ public final class Shell: @unchecked Sendable {
     var warnedAboutJobs = false
     /// A `try!` failed in a script, which stops it.
     var scriptStopped = false
-    /// The source being run, so an error can show the line it is in (and the file it is from, if it is one).
+    /// The source being run, so an error can show the line it is in (and the file it is from, if it
+    /// is one).
     var diagnosticSource: (text: String, path: String?)?
     /// The signal that stopped the script, which it then ends by.
     var endingSignal: Int32?
@@ -67,8 +69,10 @@ public final class Shell: @unchecked Sendable {
     /// The names a stage could be, known from the types.
     lazy var stageNames: StageNames = computeStageNames()
 
-    /// The enums the program being checked declares, which a word for one can't be read against yet.
-    /// What the functions a script declared say of their parameters (`@input`, `@flag`), by `function.parameter`.
+    /// The enums the program being checked declares, which a word for one can't be read against
+    /// yet.
+    /// What the functions a script declared say of their parameters (`@input`, `@flag`), by
+    /// `function.parameter`.
     var scriptMarks: [String: CommandMarks.Marks] = [:]
 
     var staticEnums: [String: Interpreter.Declarations.Enumeration] = [:]
@@ -80,7 +84,8 @@ public final class Shell: @unchecked Sendable {
     }
 
     /// Tasks still running end with the shell: they're cancelled, and waited
-    /// for, as the scope that starts a task closes it (https://github.com/raklaptudirm/Swiit/blob/main/Docs/async.md).
+    /// for, as the scope that starts a task closes it
+    /// (https://github.com/raklaptudirm/Swiit/blob/main/Docs/async.md).
     deinit {
         finishTasks()
     }
@@ -112,7 +117,9 @@ public final class Shell: @unchecked Sendable {
         // Awaited from the foreground, a task is in the foreground while it
         // runs: it reads the input, and its programs get the terminal.
         interpreter.host.willAwait = { [weak self] awaited in
-            guard let self, task.inForeground, let state = awaited as? ShellTask, !state.inForeground else { return {} }
+            guard let self, task.inForeground, let state = awaited as? ShellTask,
+                !state.inForeground
+            else { return {} }
             state.inForeground = true
             return { state.inForeground = false }
         }
@@ -123,7 +130,10 @@ public final class Shell: @unchecked Sendable {
             if !state.inForeground {
                 let cancellation = interpreter.cancellation
                 guard
-                    Interpreter.whileWaiting(wake: { state.poke() }, { state.waitForForeground(unless: cancellation) })
+                    Interpreter.whileWaiting(
+                        wake: { state.poke() },
+                        { state.waitForForeground(unless: cancellation) }
+                    )
                 else {
                     return
                 }
@@ -148,14 +158,16 @@ extension Shell {
         run(source, atPrompt: true)
     }
 
-    /// Reports what went wrong the way a compiler does: the message, and the line it is in with the place marked.
+    /// Reports what went wrong the way a compiler does: the message, and the line it is in with the
+    /// place marked.
     func reportDiagnostic(_ diagnostic: Diagnostic) {
         let kind = diagnostic.kind
         guard let (text, path) = diagnosticSource, diagnostic.range != nil else {
             report((kind == .syntax ? "syntax error: " : "error: ") + diagnostic.message)
             return
         }
-        // Where errors go decides whether the source is shown in color, as the line editor shows it.
+        // Where errors go decides whether the source is shown in color, as the line editor shows
+        // it.
         var style: Diagnostic.Style?
         if interpreter.host.error.traits().styled {
             nonisolated(unsafe) let shell = self  // safe: called holding the interpreter lock, as the report is
@@ -192,20 +204,29 @@ extension Shell {
         var declared: Interpreter.Declarations
     }
 
-    /// Reads a program: its shell forms cured to Swift, which is checked whole, so a mistake anywhere runs none of it.
+    /// Reads a program: its shell forms cured to Swift, which is checked whole, so a mistake
+    /// anywhere runs none of it.
     func prepare(_ source: String) -> Result<Reading, Diagnostic> {
         let swift: String
         do {
             swift = try cured(source)
         } catch let failure as Failure {
-            return .failure(Diagnostic(kind: .syntax, message: failure.message, isIncomplete: failure.incomplete))
+            return .failure(
+                Diagnostic(
+                    kind: .syntax,
+                    message: failure.message,
+                    isIncomplete: failure.incomplete
+                )
+            )
         } catch {
             return .failure(Diagnostic(kind: .syntax, message: "\(error)"))
         }
         do {
             let declared = try interpreter.check(swift)
             if let message = firstCommandLineError(commandUses, declared: declared) {
-                return .failure(Diagnostic(kind: .type, message: message, status: 2, isReported: false))
+                return .failure(
+                    Diagnostic(kind: .type, message: message, status: 2, isReported: false)
+                )
             }
             return .success(Reading(swift: swift, declared: declared))
         } catch {
@@ -213,7 +234,8 @@ extension Shell {
         }
     }
 
-    /// Tells what was wrong with a program that mustn't run (with the line, in a file), and fails the input.
+    /// Tells what was wrong with a program that mustn't run (with the line, in a file), and fails
+    /// the input.
     func reportReadingFailure(_ diagnostic: Diagnostic, file: String? = nil) {
         if diagnostic.range != nil, diagnosticSource != nil {
             reportDiagnostic(diagnostic)
@@ -222,7 +244,8 @@ extension Shell {
         } else {
             let place =
                 file.map {
-                    "\($0):\(diagnostic.line.map(String.init) ?? "")" + (diagnostic.line == nil ? "" : ":") + " "
+                    "\($0):\(diagnostic.line.map(String.init) ?? "")"
+                        + (diagnostic.line == nil ? "" : ":") + " "
                 } ?? ""
             report("\(place)error: \(diagnostic.message)")
         }
@@ -231,14 +254,20 @@ extension Shell {
 
     /// A runtime error abandons the rest of the input, unlike a failing
     /// command, which only sets the status.
-    func runReportingErrors(_ reading: Reading, atPrompt: Bool = false, then finish: (() -> Void)? = nil) {
+    func runReportingErrors(
+        _ reading: Reading,
+        atPrompt: Bool = false,
+        then finish: (() -> Void)? = nil
+    ) {
         // Drop a stale ^C from while the prompt was up; a script's stops it.
         if interactive && interpreter.file == nil { _ = takeInterrupt() }
         stoppedBySignal = nil
         var handled = false
-        // Only the prompt shows values; running code prints what it prints. A script goes on with the next statement
+        // Only the prompt shows values; running code prints what it prints. A script goes on with
+        // the next statement
         // after an error in one.
-        let observer: ((Interpreter.Observation) throws -> Void)? = atPrompt ? { [unowned self] in present($0) } : nil
+        let observer: ((Interpreter.Observation) throws -> Void)? =
+            atPrompt ? { [unowned self] in present($0) } : nil
         let onError: ((Diagnostic) -> Bool)? =
             atPrompt
             ? nil
@@ -247,7 +276,12 @@ extension Shell {
                 return handleRunFailure(diagnostic)
             }
         do {
-            try interpreter.execute(reading.swift, observing: observer, onError: onError, then: finish)
+            try interpreter.execute(
+                reading.swift,
+                observing: observer,
+                onError: onError,
+                then: finish
+            )
         } catch {
             if !handled || error.kind != .runtime { _ = handleRunFailure(error) }
         }
@@ -305,7 +339,8 @@ final class ShellTask {
     /// Where errors are reported, and programs' standard error goes, while
     /// running something with `2>`.
     var stderrFD = STDERR_FILENO
-    /// Problems with single items reported so far (a file `ls` couldn't read), and how many the last statement had
+    /// Problems with single items reported so far (a file `ls` couldn't read), and how many the
+    /// last statement had
     /// seen.
     var itemErrors = 0
     var itemErrorsSeen = 0

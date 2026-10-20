@@ -4,9 +4,12 @@ import Testing
 
 @testable import SwishShell
 
-// Swish's text is Swift's with the shell's in it (`$(…)`, commands, `async`), and SwiftParser is what finds where each
-// begins and ends. A program built from pieces that each print one marker must print every marker, in order, whatever
-// surrounds each piece: a statement the boundary loses is a script that does half its work and says nothing.
+// Swish's text is Swift's with the shell's in it (`$(…)`, commands, `async`), and SwiftParser is
+// what finds where each
+// begins and ends. A program built from pieces that each print one marker must print every marker,
+// in order, whatever
+// surrounds each piece: a statement the boundary loses is a script that does half its work and says
+// nothing.
 
 struct Generator {
     var state: UInt64
@@ -88,7 +91,8 @@ private func run(_ source: String) throws -> String {
     return try onLargeStack { try shell.capturing { shell.execute(source) } }
 }
 
-/// How many programs to try: a hundred and fifty as part of the suite; `SWISH_FUZZ=3000` for a long run.
+/// How many programs to try: a hundred and fifty as part of the suite; `SWISH_FUZZ=3000` for a long
+/// run.
 private let programs = ProcessInfo.processInfo.environment["SWISH_FUZZ"].flatMap(Int.init) ?? 150
 
 @Test func everyPieceOfAProgramRunsWhateverIsAroundIt() throws {
@@ -99,37 +103,53 @@ private let programs = ProcessInfo.processInfo.environment["SWISH_FUZZ"].flatMap
         let choices = (0..<count).map { _ in generator.next(pieceCount) }
         let separator = separators[generator.next(separators.count)]
         let context = generator.next(8)
-        let body = choices.enumerated().map { piece($0.offset, $0.element) }.joined(separator: separator)
+        let body = choices.enumerated().map { piece($0.offset, $0.element) }
+            .joined(separator: separator)
         // One time in three, inside another block as well.
         let outer = generator.next(8)
         // One time in three, inside another block as well.
-        let source = generator.next(3) == 0 ? wrap(wrap(body, in: context), in: outer) : wrap(body, in: context)
+        let source =
+            generator.next(3) == 0
+            ? wrap(wrap(body, in: context), in: outer) : wrap(body, in: context)
         let expected = (0..<count).map { "m\($0)\n" }.joined()
         let actual = (try? run(source)) ?? "<threw>"
         if actual != expected { failures.append((source, expected, actual)) }
     }
     // The smallest failing programs say the most.
     for failure in failures.sorted(by: { $0.source.count < $1.source.count }).prefix(12) {
-        Issue.record("\n--- program\n\(failure.source)\n--- expected\n\(failure.expected)--- got\n\(failure.actual)")
+        Issue.record(
+            "\n--- program\n\(failure.source)\n--- expected\n\(failure.expected)--- got\n\(failure.actual)"
+        )
     }
     #expect(failures.isEmpty, "\(failures.count) of \(programs) programs lost something")
 }
 
 @Test func blocksNestedInTheBlocksOfALayerStillReadTheirFirstCommand() throws {
-    // A command-style call's closure, or a task's, holding another: each window of the source that is read ends
+    // A command-style call's closure, or a task's, holding another: each window of the source that
+    // is read ends
     // mid-block
-    // until the last, and the layer's "ran out of text" must win over what SwiftParser makes of the unfinished text.
-    #expect(try run("let t = async {\nlet u = async {\necho m0\necho m1\n}\nawait u\n}\nawait t\n") == "m0\nm1\n")
-    #expect(try run("func go(_ w: () -> Void) { w() }\ngo {\ngo {\necho m0\necho m1\n}\n}\n") == "m0\nm1\n")
+    // until the last, and the layer's "ran out of text" must win over what SwiftParser makes of the
+    // unfinished text.
     #expect(
-        try run("func go(_ w: () -> Void) { w() }\ngo {\nlet t = async {\necho m0\necho m1\n}\nawait t\n}\n")
+        try run("let t = async {\nlet u = async {\necho m0\necho m1\n}\nawait u\n}\nawait t\n")
+            == "m0\nm1\n"
+    )
+    #expect(
+        try run("func go(_ w: () -> Void) { w() }\ngo {\ngo {\necho m0\necho m1\n}\n}\n")
+            == "m0\nm1\n"
+    )
+    #expect(
+        try run(
+            "func go(_ w: () -> Void) { w() }\ngo {\nlet t = async {\necho m0\necho m1\n}\nawait t\n}\n"
+        )
             == "m0\nm1\n"
     )
     #expect(try run("let t = async {\n{\necho m0\necho m1\n}()\n}\nawait t\n") == "m0\nm1\n")
 }
 
 @Test func whatIsLeftOpenByTheWindowIsNotAnError() throws {
-    // Blank lines, comments and a pipe at the end of a line, inside a closure of a command-style call.
+    // Blank lines, comments and a pipe at the end of a line, inside a closure of a command-style
+    // call.
     let source =
         "func go(_ w: () -> Void) { w() }\ngo {\n\n  echo m0 |\n    map { $0 } // x\n\n  let g = $(\n    echo m1\n  ); print(g)\n\n}\n"
     #expect(try run(source) == "m0\nm1\n")

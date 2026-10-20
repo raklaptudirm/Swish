@@ -16,7 +16,9 @@ struct JSON {
         parser.skipWhitespace()
         let value = try parser.parseValue()
         parser.skipWhitespace()
-        guard parser.index == parser.bytes.count else { throw parser.error("unexpected text after the JSON value") }
+        guard parser.index == parser.bytes.count else {
+            throw parser.error("unexpected text after the JSON value")
+        }
         return value
     }
 
@@ -41,28 +43,37 @@ struct JSON {
             let fields = found.values.enumerated()
                 .map { index, item in
                     (
-                        name: (found.labels.indices.contains(index) ? found.labels[index] : nil) ?? String(index),
+                        name: (found.labels.indices.contains(index) ? found.labels[index] : nil)
+                            ?? String(index),
                         value: item
                     )
                 }
             return try text(
-                Value(struct: nil, fields: [(name: found.name, value: Value(struct: nil, fields: fields))]),
+                Value(
+                    struct: nil,
+                    fields: [(name: found.name, value: Value(struct: nil, fields: fields))]
+                ),
                 indent: indent
             )
         case .list:
             let items = value.cast(to: [Value].self) ?? []
             guard !items.isEmpty else { return "[]" }
-            return "[\n" + (try items.map { inner + (try text($0, indent: inner)) }).joined(separator: ",\n")
+            return "[\n"
+                + (try items.map { inner + (try text($0, indent: inner)) }).joined(separator: ",\n")
                 + "\n\(indent)]"
         case .structure, .tuple:
             guard let record = value.fields, record.count > 0 else { return "{}" }
-            let fields = try record.map { inner + quoted($0.key) + ": " + (try text($0.value, indent: inner)) }
+            let fields = try record.map {
+                inner + quoted($0.key) + ": " + (try text($0.value, indent: inner))
+            }
             return "{\n" + fields.joined(separator: ",\n") + "\n\(indent)}"
         case .dictionary:
             guard let dictionary = value.entries, dictionary.count > 0 else { return "{}" }
             let fields = try dictionary.sortedForDisplay.map { key, value in
                 guard let name = key.cast(to: String.self) else {
-                    throw LibraryError("to json: an object's keys are Strings, and \(key.debugDescription) isn't one")
+                    throw LibraryError(
+                        "to json: an object's keys are Strings, and \(key.debugDescription) isn't one"
+                    )
                 }
                 return inner + quoted(name) + ": " + (try text(value, indent: inner))
             }
@@ -71,19 +82,27 @@ struct JSON {
             throw LibraryError("to json: a function has no JSON form")
         case .object:
             if let fields = value.fields {
-                return try text(Value(struct: nil, fields: fields.entries.map { ($0.key, $0.value) }), indent: indent)
+                return try text(
+                    Value(struct: nil, fields: fields.entries.map { ($0.key, $0.value) }),
+                    indent: indent
+                )
             }
             // What stands for text is its text; else a Swift value is as Swift
             // encodes it (a file size is its bytes).
             if let held = try? value.unboxed(Any.self) {
                 if let text = (held as? any StandsForText)?.text { return quoted(text) }
                 // What a text literal can be, like a FilePath.
-                if held is any ExpressibleByUnicodeScalarLiteral { return quoted(value.description) }
+                if held is any ExpressibleByUnicodeScalarLiteral {
+                    return quoted(value.description)
+                }
                 if let encodable = held as? any Encodable {
                     // A date as ISO 8601 text, not Swift's number of seconds.
                     let encoder = JSONEncoder()
                     encoder.dateEncodingStrategy = .iso8601
-                    return String(decoding: try encoder.encode(AnyEncodable(value: encodable)), as: UTF8.self)
+                    return String(
+                        decoding: try encoder.encode(AnyEncodable(value: encodable)),
+                        as: UTF8.self
+                    )
                 }
             }
             throw LibraryError("to json: a \(value.typeName) has no JSON form")
@@ -157,7 +176,9 @@ private struct JSONParser {
         }
         while true {
             skipWhitespace()
-            guard index < bytes.count, bytes[index] == UInt8(ascii: "\"") else { throw error("expected a key") }
+            guard index < bytes.count, bytes[index] == UInt8(ascii: "\"") else {
+                throw error("expected a key")
+            }
             let key = try parseString()
             skipWhitespace()
             try expect(":")
@@ -228,7 +249,9 @@ private struct JSONParser {
                 case UInt8(ascii: "u"):
                     var code = try parseHex4()
                     // A surrogate pair encodes one scalar beyond the BMP.
-                    if (0xD800..<0xDC00).contains(code), bytes[index...].starts(with: Array("\\u".utf8)) {
+                    if (0xD800..<0xDC00).contains(code),
+                        bytes[index...].starts(with: Array("\\u".utf8))
+                    {
                         index += 2
                         let low = try parseHex4()
                         code = 0x10000 + ((code - 0xD800) << 10) + (low - 0xDC00)

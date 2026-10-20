@@ -11,7 +11,8 @@ enum XDG {
 
     /// `$XDG_CONFIG_DIRS`, or `/etc/xdg`: where to look after configHome.
     static func configDirectories(_ environment: [String: String]) -> [String] {
-        let listed = (environment["XDG_CONFIG_DIRS"] ?? "").split(separator: ":").compactMap { absolute(String($0)) }
+        let listed = (environment["XDG_CONFIG_DIRS"] ?? "").split(separator: ":")
+            .compactMap { absolute(String($0)) }
         return listed.isEmpty ? ["/etc/xdg"] : listed
     }
 

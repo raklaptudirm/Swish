@@ -9,7 +9,11 @@ import Swiit
 extension DisplayFormatter {
     /// Writes with `write`, fitting what the stream is: a terminal's width
     /// and a styled header, or every character for a file.
-    convenience init(traits: OutputSink.Traits, registry: DisplayRegistry, write: @escaping (String) -> Bool) {
+    convenience init(
+        traits: OutputSink.Traits,
+        registry: DisplayRegistry,
+        write: @escaping (String) -> Bool
+    ) {
         self.init(
             maxWidth: traits.width ?? .max,
             styled: traits.styled,
@@ -21,7 +25,8 @@ extension DisplayFormatter {
 }
 
 extension Shell {
-    /// How types show in a table: the shell's own (`Job`, `Help`, `FileEntry`), and the columns of the structs declared
+    /// How types show in a table: the shell's own (`Job`, `Help`, `FileEntry`), and the columns of
+    /// the structs declared
     /// in
     /// Swish that say so (`Tabular`), found when a table of one is laid out.
     var displayRegistry: DisplayRegistry { tableRegistry() }
@@ -44,7 +49,8 @@ extension Shell {
 
     /// The `columns` a struct of the program's declares by being `Tabular`.
     private func declaredColumns(of typeName: String) -> [DisplayColumn]? {
-        guard let type = interpreter[typeName], let list = try? interpreter.value(of: "columns", in: type),
+        guard let type = interpreter[typeName],
+            let list = try? interpreter.value(of: "columns", in: type),
             let items = list.cast(to: [Value].self)
         else { return nil }
         let columns = items.compactMap { try? $0.unboxed(DisplayColumn.self) }
@@ -66,13 +72,20 @@ extension Shell {
         case .object where value.displayShape.isEmpty && !debug:
             return
         case .structure where !debug, .tuple where !debug:
-            for line in DisplayFormatter.keyValueLines(fields!, styled: traits.styled, registry: displayRegistry) {
+            for line in DisplayFormatter.keyValueLines(
+                fields!,
+                styled: traits.styled,
+                registry: displayRegistry
+            ) {
                 output.write(line + "\n")
             }
         // A command's list reads as a pipeline's output would: records as a
         // table, anything else an item per line. A bare list is a value.
-        case .list where !debug || (value.cast(to: [Value].self) ?? []).contains(where: { $0.fields != nil }):
-            let formatter = DisplayFormatter(traits: traits, registry: displayRegistry) { output.write($0) }
+        case .list
+        where !debug || (value.cast(to: [Value].self) ?? []).contains(where: { $0.fields != nil }):
+            let formatter = DisplayFormatter(traits: traits, registry: displayRegistry) {
+                output.write($0)
+            }
             for item in value.cast(to: [Value].self) ?? [] { formatter.add(item) }
             formatter.finish()
         case _ where debug:

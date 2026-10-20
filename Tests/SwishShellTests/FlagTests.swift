@@ -26,13 +26,20 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 
 @Test func optionalParametersAreOptionalFlags() throws {
     #expect(try output(#"func f(n: Int?) { echo "\(n ?? 0)" }; f --n 3; f"#) == "3\n0\n")
-    #expect(try output(#"func f(_ p: FilePath?) { echo "\(p == nil)" }; f; f /a"#) == "true\nfalse\n")
+    #expect(
+        try output(#"func f(_ p: FilePath?) { echo "\(p == nil)" }; f; f /a"#) == "true\nfalse\n"
+    )
 }
 
 @Test func collectionsTakeSeveralWords() throws {
     // Labeled: a repeated flag. Unlabeled: the remaining words.
-    #expect(try output(#"func f(xs: [Int]) { echo "\(xs)" }; f --xs 1 --xs 2; f"#) == "[1, 2]\n[]\n")
-    #expect(try output(#"func f(_ n: Int, _ rest: [String]) { echo "\(n) \(rest)" }; f 1 a b"#) == "1 [\"a\", \"b\"]\n")
+    #expect(
+        try output(#"func f(xs: [Int]) { echo "\(xs)" }; f --xs 1 --xs 2; f"#) == "[1, 2]\n[]\n"
+    )
+    #expect(
+        try output(#"func f(_ n: Int, _ rest: [String]) { echo "\(n) \(rest)" }; f 1 a b"#)
+            == "1 [\"a\", \"b\"]\n"
+    )
     // Any collection an array literal can be, made from the words: a Set too.
     #expect(try output(#"func f(s: Set<Int>) { echo "\(s.count)" }; f --s 1 --s 1 --s 2"#) == "2\n")
     #expect(try output(#"func f(_ s: Set<String>) { echo "\(s.count)" }; f a a b"#) == "2\n")
@@ -43,7 +50,10 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
         try output(#"func f(v: Bool) { echo "\(v)" }; f --v; f --v false; f --v true; f"#)
             == "true\nfalse\ntrue\nfalse\n"
     )
-    #expect(try output(#"func f(v: Bool = true) { echo "\(v)" }; f --no-v; f --v=false; f"#) == "false\nfalse\ntrue\n")
+    #expect(
+        try output(#"func f(v: Bool = true) { echo "\(v)" }; f --no-v; f --v=false; f"#)
+            == "false\nfalse\ntrue\n"
+    )
 }
 
 @Test func aLiteralPrefersItsOwnType() throws {

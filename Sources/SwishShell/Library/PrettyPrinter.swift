@@ -53,9 +53,11 @@ struct PrettyPrinter: Sendable {
                     close: "]"
                 )
         case .enumeration:
-            return value.enumCase.map { node(for: $0) } ?? .segments([(value.debugDescription, nil)])
+            return value.enumCase.map { node(for: $0) }
+                ?? .segments([(value.debugDescription, nil)])
         case .object:
-            // A command's output is laid out as the struct it is; any other Swift value as its type says it looks, in a
+            // A command's output is laid out as the struct it is; any other Swift value as its type
+            // says it looks, in a
             // style.
             if let output = value.commandOutput { return node(for: output.displayValue) }
             if let role = value.displayShape.role { return .segments([(value.description, role)]) }
@@ -75,7 +77,8 @@ struct PrettyPrinter: Sendable {
 
     /// A struct's value, `Point(x: 1)`, or a tuple, `(name: "x", 2)`.
     private func node(for record: Fields) -> Node {
-        let open: [Segment] = record.typeName.map { [($0, DisplayStyle.type), ("(", nil)] } ?? [("(", nil)]
+        let open: [Segment] =
+            record.typeName.map { [($0, DisplayStyle.type), ("(", nil)] } ?? [("(", nil)]
         return .group(
             open: open,
             items: record.map { field in
@@ -90,12 +93,17 @@ struct PrettyPrinter: Sendable {
         return (key.debugDescription, DisplayStyle.constant)
     }
 
-    private func node(for value: (type: String, name: String, values: [Value], labels: [String?])) -> Node {
+    private func node(
+        for value: (type: String, name: String, values: [Value], labels: [String?])
+    ) -> Node {
         let head: [Segment] = [(value.type, DisplayStyle.type), ("." + value.name, nil)]
         guard !value.values.isEmpty else { return .segments(head) }
         let items = value.values.enumerated()
             .map { index, item in
-                (index < value.labels.count ? value.labels[index].map(label) ?? [] : [], node(for: item))
+                (
+                    index < value.labels.count ? value.labels[index].map(label) ?? [] : [],
+                    node(for: item)
+                )
             }
         return .group(open: head + [("(", nil)], items: items, close: ")")
     }
@@ -110,7 +118,9 @@ struct PrettyPrinter: Sendable {
     /// `trailing` columns (a comma) to follow it.
     private func render(_ node: Node, indent: Int, used: Int, trailing: Int) -> String {
         let line = flat(node)
-        if !mustBreak(node, indent: indent), used + line.plain.count + trailing <= width { return line.styled }
+        if !mustBreak(node, indent: indent), used + line.plain.count + trailing <= width {
+            return line.styled
+        }
         switch node {
         case .segments:
             return line.styled  // Can't be broken.
@@ -120,7 +130,10 @@ struct PrettyPrinter: Sendable {
             let body = text.split(separator: "\n", omittingEmptySubsequences: false)
                 .map { row in
                     row.isEmpty
-                        ? "" : inner + PrettyPrinter.escapedForBlock(String(row)).styled(DisplayStyle.string, styled)
+                        ? ""
+                        : inner
+                            + PrettyPrinter.escapedForBlock(String(row))
+                            .styled(DisplayStyle.string, styled)
                 }
             let quotes = "\"\"\"".styled(DisplayStyle.string, styled)
             return quotes + "\n" + body.joined(separator: "\n") + "\n" + inner + quotes

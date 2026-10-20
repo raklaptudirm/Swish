@@ -18,7 +18,9 @@ struct Output: Sendable, Hashable, RandomAccessCollection, StandsForText {
         self.text = text
         self.code = code
         self.signal = signal
-        lines = text.isEmpty ? [] : text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        lines =
+            text.isEmpty
+            ? [] : text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
     }
 
     public var succeeded: Bool {
@@ -53,7 +55,8 @@ struct Status: Sendable, Hashable, Encodable {
     }
 }
 
-extension Output: CustomStringConvertible, CustomDebugStringConvertible, SwiitDisplayed, Presentable {
+extension Output: CustomStringConvertible, CustomDebugStringConvertible, SwiitDisplayed, Presentable
+{
     var description: String { text }
     var swiitDescription: String { text }
     /// Shown as its text and status, and nothing at all if it's empty.
@@ -98,7 +101,9 @@ extension Value {
 extension Output: ValueConvertible {
     static var valueType: ValueType { .named("Output") }
     init(_ swiitValue: Value) throws {
-        guard let value = swiitValue.commandOutput else { throw LibraryError("expected an Output, not \(swiitValue)") }
+        guard let value = swiitValue.commandOutput else {
+            throw LibraryError("expected an Output, not \(swiitValue)")
+        }
         self = value
     }
     var value: Value { .output(self) }

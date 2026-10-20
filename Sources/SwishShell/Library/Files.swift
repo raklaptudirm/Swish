@@ -45,7 +45,9 @@ struct FileEntry: Encodable, Equatable, Hashable {
 }
 
 extension FileEntry: Tabular {
-    static let columns: [DisplayColumn] = [DisplayColumn("name", styledBy: "type"), "type", "size", "modified"]
+    static let columns: [DisplayColumn] = [
+        DisplayColumn("name", styledBy: "type"), "type", "size", "modified",
+    ]
 }
 
 /// Lists directory contents.
@@ -86,12 +88,19 @@ struct PathError: Error, CustomStringConvertible {
     var description: String { "\(path): \(reason)" }
 }
 
-private func entry(named name: String, at path: String, into entries: inout [FileEntry], errors: inout [any Error]) {
+private func entry(
+    named name: String,
+    at path: String,
+    into entries: inout [FileEntry],
+    errors: inout [any Error]
+) {
     let status: FileStatus
     do {
         status = try FileStatus(path)
     } catch {
-        errors.append(PathError(path: path, reason: String(cString: strerror(error.rawValue)).lowercased()))
+        errors.append(
+            PathError(path: path, reason: String(cString: strerror(error.rawValue)).lowercased())
+        )
         return
     }
     let (type, letter): (FileType, String) =
@@ -100,7 +109,8 @@ private func entry(named name: String, at path: String, into entries: inout [Fil
         : status.isSymlink
             ? (.symlink, "l")
             : status.isFile ? (.file, "-") : (.other, "?")
-    let target = status.isSymlink ? try? FileManager.default.destinationOfSymbolicLink(atPath: path) : nil
+    let target =
+        status.isSymlink ? try? FileManager.default.destinationOfSymbolicLink(atPath: path) : nil
     entries.append(
         FileEntry(
             name: name,
@@ -153,8 +163,11 @@ struct FileStatus {
 
     /// `rwxr-xr-x`.
     var permissions: String {
-        let bits = [S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IWGRP, S_IXGRP, S_IROTH, S_IWOTH, S_IXOTH]
-        return bits.enumerated().map { index, bit in mode & mode_t(bit) != 0 ? ["r", "w", "x"][index % 3] : "-" }
+        let bits = [
+            S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IWGRP, S_IXGRP, S_IROTH, S_IWOTH, S_IXOTH,
+        ]
+        return bits.enumerated()
+            .map { index, bit in mode & mode_t(bit) != 0 ? ["r", "w", "x"][index % 3] : "-" }
             .joined()
     }
 

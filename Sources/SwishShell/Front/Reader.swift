@@ -1,12 +1,16 @@
 import Foundation
 
-// Spike: the shell's grammar, read by the shell. A `Reader` stands on the text of one source at the start of a form of
+// Spike: the shell's grammar, read by the shell. A `Reader` stands on the text of one source at the
+// start of a form of
 // the
-// shell's (a command, a pipeline, `$(…)`, `$name`, `async …`) and reads it as characters; where the form holds Swift
+// shell's (a command, a pipeline, `$(…)`, `$name`, `async …`) and reads it as characters; where the
+// form holds Swift
 // (an
-// argument, `\(…)`, a closure, the program in `$(…)`) it finds the extent with the lexical scanner and has the front
+// argument, `\(…)`, a closure, the program in `$(…)`) it finds the extent with the lexical scanner
+// and has the front
 // end cure
-// that text in turn. What it gives back is Swift: the form as the calls it means, which a plain Swift front end reads.
+// that text in turn. What it gives back is Swift: the form as the calls it means, which a plain
+// Swift front end reads.
 
 struct Failure: Error, CustomStringConvertible {
     var message: String
@@ -129,11 +133,13 @@ struct Reader {
     }
 
     static let statementKeywords: Set<String> = [
-        "let", "var", "func", "return", "break", "continue", "do", "catch", "enum", "fallthrough", "import", "struct",
+        "let", "var", "func", "return", "break", "continue", "do", "catch", "enum", "fallthrough",
+        "import", "struct",
         "defer", "guard", "throw", "repeat",
         "class", "actor", "protocol", "extension", "typealias",
     ]
-    /// The keywords a line can begin with: a statement's, a unit's (`if make { … }`), or an expression's (`await job`).
+    /// The keywords a line can begin with: a statement's, a unit's (`if make { … }`), or an
+    /// expression's (`await job`).
     /// Completion
     /// offers them where a command could go.
     static let lineStarts = statementKeywords.subtracting(["catch"])
@@ -151,7 +157,8 @@ struct Reader {
         if start < end { spans.append(HighlightSpan(range: start..<end, kind: kind)) }
     }
 
-    /// The Swift in a slice of this text, cured; its highlighting joins this reader's. `prefix`: characters put before
+    /// The Swift in a slice of this text, cured; its highlighting joins this reader's. `prefix`:
+    /// characters put before
     /// the slice
     /// that are not in the text.
     mutating func cureSlice(
@@ -168,7 +175,8 @@ struct Reader {
         for span in cured.spans where span.range.lowerBound >= prefix {
             spans.append(
                 HighlightSpan(
-                    range: (span.range.lowerBound - prefix + start)..<(span.range.upperBound - prefix + start),
+                    range: (span.range.lowerBound - prefix + start)..<(span.range.upperBound
+                        - prefix + start),
                     kind: span.kind
                 )
             )
@@ -234,7 +242,8 @@ struct Reader {
 
     // MARK: Chains
 
-    /// Commands joined by `&&` and `||`, with Swift between them or not; nil (having looked ahead) when there is no
+    /// Commands joined by `&&` and `||`, with Swift between them or not; nil (having looked ahead)
+    /// when there is no
     /// command in
     /// it, which is Swift's.
     mutating func parseCommandChain(condition: Bool) throws -> Chain? {
@@ -326,7 +335,8 @@ struct Reader {
         return probe.failure == nil ? probe : nil
     }
 
-    /// `try cmd …` or `try! cmd …`, or nil (having looked ahead) when what follows the `try` is an expression.
+    /// `try cmd …` or `try! cmd …`, or nil (having looked ahead) when what follows the `try` is an
+    /// expression.
     mutating func parseThrowingCommand() throws -> PipelineOut? {
         let before = self
         guard let kind = parseTry() else { return nil }
@@ -355,7 +365,8 @@ struct Reader {
         return .plain
     }
 
-    /// Whether the unit ahead is a command rather than an expression (see the grammar's rules in `commandAhead` of the
+    /// Whether the unit ahead is a command rather than an expression (see the grammar's rules in
+    /// `commandAhead` of the
     /// interpreter's old plug-in): an expression if one parses there and the unit ends after it.
     mutating func commandAhead(boolIsCommand: Bool = false) -> UnitStart {
         let saved = self
@@ -365,7 +376,8 @@ struct Reader {
         if c == "^" || (c == "$" && peek(1).map(Lex.isIdentifierStart) ?? false) {
             return .command(notAnExpression: nil)
         }
-        // `'raw'` is a string, which Swift has no spelling of: an expression if it is the whole unit.
+        // `'raw'` is a string, which Swift has no spelling of: an expression if it is the whole
+        // unit.
         if c == "'", let close = chars[(pos + 1)...].firstIndex(of: "'") {
             pos = close + 1
             skipSpaces()
@@ -373,7 +385,9 @@ struct Reader {
         }
         if let word = identifier() {
             let after = peek(word.count)
-            if boolIsCommand && (word == "true" || word == "false") && after.map(isWordBoundary) ?? true {
+            if boolIsCommand && (word == "true" || word == "false")
+                && after.map(isWordBoundary) ?? true
+            {
                 return .command(notAnExpression: nil)
             }
             if after == "(" { return .expression }
@@ -409,11 +423,14 @@ struct Reader {
 
     // MARK: Pipelines and commands
 
-    mutating func parsePipeline(from start: Int? = nil, input: String? = nil) throws -> PipelineOut {
+    mutating func parsePipeline(from start: Int? = nil, input: String? = nil) throws -> PipelineOut
+    {
         let start = start ?? pos
         var commands = [try parseCommand()]
-        // A method with nothing piped in, and no function or program by that name, has nothing to work on.
-        if input == nil, !commands[0].external, case .text(let pieces)? = commands[0].words.first, pieces.count == 1,
+        // A method with nothing piped in, and no function or program by that name, has nothing to
+        // work on.
+        if input == nil, !commands[0].external, case .text(let pieces)? = commands[0].words.first,
+            pieces.count == 1,
             case .literal(let name) = pieces[0],
             names.role(of: name, at: here) != .function, front.isMethodWithoutInput(name)
         {
@@ -434,7 +451,8 @@ struct Reader {
         front.record(.pipeline, source)
         for (index, command) in commands.enumerated()
         where !command.external && command.call == nil && command.redirects.isEmpty {
-            guard case .text(let first)? = command.words.first, first.count == 1, case .literal(let name) = first[0]
+            guard case .text(let first)? = command.words.first, first.count == 1,
+                case .literal(let name) = first[0]
             else { continue }
             var words: [String] = []
             for word in command.words.dropFirst() {
@@ -445,7 +463,12 @@ struct Reader {
             }
             if command.words.count - 1 == words.count {
                 front.record(
-                    use: Front.CommandUse(name: name, words: words, piped: index > 0 || input != nil, source: source)
+                    use: Front.CommandUse(
+                        name: name,
+                        words: words,
+                        piped: index > 0 || input != nil,
+                        source: source
+                    )
                 )
             }
         }
@@ -475,7 +498,8 @@ struct Reader {
                 command.words.append(.closure(try parseClosure(arityOf: command)))
                 continue
             }
-            // `sorted(by: "size")`: a name touching its arguments is a call; a trailing closure may follow.
+            // `sorted(by: "size")`: a name touching its arguments is a call; a trailing closure may
+            // follow.
             if c == "(", command.words.count == 1, command.call == nil, !external, pos > 0,
                 Lex.isIdentifierPart(chars[pos - 1])
             {
@@ -489,16 +513,22 @@ struct Reader {
                 continue
             }
             if c == "(" {
-                throw Failure("unexpected '(' in a command; quote it, or use \\(…) to interpolate an expression")
+                throw Failure(
+                    "unexpected '(' in a command; quote it, or use \\(…) to interpolate an expression"
+                )
             }
             if command.call != nil {
-                throw Failure("a command written as a call takes all its arguments in the parentheses")
+                throw Failure(
+                    "a command written as a call takes all its arguments in the parentheses"
+                )
             }
             if c == "&" {
                 throw Failure("'&' isn't Swish; background jobs will be `async command`")
             }
             // `NAME=value` before the command sets it for the command.
-            if command.words.isEmpty, let name = identifier(), peek(name.count) == "=", peek(name.count + 1) != "=" {
+            if command.words.isEmpty, let name = identifier(), peek(name.count) == "=",
+                peek(name.count + 1) != "="
+            {
                 mark(.variable, from: pos, to: pos + name.count)
                 pos += name.count + 1
                 let value = peek().map(isWordBoundary) ?? true ? [.literal("")] : try parseWord()
@@ -510,7 +540,8 @@ struct Reader {
             if command.words.isEmpty {
                 mark(
                     .command,
-                    from: command.redirects.isEmpty && command.environment.isEmpty ? caretStart ?? wordStart : wordStart
+                    from: command.redirects.isEmpty && command.environment.isEmpty
+                        ? caretStart ?? wordStart : wordStart
                 )
             } else if chars[wordStart] == "-" {
                 mark(.flag, from: wordStart)
@@ -523,7 +554,9 @@ struct Reader {
                     "\(assignment.name)=… sets a variable for one command; use env.\(assignment.name) = … to set it for the session"
                 )
             }
-            if let c = peek() { throw Failure(c == "\n" ? "unexpected newline" : "unexpected '\(c)'") }
+            if let c = peek() {
+                throw Failure(c == "\n" ? "unexpected newline" : "unexpected '\(c)'")
+            }
             throw Failure.incomplete("expected a command")
         }
         return command
@@ -534,7 +567,8 @@ struct Reader {
         case "|", ";", "\n", ")", "}": true
         case "&": peek(1) == "&"
         case "{": peek(1) != "}" && conditionDepth > 0
-        case "e": guardCondition && identifier() == "else" && (pos == 0 || isWordBoundary(chars[pos - 1]))
+        case "e":
+            guardCondition && identifier() == "else" && (pos == 0 || isWordBoundary(chars[pos - 1]))
         default: false
         }
     }
@@ -577,7 +611,10 @@ struct Reader {
         let file = try parseWord()
         let mode: ShellRedirect.Mode = fds == [0] ? .read : append ? .append : .write
         if fds == [1, 2] {
-            return [ShellRedirect(fd: 1, target: .file(file, mode)), ShellRedirect(fd: 2, target: .descriptor(1))]
+            return [
+                ShellRedirect(fd: 1, target: .file(file, mode)),
+                ShellRedirect(fd: 2, target: .descriptor(1)),
+            ]
         }
         return [ShellRedirect(fd: fds[0], target: .file(file, mode))]
     }
@@ -635,7 +672,9 @@ struct Reader {
                 flush()
                 parts += try parseInterpolatedString()
             case "\\":
-                guard let next = peek(1) else { throw Failure.incomplete("expected a character after '\\'") }
+                guard let next = peek(1) else {
+                    throw Failure.incomplete("expected a character after '\\'")
+                }
                 if next == "(" {
                     flush()
                     parts.append(.spread(try parseInterpolation()))
@@ -741,7 +780,8 @@ struct Reader {
             hex.append(c)
             pos += 1
         }
-        guard consume("}"), let value = UInt32(hex, radix: 16), let scalar = Unicode.Scalar(value) else {
+        guard consume("}"), let value = UInt32(hex, radix: 16), let scalar = Unicode.Scalar(value)
+        else {
             throw Failure("invalid unicode escape '\\u{\(hex)'")
         }
         return Character(scalar)
@@ -765,13 +805,18 @@ struct Reader {
 
     /// `{ … }` at the brace: the closure, cured.
     mutating func parseClosure(arityOf command: CommandOut? = nil) throws -> String {
-        guard let close = Lex.closing(chars, from: pos) else { throw Failure.incomplete("expected '}'") }
+        guard let close = Lex.closing(chars, from: pos) else {
+            throw Failure.incomplete("expected '}'")
+        }
         let source = text.slice(pos..<(close + 1))
         let sourceStart = pos
         pos = close + 1
         let cured = try cureSlice(source, from: sourceStart)
-        // A closure word takes what its stage gives it; Swift's closure without parameters or `$0` takes none.
-        if SwiftProbe.isParameterlessClosure(source), cured.range(of: #"\$\d"#, options: .regularExpression) == nil {
+        // A closure word takes what its stage gives it; Swift's closure without parameters or `$0`
+        // takes none.
+        if SwiftProbe.isParameterlessClosure(source),
+            cured.range(of: #"\$\d"#, options: .regularExpression) == nil
+        {
             var name: String?
             if let command, case .text(let pieces)? = command.words.first, pieces.count == 1,
                 case .literal(let literal) = pieces[0]
@@ -780,8 +825,10 @@ struct Reader {
             }
             let arity = name.flatMap { names.closureArities[$0] ?? front.closureArity($0) } ?? 1
             if arity > 0 {
-                let body = cured.dropFirst().dropLast().trimmingCharacters(in: .whitespacesAndNewlines)
-                return "{ " + Array(repeating: "_", count: arity).joined(separator: ", ") + " in " + body + " }"
+                let body = cured.dropFirst().dropLast()
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                return "{ " + Array(repeating: "_", count: arity).joined(separator: ", ") + " in "
+                    + body + " }"
             }
         }
         return cured
@@ -789,18 +836,22 @@ struct Reader {
 
     /// `(a, b: c)` at the parenthesis: what is between, cured.
     mutating func parseArguments() throws -> String {
-        guard let close = Lex.closing(chars, from: pos) else { throw Failure.incomplete("expected ')'") }
+        guard let close = Lex.closing(chars, from: pos) else {
+            throw Failure.incomplete("expected ')'")
+        }
         let innerStart = pos + 1
         let inner = text.slice(innerStart..<close)
         pos = close + 1
-        // As the arguments of a call, so that a label is a label (`while:`, `in:`), not the start of a statement.
+        // As the arguments of a call, so that a label is a label (`while:`, `in:`), not the start
+        // of a statement.
         let cured = try cureSlice("_(\(inner))", from: innerStart, prefix: 2)
         return String(cured.dropFirst(2).dropLast())
     }
 
     func environment(_ name: String) -> String { "env[\"\(name)\"]!" }
 
-    /// `$0` in a closure, or a `$` form of the shell's, at the dollar sign; nil if the dollar is just a character.
+    /// `$0` in a closure, or a `$` form of the shell's, at the dollar sign; nil if the dollar is
+    /// just a character.
     mutating func parseDollar() throws -> String? {
         switch peek(1) {
         case let c? where Lex.isDigit(c): return nil
@@ -810,12 +861,15 @@ struct Reader {
         }
     }
 
-    /// `$(…)`, `$?` or `$name`, at the dollar sign: `capture { … }`, the variable, or the environment's.
+    /// `$(…)`, `$?` or `$name`, at the dollar sign: `capture { … }`, the variable, or the
+    /// environment's.
     mutating func parseShellDollar() throws -> String? {
         switch peek(1) {
         case "(":
             mark(.punctuation, from: pos, to: pos + 2)
-            guard let close = Lex.closing(chars, from: pos + 1) else { throw Failure.incomplete("expected ')'") }
+            guard let close = Lex.closing(chars, from: pos + 1) else {
+                throw Failure.incomplete("expected ')'")
+            }
             let innerStart = pos + 2
             let inner = text.slice(innerStart..<close)
             let throwing = tryDepth > 0
@@ -824,7 +878,9 @@ struct Reader {
             let program = try cureSlice(inner, from: innerStart, asExpression: false)
             return throwing ? "captureThrowing({ \(program) })" : "capture({ \(program) })"
         case "?":
-            throw Failure("$? isn't Swish: a captured command has its own .status, and `try` makes a failure throw")
+            throw Failure(
+                "$? isn't Swish: a captured command has its own .status, and `try` makes a failure throw"
+            )
         case let c? where Lex.isIdentifierStart(c):
             let start = pos
             pos += 1
@@ -858,7 +914,9 @@ struct Reader {
         if peek() == "$" && peek(1) == "(" {
             let open = pos
             mark(.punctuation, from: open, to: open + 2)
-            guard let close = Lex.closing(chars, from: pos + 1) else { throw Failure.incomplete("expected ')'") }
+            guard let close = Lex.closing(chars, from: pos + 1) else {
+                throw Failure.incomplete("expected ')'")
+            }
             let inner = text.slice((open + 2)..<close)
             mark(.punctuation, from: close, to: close + 1)
             pos = close + 1
@@ -873,7 +931,8 @@ struct Reader {
                 for span in reader.spans {
                     spans.append(
                         HighlightSpan(
-                            range: (span.range.lowerBound + open + 2)..<(span.range.upperBound + open + 2),
+                            range: (span.range.lowerBound + open + 2)..<(span.range.upperBound
+                                + open + 2),
                             kind: span.kind
                         )
                     )
@@ -886,11 +945,17 @@ struct Reader {
             }
             return "\(emit(pipeline)).startCapturing()"
         }
-        guard peek() != nil else { throw Failure.incomplete("expected a command or an expression after 'async'") }
-        if commandAhead(boolIsCommand: true).isCommand { return "\(emit(try parsePipeline())).start()" }
+        guard peek() != nil else {
+            throw Failure.incomplete("expected a command or an expression after 'async'")
+        }
+        if commandAhead(boolIsCommand: true).isCommand {
+            return "\(emit(try parsePipeline())).start()"
+        }
         // `async f(x)`, `async { … }`: Swish code, as a task of its own.
         let exprStart = pos
-        guard let probe = swiftExpression(logical: false) else { throw Failure("expected an expression after 'async'") }
+        guard let probe = swiftExpression(logical: false) else {
+            throw Failure("expected an expression after 'async'")
+        }
         pos = probe.end
         let slice = text.slice(exprStart..<probe.end)
         let source = slice.trimmingCharacters(in: .whitespaces)
@@ -924,17 +989,22 @@ struct Reader {
         func status(_ operand: Operand) -> String {
             switch operand {
             case .command(let pipeline):
-                if let kind = pipeline.throwing { return "\(kind.keyword) \(emit(pipeline)).check()" }
+                if let kind = pipeline.throwing {
+                    return "\(kind.keyword) \(emit(pipeline)).check()"
+                }
                 return "\(emit(pipeline)).\(display ? "run" : "runQuietly")()"
             case .expression(let text):
                 let value = operand.isOptionalAttempt ? "(\(text)) != nil" : text
                 return "exitStatus(of: \(value))"
             }
         }
-        // `exit 1` alone leaves the program, which a `guard` knows when it is a call that never returns.
-        if chain.links.isEmpty, !chain.isCondition, case .command(let pipeline) = chain.first, pipeline.throwing == nil,
+        // `exit 1` alone leaves the program, which a `guard` knows when it is a call that never
+        // returns.
+        if chain.links.isEmpty, !chain.isCondition, case .command(let pipeline) = chain.first,
+            pipeline.throwing == nil,
             pipeline.input == nil,
-            pipeline.commands.count == 1, case .text(let pieces)? = pipeline.commands[0].words.first,
+            pipeline.commands.count == 1,
+            case .text(let pieces)? = pipeline.commands[0].words.first,
             pieces == [.literal("exit")]
         {
             return "exitShell(\(emit(pipeline)))"
@@ -968,14 +1038,18 @@ struct Reader {
         if !command.environment.isEmpty {
             out +=
                 ".environment(["
-                + command.environment.map { "\(Reader.string(literal: $0.name)): \(emit(text: $0.value))" }
+                + command.environment
+                .map { "\(Reader.string(literal: $0.name)): \(emit(text: $0.value))" }
                 .joined(separator: ", ") + "])"
         }
         for redirect in command.redirects {
             switch redirect.target {
-            case .file(let pieces, .read): out += ".reading(\(redirect.fd), from: \(emit(word: pieces)))"
-            case .file(let pieces, .write): out += ".writing(\(redirect.fd), to: \(emit(word: pieces)))"
-            case .file(let pieces, .append): out += ".appending(\(redirect.fd), to: \(emit(word: pieces)))"
+            case .file(let pieces, .read):
+                out += ".reading(\(redirect.fd), from: \(emit(word: pieces)))"
+            case .file(let pieces, .write):
+                out += ".writing(\(redirect.fd), to: \(emit(word: pieces)))"
+            case .file(let pieces, .append):
+                out += ".appending(\(redirect.fd), to: \(emit(word: pieces)))"
             case .descriptor(let other): out += ".sending(\(redirect.fd), to: \(other))"
             }
         }
@@ -985,12 +1059,15 @@ struct Reader {
 
     func emit(word pieces: [Piece]) -> String {
         if pieces.count == 1, case .spread(let value) = pieces[0] { return "Spread(\(value))" }
-        guard pieces.contains(where: { if case .glob = $0 { true } else { false } }) else { return emit(text: pieces) }
+        guard pieces.contains(where: { if case .glob = $0 { true } else { false } }) else {
+            return emit(text: pieces)
+        }
         let pattern = pieces.map { piece -> Piece in
             switch piece {
             case .literal(let text): .literal(Glob.escape(text))
             case .glob(let text): .literal(text.replacingOccurrences(of: "?", with: "\\?"))
-            case .expression(let value), .spread(let value): .expression("escapingWildcards(\"\\(\(value))\")")
+            case .expression(let value), .spread(let value):
+                .expression("escapingWildcards(\"\\(\(value))\")")
             }
         }
         return "Glob(\(emit(text: pattern)))"

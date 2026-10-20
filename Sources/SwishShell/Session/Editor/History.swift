@@ -44,12 +44,18 @@ final class History {
         guard let path else { return }
         History.makeDirectory(for: path)
         let text = entries.map { History.encode($0) + "\n" }.joined()
-        FileManager.default.createFile(atPath: path, contents: Data(text.utf8), attributes: [.posixPermissions: 0o600])
+        FileManager.default.createFile(
+            atPath: path,
+            contents: Data(text.utf8),
+            attributes: [.posixPermissions: 0o600]
+        )
     }
 
     static func encode(_ entry: String) -> String {
-        guard entry.utf8.contains(where: { $0 == UInt8(ascii: "\\") || $0 == UInt8(ascii: "\n") }) else { return entry }
-        return entry.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\n", with: "\\n")
+        guard entry.utf8.contains(where: { $0 == UInt8(ascii: "\\") || $0 == UInt8(ascii: "\n") })
+        else { return entry }
+        return entry.replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\n", with: "\\n")
     }
 
     /// The file's entries. It's read as bytes on every start, since that's

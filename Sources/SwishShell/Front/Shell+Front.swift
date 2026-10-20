@@ -18,13 +18,16 @@ extension Shell {
         front.closureArity = { [unowned self] (name: String) -> Int? in
             for overload in commandFunctions(named: name)?.overloads ?? [] {
                 for parameter in overload.function?.parameters ?? [] {
-                    if case .function(let parameters, _) = parameter.type { return parameters.count }
+                    if case .function(let parameters, _) = parameter.type {
+                        return parameters.count
+                    }
                 }
             }
             return nil
         }
         front.isMethodWithoutInput = { [unowned self] name in
-            isStageMethod(name) && commandFunctions(named: name) == nil && Shell.shellBuiltins[name] == nil
+            isStageMethod(name) && commandFunctions(named: name) == nil
+                && Shell.shellBuiltins[name] == nil
                 && findExecutable(name) == nil
         }
         front.recovering = recovering
@@ -69,11 +72,16 @@ extension Shell {
 }
 
 extension Shell {
-    /// The first command line in the program that its function would not take, as `f 1 --bogus` against `func f(…)`:
+    /// The first command line in the program that its function would not take, as `f 1 --bogus`
+    /// against `func f(…)`:
     /// found
     /// before anything runs, from the function's parameters and the words alone.
-    func firstCommandLineError(_ uses: [Front.CommandUse], declared declarations: Interpreter.Declarations) -> String? {
-        // The enums the program declares have no cases to read yet: a word for one is read against what was declared.
+    func firstCommandLineError(
+        _ uses: [Front.CommandUse],
+        declared declarations: Interpreter.Declarations
+    ) -> String? {
+        // The enums the program declares have no cases to read yet: a word for one is read against
+        // what was declared.
         staticEnums = declarations.enumerations
         defer { staticEnums = [:] }
         let declared = declarations.symbols
@@ -82,9 +90,15 @@ extension Shell {
             guard
                 let callee = functions.isEmpty
                     ? commandFunctions(named: use.name)
-                    : Callee(name: use.name, overloads: functions, receiver: nil, marks: scriptMarks)
+                    : Callee(
+                        name: use.name,
+                        overloads: functions,
+                        receiver: nil,
+                        marks: scriptMarks
+                    )
             else { continue }
-            // After a `|`, a name some type has as a member may be that member, which is found when items arrive.
+            // After a `|`, a name some type has as a member may be that member, which is found when
+            // items arrive.
             if use.piped, isMemberName(use.name) || isStageMethod(use.name) { continue }
             let words = use.words.map { CommandWordShape.text($0) }
             if helpRequested(words, for: callee) { continue }

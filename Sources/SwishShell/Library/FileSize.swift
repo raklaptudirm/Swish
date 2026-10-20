@@ -2,7 +2,8 @@ import Foundation
 import Swiit
 
 /// An amount of bytes, shown in decimal units as Finder shows them (`532 B`,
-/// `1.2 KB`, `123 MB`) and written `1.5.mb` in Swiit (each unit is a property of `Int` and `Double`). It adds and
+/// `1.2 KB`, `123 MB`) and written `1.5.mb` in Swiit (each unit is a property of `Int` and
+/// `Double`). It adds and
 /// subtracts,
 /// scales by a number, and divides by another size for a ratio. Encodes as
 /// its byte count.
@@ -31,10 +32,13 @@ struct FileSize: Codable, Hashable, Comparable, Sendable, LosslessStringConverti
         "kib": 1 << 10, "mib": 1 << 20, "gib": 1 << 30, "tib": 1 << 40,
     ]
 
-    /// `amount` of a unit worth `multiplier` bytes, which `2.mb` is: a size too large to hold is the largest there is.
+    /// `amount` of a unit worth `multiplier` bytes, which `2.mb` is: a size too large to hold is
+    /// the largest there is.
     public init(_ amount: Double, multiplier: Int) {
         let bytes = (amount * Double(multiplier)).rounded()
-        self.init(bytes: bytes.magnitude < Double(Int.max) ? Int(bytes) : (bytes < 0 ? -Int.max : Int.max))
+        self.init(
+            bytes: bytes.magnitude < Double(Int.max) ? Int(bytes) : (bytes < 0 ? -Int.max : Int.max)
+        )
     }
 
     /// `1.5` of a unit (`mb`), or nil if there's no such unit or the size is too large.
@@ -94,15 +98,25 @@ struct FileSize: Codable, Hashable, Comparable, Sendable, LosslessStringConverti
     }
     public static prefix func - (operand: FileSize) -> FileSize { FileSize(bytes: -operand.bytes) }
 
-    public static func * (lhs: FileSize, rhs: Int) throws -> FileSize { try scaled(Double(lhs.bytes) * Double(rhs)) }
-    public static func * (lhs: FileSize, rhs: Double) throws -> FileSize { try scaled(Double(lhs.bytes) * rhs) }
+    public static func * (lhs: FileSize, rhs: Int) throws -> FileSize {
+        try scaled(Double(lhs.bytes) * Double(rhs))
+    }
+    public static func * (lhs: FileSize, rhs: Double) throws -> FileSize {
+        try scaled(Double(lhs.bytes) * rhs)
+    }
     public static func * (lhs: Int, rhs: FileSize) throws -> FileSize { try rhs * lhs }
     public static func * (lhs: Double, rhs: FileSize) throws -> FileSize { try rhs * lhs }
 
-    public static func / (lhs: FileSize, rhs: Int) throws -> FileSize { try divided(lhs.bytes, by: Double(rhs)) }
-    public static func / (lhs: FileSize, rhs: Double) throws -> FileSize { try divided(lhs.bytes, by: rhs) }
+    public static func / (lhs: FileSize, rhs: Int) throws -> FileSize {
+        try divided(lhs.bytes, by: Double(rhs))
+    }
+    public static func / (lhs: FileSize, rhs: Double) throws -> FileSize {
+        try divided(lhs.bytes, by: rhs)
+    }
     /// How many of one fit in the other.
-    public static func / (lhs: FileSize, rhs: FileSize) -> Double { Double(lhs.bytes) / Double(rhs.bytes) }
+    public static func / (lhs: FileSize, rhs: FileSize) -> Double {
+        Double(lhs.bytes) / Double(rhs.bytes)
+    }
 }
 
 extension FileSize: SwiitDisplayed, Presentable {

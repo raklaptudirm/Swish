@@ -7,13 +7,25 @@ struct SpawnFailure: Error {
 }
 
 enum Stage {
-    case external([String], skipBuiltins: Bool, redirects: [ResolvedRedirect], environment: [(String, String)])
-    /// A Swish function, which runs in the shell's own process; or a method of what flows in, as in `[p1, p2] |
+    case external(
+        [String],
+        skipBuiltins: Bool,
+        redirects: [ResolvedRedirect],
+        environment: [(String, String)]
+    )
+    /// A Swish function, which runs in the shell's own process; or a method of what flows in, as in
+    /// `[p1, p2] |
     /// describe`.
-    case function(Callee, [CommandArgument], redirects: [ResolvedRedirect], environment: [(String, String)])
+    case function(
+        Callee,
+        [CommandArgument],
+        redirects: [ResolvedRedirect],
+        environment: [(String, String)]
+    )
     /// A value feeding the pipeline, as in `[3, 1, 2] | sorted`.
     case value(Value)
-    /// A name that may be a method of what flows in, decided when the first item arrives (Shell+Resolving.swift).
+    /// A name that may be a method of what flows in, decided when the first item arrives
+    /// (Shell+Resolving.swift).
     case deferred(DeferredStage)
 
     var isExternal: Bool {
@@ -51,7 +63,9 @@ extension Shell {
             case .function(let callee, let args, let redirects, let environment)
             where callee.receiver == nil && !redirects.contains(where: { $0.fd == 0 }):
                 return try withEnvironment(environment) {
-                    try withRedirects(redirects) { _, _ in try callCommand(callee, args, display: display) }
+                    try withRedirects(redirects) { _, _ in
+                        try callCommand(callee, args, display: display)
+                    }
                 }
             case .external(let argv, let skipBuiltins, let redirects, let environment)
             where !skipBuiltins && Shell.shellBuiltins[argv[0]] != nil:
@@ -66,7 +80,9 @@ extension Shell {
         // Only one thread runs Swish code, so a pipeline can have one run of
         // in-process stages; two runs would each wait on the other.
         let inProcess = stages.indices.filter { !stages[$0].isExternal }
-        if let first = inProcess.first, let last = inProcess.last, last - first + 1 != inProcess.count {
+        if let first = inProcess.first, let last = inProcess.last,
+            last - first + 1 != inProcess.count
+        {
             throw RuntimeError("a pipeline can only have one run of Swish functions for now")
         }
         let segment = inProcess.first.map { $0...inProcess.last! }
@@ -145,7 +161,9 @@ extension Shell {
             do {
                 let pipeOutput = segmentOutput >= 0 ? segmentOutput : stdoutFD
                 try withEnvironment(stages[segment].flatMap(\.environment)) {
-                    try withRedirects(segmentRedirects, input: segmentInput, output: pipeOutput) { input, output in
+                    try withRedirects(segmentRedirects, input: segmentInput, output: pipeOutput) {
+                        input,
+                        output in
                         // Text for the next program, or, if it went to a file or
                         // the terminal, formatted as it would be displayed.
                         try runSegment(
@@ -216,7 +234,10 @@ extension Shell {
         while let pid = job.running.first {
             var raw: Int32 = 0
             // Cancelling the task stops its programs, which ends the wait.
-            guard Interpreter.whileWaiting(wake: { job.send(SIGTERM) }) { waitpid(pid, &raw, WUNTRACED) } == pid else {
+            let waited = Interpreter.whileWaiting(wake: { job.send(SIGTERM) }) {
+                waitpid(pid, &raw, WUNTRACED)
+            }
+            guard waited == pid else {
                 if errno == EINTR { continue }
                 job.running.removeFirst()
                 continue
@@ -230,7 +251,10 @@ extension Shell {
                 job.state = .stopped
                 job.reported = true
                 adopt(job)
-                writeAll(STDERR_FILENO, "\n" + job.line(styled: DisplayStyle.enabled(for: STDERR_FILENO)) + "\n")
+                writeAll(
+                    STDERR_FILENO,
+                    "\n" + job.line(styled: DisplayStyle.enabled(for: STDERR_FILENO)) + "\n"
+                )
                 return 128 + SIGTSTP
             }
             job.running.removeFirst()
@@ -301,7 +325,9 @@ extension Shell {
         case .failure(let error): code = error.code
         }
         let status: Int32 = code == ENOENT ? 127 : 126
-        return .failure(SpawnFailure(message: "\(name): \(errorMessage(code).lowercased())", status: status))
+        return .failure(
+            SpawnFailure(message: "\(name): \(errorMessage(code).lowercased())", status: status)
+        )
     }
 
     /// Finds `name` on PATH; names containing a slash are used as-is.

@@ -13,7 +13,8 @@ final class ValueStream {
 
     static var empty: ValueStream { ValueStream { nil } }
 
-    /// A list flows as its elements, as does a Swift sequence (a Set, a range of Ints, a command's output, a flow);
+    /// A list flows as its elements, as does a Swift sequence (a Set, a range of Ints, a command's
+    /// output, a flow);
     /// nothing
     /// as no items, anything else as a single item.
     static func elements(of value: Value) -> ValueStream {
@@ -81,7 +82,12 @@ extension Shell {
     /// Runs the in-process run of a pipeline: reads `input` (an external
     /// stage's output, or -1 when the run starts the pipeline), and writes
     /// its items as text to `output`, one per line.
-    func runSegment(_ stages: ArraySlice<Stage>, input: Int32, output: Int32, toExternal: Bool) throws {
+    func runSegment(
+        _ stages: ArraySlice<Stage>,
+        input: Int32,
+        output: Int32,
+        toExternal: Bool
+    ) throws {
         // Text the functions' own commands print goes to the same place.
         let savedOutput = stdoutFD
         stdoutFD = output
@@ -114,8 +120,11 @@ extension Shell {
                     upstreamIsExternal: upstreamIsExternal
                 )
             case .external(let argv, _, _, _):
-                // A name that might have been a method, and was a program after all (Shell+Resolving.swift).
-                throw RuntimeError("\(argv[0]) isn't a method of what flows into it, and a program can't run here")
+                // A name that might have been a method, and was a program after all
+                // (Shell+Resolving.swift).
+                throw RuntimeError(
+                    "\(argv[0]) isn't a method of what flows into it, and a program can't run here"
+                )
             case .deferred:
                 preconditionFailure("a deferred stage is resolved above")
             }
@@ -138,7 +147,9 @@ extension Shell {
                 // Records as the rows they'd display as, so `ls | grep x` works.
                 let formatter = DisplayFormatter.forProgram(fd: output, registry: displayRegistry)
                 while let item = try stream.next() {
-                    if item.kind == .function { throw RuntimeError("can't send a function to an external command") }
+                    if item.kind == .function {
+                        throw RuntimeError("can't send a function to an external command")
+                    }
                     guard formatter.add(item) else { throw BrokenPipe() }
                 }
                 guard formatter.finish() else { throw BrokenPipe() }
@@ -167,7 +178,13 @@ extension Shell {
             return .empty
         }
         if let receiver = callee.receiver {
-            return try methodStream(callee, args, receiver: receiver, upstream: upstream ?? .empty, single: single)
+            return try methodStream(
+                callee,
+                args,
+                receiver: receiver,
+                upstream: upstream ?? .empty,
+                single: single
+            )
         }
 
         guard let upstream else {
@@ -175,7 +192,9 @@ extension Shell {
             // from the command line, and the function runs once.
             let call = try bind(commandLine: args, to: callee, excludingInput: false)
             let result = try invoke(callee, call.arguments())
-            if let input = callee.parameters[call.overload].first(where: \.isInput), !input.type.isList {
+            if let input = callee.parameters[call.overload].first(where: \.isInput),
+                !input.type.isList
+            {
                 return .elements(of: Value([result]))
             }
             return .elements(of: result)
@@ -185,8 +204,13 @@ extension Shell {
         return stream(call, upstream: upstream, upstreamIsExternal: upstreamIsExternal)
     }
 
-    /// `call` fed by `upstream`: once per item for an item parameter, or once with them all for a list.
-    private func stream(_ call: BoundCall, upstream: ValueStream, upstreamIsExternal: Bool) -> ValueStream {
+    /// `call` fed by `upstream`: once per item for an item parameter, or once with them all for a
+    /// list.
+    private func stream(
+        _ call: BoundCall,
+        upstream: ValueStream,
+        upstreamIsExternal: Bool
+    ) -> ValueStream {
         let callee = call.callee
         guard let input = callee.parameters[call.overload].first(where: \.isInput) else {
             // Takes no input: let in-process stages before it run for their
@@ -211,7 +235,12 @@ extension Shell {
                     while let item = try upstream.next() {
                         items.append(try self.inputValue(item, as: elementType, of: callee.name))
                     }
-                    output = .elements(of: try self.invoke(callee, call.arguments(input: (input.name, Value(items)))))
+                    output = .elements(
+                        of: try self.invoke(
+                            callee,
+                            call.arguments(input: (input.name, Value(items)))
+                        )
+                    )
                 }
                 return try output!.next()
             }
@@ -229,7 +258,8 @@ extension Shell {
 
     // MARK: Methods
 
-    /// A method of what flows in: of each item (`[p1, p2] | describe`), of the items collected, of the one value the
+    /// A method of what flows in: of each item (`[p1, p2] | describe`), of the items collected, of
+    /// the one value the
     /// pipeline
     /// started from, or of the items as they come, lazily.
     private func methodStream(
@@ -242,7 +272,9 @@ extension Shell {
         let call = try bind(commandLine: args, to: callee, excludingInput: true)
         let overload = callee.overloads[call.overload]
         if let function = overload.function, function.isMutating {
-            throw RuntimeError("\(callee.name) is mutating, and a piped value can't change: call it on a variable")
+            throw RuntimeError(
+                "\(callee.name) is mutating, and a piped value can't change: call it on a variable"
+            )
         }
         // A stage written as a call, with arguments, is a method.
         let isProperty = overload.function == nil && (call.written ?? []).isEmpty
@@ -282,7 +314,8 @@ extension Shell {
                 return try output!.next()
             }
         case .flow:
-            // Lazily: the stage reads upstream only as its own reader is asked, and the Flow it gives is read as the
+            // Lazily: the stage reads upstream only as its own reader is asked, and the Flow it
+            // gives is read as the
             // next
             // stage asks.
             let flow = Value(boxing: Flow<Value> { try upstream.next() }, as: "Flow")
@@ -296,7 +329,9 @@ extension Shell {
     /// are text, so they're converted like command-line arguments.
     private func inputValue(_ item: Value, as type: ValueType, of name: String) throws -> Value {
         if let value = interpreter.convert(item, to: type) { return value }
-        if item.kind == .string, let value = try? converted(item.description, to: type, for: "input", of: name) {
+        if item.kind == .string,
+            let value = try? converted(item.description, to: type, for: "input", of: name)
+        {
             return value
         }
         throw RuntimeError("\(name): input must be \(type), not \(item.typeName) '\(item)'")

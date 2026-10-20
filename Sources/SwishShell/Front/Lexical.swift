@@ -1,8 +1,10 @@
 import Foundation
 
-// Spike: the shell's own text, read by the shell. Nothing here knows the interpreter: this is the lexical level of
+// Spike: the shell's own text, read by the shell. Nothing here knows the interpreter: this is the
+// lexical level of
 // Swift's
-// text with the shell's in it (strings and their interpolations, comments, brackets), enough to find where a form ends.
+// text with the shell's in it (strings and their interpolations, comments, brackets), enough to
+// find where a form ends.
 
 /// The characters of a source, and what its bytes are (SwiftParser's positions are bytes).
 struct Text {
@@ -50,7 +52,8 @@ enum Lex {
         return name.dropFirst().allSatisfy(isIdentifierPart)
     }
 
-    /// The index of the bracket that closes the one at `open`, skipping strings (a shell's `'…'` too) and comments.
+    /// The index of the bracket that closes the one at `open`, skipping strings (a shell's `'…'`
+    /// too) and comments.
     static func closing(_ chars: [Character], from open: Int) -> Int? {
         var stack: [Character] = []
         var i = open
@@ -68,14 +71,16 @@ enum Lex {
             case "\"": i = skipString(chars, from: i)
             case "'": i = skipRaw(chars, from: i)
             case "/" where i + 1 < chars.count && chars[i + 1] == "/": i = skipLine(chars, from: i)
-            case "/" where i + 1 < chars.count && chars[i + 1] == "*": i = skipBlockComment(chars, from: i)
+            case "/" where i + 1 < chars.count && chars[i + 1] == "*":
+                i = skipBlockComment(chars, from: i)
             default: i += 1
             }
         }
         return nil
     }
 
-    /// Past a double-quoted string starting at `start`, its interpolations (`\(…)`, and `$(…)` as a command's word has
+    /// Past a double-quoted string starting at `start`, its interpolations (`\(…)`, and `$(…)` as a
+    /// command's word has
     /// it) included.
     static func skipString(_ chars: [Character], from start: Int) -> Int {
         var i = start + 1
@@ -129,14 +134,16 @@ enum Lex {
         return chars.count
     }
 
-    /// Each outermost `$(…)` of the code: from the `$` to the `)` that closes it, or to the end when it is left open.
+    /// Each outermost `$(…)` of the code: from the `$` to the `)` that closes it, or to the end
+    /// when it is left open.
     /// Strings are skipped, except for the code in their interpolations.
     static func substitutions(in chars: [Character]) -> (ranges: [Range<Int>], unclosed: Bool) {
         let found = scan(chars)
         return (found.substitutions, found.unclosed)
     }
 
-    /// Each `'…'` in the code, outside the substitutions: the shell's raw strings, which Swift has no spelling for.
+    /// Each `'…'` in the code, outside the substitutions: the shell's raw strings, which Swift has
+    /// no spelling for.
     static func rawStrings(in chars: [Character]) -> [Range<Int>] { scan(chars).rawStrings }
 
     private static func scan(
@@ -147,7 +154,8 @@ enum Lex {
         var unclosed = false
         let n = chars.count
 
-        /// Scans code from `start`; stops at the `)` that ends an interpolation when `inInterpolation`.
+        /// Scans code from `start`; stops at the `)` that ends an interpolation when
+        /// `inInterpolation`.
         func code(from start: Int, inInterpolation: Bool) -> Int {
             var i = start
             var depth = 0
@@ -155,7 +163,8 @@ enum Lex {
                 let c = chars[i]
                 switch c {
                 case "/" where i + 1 < n && chars[i + 1] == "/": i = skipLine(chars, from: i)
-                case "/" where i + 1 < n && chars[i + 1] == "*": i = skipBlockComment(chars, from: i)
+                case "/" where i + 1 < n && chars[i + 1] == "*":
+                    i = skipBlockComment(chars, from: i)
                 case "'":
                     let end = skipRaw(chars, from: i)
                     raws.append(i..<end)
@@ -203,11 +212,13 @@ enum Lex {
 
         _ = code(from: 0, inInterpolation: false)
         return (
-            ranges.sorted { $0.lowerBound < $1.lowerBound }, raws.sorted { $0.lowerBound < $1.lowerBound }, unclosed
+            ranges.sorted { $0.lowerBound < $1.lowerBound },
+            raws.sorted { $0.lowerBound < $1.lowerBound }, unclosed
         )
     }
 
-    /// The code with what is inside each `$(…)` replaced by blanks (newlines stay), so SwiftParser reads the call `$()`
+    /// The code with what is inside each `$(…)` replaced by blanks (newlines stay), so SwiftParser
+    /// reads the call `$()`
     /// and
     /// leaves the shell's text to the reader; the same length, so positions agree.
     static func blankingSubstitutions(_ chars: [Character]) -> [Character] {
@@ -216,7 +227,9 @@ enum Lex {
         var blanked = chars
         for range in found.ranges {
             let start = range.lowerBound + 2
-            let end = found.unclosed && range.upperBound == chars.count ? range.upperBound : range.upperBound - 1
+            let end =
+                found.unclosed && range.upperBound == chars.count
+                ? range.upperBound : range.upperBound - 1
             let inner = start..<end
             guard inner.lowerBound < inner.upperBound else { continue }
             for index in inner where blanked[index] != "\n" { blanked[index] = " " }
@@ -224,16 +237,19 @@ enum Lex {
         return blanked
     }
 
-    /// The code with what is inside each outermost `{ … }` replaced by blanks: the statements in a closure's body are
+    /// The code with what is inside each outermost `{ … }` replaced by blanks: the statements in a
+    /// closure's body are
     /// read
-    /// in their turn, so what a stretch of code is (where it ends) is asked with the bodies left out.
+    /// in their turn, so what a stretch of code is (where it ends) is asked with the bodies left
+    /// out.
     static func blankingBlocks(_ chars: [Character]) -> [Character] {
         var blanked = chars
         var i = 0
         while i < chars.count {
             switch chars[i] {
             case "/" where i + 1 < chars.count && chars[i + 1] == "/": i = skipLine(chars, from: i)
-            case "/" where i + 1 < chars.count && chars[i + 1] == "*": i = skipBlockComment(chars, from: i)
+            case "/" where i + 1 < chars.count && chars[i + 1] == "*":
+                i = skipBlockComment(chars, from: i)
             case "'": i = skipRaw(chars, from: i)
             case "\"": i = skipString(chars, from: i)
             case "{":
@@ -246,14 +262,16 @@ enum Lex {
         return blanked
     }
 
-    /// The code up to the first `{` that is not inside brackets: in a condition, that brace opens the body.
+    /// The code up to the first `{` that is not inside brackets: in a condition, that brace opens
+    /// the body.
     static func truncatingAtBlock(_ chars: [Character]) -> [Character] {
         var depth = 0
         var i = 0
         while i < chars.count {
             switch chars[i] {
             case "/" where i + 1 < chars.count && chars[i + 1] == "/": i = skipLine(chars, from: i)
-            case "/" where i + 1 < chars.count && chars[i + 1] == "*": i = skipBlockComment(chars, from: i)
+            case "/" where i + 1 < chars.count && chars[i + 1] == "*":
+                i = skipBlockComment(chars, from: i)
             case "'": i = skipRaw(chars, from: i)
             case "\"": i = skipString(chars, from: i)
             case "(", "[": depth += 1; i += 1

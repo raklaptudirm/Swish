@@ -91,7 +91,9 @@ struct InlineMarkdown {
         let c = chars[i]
         let n = run(of: c, at: i, before: range.upperBound)
         guard n <= 2, i + n < range.upperBound, !chars[i + n].isWhitespace else { return nil }
-        if c == "_", i > range.lowerBound, chars[i - 1].isLetter || chars[i - 1].isNumber { return nil }
+        if c == "_", i > range.lowerBound, chars[i - 1].isLetter || chars[i - 1].isNumber {
+            return nil
+        }
         var j = i + n
         while j < range.upperBound {
             if chars[j] == "\\" {
@@ -101,7 +103,9 @@ struct InlineMarkdown {
             } else if chars[j] == c {
                 let m = run(of: c, at: j, before: range.upperBound)
                 let after = j + m
-                let intraword = c == "_" && after < range.upperBound && (chars[after].isLetter || chars[after].isNumber)
+                let intraword =
+                    c == "_" && after < range.upperBound
+                    && (chars[after].isLetter || chars[after].isNumber)
                 if m == n, !chars[j - 1].isWhitespace, !intraword, j > i + n {
                     return Emphasis(inner: (i + n)..<j, next: after, strength: n)
                 }
@@ -113,7 +117,8 @@ struct InlineMarkdown {
         return nil
     }
 
-    /// Emphasized text: where its words are, where reading goes on after its closer, and how many marks it has (1
+    /// Emphasized text: where its words are, where reading goes on after its closer, and how many
+    /// marks it has (1
     /// italic, 2 bold).
     private struct Emphasis {
         var inner: Range<Int>
@@ -150,11 +155,14 @@ struct InlineMarkdown {
 }
 
 extension AttributedString {
-    /// Text written in Markdown, as documentation is: its code, strong text, emphasis and links as styles, which show
+    /// Text written in Markdown, as documentation is: its code, strong text, emphasis and links as
+    /// styles, which show
     /// where
-    /// there are colors, and the plain words anywhere else. Only the inline syntax, which is what a description is made
+    /// there are colors, and the plain words anywhere else. Only the inline syntax, which is what a
+    /// description is made
     /// of;
-    /// see `InlineMarkdown`. (Foundation on Linux does not parse Markdown, so documentation's is read here.)
+    /// see `InlineMarkdown`. (Foundation on Linux does not parse Markdown, so documentation's is
+    /// read here.)
     init(documentation text: String) {
         self = InlineMarkdown(Array(text)).parse(0..<text.count, style: nil)
     }

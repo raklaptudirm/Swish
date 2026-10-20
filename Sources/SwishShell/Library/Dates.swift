@@ -1,7 +1,8 @@
 import Foundation
 import Swiit
 
-// What a script can do with a `Date` beyond Swift's own: write one as ISO 8601 text, and do sums in seconds.
+// What a script can do with a `Date` beyond Swift's own: write one as ISO 8601 text, and do sums in
+// seconds.
 
 extension Date {
     /// A date written as ISO 8601 text, like `2026-09-27T14:03:00Z`; nil for anything else.

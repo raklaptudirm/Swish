@@ -1,15 +1,20 @@
 import Foundation
 import Swiit
 
-// Spike: what a stage is, decided from what flows into it, when it flows. The front end emits `Command("sorted")` and
+// Spike: what a stage is, decided from what flows into it, when it flows. The front end emits
+// `Command("sorted")` and
 // nothing
-// about the type; here the first item says what the items are, and the forms are looked up in the order the checker
+// about the type; here the first item says what the items are, and the forms are looked up in the
+// order the checker
 // looked
-// (the items as they come, the prelude's sequence methods, the items collected, a method of each item, each item's
+// (the items as they come, the prelude's sequence methods, the items collected, a method of each
+// item, each item's
 // Swift
-// members), then a function, then a program. Binding the stage's words to a candidate decides whether it fits.
+// members), then a function, then a program. Binding the stage's words to a candidate decides
+// whether it fits.
 
-/// What a stage is called on: the items collected, the items as they come, each item, or the one value.
+/// What a stage is called on: the items collected, the items as they come, each item, or the one
+/// value.
 enum StageReceiver: Equatable, Sendable {
     case collected, flow, each, value
 }
@@ -26,7 +31,8 @@ struct DeferredStage {
 private struct ConstraintFailure: Error { var message: String }
 
 extension Shell {
-    /// The stage `deferred` is, fed by `upstream`, and the stream to read in its place (the first item put back).
+    /// The stage `deferred` is, fed by `upstream`, and the stream to read in its place (the first
+    /// item put back).
     /// `single`: the one value the pipeline started from, when it isn't a sequence.
     func resolve(
         _ deferred: DeferredStage,
@@ -46,23 +52,34 @@ extension Shell {
         let element = first.map(interpreter.valueType(of:)) ?? .any
 
         func function(_ callee: Callee) -> Stage {
-            .function(callee, deferred.arguments, redirects: deferred.redirects, environment: deferred.environment)
+            .function(
+                callee,
+                deferred.arguments,
+                redirects: deferred.redirects,
+                environment: deferred.environment
+            )
         }
 
         var candidates: [() -> Stage?] = []
         // The one value a pipeline started from: its own members.
         if let single, single.items == nil {
             candidates.append {
-                self.stageCallee(name, of: self.interpreter.valueType(of: single), receiver: .value).map(function)
+                self.stageCallee(name, of: self.interpreter.valueType(of: single), receiver: .value)
+                    .map(function)
             }
         }
-        candidates.append { self.stageCallee(name, of: .named("Flow", [element]), receiver: .flow).map(function) }
+        candidates.append {
+            self.stageCallee(name, of: .named("Flow", [element]), receiver: .flow).map(function)
+        }
         // The items collected: what every sequence has, and the list's own.
-        candidates.append { self.stageCallee(name, of: .list(element), receiver: .collected).map(function) }
+        candidates.append {
+            self.stageCallee(name, of: .list(element), receiver: .collected).map(function)
+        }
         // A member of each item's type: a struct's method, an object's, a Swift type's.
         if first != nil, !element.isUnknown {
             candidates.append {
-                self.stageCallee(name, of: element, receiver: .each, includingMutating: true).map(function)
+                self.stageCallee(name, of: element, receiver: .each, includingMutating: true)
+                    .map(function)
             }
         }
 
@@ -71,7 +88,8 @@ extension Shell {
             guard let stage = candidate() else { continue }
             // It fits if its words bind to it: a stage is built to find out.
             if case .function(let callee, let args, _, _) = stage {
-                // A stage written as a call is bound as a call is: by the labels and types of its arguments.
+                // A stage written as a call is bound as a call is: by the labels and types of its
+                // arguments.
                 let written = args.compactMap { argument -> (label: String?, value: Value)? in
                     if case .call(let call) = argument { call } else { nil }
                 }
@@ -88,12 +106,15 @@ extension Shell {
                     let binding = try bindCommandLine(shapes, to: callee, excludingInput: true)
                     // `[K.a] | sorted` needs its Element to be Comparable.
                     if first != nil, !element.isUnknown,
-                        let missing = (callee.overloads[binding.overload].function?.generics["Element"] ?? [])
+                        let missing =
+                            (callee.overloads[binding.overload].function?.generics["Element"] ?? [])
                             .first(where: {
                                 !$0.hasPrefix("=") && !self.interpreter.conforms(element, to: $0)
                             })
                     {
-                        throw ConstraintFailure(message: "\(name) needs Element to be \(missing), and \(element) isn't")
+                        throw ConstraintFailure(
+                            message: "\(name) needs Element to be \(missing), and \(element) isn't"
+                        )
                     }
                 } catch let failure as ConstraintFailure {
                     throw RuntimeError(failure.message)
@@ -104,7 +125,8 @@ extension Shell {
             }
             return (stage, replay)
         }
-        // Something was a method of that name and its words did not fit: that says what is wrong, unless the name is
+        // Something was a method of that name and its words did not fit: that says what is wrong,
+        // unless the name is
         // also a function or a program, which then is what it is.
         let fallback = try? deferred.fallback()
         if let firstFailure {
@@ -120,7 +142,8 @@ extension Shell {
 }
 
 extension Shell {
-    /// Whether a call with these arguments could mean the function: by their labels, and whether each converts to the
+    /// Whether a call with these arguments could mean the function: by their labels, and whether
+    /// each converts to the
     /// type its
     /// parameter has (a one-letter text to a `Character`).
     func accepts(_ symbol: Symbol, _ arguments: [(label: String?, value: Value)]) -> Bool {
@@ -133,7 +156,10 @@ extension Shell {
                     ?? parameters.firstIndex(where: { $0.isVariadic && $0.label == argument.label })
             else { return false }
             let parameter = parameters[index]
-            guard parameter.type.isUnknown || interpreter.convert(argument.value, to: parameter.type) != nil else {
+            guard
+                parameter.type.isUnknown
+                    || interpreter.convert(argument.value, to: parameter.type) != nil
+            else {
                 return false
             }
             given.insert(parameter.name)

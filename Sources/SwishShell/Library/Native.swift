@@ -1,12 +1,15 @@
 import Foundation
 import Swiit
 
-// The Swift types the shell gives scripts, described to the interpreter: a size, a column, a command's output.
+// The Swift types the shell gives scripts, described to the interpreter: a size, a column, a
+// command's output.
 
 extension FileSize {
     static let native = NativeType.Builder<FileSize>(
         "FileSize",
-        conformances: ["Equatable", "Hashable", "Comparable", "CustomStringConvertible", "Encodable"],
+        conformances: [
+            "Equatable", "Hashable", "Comparable", "CustomStringConvertible", "Encodable",
+        ],
         parse: { FileSize($0) }
     )
     .property("bytes", \.bytes)
@@ -15,17 +18,35 @@ extension FileSize {
     .initializer(labels: [nil, "multiplier"]) { (amount: Double, multiplier: Int) in
         FileSize(amount, multiplier: multiplier)
     }
-    .failableInitializer(labels: [nil, "unit"]) { (amount: Double, unit: String) in FileSize(amount, unit: unit) }
+    .failableInitializer(labels: [nil, "unit"]) { (amount: Double, unit: String) in
+        FileSize(amount, unit: unit)
+    }
     .failableInitializer { (text: String) in FileSize(text) }
-    .static("+", labels: [nil, nil], throwing: true) { (a: FileSize, b: FileSize) throws -> FileSize in try a + b }
-    .static("-", labels: [nil, nil], throwing: true) { (a: FileSize, b: FileSize) throws -> FileSize in try a - b }
+    .static("+", labels: [nil, nil], throwing: true) {
+        (a: FileSize, b: FileSize) throws -> FileSize in try a + b
+    }
+    .static("-", labels: [nil, nil], throwing: true) {
+        (a: FileSize, b: FileSize) throws -> FileSize in try a - b
+    }
     .static("-", labels: [nil], throwing: true) { (a: FileSize) throws -> FileSize in try -a }
-    .static("*", labels: [nil, nil], throwing: true) { (a: FileSize, b: Int) throws -> FileSize in try a * b }
-    .static("*", labels: [nil, nil], throwing: true) { (a: FileSize, b: Double) throws -> FileSize in try a * b }
-    .static("*", labels: [nil, nil], throwing: true) { (a: Int, b: FileSize) throws -> FileSize in try a * b }
-    .static("*", labels: [nil, nil], throwing: true) { (a: Double, b: FileSize) throws -> FileSize in try a * b }
-    .static("/", labels: [nil, nil], throwing: true) { (a: FileSize, b: Int) throws -> FileSize in try a / b }
-    .static("/", labels: [nil, nil], throwing: true) { (a: FileSize, b: Double) throws -> FileSize in try a / b }
+    .static("*", labels: [nil, nil], throwing: true) { (a: FileSize, b: Int) throws -> FileSize in
+        try a * b
+    }
+    .static("*", labels: [nil, nil], throwing: true) {
+        (a: FileSize, b: Double) throws -> FileSize in try a * b
+    }
+    .static("*", labels: [nil, nil], throwing: true) { (a: Int, b: FileSize) throws -> FileSize in
+        try a * b
+    }
+    .static("*", labels: [nil, nil], throwing: true) {
+        (a: Double, b: FileSize) throws -> FileSize in try a * b
+    }
+    .static("/", labels: [nil, nil], throwing: true) { (a: FileSize, b: Int) throws -> FileSize in
+        try a / b
+    }
+    .static("/", labels: [nil, nil], throwing: true) {
+        (a: FileSize, b: Double) throws -> FileSize in try a / b
+    }
     .static("/", labels: [nil, nil]) { (a: FileSize, b: FileSize) -> Double in a / b }
 }
 
@@ -42,7 +63,9 @@ extension DisplayColumn {
 extension Status: ValueConvertible {
     static var valueType: ValueType { .named("Status") }
     init(_ value: Value) throws {
-        guard value.typeName == "Status", let succeeded = value.field("succeeded")?.cast(to: Bool.self) else {
+        guard value.typeName == "Status",
+            let succeeded = value.field("succeeded")?.cast(to: Bool.self)
+        else {
             throw LibraryError("expected a Status, not \(value)")
         }
         self.init(
@@ -56,7 +79,9 @@ extension Status: ValueConvertible {
 extension Output {
     static let native = NativeType.Builder<Output>(
         "Output",
-        conformances: ["Equatable", "Hashable", "Sequence", "StandsForText", "CustomStringConvertible"],
+        conformances: [
+            "Equatable", "Hashable", "Sequence", "StandsForText", "CustomStringConvertible",
+        ],
         associatedTypes: ["Element": .string, "Index": .int]
     )
     .property("text", \.text)

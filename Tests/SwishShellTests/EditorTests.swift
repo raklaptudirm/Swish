@@ -55,14 +55,18 @@ import Testing
 
 @Test func historyCreatesItsDirectory() throws {
     let shell = Shell()
-    let directory = try shell.capturing { shell.execute("mktemp -d") }.trimmingCharacters(in: .newlines)
+    let directory = try shell.capturing { shell.execute("mktemp -d") }
+        .trimmingCharacters(in: .newlines)
     let path = directory + "/state/swish/history"
     History(path: path).add("echo one")
     #expect(History(path: path).entries == ["echo one"])
-    // Private to you: the permissions `ls` shows, which is the same on every platform (`stat`'s flags aren't).
+    // Private to you: the permissions `ls` shows, which is the same on every platform (`stat`'s
+    // flags aren't).
     #expect(
         try shell.capturing {
-            shell.execute("ls \(directory)/state | filter { $0.name == \"swish\" } | get permissions")
+            shell.execute(
+                "ls \(directory)/state | filter { $0.name == \"swish\" } | get permissions"
+            )
         } == "drwx------\n"
     )
 }
@@ -101,7 +105,10 @@ import Testing
 
 // MARK: Completion
 
-private func completion(_ text: String, in shell: Shell = Shell()) -> (start: Int, replacements: [String]) {
+private func completion(
+    _ text: String,
+    in shell: Shell = Shell()
+) -> (start: Int, replacements: [String]) {
     let result = shell.completions(for: text, cursor: text.count)
     return (result?.start ?? -1, result?.candidates.map(\.replacement) ?? [])
 }
@@ -111,7 +118,9 @@ private func completion(_ text: String, in shell: Shell = Shell()) -> (start: In
     shell.execute("/// Greets.\nfunc zzgreet() {}")
     let result = shell.completions(for: "zzg", cursor: 3)
     #expect(
-        result?.candidates == [LineEditor.Candidate(replacement: "zzgreet", display: "zzgreet", description: "Greets.")]
+        result?.candidates == [
+            LineEditor.Candidate(replacement: "zzgreet", display: "zzgreet", description: "Greets.")
+        ]
     )
     #expect(completion("ech").replacements.contains("echo"))
     #expect(completion("if tru && ls | filt").replacements.contains("filter"))  // after a pipe: command position
@@ -123,7 +132,11 @@ private func completion(_ text: String, in shell: Shell = Shell()) -> (start: In
 @Test func completesFlagsFromSignatures() {
     let shell = Shell()
     shell.execute(#"func f(@flag("n") times: Int = 1, color: Bool = true) {}"#)
-    #expect(completion("f --", in: shell).replacements == ["--color", "--help", "--no-color", "--times"])
+    #expect(
+        completion("f --", in: shell).replacements == [
+            "--color", "--help", "--no-color", "--times",
+        ]
+    )
     #expect(completion("f -", in: shell).replacements.contains("-n"))
     #expect(completion("ls | sorted --b").replacements == ["--by"])
 }
@@ -187,8 +200,12 @@ private func completion(_ text: String, in shell: Shell = Shell()) -> (start: In
     let styles = shell.highlightStyles(line)
     let at = { (word: String, from: Int) in
         styles[
-            line.range(of: word, range: line.index(line.startIndex, offsetBy: from)..<line.endIndex)!.lowerBound
-                .utf16Offset(in: line)
+            line.range(
+                of: word,
+                range: line.index(line.startIndex, offsetBy: from)..<line.endIndex
+            )!
+            .lowerBound
+            .utf16Offset(in: line)
         ]
     }
     #expect(at("contains", 0) == "\u{1B}[32m")
@@ -199,6 +216,7 @@ private func completion(_ text: String, in shell: Shell = Shell()) -> (start: In
 @Test func redirectOperatorsHighlight() {
     let source = "sort < in e>o > out o+e>> log"
     let chars = Array(source)
-    let marked = Shell().highlightSpans(source).filter { $0.kind == .punctuation }.map { String(chars[$0.range]) }
+    let marked = Shell().highlightSpans(source).filter { $0.kind == .punctuation }
+        .map { String(chars[$0.range]) }
     #expect(marked == ["<", "e>o", ">", "o+e>>"])
 }

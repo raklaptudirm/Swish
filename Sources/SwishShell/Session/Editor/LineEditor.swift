@@ -180,8 +180,10 @@ final class LineEditor {
     /// One level of indentation.
     private static let indentation = "    "
 
-    /// A new line after the cursor, indented as the line it follows is, and a level deeper if that one opens a block
-    /// (`{`, `(`, `[`, or a `case …:`). Text pasted arrives with its own indentation, so with more input waiting there
+    /// A new line after the cursor, indented as the line it follows is, and a level deeper if that
+    /// one opens a block
+    /// (`{`, `(`, `[`, or a `case …:`). Text pasted arrives with its own indentation, so with more
+    /// input waiting there
     /// is none.
     private func insertNewline() {
         guard !inputPending() else { return insert(["\n"]) }
@@ -189,8 +191,11 @@ final class LineEditor {
         var indent = String(line.prefix { $0 == " " || $0 == "\t" })
         let trimmed = line.drop { $0 == " " || $0 == "\t" }
         if let last = trimmed.last(where: { $0 != " " && $0 != "\t" }) {
-            let words = String(trimmed).split(separator: " ", maxSplits: 1).first.map(String.init) ?? ""
-            if "{([".contains(last) || last == ":" && (words == "case" || words == "default:" || words == "default") {
+            let words =
+                String(trimmed).split(separator: " ", maxSplits: 1).first.map(String.init) ?? ""
+            if "{([".contains(last)
+                || last == ":" && (words == "case" || words == "default:" || words == "default")
+            {
                 indent += LineEditor.indentation
             }
         }
@@ -312,13 +317,16 @@ final class LineEditor {
 
         func find(from start: Int) -> Int? {
             guard !query.isEmpty else { return nil }
-            return stride(from: min(start, entries.count - 1), through: 0, by: -1).first { entries[$0].contains(query) }
+            return stride(from: min(start, entries.count - 1), through: 0, by: -1)
+                .first { entries[$0].contains(query) }
         }
         func show() {
             if let match {
                 buffer = Array(entries[match])
                 let offset = entries[match].range(of: query)
-                    .map { entries[match].distance(from: entries[match].startIndex, to: $0.lowerBound) }
+                    .map {
+                        entries[match].distance(from: entries[match].startIndex, to: $0.lowerBound)
+                    }
                 cursor = offset ?? buffer.count
             }
             let label = failing ? "failing search" : "search"
@@ -372,7 +380,8 @@ final class LineEditor {
     /// one candidate, as much as they share when there are several, and
     /// otherwise lists them.
     private func completeWord() {
-        guard let completion = complete(String(buffer), cursor), !completion.candidates.isEmpty else {
+        guard let completion = complete(String(buffer), cursor), !completion.candidates.isEmpty
+        else {
             writeOut("\u{07}")
             return
         }
@@ -408,7 +417,8 @@ final class LineEditor {
                 )
                 if let description = candidate.description {
                     let room = max(width - nameWidth - 2, 10)
-                    let text = description.count > room ? description.prefix(room - 1) + "…" : description
+                    let text =
+                        description.count > room ? description.prefix(room - 1) + "…" : description
                     line += "  \u{1B}[90m\(text)\u{1B}[0m"
                 }
                 lines.append(line)
@@ -424,7 +434,12 @@ final class LineEditor {
                     let index = column * rows + row
                     guard index < shown.count else { break }
                     let display = shown[shown.startIndex + index].display
-                    line += display + String(repeating: " ", count: columnWidth - LineEditor.displayWidth(of: display))
+                    line +=
+                        display
+                        + String(
+                            repeating: " ",
+                            count: columnWidth - LineEditor.displayWidth(of: display)
+                        )
                 }
                 lines.append(String(line.reversed().drop { $0 == " " }.reversed()))
             }
@@ -537,7 +552,11 @@ final class LineEditor {
     }
 
     static func strippingEscapes(_ text: String) -> String {
-        text.replacingOccurrences(of: "\u{1B}\\[[0-9;?]*[A-Za-z]", with: "", options: .regularExpression)
+        text.replacingOccurrences(
+            of: "\u{1B}\\[[0-9;?]*[A-Za-z]",
+            with: "",
+            options: .regularExpression
+        )
     }
 
     /// Terminal cells a character takes: 2 for wide East Asian characters
@@ -545,7 +564,9 @@ final class LineEditor {
     static func displayWidth(of character: Character) -> Int {
         guard let scalar = character.unicodeScalars.first else { return 0 }
         if scalar.value < 0x20 || (0x7F..<0xA0).contains(scalar.value) { return 0 }
-        if character.unicodeScalars.contains(where: { $0.properties.isEmojiPresentation || $0 == "\u{FE0F}" }) {
+        if character.unicodeScalars.contains(where: {
+            $0.properties.isEmojiPresentation || $0 == "\u{FE0F}"
+        }) {
             return 2
         }
         switch scalar.value {
