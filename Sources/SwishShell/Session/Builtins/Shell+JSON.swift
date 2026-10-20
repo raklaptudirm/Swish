@@ -7,7 +7,7 @@ extension Shell {
     /// checker writes each access into `jsonField(json, "name")`, and a view like
     /// `json.port?.int` into `jsonInt(…)`. All give nil for nil, a missing
     /// field, or a value of another kind. The functions are the shell's
-    /// (`Shell.prelude`), typed in its declarations like any others.
+    /// (Resources/Prelude.swift), typed in its declarations like any others.
     func installJSON() {
         let json = ValueType.named("JSON")
         interpreter.registerDynamic(named: "JSON", field: "jsonField", views: [

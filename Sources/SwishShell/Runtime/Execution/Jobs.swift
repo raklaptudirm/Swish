@@ -1,6 +1,5 @@
 import Swiit
 import Foundation
-import SwiitStandardLibrary
 
 /// A pipeline of processes, one running in the foreground or a job in the
 /// background (from `async` or ^Z), or Swish code running as a task of its

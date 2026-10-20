@@ -1,6 +1,5 @@
 import Swiit
 import Foundation
-import SwiitStandardLibrary
 
 extension Interpreter.Host {
     /// The shell as a host: the process it is. Output goes to the

@@ -1,5 +1,5 @@
 import Foundation
-import SwiitStandardLibrary
+import Swiit
 
 /// How `help` is colored: with the roles `DisplayStyle` names, the colors the
 /// highlighter gives the same things, so a signature reads as it would in code.
@@ -50,4 +50,17 @@ enum HelpStyle {
 extension AttributedString {
     /// The width it takes on a line.
     var width: Int { plain.count }
+}
+
+extension DisplayStyle {
+    /// A command's name, and a flag: what a command line is made of is the shell's.
+    static let command = DisplayStyle.function
+    static let flag = DisplayStyle.blue
+
+    /// Whether to style what's written to `fd`: only for a terminal, and
+    /// not with `NO_COLOR` set or `TERM=dumb`.
+    static func enabled(for fd: Int32) -> Bool {
+        func variable(_ name: String) -> String? { getenv(name).map { String(cString: $0) } }
+        return isatty(fd) != 0 && variable("NO_COLOR").map(\.isEmpty) != false && variable("TERM") != "dumb"
+    }
 }

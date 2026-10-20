@@ -1,6 +1,5 @@
 import Swiit
 import Foundation
-import SwiitStandardLibrary
 
 // The shell's halves of what the interpreter does with environment, words and
 // statuses: a command's words and redirects expanded, and a status read as an

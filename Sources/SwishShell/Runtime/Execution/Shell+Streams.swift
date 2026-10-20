@@ -1,6 +1,5 @@
 import Swiit
 import Foundation
-import SwiitStandardLibrary
 
 /// Items read one at a time, as the stages of a pipeline pass them on.
 final class ValueStream {

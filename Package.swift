@@ -22,11 +22,12 @@ let package = Package(
             name: "SwishShell",
             dependencies: [
                 .product(name: "Swiit", package: "Swiit"),
-                .product(name: "SwiitStandardLibrary", package: "Swiit"),
                 .product(name: "SystemPackage", package: "swift-system"),
                 .product(name: "SwiftSyntax", package: "swift-syntax"),
                 .product(name: "SwiftParser", package: "swift-syntax"),
-            ]
+            ],
+            // The shell's prelude is Swift source that is read, not compiled: it is embedded in the target.
+            resources: [.embedInCode("Resources/Prelude.swift")]
         ),
         .testTarget(name: "SwishShellTests", dependencies: [
             "SwishShell", .product(name: "Swiit", package: "Swiit"),

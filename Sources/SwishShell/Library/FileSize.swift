@@ -100,10 +100,10 @@ struct FileSize: Codable, Hashable, Comparable, Sendable, LosslessStringConverti
     public static func / (lhs: FileSize, rhs: FileSize) -> Double { Double(lhs.bytes) / Double(rhs.bytes) }
 }
 
-extension FileSize: SwiitDisplayed {
+extension FileSize: SwiitDisplayed, Presentable {
     var swiitDescription: String { description }
     /// A number: in the constant color, and a column of them lines up on the right.
-    var swiitShape: DisplayShape { DisplayShape(role: .constant, isNumeric: true) }
+    var shape: DisplayShape { DisplayShape(role: .constant, isNumeric: true) }
 }
 
 extension FileSize: ValueConvertible {

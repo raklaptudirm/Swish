@@ -1,14 +1,6 @@
-import Foundation
-import Swiit
+// The shell's own declarations, in Swift, read after the language's prelude: the checker works from the signatures, and
+// the bodies are in Swift too, found by name (Library/Install.swift). Not compiled: it is embedded in the target.
 
-// The shell's own declarations, in Swift, read after the language's prelude. The checker works from the signatures; the
-// bodies are in Swift, found by name (Install.swift).
-
-extension Shell {
-    static var prelude: String { [types, declarations, libraryFunctions, styling, fileSizeUnits].joined(separator: "\n") }
-
-    /// What `ls` and the others give, and what `from` and `to` take.
-    private static let types = #"""
 /// What text `from` can parse.
 enum InputFormat: Equatable, Hashable {
     case json
@@ -58,72 +50,6 @@ struct ProcessEntry: Equatable, Hashable, Encodable {
     let cpuTime: Double?
     let threads: Int?
 }
-"""#
-
-    /// The shell's own types and functions that reach the process, the files and the session.
-    private static let libraryFunctions = #"""
-/// Parses text into values.
-/// - Parameter format: json
-func from(_ format: InputFormat, _ text: [String]) throws -> JSON
-
-/// Converts the input to text: json, or text for how it would be displayed.
-/// - Parameter format: json or text
-func to(_ format: OutputFormat, _ items: [Any]) throws -> String
-
-/// Lays records out as a table with every field.
-func table(_ items: [Any]) -> [String]
-
-/// Shows each record as a list of fields.
-func list(_ items: [Any]) -> [String]
-
-/// The working directory.
-func pwd() -> FilePath
-
-/// Runs a closure with environment variables set, then puts them back.
-/// - Parameter variables: the variables to set, as in with(env: ["EDITOR": "vim"]) { git commit }
-/// - Parameter body: what to run with them set
-func with<T>(env variables: [String: String], _ body: () throws -> T) rethrows -> T
-
-/// Lists directory contents.
-/// - Parameter paths: files or directories to list (default: the current directory)
-/// - Parameter all: include hidden files
-func ls(_ paths: FilePath..., all: Bool = false) -> [FileEntry]
-
-/// What you've entered at the prompt, oldest first.
-func history() -> [String]
-
-/// A line of standard input, or nil at its end.
-/// - Parameter strippingNewline: leave the line's newline off
-func readLine(strippingNewline: Bool = true) -> String?
-
-/// Lists running processes. Memory and CPU time are only known for your own processes.
-func ps() -> [ProcessEntry]
-
-func shellStyled(_ text: String, _ styles: [TextStyle]) -> String
-"""#
-
-    /// `"error".styled(.red)`.
-    private static let styling = #"""
-extension String {
-    /// The text in colors or emphasis, plain where color is off.
-    /// - Parameter styles: how to style it, as in `.bold, .red`
-    func styled(_ styles: TextStyle...) -> String { shellStyled(self, styles) }
-}
-
-"""#
-
-    /// `2.mb` and `1.5.gib`: each unit a file size is written in is a property of `Int` and `Double`.
-    private static var fileSizeUnits: String {
-        let units = FileSize.units.sorted { ($0.value, $0.key) < ($1.value, $1.key) }
-        func properties(of number: String, _ amount: String) -> String {
-            units.map { "    var \($0.key): FileSize { FileSize(\(amount), multiplier: \($0.value)) }" }.joined(separator: "\n")
-        }
-        return "\nextension Int {\n\(properties(of: "Int", "Double(self)"))\n}\nextension Double {\n\(properties(of: "Double", "self"))\n}\n"
-    }
-
-    /// Swish source read after the core's prelude. The checker works from the
-    /// signatures; the bodies are in Swift, found by name (`bodies`).
-    private static let declarations = #"""
 
 /// A struct that says which of its fields a table shows by default, in
 /// order. The rest are still there for `filter`, `select` and `get`, and
@@ -135,7 +61,7 @@ protocol Tabular {
 /// A command or task started in the background, which `await` joins and
 /// `jobs` lists. What scripts may use of it is what the shell's jobs have
 /// (Jobs.swift); a `Job<Int>` is one of these too.
-protocol Job { \#(Job.declaration) }
+protocol Job { __JOB_MEMBERS__ }
 
 /// How a command exited: `output.status`, and what `Command.run()` gives.
 /// A command statement is a `Status`, and `a && b || c` is
@@ -377,5 +303,77 @@ extension Sequence {
     /// Keeps only the named fields of each record.
     func select(_ fields: String...) -> [Any]
 }
-"""#
+/// Parses text into values.
+/// - Parameter format: json
+func from(_ format: InputFormat, _ text: [String]) throws -> JSON
+
+/// Converts the input to text: json, or text for how it would be displayed.
+/// - Parameter format: json or text
+func to(_ format: OutputFormat, _ items: [Any]) throws -> String
+
+/// Lays records out as a table with every field.
+func table(_ items: [Any]) -> [String]
+
+/// Shows each record as a list of fields.
+func list(_ items: [Any]) -> [String]
+
+/// The working directory.
+func pwd() -> FilePath
+
+/// Runs a closure with environment variables set, then puts them back.
+/// - Parameter variables: the variables to set, as in with(env: ["EDITOR": "vim"]) { git commit }
+/// - Parameter body: what to run with them set
+func with<T>(env variables: [String: String], _ body: () throws -> T) rethrows -> T
+
+/// Lists directory contents.
+/// - Parameter paths: files or directories to list (default: the current directory)
+/// - Parameter all: include hidden files
+func ls(_ paths: FilePath..., all: Bool = false) -> [FileEntry]
+
+/// What you've entered at the prompt, oldest first.
+func history() -> [String]
+
+/// A line of standard input, or nil at its end.
+/// - Parameter strippingNewline: leave the line's newline off
+func readLine(strippingNewline: Bool = true) -> String?
+
+/// Lists running processes. Memory and CPU time are only known for your own processes.
+func ps() -> [ProcessEntry]
+
+func shellStyled(_ text: String, _ styles: [TextStyle]) -> String
+extension String {
+    /// The text in colors or emphasis, plain where color is off.
+    /// - Parameter styles: how to style it, as in `.bold, .red`
+    func styled(_ styles: TextStyle...) -> String { shellStyled(self, styles) }
+}
+
+extension Sequence {
+    /// The items without repeats, first ones kept.
+    func uniqued() -> [Element] {
+        var seen: [Element: Bool] = [:]
+        var kept: [Element] = []
+        for item in self where seen[item] == nil {
+            seen[item] = true
+            kept.append(item)
+        }
+        return kept
+    }
+
+    /// The value of one field of each item.
+    /// - Parameter key: a field, as in get name or get(\.name)
+    func get<V>(_ key: KeyPath<Element, V>) -> [V] {
+        map(key)
+    }
+
+    /// The items in order of a field; Swift's sorted() and sorted(by:)
+    /// sort by the items themselves or a closure.
+    /// - Parameter by: the field, as in --by size or by: \.size
+    func sorted<V: Comparable>(by key: KeyPath<Element, V>) -> [Element] {
+        // Ties keep their order.
+        let items = Array(self)
+        let keys = items.map(key)
+        return keys.enumerated().sorted { first, second in
+            first.element != second.element ? first.element < second.element : first.offset < second.offset
+        }.map { items[$0.offset] }
+    }
 }

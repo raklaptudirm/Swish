@@ -1,6 +1,5 @@
 import Foundation
 import Swiit
-import SwiitStandardLibrary
 
 extension Shell {
     /// Reports an error, to wherever standard error is redirected.

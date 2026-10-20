@@ -1,6 +1,5 @@
 import Swiit
 @testable import SwishShell
-import SwiitStandardLibrary
 import Testing
 
 private let wide = PrettyPrinter(width: .max)

@@ -1,6 +1,5 @@
 import Swiit
 @testable import SwishShell
-import SwiitStandardLibrary
 import Testing
 
 /// Runs `source` in `shell`, returning what it wrote to standard output.

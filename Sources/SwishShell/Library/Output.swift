@@ -53,13 +53,13 @@ struct Status: Sendable, Hashable, Encodable {
     }
 }
 
-extension Output: CustomStringConvertible, CustomDebugStringConvertible, SwiitDisplayed {
+extension Output: CustomStringConvertible, CustomDebugStringConvertible, SwiitDisplayed, Presentable {
     var description: String { text }
     var swiitDescription: String { text }
     /// Shown as its text and status, and nothing at all if it's empty.
-    var swiitShape: DisplayShape { DisplayShape(isEmpty: text.isEmpty) }
+    var shape: DisplayShape { DisplayShape(isEmpty: text.isEmpty) }
     /// One line in a table: its newlines shown as ↵.
-    var swiitCell: String { text.replacingOccurrences(of: "\n", with: "↵") }
+    var cell: String { text.replacingOccurrences(of: "\n", with: "↵") }
     var debugDescription: String {
         "Output(text: \(Value(text).debugDescription), status: \(status.value.debugDescription))"
     }

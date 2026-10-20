@@ -1,6 +1,5 @@
 import Foundation
 import Swiit
-import SwiitStandardLibrary
 import SystemPackage
 
 // What the shell adds to the language, told to the interpreter through its public interface: Swift types it holds as they
@@ -10,6 +9,7 @@ extension Shell {
     /// Teaches the interpreter the shell's own: `ls`, `ps`, `pwd`, `from`, `to`, `help`, and the types they use.
     func installLibrary() {
         interpreter.register(FileSize.native)
+        interpreter.register(Date.native)
         interpreter.register(DisplayColumn.native)
         interpreter.register(Output.native)
         do {

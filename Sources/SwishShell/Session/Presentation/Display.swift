@@ -1,6 +1,5 @@
 import Foundation
 import Swiit
-import SwiitStandardLibrary
 
 /// How the standard library's and the shell's own types show in a table:
 /// the columns shown by default for records of a type, and what styles them.

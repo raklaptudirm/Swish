@@ -31,8 +31,7 @@ extension Shell {
             self.interpreter.highlight(source).map { span in
                 let kind: HighlightKind = switch span.kind {
                 case .keyword: .keyword
-                case .command: .command
-                case .flag: .flag
+                case .function: .command
                 case .string: .string
                 case .number: .number
                 case .constant: .constant

@@ -1,6 +1,5 @@
 import Foundation
 import Swiit
-import SwiitStandardLibrary
 
 /// Lays out a stream of items as it arrives. Records become table rows:
 /// the first 100, or whatever arrives in the first 200ms, decide the
@@ -56,7 +55,7 @@ final class DisplayFormatter {
         }
         guard flush() else { return false }
         // A Swift value with colors to show (help), on a terminal.
-        if styled, let colored = (try? item.unboxed((any SwiitDisplayed).self))?.swiitColored {
+        if styled, let colored = (try? item.unboxed((any Presentable).self))?.styledText {
             return emit(colored)
         }
         return emit(item.description)
@@ -181,7 +180,7 @@ final class DisplayFormatter {
             return "{\(count) field\(count == 1 ? "" : "s")}"
         default:
             // What a Swift value's type says a table shows: a date to the minute.
-            if let displayed = try? value.unboxed((any SwiitDisplayed).self) { return displayed.swiitCell }
+            if let displayed = try? value.unboxed((any Presentable).self) { return displayed.cell }
             return value.description
         }
     }

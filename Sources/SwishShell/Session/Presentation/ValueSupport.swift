@@ -1,6 +1,5 @@
 import Foundation
 import Swiit
-import SwiitStandardLibrary
 
 // What the shell's printers read of a value, over Swiit's public inspection: a struct's or an object's fields, and how a
 // value held as a Swift one looks.
@@ -37,7 +36,7 @@ extension Value {
 
     /// How it looks beyond its text, said by the Swift type it is held as.
     var displayShape: DisplayShape {
-        ((try? unboxed((any SwiitDisplayed).self))?.swiitShape) ?? DisplayShape()
+        ((try? unboxed((any Presentable).self))?.shape) ?? DisplayShape()
     }
 
     /// Text with styles, held as the Swift value it is.
