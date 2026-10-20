@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 import Foundation
 
 struct SpawnFailure: Error {
@@ -8,12 +8,10 @@ struct SpawnFailure: Error {
 
 enum Stage {
     case external([String], skipBuiltins: Bool, redirects: [ResolvedRedirect], environment: [(String, String)])
-    /// A Swish function, which runs in the shell's own process.
-    case function(OverloadSet, [CommandArgument], redirects: [ResolvedRedirect], environment: [(String, String)])
+    /// A Swish function, which runs in the shell's own process; or a method of what flows in, as in `[p1, p2] | describe`.
+    case function(Callee, [CommandArgument], redirects: [ResolvedRedirect], environment: [(String, String)])
     /// A value feeding the pipeline, as in `[3, 1, 2] | sorted`.
     case value(Value)
-    /// `[p1, p2] | describe`: a method of each item piped in.
-    case method(String, [CommandArgument], redirects: [ResolvedRedirect], environment: [(String, String)])
     /// A name that may be a method of what flows in, decided when the first item arrives (Shell+Resolving.swift).
     case deferred(DeferredStage)
 
@@ -23,7 +21,7 @@ enum Stage {
 
     var redirects: [ResolvedRedirect] {
         switch self {
-        case .external(_, _, let redirects, _), .function(_, _, let redirects, _), .method(_, _, let redirects, _): redirects
+        case .external(_, _, let redirects, _), .function(_, _, let redirects, _): redirects
         case .deferred(let stage): stage.redirects
         case .value: []
         }
@@ -32,7 +30,7 @@ enum Stage {
     /// `NAME=value` given before the command.
     var environment: [(String, String)] {
         switch self {
-        case .external(_, _, _, let environment), .function(_, _, _, let environment), .method(_, _, _, let environment): environment
+        case .external(_, _, _, let environment), .function(_, _, _, let environment): environment
         case .deferred(let stage): stage.environment
         case .value: []
         }
@@ -49,13 +47,13 @@ extension Shell {
         if stages.count == 1 {
             switch stages[0] {
             // A function reading a file (`double < numbers`) streams it, below.
-            case .function(let set, let args, let redirects, let environment) where !redirects.contains(where: { $0.fd == 0 }):
-                return try interpreter.withEnvironment(environment) {
-                    try withRedirects(redirects) { _, _ in try callCommand(set, args, display: display) }
+            case .function(let callee, let args, let redirects, let environment) where callee.receiver == nil && !redirects.contains(where: { $0.fd == 0 }):
+                return try withEnvironment(environment) {
+                    try withRedirects(redirects) { _, _ in try callCommand(callee, args, display: display) }
                 }
             case .external(let argv, let skipBuiltins, let redirects, let environment)
                 where !skipBuiltins && Shell.shellBuiltins[argv[0]] != nil:
-                return try interpreter.withEnvironment(environment) {
+                return try withEnvironment(environment) {
                     try withRedirects(redirects) { _, _ in runBuiltin(argv)! }
                 }
             default:
@@ -125,7 +123,7 @@ extension Shell {
                 job.running.append(pid)
                 if isLast { job.lastPid = pid }
             case .failure(let failure):
-                interpreter.report(failure.message)
+                report(failure.message)
                 if isLast { job.status = failure.status }
             }
         }
@@ -135,7 +133,7 @@ extension Shell {
         if let segment {
             do {
                 let pipeOutput = segmentOutput >= 0 ? segmentOutput : stdoutFD
-                try interpreter.withEnvironment(stages[segment].flatMap(\.environment)) {
+                try withEnvironment(stages[segment].flatMap(\.environment)) {
                 try withRedirects(segmentRedirects, input: segmentInput, output: pipeOutput) { input, output in
                     // Text for the next program, or, if it went to a file or
                     // the terminal, formatted as it would be displayed.
@@ -172,7 +170,7 @@ extension Shell {
             try descriptors.apply(redirects)
             defer { descriptors.closeFiles() }
             // Children inherit the environment as it is when they start.
-            return interpreter.withEnvironment(environment) {
+            return withEnvironment(environment) {
                 spawn(argv, pgid: pgid, descriptors: descriptors, foreground: foreground)
             }
         } catch {
@@ -198,7 +196,7 @@ extension Shell {
         while let pid = job.running.first {
             var raw: Int32 = 0
             // Cancelling the task stops its programs, which ends the wait.
-            guard interpreter.suspend(wake: { job.send(SIGTERM) }, { waitpid(pid, &raw, WUNTRACED) }) == pid else {
+            guard Interpreter.whileWaiting(wake: { job.send(SIGTERM) }) { waitpid(pid, &raw, WUNTRACED) } == pid else {
                 if errno == EINTR { continue }
                 job.running.removeFirst()
                 continue
@@ -237,7 +235,7 @@ extension Shell {
             switch signal {
             case SIGINT: if interactive { writeAll(STDERR_FILENO, "\n") }
             case SIGPIPE: break
-            default: if !quiet { interpreter.report(String(cString: strsignal(signal))) }
+            default: if !quiet { report(String(cString: strsignal(signal))) }
             }
             return 128 + signal
         }

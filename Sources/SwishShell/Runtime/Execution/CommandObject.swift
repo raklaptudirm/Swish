@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 import Foundation
 
 // What a command and a pipeline are in Swift: the prelude's `Command` and
@@ -12,8 +12,8 @@ import Foundation
 // prompt.
 
 extension Shell {
-    /// The Swift bodies of `Command`'s and `Pipeline`'s methods that run them.
-    var commandMethods: [String: (body: FunctionBody, input: Parameter?)] {
+    /// The Swift bodies of `Command`'s and `Pipeline`'s methods that run them, by the names the prelude gives them.
+    var commandMethods: [String: @Sendable ([String: Value]) throws -> Value] {
         let methods: [String: ([Value], Value?) throws -> Value] = [
             // As a statement: its output goes where the shell's does.
             "run": { [unowned self] in statusValue(try run($0, from: $1, display: true)) },
@@ -21,54 +21,61 @@ extension Shell {
             "runQuietly": { [unowned self] in statusValue(try run($0, from: $1, display: false)) },
             "check": { [unowned self] in try check($0, from: $1) },
             "output": { [unowned self] in .output(try output($0, from: $1)) },
-            "start": { [unowned self] in .object(try startJob(try stages($0, from: $1), source: source($0, from: $1), capture: false)) },
+            "start": { [unowned self] in Value(try startJob(try stages($0, from: $1), source: source($0, from: $1), capture: false)) },
             "startCapturing": { [unowned self] in
-                .object(try startJob(try stages($0, from: $1), source: source($0, from: $1), capture: true))
+                Value(try startJob(try stages($0, from: $1), source: source($0, from: $1), capture: true))
             },
         ]
-        var bodies: [String: (body: FunctionBody, input: Parameter?)] = [:]
+        var bodies: [String: @Sendable ([String: Value]) throws -> Value] = [:]
         for (name, method) in methods {
+            nonisolated(unsafe) let method = method
             // A command alone, or a pipeline's commands and what it is fed.
-            bodies["Command." + name] = (.native { _, arguments in try method([arguments["self"] ?? .nothing], nil) }, nil)
-            bodies["Pipeline." + name] = (.native { _, arguments in
-                guard case .record(let pipeline)? = arguments["self"], case .list(let commands)? = pipeline["commands"] else {
+            bodies["Command." + name] = { arguments in try method([arguments["self"] ?? .null], nil) }
+            bodies["Pipeline." + name] = { arguments in
+                guard let pipeline = arguments["self"], let commands = pipeline.field("commands")?.cast(to: [Value].self) else {
                     throw RuntimeError("not a Pipeline")
                 }
-                return try method(commands, pipeline["input"].flatMap { $0 == .nothing ? nil : $0 })
-            }, nil)
+                return try method(commands, pipeline.field("input").flatMap { $0.kind == .nothing ? nil : $0 })
+            }
         }
         return bodies
     }
 
     /// `captureThrowing { … }`: as `capture(throwing: true)`.
-    var captureThrowingBody: FunctionBody {
-        .native { [unowned self] interpreter, arguments in
-            var arguments = arguments
-            arguments["throwing"] = .bool(true)
-            guard case .native(let body) = captureBody else { return .nothing }
-            return try body(interpreter, arguments)
-        }
+    func captureThrowingBody(_ arguments: [String: Value]) throws -> Value {
+        var arguments = arguments
+        arguments["throwing"] = Value(true)
+        return try captureBody(arguments)
     }
 
     /// `capture { … }`: the block, run with its output gathered.
-    var captureBody: FunctionBody {
-        .native { [unowned self] interpreter, arguments in
-            guard case .function(let body as Function)? = arguments["body"], case .swiit(let program) = body.body else {
-                throw RuntimeError("capture needs a block")
-            }
-            // What runs in it leaves the status it ends with.
-            let before = lastStatus
-            lastStatus = 0
-            // Its statements run as statements, which say how they went.
-            let text = try capturing { try interpreter.runBlock(program) }
-            let status = lastStatus
-            lastStatus = before
-            let output = output(text, status: status)
-            // Without `try`, failing is just what `.status` says.
-            if arguments["throwing"] == .bool(true) && status != 0 {
-                throw RuntimeError.commandFailure("$(…) failed with status \(status)", status: status, output: output)
-            }
-            return .output(output)
+    func captureBody(_ arguments: [String: Value]) throws -> Value {
+        guard let body = arguments["body"], body.kind == .function else { throw RuntimeError("capture needs a block") }
+        // What runs in it leaves the status it ends with.
+        let before = lastStatus
+        lastStatus = 0
+        // Its statements run as statements, which say how they went.
+        let text = try capturing {
+            let result = try self.callBlock(body)
+            // A block of one expression gives its value rather than running a statement, so says its status here.
+            if result.kind != .nothing { self.lastStatus = self.status(of: result) }
+        }
+        let status = lastStatus
+        lastStatus = before
+        let output = output(text, status: status)
+        // Without `try`, failing is just what `.status` says.
+        if arguments["throwing"]?.cast(to: Bool.self) == true && status != 0 {
+            throw RuntimeError.commandFailure("$(…) failed with status \(status)", status: status, output: output)
+        }
+        return .output(output)
+    }
+
+    /// Runs a closure the language gave, as a block.
+    func callBlock(_ closure: Value) throws -> Value {
+        do {
+            return try interpreter.call(closure, with: [])
+        } catch let error as Diagnostic {
+            throw ScriptError(error.message, status: error.status, isReported: error.isReported)
         }
     }
 
@@ -80,7 +87,7 @@ extension Shell {
     func check(_ commands: [Value], from input: Value?) throws -> Value {
         let status = try run(commands, from: input, display: true)
         if status != 0 {
-            let (code, signal) = interpreter.exitCode(status)
+            let (code, signal) = exitCode(status)
             throw RuntimeError.commandFailure("\(source(commands, from: input)) failed with status \(status)", status: status,
                                               output: Output(text: "", code: code, signal: signal))
         }
@@ -98,18 +105,18 @@ extension Shell {
     func output(_ text: String, status: Int32) -> Output {
         var text = text
         while text.last == "\n" { text.removeLast() }
-        let (code, signal) = interpreter.exitCode(status)
+        let (code, signal) = exitCode(status)
         return Output(text: text, code: code, signal: signal)
     }
 
     /// The exit status a value gives: a Bool's truth, a `Status` or an
     /// `Output` how its command ended; anything else succeeded.
     func status(of value: Value) -> Int32 {
-        if case .bool(let truth) = value { return truth ? 0 : 1 }
-        if case .record(let record) = value, record.typeName == "Status", case .bool(let succeeded)? = record["succeeded"] {
+        if let truth = value.cast(to: Bool.self) { return truth ? 0 : 1 }
+        if value.kind == .structure, value.typeName == "Status", let succeeded = value.field("succeeded")?.cast(to: Bool.self) {
             if succeeded { return 0 }
-            if case .int(let code)? = record["code"] { return Int32(code) }
-            if case .int(let signal)? = record["signal"] { return 128 + Int32(signal) }
+            if let code = value.field("code")?.cast(to: Int.self) { return Int32(code) }
+            if let signal = value.field("signal")?.cast(to: Int.self) { return 128 + Int32(signal) }
             return 1
         }
         // `await build && echo ok`: an Output's status is its command's.
@@ -119,28 +126,14 @@ extension Shell {
         return 0
     }
 
-    /// Keeps the exit status as statements run: an expression statement's
-    /// value says it (`false` fails, a command's `Status` is how it ended),
-    /// a per-item error reported makes it a failure, and anything else, as a
-    /// `let`, succeeds. An `if` or a loop is what ran in it last.
-    func recordStatuses() {
-        interpreter.statementFinished = { [unowned self] statement, value, itemErrors in
-            var status = value.map(status(of:)) ?? 0
-            // A `try?` that caught an error failed; other nils, like a
-            // function that returns nothing, didn't.
-            if value == .nothing, case .expression(.attempt(_, .optional)) = statement { status = 1 }
-            lastStatus = itemErrors && status == 0 ? 1 : status
-        }
-    }
-
     /// A command statement's value: how it ended.
     func statusValue(_ status: Int32) -> Value {
-        let (code, signal) = interpreter.exitCode(status)
-        return .record(Record([
-            "code": code.map(Value.int) ?? .nothing,
-            "signal": signal.map(Value.int) ?? .nothing,
-            "succeeded": .bool(status == 0),
-        ], typeName: "Status"))
+        let (code, signal) = exitCode(status)
+        return Value(struct: "Status", fields: [
+            "code": code.map { Value($0) } ?? Value.null,
+            "signal": signal.map { Value($0) } ?? Value.null,
+            "succeeded": Value(status == 0),
+        ])
     }
 
     func stages(_ commands: [Value], from input: Value?) throws -> [Stage] {
@@ -150,18 +143,18 @@ extension Shell {
     /// The commands as a person would type them, for messages and `jobs`.
     func source(_ commands: [Value], from input: Value?) -> String {
         let typed = commands.map { command -> String in
-            guard case .record(let record) = command, case .list(let words)? = record["words"] else { return command.description }
-            return (record["isExternal"] == .bool(true) ? "^" : "") + words.map(Shell.shellWord).joined(separator: " ")
+            guard let words = command.field("words")?.cast(to: [Value].self) else { return command.description }
+            return (command.field("isExternal")?.cast(to: Bool.self) == true ? "^" : "") + words.map(Shell.shellWord).joined(separator: " ")
         }
         return ((input.map { [$0.debugDescription] } ?? []) + typed).joined(separator: " | ")
     }
 
     /// A word as a shell would show it: quoted when it has spaces or quotes.
     private static func shellWord(_ value: Value) -> String {
-        if case .record(let record) = value, record.typeName == "Glob", case .string(let pattern)? = record["pattern"] {
+        if value.kind == .structure, value.typeName == "Glob", let pattern = value.field("pattern")?.cast(to: String.self) {
             return Glob.unescape(pattern)
         }
-        guard case .string(let text) = value else { return value.description }
+        guard let text = value.cast(to: String.self) else { return value.description }
         guard !text.isEmpty, !text.contains(where: { " \t\n'\"\\$|&;<>(){}".contains($0) }) else {
             return "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'"
         }
@@ -170,39 +163,39 @@ extension Shell {
 
     /// A `Command` as it runs: its words expanded, its redirects resolved.
     func spec(_ command: Value) throws -> CommandSpec {
-        guard case .record(let record) = command, case .list(let words)? = record["words"] else {
+        guard command.kind == .structure, let words = command.field("words")?.cast(to: [Value].self) else {
             throw RuntimeError("\(command.typeName) isn't a Command")
         }
         var spec = CommandSpec(arguments: try words.flatMap(arguments))
-        spec.external = record["isExternal"] == .bool(true)
-        if case .list(let redirections)? = record["redirections"] {
+        spec.external = command.field("isExternal")?.cast(to: Bool.self) == true
+        if let redirections = command.field("redirections")?.cast(to: [Value].self) {
             spec.redirects = try redirections.map(redirect)
         }
-        if case .dictionary(let variables)? = record["variables"] {
-            spec.environment = variables.dictionary.map { ($0.key.description, $0.value.description) }.sorted { $0.0 < $1.0 }
+        if let variables = command.field("variables")?.entries {
+            spec.environment = variables.map { ($0.key.description, $0.value.description) }.sorted { $0.0 < $1.0 }
         }
         // `(by: "size")`: the tuple's elements, as arguments; a position is no label.
-        if case .record(let tuple)? = record["arguments"], tuple.typeName == nil {
-            spec.call = tuple.keys.map { key in
-                Argument(label: Int(key) == nil ? key : nil, value: .literal(tuple[key] ?? .nothing))
+        if let call = command.field("arguments"), call.kind != .nothing {
+            if call.kind == .tuple, let tuple = call.fields {
+                spec.call = tuple.entries.map { (label: Int($0.key) == nil ? $0.key : nil, value: $0.value) }
+            } else {
+                // `(x)` is x, not a tuple of one.
+                spec.call = [(label: nil, value: call)]
             }
-        } else if let single = record["arguments"], single != .nothing {
-            // `(x)` is x, not a tuple of one.
-            spec.call = [Argument(label: nil, value: .literal(single))]
         }
         return spec
     }
 
     private func redirect(_ value: Value) throws -> ResolvedRedirect {
-        guard case .record(let record) = value, case .int(let fd)? = record["fd"], case .string(let mode)? = record["mode"] else {
+        guard let fd = value.field("fd")?.cast(to: Int.self), let mode = value.field("mode")?.cast(to: String.self) else {
             throw RuntimeError("\(value.typeName) isn't a Redirection")
         }
         let modes: [String: RedirectMode] = ["read": .read, "write": .write, "append": .append]
         guard let open = modes[mode] else {
-            guard mode == "send", case .int(let other)? = record["other"] else { throw RuntimeError("no redirection '\(mode)'") }
+            guard mode == "send", let other = value.field("other")?.cast(to: Int.self) else { throw RuntimeError("no redirection '\(mode)'") }
             return ResolvedRedirect(fd: Int32(fd), action: .duplicate(Int32(other)))
         }
-        let paths = try arguments(record["path"] ?? .nothing)
+        let paths = try arguments(value.field("path") ?? .null)
         guard paths.count == 1, case .text(let path) = paths[0] else {
             throw RuntimeError("ambiguous redirect: \(paths.count) files match")
         }
@@ -212,19 +205,24 @@ extension Shell {
     /// The arguments a word gives: a String is itself, a `Glob` the paths it
     /// matches, a `Spread` its items, a closure itself.
     func arguments(_ word: Value) throws -> [CommandArgument] {
-        switch word {
-        case .string(let text):
-            return [.text(text)]
+        switch word.kind {
+        case .string:
+            return [.text(word.description)]
         case .function:
             return [.value(word)]
-        case .record(let record) where record.typeName == "Glob":
-            guard case .string(let pattern)? = record["pattern"] else { return [] }
-            return try interpreter.expand(pattern).map(CommandArgument.text)
-        case .record(let record) where record.typeName == "Spread":
-            guard case .list(let items)? = record["value"] else { return [.text(record["value"]?.description ?? "")] }
+        case .structure where word.typeName == "Glob":
+            guard let pattern = word.field("pattern")?.cast(to: String.self) else { return [] }
+            return try expand(pattern).map(CommandArgument.text)
+        case .structure where word.typeName == "Spread":
+            guard let items = word.field("value")?.cast(to: [Value].self) else { return [.text(word.field("value")?.description ?? "")] }
             return items.map { .text($0.description) }
         default:
             return [.text(word.description)]
         }
     }
+}
+
+extension Value {
+    /// The field of a struct value, by name.
+    func field(_ name: String) -> Value? { entries?[Value(name)] }
 }

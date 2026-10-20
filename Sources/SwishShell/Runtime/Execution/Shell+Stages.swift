@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 import Foundation
 
 /// A command as it runs: its words expanded, its redirects resolved.
@@ -9,7 +9,7 @@ struct CommandSpec {
     var redirects: [ResolvedRedirect] = []
     var environment: [(String, String)] = []
     /// Arguments written as a call, `sorted(by: "size")`; a `.case` waits for its parameter's type.
-    var call: [Argument]? = nil
+    var call: [(label: String?, value: Value)]? = nil
 }
 
 extension Shell {
@@ -31,12 +31,12 @@ extension Shell {
             let rest = Array(arguments.dropFirst())
             // A function if one has that name, else a program; or a method of what flows in, which is found when the
             // first item arrives (Shell+Resolving.swift).
-            func function(_ set: OverloadSet?) throws -> Stage {
-                guard let set else { throw RuntimeError("\(name): not found") }
-                return .function(set, rest, redirects: redirects, environment: environment)
+            func function(_ callee: Callee?) throws -> Stage {
+                guard let callee else { throw RuntimeError("\(name): not found") }
+                return .function(callee, rest, redirects: redirects, environment: environment)
             }
             func fallback() throws -> Stage {
-                if !command.external, let set = interpreter.commandFunctions(named: name) { return try function(set) }
+                if !command.external, let callee = commandFunctions(named: name) { return try function(callee) }
                 return try program(arguments, name, command, redirects, environment)
             }
             if !command.external, (input != nil || !stages.isEmpty), isMemberName(name) || isStageMethod(name) {

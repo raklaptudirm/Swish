@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 import Foundation
 
 /// An interactive line editor: syntax highlighting, completion, history

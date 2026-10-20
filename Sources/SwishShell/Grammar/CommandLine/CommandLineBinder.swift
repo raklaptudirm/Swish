@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 import Foundation
 
 // A command line bound to a declaration's parameters: which overload the words
@@ -44,8 +44,8 @@ struct CommandLineBinding {
 
 extension Shell {
     /// Whether the shell answers `--help` or `-h` for these overloads, as it does unless one claims them.
-    func helpRequested(_ words: [CommandWordShape], for signatures: [TypeChecker.Signature]) -> Bool {
-        guard !signatures.contains(where: { $0.parameters.contains { $0.label == "help" || $0.shortFlag == "h" } }) else { return false }
+    func helpRequested(_ words: [CommandWordShape], for callee: Callee) -> Bool {
+        guard !callee.parameters.contains(where: { $0.contains { $0.label == "help" || $0.shortFlag == "h" } }) else { return false }
         for case .text(let arg) in words {
             if arg == "--" { return false }
             if arg == "--help" || arg == "-h" { return true }
@@ -53,55 +53,52 @@ extension Shell {
         return false
     }
 
-    /// Picks the overload the words bind to with the lowest penalty, as `Interpreter.resolve` does for values.
+    /// Picks the overload the words bind to with the lowest penalty, as a call by its arguments does.
     func bindCommandLine(
-        _ words: [CommandWordShape], to signatures: [TypeChecker.Signature], name: String, excludingInput: Bool, declaredEnum: DeclaredEnum? = nil
+        _ words: [CommandWordShape], to callee: Callee, excludingInput: Bool
     ) throws -> CommandLineBinding {
-        let stand = Function(name: nil, parameters: [], returnType: nil, body: .native { _, _ in .nothing })
-        if signatures.count == 1 {
-            return try bindWords(words, to: signatures[0].parameters, overload: 0, name: name, excludingInput: excludingInput, stand: stand, declaredEnum: declaredEnum)
+        let name = callee.label
+        let overloads = callee.parameters
+        if overloads.count == 1 {
+            return try bindWords(words, to: overloads[0], overload: 0, name: name, excludingInput: excludingInput)
         }
         var matches: [CommandLineBinding] = []
-        for (position, signature) in signatures.enumerated() {
+        for (position, parameters) in overloads.enumerated() {
             do {
-                matches.append(try bindWords(words, to: signature.parameters, overload: position, name: name, excludingInput: excludingInput, stand: stand, declaredEnum: declaredEnum))
+                matches.append(try bindWords(words, to: parameters, overload: position, name: name, excludingInput: excludingInput))
             } catch is RuntimeError {
                 continue
             }
         }
-        func rendered(_ signature: TypeChecker.Signature) -> String {
-            "  " + Function(name: signature.name, parameters: signature.parameters, returnType: signature.returns, body: .native { _, _ in .nothing },
-                            isThrowing: signature.isThrowing, generics: signature.generics).signature
-        }
+        func rendered(_ symbol: Symbol) -> String { "  " + signature(of: symbol) }
         guard let best = matches.map(\.penalty).min() else {
-            throw RuntimeError("\(name): no overload accepts these arguments; candidates:\n" + signatures.map(rendered).joined(separator: "\n"))
+            throw RuntimeError("\(name): no overload accepts these arguments; candidates:\n" + callee.overloads.map(rendered).joined(separator: "\n"))
         }
         var bestMatches = matches.filter { $0.penalty == best }
         if bestMatches.count > 1 {
-            let generic = { (match: CommandLineBinding) in
-                signatures[match.overload].parameters.filter { if case .parameter = $0.type { true } else { false } }.count
-            }
+            // Of equals, a function that takes a type itself beats one that takes anything, as in Swift.
+            let generic = { (match: CommandLineBinding) in overloads[match.overload].filter { $0.type.isUnknown }.count }
             let fewest = bestMatches.map(generic).min()!
             bestMatches = bestMatches.filter { generic($0) == fewest }
         }
         guard bestMatches.count == 1 else {
-            throw RuntimeError("\(name): ambiguous call; these overloads all match:\n" + bestMatches.map { rendered(signatures[$0.overload]) }.joined(separator: "\n"))
+            throw RuntimeError("\(name): ambiguous call; these overloads all match:\n" + bestMatches.map { rendered(callee.overloads[$0.overload]) }.joined(separator: "\n"))
         }
         return bestMatches[0]
     }
 
     /// `bind(commandLine:to:excludingInput:)`, deciding and not making: the same flags, positionals, collections and errors.
     func bindWords(
-        _ words: [CommandWordShape], to allParameters: [Parameter], overload: Int, name: String,
-        excludingInput: Bool, stand: Function, declaredEnum: DeclaredEnum?
+        _ words: [CommandWordShape], to allParameters: [CommandParameter], overload: Int, name: String,
+        excludingInput: Bool
     ) throws -> CommandLineBinding {
         let parameters = allParameters.filter { !(excludingInput && $0.isInput) }
-        var longFlags: [String: (parameter: Parameter, negated: Bool)] = [:]
-        var shortFlags: [Character: Parameter] = [:]
+        var longFlags: [String: (parameter: CommandParameter, negated: Bool)] = [:]
+        var shortFlags: [Character: CommandParameter] = [:]
         for parameter in parameters {
             guard let label = parameter.label else { continue }
             longFlags[kebabCase(label)] = (parameter, false)
-            if parameter.type == .bool, case .literal(.bool(true)) = parameter.defaultValue {
+            if parameter.type.isBool, parameter.defaultValue == Value(true) {
                 longFlags["no-" + kebabCase(label)] = (parameter, true)
             }
             if let flag = parameter.shortFlag { shortFlags[flag] = parameter }
@@ -111,17 +108,17 @@ extension Shell {
         var bound: [String: CommandLineBinding.Assigned] = [:]
         var penalty = 0
         /// A word taken as a value of `type`: whether it can be, and what it costs.
-        func take(_ word: Int, text: String?, as type: TypeAnnotation, for what: String) throws -> Piece {
+        func take(_ word: Int, text: String?, as type: ValueType, for what: String) throws -> Piece {
             if let text {
                 if type == .string || type == .any { penalty += 1 }
-                _ = try converted(text, to: type, for: what, of: name, declaredEnum: declaredEnum)
-            } else if interpreter.conform(.function(stand), to: type) == nil {
-                throw RuntimeError("\(name): \(what) must be \(type), not \(Value.function(stand).typeName)")
+                _ = try converted(text, to: type, for: what, of: name)
+            } else if !type.acceptsFunction {
+                throw RuntimeError("\(name): \(what) must be \(type), not Function")
             }
             return Piece(word: word, text: text)
         }
         var collected: [String: [Piece]] = [:]
-        func assign(_ parameter: Parameter, word: Int, text: String?, flag: String) throws {
+        func assign(_ parameter: CommandParameter, word: Int, text: String?, flag: String) throws {
             if let (element, _) = Shell.collection(parameter.type) {
                 collected[parameter.name, default: []].append(try take(word, text: text, as: element, for: flag))
             } else {
@@ -154,10 +151,10 @@ extension Shell {
                 guard let (parameter, negated) = longFlags[flagName] else {
                     throw RuntimeError("\(name): unknown option --\(flagName)" + programHint(name))
                 }
-                if parameter.type == .bool && (inline == nil || negated) {
+                if parameter.type.isBool && (inline == nil || negated) {
                     guard inline == nil else { throw RuntimeError("\(name): --\(flagName) doesn't take a value") }
                     if !negated, index < words.count, let next = textOf(index),
-                       (try? converted(next, to: parameter.type, for: "", of: name, declaredEnum: declaredEnum)) != nil {
+                       (try? converted(next, to: parameter.type, for: "", of: name)) != nil {
                         bound[parameter.name] = .words([Piece(word: index, text: next)])
                         index += 1
                     } else {
@@ -184,7 +181,7 @@ extension Shell {
                     throw RuntimeError("\(name): unknown option -\(letter)\(letters.count > 1 ? " in \(arg)" : "")" + programHint(name))
                 }
                 cursor += 1
-                if parameter.type == .bool {
+                if parameter.type.isBool {
                     bound[parameter.name] = .flag(true)
                     continue
                 }
@@ -204,7 +201,7 @@ extension Shell {
         var remaining = positionals[...]
         for parameter in parameters where parameter.label == nil {
             let what = "<\(parameter.name)>"
-            if parameter.variadic {
+            if parameter.isVariadic {
                 bound[parameter.name] = .words(try remaining.map { try take($0, text: textOf($0), as: parameter.type, for: what) })
                 remaining = []
             } else if let (element, _) = Shell.collection(parameter.type) {
@@ -224,16 +221,16 @@ extension Shell {
         }
         for (name, items) in collected { bound[name] = .words(items) }
         for parameter in parameters where bound[parameter.name] == nil {
-            if parameter.defaultValue != nil || parameter.externalDefault != nil {
+            if parameter.hasDefault {
                 bound[parameter.name] = .defaulted
-            } else if parameter.type == .bool && parameter.label != nil {
+            } else if parameter.type.isBool && parameter.label != nil {
                 bound[parameter.name] = .omitted
             } else if parameter.label != nil, Shell.collection(parameter.type) != nil {
                 bound[parameter.name] = .omitted
-            } else if case .optional = parameter.type {
+            } else if parameter.type.optionalWrapped != nil {
                 bound[parameter.name] = .omitted
             } else {
-                throw RuntimeError("\(name): missing \(commandLineName(of: parameter))")
+                throw RuntimeError("\(name): missing \(parameter.commandLineName)")
             }
         }
         return CommandLineBinding(overload: overload, assigned: bound, penalty: penalty)

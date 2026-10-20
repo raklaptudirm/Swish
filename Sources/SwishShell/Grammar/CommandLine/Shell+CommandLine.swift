@@ -1,6 +1,32 @@
-@_spi(Layer) import Swiit
+import Swiit
 import Foundation
 import SystemPackage
+
+/// A call a command line was bound to: the overload it means, and the values its words made for each parameter.
+struct BoundCall {
+    var callee: Callee
+    var overload: Int
+    var penalty: Int
+    /// The values each parameter was given, by its name: several for a variadic one.
+    var bound: [String: [Value]]
+    /// A stage written as a call, `sorted(by: "size")`, is bound by Swift's rules instead: its arguments as written.
+    var written: [(label: String?, value: Value)]?
+
+    /// What the call is made with, in the order the parameters are declared. `input` is what a pipe feeds the parameter
+    /// that takes it.
+    func arguments(input: (name: String, value: Value)? = nil) -> [(label: String?, value: Value)] {
+        if let written { return written }
+        var made: [(label: String?, value: Value)] = []
+        for parameter in callee.parameters[overload] {
+            if let input, parameter.name == input.name {
+                made.append((parameter.label, input.value))
+            } else if let values = bound[parameter.name] {
+                for (index, value) in values.enumerated() { made.append((index == 0 ? parameter.label : nil, value)) }
+            }
+        }
+        return made
+    }
+}
 
 extension Shell {
     // MARK: Command-mode calls
@@ -13,19 +39,28 @@ extension Shell {
 
     /// Calls a function with command-line arguments, displaying its result if
     /// asked. The status is 1 for a false result and 0 otherwise.
-    func callCommand(_ set: OverloadSet, _ args: [CommandArgument], display shouldDisplay: Bool) throws -> Int32 {
-        if helpRequested(args, for: set) {
-            interpreter.host.output.write(helpText(for: set, styled: interpreter.host.output.traits().styled))
+    func callCommand(_ callee: Callee, _ args: [CommandArgument], display shouldDisplay: Bool) throws -> Int32 {
+        if helpRequested(args, for: callee) {
+            interpreter.host.output.write(helpText(for: callee, styled: interpreter.host.output.traits().styled))
             return 0
         }
-        let (function, bindings) = try interpreter.resolve(set) { try self.bind(commandLine: args, to: $0, excludingInput: false) }
-        let result = try interpreter.invoke(function, with: bindings)
+        let call = try bind(commandLine: args, to: callee, excludingInput: false)
+        let result = try invoke(call.callee, call.arguments())
         // A command that found nothing (`ls` of an empty directory) shows nothing.
-        if shouldDisplay && result != .list([]) {
+        if shouldDisplay && result != Value([] as [Value]) {
             show(result)
         }
-        if case .bool(let truth) = result { return truth ? 0 : 1 }
+        if let truth = result.cast(to: Bool.self) { return truth ? 0 : 1 }
         return 0
+    }
+
+    /// Calls the function a callee names, or its method on `receiver`. A failure is the shell's own error.
+    func invoke(_ callee: Callee, _ arguments: [(label: String?, value: Value)], on receiver: Value? = nil) throws -> Value {
+        do {
+            return try interpreter.call(callee.name, on: receiver, arguments: arguments)
+        } catch {
+            throw ScriptError(error.message, status: error.status, isReported: error.isReported)
+        }
     }
 
     /// Derives a command-line interface from the signature (see
@@ -34,140 +69,97 @@ extension Shell {
     ///
     /// The penalty counts arguments taken as text by String or untyped
     /// parameters, so an Int overload beats a String one for `f 5`.
-    func bind(
-        commandLine args: [CommandArgument], to function: Function, excludingInput: Bool
-    ) throws -> (bindings: [String: Value], penalty: Int) {
-        let name = function.name ?? "closure"
-        let parameters = function.parameters.filter { !(excludingInput && $0.isInput) }
+    func bind(commandLine args: [CommandArgument], to callee: Callee, excludingInput: Bool) throws -> BoundCall {
         // A stage written as a call binds as a call does, without the input.
-        let callArguments = args.compactMap { argument -> Argument? in
+        let written = args.compactMap { argument -> (label: String?, value: Value)? in
             if case .call(let call) = argument { call } else { nil }
         }
-        if !callArguments.isEmpty {
-            let stripped = Function(
-                name: function.name, parameters: parameters, returnType: function.returnType, body: function.body,
-                captured: function.captured, documentation: function.documentation
-            )
-            return try interpreter.bind(callArguments, to: stripped)
+        if !written.isEmpty {
+            return BoundCall(callee: callee, overload: 0, penalty: 0, bound: [:], written: written)
         }
         // Which words each parameter gets is decided without values (CommandLineBinder.swift); here they are made.
         let shapes = args.map { argument -> CommandWordShape in
             if case .text(let text) = argument { .text(text) } else { .closure }
         }
-        let stand = Function(name: nil, parameters: [], returnType: nil, body: .native { _, _ in .nothing })
-        let binding = try bindWords(shapes, to: function.parameters, overload: 0, name: name, excludingInput: excludingInput, stand: stand, declaredEnum: nil)
+        let binding = try bindCommandLine(shapes, to: callee, excludingInput: excludingInput)
+        let name = callee.label
+        let parameters = callee.parameters[binding.overload].filter { !(excludingInput && $0.isInput) }
 
-        func take(_ word: Int, text: String?, as type: TypeAnnotation, for what: String) throws -> Value {
+        func take(_ word: Int, text: String?, as type: ValueType, for what: String) throws -> Value {
             if let text { return try converted(text, to: type, for: what, of: name) }
-            guard case .value(let value) = args[word], let conforming = interpreter.conform(value, to: type) else {
+            guard case .value(let value) = args[word], let conforming = interpreter.convert(value, to: type) else {
                 throw RuntimeError("\(name): \(what) must be \(type), not \(args[word].description)")
             }
             return conforming
         }
-        var bound: [String: Value] = [:]
+        var bound: [String: [Value]] = [:]
         for parameter in parameters {
             switch binding.assigned[parameter.name] {
             case .words(let pieces)?:
-                let what = parameter.label.map { "--\(kebabCase($0))" } ?? "<\(parameter.name)>"
-                if parameter.variadic {
-                    bound[parameter.name] = .list(try pieces.map { try take($0.word, text: $0.text, as: parameter.type, for: what) })
+                let what = parameter.commandLineName
+                if parameter.isVariadic {
+                    bound[parameter.name] = try pieces.map { try take($0.word, text: $0.text, as: parameter.type, for: what) }
                 } else if let (element, make) = Shell.collection(parameter.type) {
-                    bound[parameter.name] = make(try pieces.map { try take($0.word, text: $0.text, as: element, for: what) })
+                    bound[parameter.name] = [make(try pieces.map { try take($0.word, text: $0.text, as: element, for: what) })]
                 } else if let piece = pieces.first {
-                    bound[parameter.name] = try take(piece.word, text: piece.text, as: parameter.type, for: what)
+                    bound[parameter.name] = [try take(piece.word, text: piece.text, as: parameter.type, for: what)]
                 }
             case .flag(let on)?:
-                bound[parameter.name] = .bool(on)
+                bound[parameter.name] = [Value(on)]
             case .defaulted?:
-                // An external default is filled in by the Swift function.
-                if let defaultValue = parameter.defaultValue {
-                    bound[parameter.name] = try interpreter.defaultArgument(defaultValue, for: parameter, of: function)
-                }
+                break // The function fills in its own default.
             case .omitted?:
-                if parameter.type == .bool {
-                    bound[parameter.name] = .bool(false)
+                if parameter.type.isBool {
+                    bound[parameter.name] = [Value(false)]
                 } else if let (_, make) = Shell.collection(parameter.type) {
-                    bound[parameter.name] = make([])
+                    bound[parameter.name] = [make([])]
                 } else {
-                    bound[parameter.name] = .nothing
+                    bound[parameter.name] = [Value.null]
                 }
             case nil:
                 break
             }
         }
-        return (bound, binding.penalty)
+        return BoundCall(callee: callee, overload: binding.overload, penalty: binding.penalty, bound: bound, written: nil)
     }
 
     /// What a parameter given several words is made of, and how: a
     /// collection an array literal can be (`[Int]`, `Set<String>`).
-    static func collection(_ type: TypeAnnotation) -> (element: TypeAnnotation, make: ([Value]) -> Value)? {
-        guard let (bridged, bindings) = Bridge.type(of: type), let make = bridged.arrayLiteral,
-              let parameter = bridged.genericParameters.first, let element = bindings[parameter] else { return nil }
-        return (element, make)
-    }
-
-    /// Whether a word can be a value of `type` at all: a Swift type text
-    /// can be, an enum, or one of Swish's own that's read from text.
-    func takesWords(_ type: TypeAnnotation, declaredEnum: DeclaredEnum? = nil) -> Bool {
+    static func collection(_ type: ValueType) -> (element: ValueType, make: ([Value]) -> Value)? {
         switch type {
-        case .any, .unknown, .parameter, .keyPath, .output: return true
-        case .optional(let wrapped): return takesWords(wrapped, declaredEnum: declaredEnum)
-        case .named(let name) where declaredEnum?(name) != nil || interpreter.enumType(named: name) != nil: return true
+        case .named("Array", let arguments) where arguments.count == 1:
+            return (arguments[0], { Value($0) })
+        case .named("ArraySlice", let arguments) where arguments.count == 1:
+            return (arguments[0], { Value(boxing: ArraySlice($0), as: "ArraySlice") })
+        case .named("Set", let arguments) where arguments.count == 1:
+            return (arguments[0], { Value(boxing: Set($0), as: "Set") })
         default:
-            guard let (bridged, _) = Bridge.type(of: type) else { return false }
-            return bridged.parse != nil || bridged.literal != nil
+            return nil
         }
     }
 
-    /// An enum the program being checked declares, which has no `EnumType` to read its cases from yet.
-    typealias DeclaredEnum = (String) -> TypeProfile?
-
-    /// `text` as a value of `type`. With `declaredEnum`, a word for an enum is only checked against its declared cases
-    /// (a `.string` stands for the value), which is how the checker reads a command line before anything has run.
-    func converted(
-        _ text: String, to type: TypeAnnotation, for what: String, of function: String, declaredEnum: DeclaredEnum? = nil
-    ) throws -> Value {
-        let value: Value?
-        if case .named(let name) = type, let profile = declaredEnum?(name) {
+    /// `text` as a value of `type`, or the error that says why it can't be.
+    func converted(_ text: String, to type: ValueType, for what: String, of function: String) throws -> Value {
+        // Checking a program before it runs: an enum it declares has no cases yet, so the word is read against what was declared.
+        if case .named(let name, _) = type.optionalWrapped ?? type, let declared = staticEnums[name] {
             let bare = text.hasPrefix(".") ? String(text.dropFirst()) : text
-            let isCase = profile.cases.contains { $0.name == bare && $0.payload.isEmpty }
-            value = isCase || profile.rawType != nil ? .string(text) : nil
-        } else if case .named(let name) = type, let enumType = interpreter.enumType(named: name) {
-            value = interpreter.enumCase(fromText: text, enumType)
-        } else if let (bridgedType, _) = Bridge.type(of: type), let made = Bridge.value(of: bridgedType.name, from: text) {
-            // A Swift type text can be, by its own declarations: `--n 3` for
-            // an Int, `--separator " "` for a Character, a FilePath.
-            value = made
-        } else {
-            value = switch type {
-            case .any, .unknown, .parameter: .string(text)
-            // `sorted --by size`: a field's name is its key path.
-            case .keyPath: .function(KeyPathValue(path: text.split(separator: ".").map(String.init)))
-            case .optional(let wrapped): try converted(text, to: wrapped, for: what, of: function, declaredEnum: declaredEnum)
-            case .output: .output(Output(text: text, code: 0))
-            default: nil
+            guard declared.cases.contains(bare) || declared.hasRawValues else {
+                throw RuntimeError("\(function): \(what) must be \(type), got '\(text)'")
             }
+            return Value(text)
         }
-        guard let value else {
-            guard takesWords(type, declaredEnum: declaredEnum) else {
-                throw RuntimeError("\(function): \(what) is \(type), which a word can't be: call it with parentheses, as in \(function)(…)")
-            }
-            throw RuntimeError("\(function): \(what) must be \(type), got '\(text)'")
+        if let value = interpreter.value(fromWord: text, as: type) { return value }
+        // A command's output, which is text, is what a word is for it.
+        if type == .named("Output") { return .output(Output(text: text, code: 0)) }
+        guard takesWords(type) else {
+            throw RuntimeError("\(function): \(what) is \(type), which a word can't be: call it with parentheses, as in \(function)(…)")
         }
-        return value
+        throw RuntimeError("\(function): \(what) must be \(type), got '\(text)'")
     }
 
-    func kebabCase(_ label: String) -> String {
-        label.reduce(into: "") { result, c in
-            if c.isUppercase {
-                result += "-" + c.lowercased()
-            } else {
-                result.append(c)
-            }
-        }
-    }
-
-    func commandLineName(of parameter: Parameter) -> String {
-        parameter.label.map { "--\(kebabCase($0))" } ?? "<\(parameter.name)>"
+    /// Whether a word can be a value of `type` at all: a Swift type text can be, an enum, or one of Swish's own that's read
+    /// from text.
+    func takesWords(_ type: ValueType) -> Bool {
+        type == .named("Output") || interpreter.acceptsWords(as: type)
     }
 }

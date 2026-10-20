@@ -23,3 +23,11 @@ func errorText(_ source: String, in shell: Shell = Shell()) -> String? {
     let text = shell.interpreter.suspend { collector.finish() }
     return text.isEmpty ? nil : String(text.split(separator: "\n", omittingEmptySubsequences: false).first ?? "")
 }
+
+/// What stops `source` before it runs in `shell`, or nil if it checks: "syntax error", or the type error's message.
+func checkMessage(_ source: String, in shell: Shell) -> String? {
+    switch shell.prepare(source) {
+    case .success: return nil
+    case .failure(let diagnostic): return diagnostic.kind == .syntax ? "syntax error" : diagnostic.message
+    }
+}

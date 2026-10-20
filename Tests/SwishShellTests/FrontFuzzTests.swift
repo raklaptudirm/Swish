@@ -7,8 +7,6 @@ import Testing
     let count = ProcessInfo.processInfo.environment["SWISH_FUZZ"].flatMap(Int.init) ?? 300
     var generator = Generator(state: 20_261_016)
     let probe = Shell()
-    let bound = probe.interpreter.globalNames()
-    let names = Names(roles: bound.compactMapValues { NameRole($0) })
     var ran = 0, matched = 0
     var failures: [String: [String]] = [:]
     for _ in 0..<count {
@@ -20,13 +18,7 @@ import Testing
         let outer = generator.next(8)
         let source = generator.next(3) == 0 ? wrap(wrap(body, in: context), in: outer) : wrap(body, in: context)
         let expected = (0..<pieces).map { "m\($0)\n" }.joined()
-        let front = Front(bound: names)
-        front.closureArity = { name in
-            for candidate in probe.interpreter.commandFunctions(named: name)?.candidates ?? [] {
-                for parameter in candidate.parameters { if case .functionType(let parameters, _, _, _) = parameter.type { return parameters.count } }
-            }
-            return nil
-        }
+        let front = probe.makeFront()
         guard let cured = try? front.cure(source) else { continue }
         ran += 1
         let shell = Shell()

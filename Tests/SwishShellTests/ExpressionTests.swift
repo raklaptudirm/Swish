@@ -9,17 +9,9 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 /// The syntax or type error that stops `source` before it runs, or nil.
 private func checkError(_ source: String) -> String? {
     let shell = Shell()
-    let program: Program
-    do {
-        program = try shell.parseSource(source).get()
-    } catch {
-        return "syntax error: \(error)"
-    }
-    do {
-        _ = try TypeChecker(interpreter: shell.interpreter).check(program)
-        return nil
-    } catch {
-        return "error: \(error.message)"
+    switch shell.prepare(source) {
+    case .success: return nil
+    case .failure(let diagnostic): return diagnostic.kind == .syntax ? "syntax error: \(diagnostic.message)" : "error: \(diagnostic.message)"
     }
 }
 

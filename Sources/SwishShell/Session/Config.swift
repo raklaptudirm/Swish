@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 import Foundation
 
 /// The config file: a Swish script the interactive shell runs as it
@@ -28,17 +28,17 @@ extension Shell {
     /// `prompt() -> String`, or `prompt(status: Int) -> String` to be told
     /// how the last command exited.
     func customPrompt() throws -> String? {
-        guard let binding = interpreter.scopes[1].bindings["prompt"], binding.isFunction,
-              case .function(let set as OverloadSet) = binding.value else { return nil }
-        let withStatus = set.candidates.first { $0.parameters.map(\.label) == ["status"] && $0.parameters[0].type == .int }
-        guard let function = withStatus ?? set.candidates.first(where: { $0.parameters.isEmpty }),
-              function.returnType == .string else {
+        let overloads = interpreter.symbols(named: "prompt").compactMap { $0.function }
+        guard !overloads.isEmpty else { return nil }
+        let withStatus = overloads.first { $0.parameters.map(\.label) == ["status"] && $0.parameters[0].type == .int }
+        guard let function = withStatus ?? overloads.first(where: { $0.parameters.isEmpty }), function.returns == .string else {
             throw RuntimeError("declare it as `func prompt() -> String` or `func prompt(status: Int) -> String`")
         }
         let status = lastStatus
         defer { lastStatus = status } // Drawing the prompt isn't a command.
-        let value = try interpreter.invoke(function, with: withStatus != nil ? ["status": .int(Int(status))] : [:])
-        guard case .string(let text) = value else { throw RuntimeError("it gave \(value.typeName), not a String") }
+        let value = try invoke(Callee(name: "prompt", overloads: [], receiver: nil),
+                               withStatus != nil ? [("status", Value(Int(status)))] : [])
+        guard let text = value.cast(to: String.self) else { throw RuntimeError("it gave \(value.typeName), not a String") }
         return text
     }
 }

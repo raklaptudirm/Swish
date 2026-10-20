@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 import Foundation
 import SwiitStandardLibrary
 
@@ -80,15 +80,15 @@ final class Job: HostObject, @unchecked Sendable {
     /// read, and once the job is done, from what its output has left.
     var lines: Value {
         guard let collector = capture else {
-            return SwiftValue.make(Flow<Value>((output?.lines ?? []).map(Value.string)), as: "Flow")
+            return Value(boxing: Flow<Value>((output?.lines ?? []).map { Value($0) }), as: "Flow")
         }
-        return SwiftValue.make(Flow<Value> { [unowned self] in
+        return Value(boxing: Flow<Value> { [unowned self] in
             while true {
-                switch shell.interpreter.suspend({ collector.nextLine(timeout: 0.05) }) {
-                case .line(let line): return .string(line)
+                switch Interpreter.whileWaiting({ collector.nextLine(timeout: 0.05) }) {
+                case .line(let line): return Value(line)
                 case .end: return nil
                 // Waiting for a line is where Ctrl-C has to be noticed.
-                case .pending: try shell.interpreter.checkInterrupt()
+                case .pending: try shell.interpreter.checkForStop()
                 }
             }
         }, as: "Flow")
@@ -101,26 +101,26 @@ final class Job: HostObject, @unchecked Sendable {
     /// What a table of jobs starts with: the state shown as it's going.
     static let columns: [DisplayColumn] = ["id", DisplayColumn("state", styledBy: "state"), "command"]
 
-    /// A job's members: each one's type, for the checker, and its value.
-    static let members: [(name: String, type: TypeAnnotation, value: @Sendable (Job) -> Value)] = [
-        ("id", .int, { .int($0.id) }),
-        ("command", .string, { .string($0.source) }),
-        ("state", .named("JobState"), { job in
-            job.shell.interpreter.declaredCase("JobState", job.cancelled && job.state == .done ? "cancelled" : job.state.rawValue)
+    /// A job's members: each one's type as Swift writes it, for the checker, and its value.
+    static let members: [(name: String, type: String, value: @Sendable (Job) -> Value)] = [
+        ("id", "Int", { Value($0.id) }),
+        ("command", "String", { Value($0.source) }),
+        ("state", "JobState", { job in
+            job.shell.interpreter.value(ofCase: job.cancelled && job.state == .done ? "cancelled" : job.state.rawValue, in: "JobState") ?? .null
         }),
-        ("pids", .list(.int), { .list($0.running.map { .int(Int($0)) }) }),
-        ("output", .optional(.output), { $0.output.map(Value.output) ?? .nothing }),
+        ("pids", "[Int]", { Value($0.running.map { Value(Int($0)) }) }),
+        ("output", "Output?", { $0.output.map { Value.output($0) } ?? .null }),
         // A method, as it's not data: a table or `to json` of jobs can't read it.
-        ("lines", .functionType([], .generic("Flow", [.string])), { job in method("lines") { [unowned job] in job.lines } }),
-        ("resume", .functionType([], .void), { job in method("resume") { [unowned job] in job.shell.resume(job) } }),
-        ("cancel", .functionType([], .void), { job in method("cancel") { [unowned job] in job.shell.cancel(job) } }),
+        ("lines", "() -> Flow<String>", { job in method("lines") { [unowned job] in job.lines } }),
+        ("resume", "() -> Void", { job in method("resume") { [unowned job] in job.shell.resume(job) } }),
+        ("cancel", "() -> Void", { job in method("cancel") { [unowned job] in job.shell.cancel(job) } }),
     ]
-    /// What scripts may use of a job, as the protocol the checker knows it by (`describeHostType`).
+    /// What scripts may use of a job, as the protocol the checker knows it by.
     static var declaration: String {
         members.map { member in
-            if case .functionType(let parameters, let result, _, _) = member.type {
-                let list = parameters.enumerated().map { "_ p\($0.offset): \($0.element)" }.joined(separator: ", ")
-                return "func \(member.name)(\(list))" + (result == .void ? "" : " -> \(result)")
+            if member.type.hasPrefix("() -> ") {
+                let result = member.type.dropFirst(6)
+                return "func \(member.name)()" + (result == "Void" ? "" : " -> \(result)")
             }
             return "var \(member.name): \(member.type) { get }"
         }.joined(separator: "; ")
@@ -132,17 +132,15 @@ final class Job: HostObject, @unchecked Sendable {
         Job.members.first { $0.name == name }?.value(self)
     }
 
-    private static func method(_ name: String, _ body: @escaping () -> Void) -> Value {
+    private static func method(_ name: String, _ body: @escaping @Sendable () -> Void) -> Value {
         method(name) { () -> Value in
             body()
-            return .nothing
+            return .null
         }
     }
 
-    private static func method(_ name: String, _ body: @escaping () -> Value) -> Value {
-        .function(OverloadSet(name: name, candidates: [
-            Function(name: name, parameters: [], returnType: nil, body: .native { _, _ in body() }),
-        ]))
+    private static func method(_ name: String, _ body: @escaping @Sendable () -> Value) -> Value {
+        Value(HostFunction(name: name) { _ in body() })
     }
 
     /// `[1] running  make`, in pieces to color: the number dim, the state
@@ -249,7 +247,7 @@ extension Shell {
                 job.running.append(pid)
                 if isLast { job.lastPid = pid }
             case .failure(let failure):
-                interpreter.report(failure.message)
+                report(failure.message)
                 if isLast { job.status = failure.status }
             }
         }
@@ -276,15 +274,15 @@ extension Shell {
                     writeAll(stdoutFD, text + "\n")
                 }
             }
-            let result = Result { try interpreter.join(task) }
+            let result = Result { () throws(Diagnostic) -> Value in try interpreter.join(task) }
             job.finish()
             relay?.stop()
             relay?.wait()
             jobs.removeAll { $0 === job }
             if case .failure(let error) = result, !job.givesOutput {
                 // How it ended is the awaiting task's error, not a reason for it to stop too.
-                if error is RuntimeError { throw error }
-                if error is Cancelled { throw RuntimeError("\(job.source) was cancelled") }
+                if error.kind == .runtime { throw ScriptError(error.message, status: error.status, isReported: error.isReported) }
+                if error.kind == .cancelled { throw RuntimeError("\(job.source) was cancelled") }
                 throw RuntimeError("\(job.source) stopped: \(error)")
             }
             return job.output!
@@ -386,8 +384,9 @@ extension Shell {
         state.inForeground = false
         state.stdoutFD = pipe.write
         state.stderrFD = stderrFD
+        nonisolated(unsafe) let body = body // safe: runs holding the interpreter lock
         do {
-            job.task = try interpreter.startTask(host: state) {
+            job.task = try interpreter.startTask(state: state) {
                 defer { close(pipe.write) }
                 return try body()
             }

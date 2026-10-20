@@ -13,16 +13,7 @@ private func status(_ source: String) -> Int32 {
 }
 
 private func typeError(_ source: String) -> String? {
-    let shell = Shell()
-    guard case .success(let program) = Result(catching: { try shell.parseSource(source).get() }) else {
-        return "syntax error"
-    }
-    do {
-        _ = try TypeChecker(interpreter: shell.interpreter).check(program)
-        return nil
-    } catch {
-        return error.message
-    }
+    checkMessage(source, in: Shell())
 }
 
 @Test func swiftsOwnMembersOnSwishValues() throws {

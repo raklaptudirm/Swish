@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 import Foundation
 import SystemPackage
 
@@ -13,11 +13,11 @@ extension Shell {
         // ^C, kill and hangup stop the script at the next statement, so its
         // defers run; then it ends by the signal (see `endBySignal`).
         catchInterrupts([SIGINT, SIGTERM, SIGHUP])
-        return interpreter.withMainTask { runFile(at: path, arguments: arguments) { _ in
-            guard let main = topLevelFunction("main") else { return }
+        return runFile(at: path, arguments: arguments) { [self] reading in
+            guard let main = topLevelFunction("main", in: reading) else { return }
             // `main` stands for the script, so its help and errors use the script's name.
             callAsCommand(main, named: FilePath(path).lastComponent?.string ?? path, arguments)
-        } }
+        }
     }
 
     /// After a script stopped by a signal has run its defers: ends the
@@ -33,84 +33,53 @@ extension Shell {
 extension Shell {
     /// Reads, checks and runs a file's top level, then `finish`, unless a
     /// `try!` stopped it. A top-level `defer` runs when it's all over.
-    func runFile(at path: String, arguments: [String], then finish: (Program) -> Void) -> Int32 {
+    func runFile(at path: String, arguments: [String], then finish: @escaping (Reading) -> Void) -> Int32 {
         guard let data = FileManager.default.contents(atPath: path) else {
-            interpreter.report("\(path): \(errorMessage(errno).lowercased())")
+            report("\(path): \(errorMessage(errno).lowercased())")
             return 127
         }
-        interpreter.scopes[0].bindings["args"] = Binding(value: .list(arguments.map(Value.string)), mutable: false)
+        interpreter["args"] = Value(arguments.map { Value($0) })
         interpreter.file = URL(fileURLWithPath: path).standardizedFileURL.path
         scriptDirectory = URL(fileURLWithPath: path).standardizedFileURL.deletingLastPathComponent().path
-        // Parsed whole, so doc comments reach their functions and a syntax
-        // error anywhere stops the script before any of it runs; then run a
-        // statement at a time, so a runtime error only abandons its own.
-        let program: Program
+        // Read and checked whole, so doc comments reach their functions and a mistake anywhere stops the script before any
+        // of it runs; then run a statement at a time, so a runtime error only abandons its own.
         var source = String(decoding: data, as: UTF8.self)
         // `#!/usr/bin/env swish`, so it runs as a program; the line stays,
         // blank, so line numbers do too.
         if source.hasPrefix("#!") { source = String(source.drop { $0 != "\n" }) }
         diagnosticSource = (source, path)
-        switch parseSource(source) {
-        case .failure(let error):
-            if error.range != nil { reportDiagnostic(.syntax, "\(error)", at: error.range) }
-            else { interpreter.report("\(path): syntax error: \(error)") }
-            return 2
-        case .success(let parsed):
-            program = parsed
+        let reading: Reading
+        switch prepare(source) {
+        case .failure(let diagnostic):
+            reportReadingFailure(diagnostic, file: path)
+            return lastStatus
+        case .success(let read):
+            reading = read
         }
-        // Checked whole too: a type error anywhere runs none of it.
-        guard let program = typeCheck(program, file: path) else { return lastStatus }
-        var deferred: [Program] = []
-        defer { interpreter.runDeferred(deferred) }
-        // Functions and types first, so any line can use them.
-        let declarations = program.statements.indices.filter {
-            if case .function = program.statements[$0] { return true }
-            return program.statements[$0].declaresType
-        }
-        runReportingErrors(Program(statements: declarations.map { program.statements[$0] },
-                                   ranges: program.ranges.isEmpty ? [] : declarations.compactMap { $0 < program.ranges.count ? program.ranges[$0] : nil }))
-        for (index, statement) in program.statements.enumerated() {
-            if case .deferBlock(let body) = statement {
-                deferred.append(body)
-                continue
-            }
-            if statement.declaresType { continue }
-            runReportingErrors(Program(statements: [statement], ranges: index < program.ranges.count ? [program.ranges[index]] : []))
-            if scriptStopped { return lastStatus }
-        }
-        finish(program)
+        // What the script is for (`main`, a task) runs after its statements, and before its top-level defers.
+        runReportingErrors(reading, then: { [unowned self] in if !scriptStopped { finish(reading) } })
         return lastStatus
     }
 
     /// A function the file declared at its top level.
-    func topLevelFunction(_ name: String) -> OverloadSet? {
-        guard let binding = interpreter.scopes[1].bindings[name], binding.isFunction,
-              case .function(let set as OverloadSet) = binding.value else { return nil }
-        return set
+    func topLevelFunction(_ name: String, in reading: Reading) -> Callee? {
+        let functions = reading.declared.symbols.filter { $0.name == name && $0.function != nil }
+        return functions.isEmpty ? nil : Callee(name: name, overloads: functions, receiver: nil, marks: scriptMarks)
     }
 
     /// Calls a script's function with command-line `arguments`, under `name`
     /// for its help and errors.
-    func callAsCommand(_ set: OverloadSet, named name: String, _ arguments: [String]) {
-        let command = OverloadSet(name: name, candidates: set.candidates.map {
-            Function(name: name, parameters: $0.parameters, returnType: $0.returnType, body: $0.body,
-                     captured: $0.captured, documentation: $0.documentation)
-        })
+    func callAsCommand(_ callee: Callee, named name: String, _ arguments: [String]) {
+        var callee = callee
+        callee.shownName = name
+        stoppedBySignal = nil
         do {
-            lastStatus = try callCommand(command, arguments.map(CommandArgument.text), display: true)
-        } catch let interrupt as Interrupted {
-            lastStatus = 128 + interrupt.signal
-            endingSignal = interrupt.signal
-        } catch let fatal as FatalError {
-            interpreter.report("error: \(fatal.error)")
-            lastStatus = fatal.error.status
-        } catch let error as RuntimeError {
-            interpreter.report("error: \(error)")
+            lastStatus = try callCommand(callee, arguments.map(CommandArgument.text), display: true)
+        } catch let error as ScriptError {
+            if !error.isReported { report("error: \(error)") }
             lastStatus = error.status
-        } catch is AlreadyReported {
-            lastStatus = 1
         } catch {
-            interpreter.report("error: \(error)")
+            report("error: \(error)")
             lastStatus = 1
         }
     }

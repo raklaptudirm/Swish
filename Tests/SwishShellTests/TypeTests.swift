@@ -8,15 +8,7 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 
 /// The type error `source` has, or nil if it checks.
 private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
-    guard case .success(let program) = Result(catching: { try shell.parseSource(source).get() }) else {
-        return "syntax error"
-    }
-    do {
-        _ = try TypeChecker(interpreter: shell.interpreter).check(program)
-        return nil
-    } catch {
-        return error.message
-    }
+    checkMessage(source, in: shell)
 }
 
 @Test func typeErrorsStopBeforeAnythingRuns() throws {

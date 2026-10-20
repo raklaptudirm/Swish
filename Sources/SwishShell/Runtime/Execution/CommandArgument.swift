@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 
 /// One argument to a command: text, or a value like the closure in
 /// `where { $0.size > 1.mb }`.
@@ -7,7 +7,7 @@ enum CommandArgument: CustomStringConvertible {
     case value(Value)
     /// From a stage written as a call, `ls | sorted(by: "size")`: bound by
     /// Swift's rules instead of as a command line.
-    case call(Argument)
+    case call((label: String?, value: Value))
 
     var description: String {
         switch self {

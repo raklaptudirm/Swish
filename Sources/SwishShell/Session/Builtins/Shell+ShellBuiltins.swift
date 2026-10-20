@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 import Foundation
 
 /// A builtin that isn't a function: it changes the shell itself, so it
@@ -93,7 +93,7 @@ extension Shell {
         case .run(let run)?:
             return run(self, Array(argv.dropFirst()))
         case .notSwish(let instead)?:
-            interpreter.report("\(argv[0]) isn't Swish: \(instead)")
+            report("\(argv[0]) isn't Swish: \(instead)")
             return 2
         case .program?, nil:
             return nil
@@ -105,13 +105,13 @@ extension Shell {
         switch args.count {
         case 0:
             guard let home = env("HOME") else {
-                interpreter.report("cd: HOME not set")
+                report("cd: HOME not set")
                 return 1
             }
             target = home
         case 1 where args[0] == "-":
             guard let previous = env("OLDPWD") else {
-                interpreter.report("cd: OLDPWD not set")
+                report("cd: OLDPWD not set")
                 return 1
             }
             target = previous
@@ -119,13 +119,13 @@ extension Shell {
         case 1:
             target = args[0]
         default:
-            interpreter.report("cd: too many arguments")
+            report("cd: too many arguments")
             return 1
         }
 
         let previous = FileManager.default.currentDirectoryPath
         guard chdir(target) == 0 else {
-            interpreter.report("cd: \(target): \(errorMessage(errno).lowercased())")
+            report("cd: \(target): \(errorMessage(errno).lowercased())")
             return 1
         }
         setenv("OLDPWD", previous, 1)
@@ -137,14 +137,14 @@ extension Shell {
         var code = lastStatus
         if let arg = args.first {
             guard let parsed = Int32(arg) else {
-                interpreter.report("exit: \(arg): numeric argument required")
+                report("exit: \(arg): numeric argument required")
                 return 2
             }
             code = parsed
         }
         if !jobs.isEmpty && !warnedAboutJobs {
             warnedAboutJobs = true
-            interpreter.report("there are jobs in the background (see `jobs`); exit again to leave anyway")
+            report("there are jobs in the background (see `jobs`); exit again to leave anyway")
             return 1
         }
         Foundation.exit(code)
@@ -158,7 +158,7 @@ extension Shell {
             return 0
         }
         guard args.count == 1, let value = mode_t(mask, radix: 8), value <= 0o777 else {
-            interpreter.report("umask: give the mask in octal, as in 022")
+            report("umask: give the mask in octal, as in 022")
             return 2
         }
         fileCreationMask = value
@@ -181,7 +181,7 @@ extension Shell {
                     case "a": all = true
                     default:
                         guard let found = ResourceLimit.all.first(where: { $0.flag == flag }) else {
-                            interpreter.report("ulimit: unknown limit -\(flag); -a lists them")
+                            report("ulimit: unknown limit -\(flag); -a lists them")
                             return 2
                         }
                         limit = found
@@ -190,7 +190,7 @@ extension Shell {
             } else if value == nil {
                 value = arg
             } else {
-                interpreter.report("ulimit: too many arguments")
+                report("ulimit: too many arguments")
                 return 2
             }
         }
@@ -215,13 +215,13 @@ extension Shell {
             } else if let number = UInt64(value) {
                 units = number
             } else {
-                interpreter.report("ulimit: \(value): not a number or `unlimited`")
+                report("ulimit: \(value): not a number or `unlimited`")
                 return 2
             }
             try chosen.set(units, soft: soft || !hard, hard: hard || !soft)
             return 0
         } catch {
-            interpreter.report("ulimit: \(errorMessage(error.code).lowercased())")
+            report("ulimit: \(errorMessage(error.code).lowercased())")
             return 1
         }
     }
@@ -229,16 +229,16 @@ extension Shell {
     /// `exec program args…`: the program takes the shell's place.
     private func exec(_ args: [String]) -> Int32 {
         guard let name = args.first else {
-            interpreter.report("exec: give a program to run in the shell's place")
+            report("exec: give a program to run in the shell's place")
             return 2
         }
         guard let path = findExecutable(name) else {
-            interpreter.report("exec: \(name): command not found")
+            report("exec: \(name): command not found")
             return 127
         }
         if interactive { tcsetattr(terminal, TCSANOW, &shellModes) }
         let error = replaceProcess(with: path, args)
-        interpreter.report("exec: \(name): \(errorMessage(error.code).lowercased())")
+        report("exec: \(name): \(errorMessage(error.code).lowercased())")
         return 126
     }
 
@@ -247,7 +247,7 @@ extension Shell {
     /// directory, or the working directory at the prompt.
     private func source(_ args: [String]) -> Int32 {
         guard let path = args.first else {
-            interpreter.report("source: give a Swish file to run")
+            report("source: give a Swish file to run")
             return 2
         }
         let resolved = path.hasPrefix("/") ? path : (scriptDirectory ?? FileManager.default.currentDirectoryPath) + "/" + path
@@ -257,10 +257,10 @@ extension Shell {
     /// Runs a file's top level in this shell, then puts back what running a
     /// file changes: `args`, `#filePath`, and whether a script stopped.
     func sourceFile(_ path: String, arguments: [String]) -> Int32 {
-        let saved = (interpreter.file, scriptDirectory, interpreter.scopes[0].bindings["args"], scriptStopped)
+        let saved = (interpreter.file, scriptDirectory, interpreter["args"], scriptStopped)
         defer {
             (interpreter.file, scriptDirectory) = (saved.0, saved.1)
-            interpreter.scopes[0].bindings["args"] = saved.2
+            interpreter["args"] = saved.2
             scriptStopped = saved.3
         }
         return runFile(at: path, arguments: arguments) { _ in }
@@ -271,14 +271,15 @@ extension Shell {
     private func which(_ args: [String]) -> Int32 {
         var status: Int32 = 0
         for name in args {
-            if let methods = interpreter.sequenceMethods[name] ?? bridgedStage("Flow", name, receiver: .flow) {
-                for method in methods.candidates {
-                    writeAll(stdoutFD, "\(name): sequence method \(method.signature)\n")
+            if let methods = stageCallee(name, of: .named("Flow", [.any]), receiver: .flow)
+                ?? (stageNames.sequence.contains(name) ? stageCallee(name, of: .list(.any), receiver: .collected) : nil) {
+                for method in methods.overloads {
+                    writeAll(stdoutFD, "\(name): sequence method \(signature(of: method))\n")
                 }
-            } else if let functions = interpreter.commandFunctions(named: name) {
-                for function in functions.candidates {
+            } else if let functions = commandFunctions(named: name) {
+                for function in functions.overloads {
                     let kind = function.isBuiltin ? "builtin function" : "function"
-                    writeAll(stdoutFD, "\(name): \(kind) \(function.signature)\n")
+                    writeAll(stdoutFD, "\(name): \(kind) \(signature(of: function))\n")
                 }
             } else if let builtin = Shell.shellBuiltins[name] {
                 if case .notSwish(let instead) = builtin.action {
@@ -289,7 +290,7 @@ extension Shell {
             } else if let path = findExecutable(name) {
                 writeAll(stdoutFD, path + "\n")
             } else {
-                interpreter.report("which: \(name) not found")
+                report("which: \(name) not found")
                 status = 1
             }
         }

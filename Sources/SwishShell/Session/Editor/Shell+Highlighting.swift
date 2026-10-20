@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 import Foundation
 
 extension Shell {
@@ -41,7 +41,7 @@ extension Shell {
         // Names built at run time can't be checked while typing.
         guard !name.isEmpty, !name.contains(where: { "$\\\"'(".contains($0) }) else { return nil }
         let known: Bool
-        if !external && (interpreter.commandFunctions(named: name) != nil || interpreter.sequenceMethods[name] != nil || Bridge.flowNames.contains(name)
+        if !external && (commandFunctions(named: name) != nil || stageNames.sequence.contains(name) || stageNames.flow.contains(name)
                          || Shell.shellBuiltins[name] != nil) {
             known = true
         } else if !external && piped && isMemberName(name) {

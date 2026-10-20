@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 import Foundation
 
 extension Shell {
@@ -29,8 +29,9 @@ extension Shell {
             candidates = commandCandidates(prefix: word, externalOnly: false)
                 .filter { !["variable", "keyword"].contains($0.description) }
         } else if word.hasPrefix("-") && context.quote == nil,
-                  let functions = interpreter.sequenceMethods[context.words[0]] ?? bridgedStage("Flow", context.words[0], receiver: .flow)
-                    ?? interpreter.commandFunctions(named: context.words[0]) ?? stageFunctions(named: context.words[0]) {
+                  let functions = stageCallee(context.words[0], of: .named("Flow", [.any]), receiver: .flow)
+                    ?? stageCallee(context.words[0], of: .list(.any), receiver: .collected)
+                    ?? commandFunctions(named: context.words[0]) ?? stageFunctions(named: context.words[0]) {
             candidates = flagCandidates(for: functions, prefix: word)
         } else {
             candidates = pathCandidates(for: word, quote: context.quote, executablesOnly: false)
@@ -40,9 +41,7 @@ extension Shell {
 
     private func variableCandidates(prefix: String) -> [LineEditor.Candidate] {
         var names = Set(ProcessInfo.processInfo.environment.keys)
-        for scope in interpreter.scopes {
-            for (name, binding) in scope.bindings where !binding.isFunction { names.insert(name) }
-        }
+        for (name, role) in interpreter.names() where role != .function { names.insert(name) }
         return names.filter { $0.hasPrefix(prefix) }.sorted().map {
             LineEditor.Candidate(replacement: "$" + $0, suffix: "", display: "$" + $0)
         }
@@ -51,20 +50,16 @@ extension Shell {
     private func commandCandidates(prefix: String, externalOnly: Bool) -> [LineEditor.Candidate] {
         var described: [String: String] = [:]
         if !externalOnly {
-            for scope in interpreter.scopes {
-                for (name, binding) in scope.bindings {
-                    guard binding.isFunction, case .function(let set as OverloadSet) = binding.value else {
-                        described[name] = "variable"
-                        continue
-                    }
-                    let summary = set.candidates.compactMap { $0.documentation?.summary }.first { !$0.isEmpty }
-                    described[name] = summary.map { String($0.prefix { $0 != "\n" }) } ?? "function"
-                }
+            for (name, _) in interpreter.names() { described[name] = "variable" }
+            for (name, symbols) in Dictionary(grouping: interpreter.symbols().filter { $0.function != nil }, by: \.name) {
+                let summary = symbols.compactMap(\.summary).first { !$0.isEmpty }
+                described[name] = summary.map { String($0.prefix { $0 != "\n" }) } ?? "function"
             }
             for builtin in Shell.shellBuiltins.values where builtin.works { described[builtin.name] = "shell builtin" }
-            for name in Set(interpreter.sequenceMethods.keys).union(Bridge.flowNames) {
-                let set = interpreter.sequenceMethods[name] ?? bridgedStage("Flow", name, receiver: .flow)
-                described[name] = set?.candidates.first?.documentation.map { String($0.summary.prefix { $0 != "\n" }) } ?? "sequence method"
+            for name in stageNames.methods {
+                let callee = stageCallee(name, of: .named("Flow", [.any]), receiver: .flow) ?? stageCallee(name, of: .list(.any), receiver: .collected)
+                guard let callee, stageNames.flow.contains(name) || interpreter.symbols(named: name, of: .list(.any)).contains(where: { $0.function != nil }) else { continue }
+                described[name] = callee.overloads.compactMap(\.summary).first.map { String($0.prefix { $0 != "\n" }) } ?? "sequence method"
             }
             for keyword in Reader.lineStarts {
                 described[keyword] = "keyword"
@@ -80,25 +75,24 @@ extension Shell {
         return candidates.keys.sorted().map { candidates[$0]! }
     }
 
-    private func flagCandidates(for set: OverloadSet, prefix: String) -> [LineEditor.Candidate] {
+    private func flagCandidates(for callee: Callee, prefix: String) -> [LineEditor.Candidate] {
         var candidates: [String: LineEditor.Candidate] = [:]
         func add(_ flag: String, _ description: String) {
             guard flag.hasPrefix(prefix), candidates[flag] == nil else { return }
             candidates[flag] = LineEditor.Candidate(replacement: flag, display: flag, description: description)
         }
-        for function in set.candidates {
-            for parameter in function.parameters {
+        for parameters in callee.parameters {
+            for parameter in parameters {
                 guard let label = parameter.label else { continue }
-                let help = function.documentation?.parameters[parameter.name]
-                let description = help ?? (parameter.type == .bool ? "switch" : "<\(parameter.type)>")
-                if parameter.type == .bool, parameter.defaultValue == .literal(.bool(true)) {
+                let description = parameter.documentation ?? (parameter.type.isBool ? "switch" : "<\(parameter.type)>")
+                if parameter.type.isBool, parameter.defaultValue == Value(true) {
                     add("--no-" + kebabCase(label), description)
                 }
                 add("--" + kebabCase(label), description)
                 if let short = parameter.shortFlag { add("-\(short)", description) }
             }
         }
-        if !helpClaimed(by: set) {
+        if !helpClaimed(by: callee) {
             add("--help", "show help")
         }
         return candidates.keys.sorted().map { candidates[$0]! }

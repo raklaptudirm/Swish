@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 import Foundation
 
 /// A redirect with its file name worked out.
@@ -86,8 +86,10 @@ extension Shell {
         } catch let error as RuntimeError where table[2] != saved.1 {
             // Reported here, while `2>` is in effect, so `f 2>/dev/null`
             // silences f's errors too.
-            interpreter.report("error: \(error)")
-            throw AlreadyReported(error: error)
+            report("error: \(error)")
+            var reported = error
+            reported.isReported = true
+            throw reported
         }
     }
 }

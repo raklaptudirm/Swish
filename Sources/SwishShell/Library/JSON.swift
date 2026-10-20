@@ -1,10 +1,10 @@
 import Foundation
-@_spi(Layer) import Swiit
+import Swiit
 
 /// Parsed JSON: whatever it parsed as, a `Value`, which Swish reads by field
 /// and element. Object keys are kept in order, which Foundation's parser
 /// doesn't do and which tables need: key order is column order.
-struct JSON: WrapsValue {
+struct JSON {
     public let value: Value
 
     public init(_ value: Value) {
@@ -23,56 +23,67 @@ struct JSON: WrapsValue {
     /// A value as JSON text, indented two spaces to a level.
     public static func text(_ value: Value, indent: String = "") throws -> String {
         let inner = indent + "  "
-        switch value {
+        switch value.kind {
         case .nothing: return "null"
-        case .bool(let bool): return String(bool)
-        case .int(let int): return String(int)
-        case .double(let double):
-            guard double.isFinite else { throw SwiitError("to json: \(double) isn't valid JSON") }
+        case .bool: return String(value.cast(to: Bool.self)!)
+        case .int: return String(value.cast(to: Int.self)!)
+        case .double:
+            let double = value.cast(to: Double.self)!
+            guard double.isFinite else { throw LibraryError("to json: \(double) isn't valid JSON") }
             return String(double)
-        case .string(let string): return quoted(string)
-        case .enumValue(let value):
+        case .string: return quoted(value.description)
+        case .enumeration:
             // A raw value, or the case's name; with associated values, a
-            // record of them under the case's name.
+            // struct of them under the case's name.
+            guard let found = value.enumCase else { return "null" }
             if let raw = value.rawValue { return try text(raw, indent: indent) }
-            guard !value.values.isEmpty else { return quoted(value.name) }
-            var record = Record()
-            for (index, item) in value.values.enumerated() {
-                let label = value.definition?.labels[index] ?? nil
-                record[label ?? String(index)] = item
-            }
-            return try text(.record(Record([value.name: .record(record)])), indent: indent)
-        case .list(let items):
+            guard !found.values.isEmpty else { return quoted(found.name) }
+            let fields = found.values.enumerated().map { index, item in (name: (found.labels.indices.contains(index) ? found.labels[index] : nil) ?? String(index), value: item) }
+            return try text(Value(struct: nil, fields: [(name: found.name, value: Value(struct: nil, fields: fields))]), indent: indent)
+        case .list:
+            let items = value.cast(to: [Value].self) ?? []
             guard !items.isEmpty else { return "[]" }
             return "[\n" + (try items.map { inner + (try text($0, indent: inner)) }).joined(separator: ",\n") + "\n\(indent)]"
-        case .record(let record):
-            guard record.count > 0 else { return "{}" }
+        case .structure, .tuple:
+            guard let record = value.fields, record.count > 0 else { return "{}" }
             let fields = try record.map { inner + quoted($0.key) + ": " + (try text($0.value, indent: inner)) }
             return "{\n" + fields.joined(separator: ",\n") + "\n\(indent)}"
-        case .dictionary(let dictionary):
-            guard dictionary.count > 0 else { return "{}" }
+        case .dictionary:
+            guard let dictionary = value.entries, dictionary.count > 0 else { return "{}" }
             let fields = try dictionary.sortedForDisplay.map { key, value in
-                guard case .string(let name) = key else {
-                    throw SwiitError("to json: an object's keys are Strings, and \(key.debugDescription) isn't one")
+                guard let name = key.cast(to: String.self) else {
+                    throw LibraryError("to json: an object's keys are Strings, and \(key.debugDescription) isn't one")
                 }
                 return inner + quoted(name) + ": " + (try text(value, indent: inner))
             }
             return "{\n" + fields.joined(separator: ",\n") + "\n\(indent)}"
         case .function:
-            throw SwiitError("to json: a function has no JSON form")
-        case .object(let object):
-            if let fields = object.objectFields { return try text(.record(fields), indent: indent) }
+            throw LibraryError("to json: a function has no JSON form")
+        case .object:
+            if let fields = value.fields { return try text(Value(struct: nil, fields: fields.entries.map { ($0.key, $0.value) }), indent: indent) }
             // What stands for text is its text; else a Swift value is as Swift
             // encodes it (a file size is its bytes).
-            if let box = object as? SwiftValue {
-                if let text = (box.value as? any StandsForText)?.text { return quoted(text) }
+            if let held = try? value.unboxed(Any.self) {
+                if let text = (held as? any StandsForText)?.text { return quoted(text) }
                 // What a text literal can be, like a FilePath.
-                if box.value is any ExpressibleByUnicodeScalarLiteral { return quoted(box.description) }
-                if let json = try box.json() { return json }
+                if held is any ExpressibleByUnicodeScalarLiteral { return quoted(value.description) }
+                if let encodable = held as? any Encodable {
+                    // A date as ISO 8601 text, not Swift's number of seconds.
+                    let encoder = JSONEncoder()
+                    encoder.dateEncodingStrategy = .iso8601
+                    return String(decoding: try encoder.encode(AnyEncodable(value: encodable)), as: UTF8.self)
+                }
             }
-            throw SwiitError("to json: a \(object.typeName) has no JSON form")
-        @unknown default:
-            throw SwiitError("to json: unsupported value")
+            throw LibraryError("to json: a \(value.typeName) has no JSON form")
+        }
+    }
+
+    private struct AnyEncodable: Encodable {
+        let value: any Encodable
+        // Through a container, which is what applies the encoder's strategy for dates.
+        func encode(to encoder: any Encoder) throws {
+            var container = encoder.singleValueContainer()
+            try container.encode(value)
         }
     }
 
@@ -97,8 +108,8 @@ private struct JSONParser {
     let bytes: [UInt8]
     var index = 0
 
-    func error(_ message: String) -> SwiitError {
-        SwiitError("from json: \(message) at byte \(index)")
+    func error(_ message: String) -> LibraryError {
+        LibraryError("from json: \(message) at byte \(index)")
     }
 
     mutating func skipWhitespace() {
@@ -116,21 +127,21 @@ private struct JSONParser {
         switch bytes[index] {
         case UInt8(ascii: "{"): return try parseObject()
         case UInt8(ascii: "["): return try parseArray()
-        case UInt8(ascii: "\""): return .string(try parseString())
-        case UInt8(ascii: "t"): try expect("true"); return .bool(true)
-        case UInt8(ascii: "f"): try expect("false"); return .bool(false)
-        case UInt8(ascii: "n"): try expect("null"); return .nothing
+        case UInt8(ascii: "\""): return Value(try parseString())
+        case UInt8(ascii: "t"): try expect("true"); return Value(true)
+        case UInt8(ascii: "f"): try expect("false"); return Value(false)
+        case UInt8(ascii: "n"): try expect("null"); return .null
         default: return try parseNumber()
         }
     }
 
     private mutating func parseObject() throws -> Value {
         index += 1
-        var record = Record()
+        var fields: [(name: String, value: Value)] = []
         skipWhitespace()
         if index < bytes.count && bytes[index] == UInt8(ascii: "}") {
             index += 1
-            return .record(record)
+            return Value(struct: nil, fields: fields)
         }
         while true {
             skipWhitespace()
@@ -139,12 +150,13 @@ private struct JSONParser {
             skipWhitespace()
             try expect(":")
             skipWhitespace()
-            record[key] = try parseValue()
+            let value = try parseValue()
+            if let existing = fields.firstIndex(where: { $0.name == key }) { fields[existing].value = value } else { fields.append((key, value)) }
             skipWhitespace()
             guard index < bytes.count else { throw error("unterminated object") }
             if bytes[index] == UInt8(ascii: "}") {
                 index += 1
-                return .record(record)
+                return Value(struct: nil, fields: fields)
             }
             try expect(",")
         }
@@ -156,7 +168,7 @@ private struct JSONParser {
         skipWhitespace()
         if index < bytes.count && bytes[index] == UInt8(ascii: "]") {
             index += 1
-            return .list(items)
+            return Value(items)
         }
         while true {
             skipWhitespace()
@@ -165,7 +177,7 @@ private struct JSONParser {
             guard index < bytes.count else { throw error("unterminated array") }
             if bytes[index] == UInt8(ascii: "]") {
                 index += 1
-                return .list(items)
+                return Value(items)
             }
             try expect(",")
         }
@@ -227,8 +239,8 @@ private struct JSONParser {
         let start = index
         while index < bytes.count, "+-0123456789.eE".utf8.contains(bytes[index]) { index += 1 }
         let text = String(decoding: bytes[start..<index], as: UTF8.self)
-        if let int = Int(text) { return .int(int) }
-        if let double = Double(text), !text.isEmpty { return .double(double) }
+        if let int = Int(text) { return Value(int) }
+        if let double = Double(text), !text.isEmpty { return Value(double) }
         index = start
         throw error("unexpected character")
     }

@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)

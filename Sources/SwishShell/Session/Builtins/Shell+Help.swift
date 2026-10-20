@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 import Foundation
 import SystemPackage
 
@@ -6,8 +6,8 @@ extension Shell {
     // MARK: Help
 
     /// `--help` or `-h`, unless a function claims them for itself.
-    func helpRequested(_ args: [CommandArgument], for set: OverloadSet) -> Bool {
-        guard !helpClaimed(by: set) else { return false }
+    func helpRequested(_ args: [CommandArgument], for callee: Callee) -> Bool {
+        guard !helpClaimed(by: callee) else { return false }
         for case .text(let arg) in args {
             if arg == "--" { return false }
             if arg == "--help" || arg == "-h" { return true }
@@ -22,48 +22,45 @@ extension Shell {
     /// shell answers them with the function's help, as programs do.
     /// Whether an unlabeled parameter is given every remaining word: a
     /// variadic one, or one that's a collection (`_ paths: [FilePath]`).
-    func takesRemainingWords(_ parameter: Parameter) -> Bool {
-        parameter.variadic || (parameter.label == nil && !parameter.isInput && Shell.collection(parameter.type) != nil)
+    func takesRemainingWords(_ parameter: CommandParameter) -> Bool {
+        parameter.isVariadic || (parameter.label == nil && !parameter.isInput && Shell.collection(parameter.type) != nil)
     }
 
-    func helpClaimed(by set: OverloadSet) -> Bool {
-        set.candidates.contains { $0.parameters.contains { $0.label == "help" || $0.shortFlag == "h" } }
+    func helpClaimed(by callee: Callee) -> Bool {
+        callee.parameters.contains { $0.contains { $0.label == "help" || $0.shortFlag == "h" } }
     }
 
     /// What `--help` shows: usage, arguments and options, in color on a terminal.
-    func helpText(for set: OverloadSet, styled: Bool = false) -> String {
-        helpLines(for: set).map { $0.rendered(styled) }.joined(separator: "\n") + "\n"
+    func helpText(for callee: Callee, styled: Bool = false) -> String {
+        helpLines(for: callee).map { $0.rendered(styled) }.joined(separator: "\n") + "\n"
     }
 
     /// A function's help, a line at a time, each piece colored as the
     /// highlighter would color it in code.
-    func helpLines(for set: OverloadSet) -> [AttributedString] {
+    func helpLines(for callee: Callee) -> [AttributedString] {
         typealias Row = (key: [AttributedString], detail: [AttributedString])
         var lines: [AttributedString] = []
-        if let summary = set.candidates.compactMap({ $0.documentation?.summary }).first(where: { !$0.isEmpty }) {
+        if let summary = callee.overloads.compactMap(\.summary).first(where: { !$0.isEmpty }) {
             lines += [AttributedString(documentation: summary), AttributedString("")]
         }
         lines.append(HelpStyle.heading("Usage:"))
-        lines += set.candidates.map { AttributedString(joining: [.init("  ")] + usage(of: $0, named: set.name)) }
+        lines += callee.parameters.indices.map { AttributedString(joining: [.init("  ")] + usage(of: callee.parameters[$0], named: callee.label)) }
 
         var arguments: [Row] = []
         var options: [Row] = []
         var seen: Set<String> = []
-        for function in set.candidates {
-            for parameter in function.parameters {
+        for parameters in callee.parameters {
+            for parameter in parameters {
                 var details: [[AttributedString]] = []
-                if let help = function.documentation?.parameters[parameter.name] { details.append([AttributedString(documentation: help)]) }
+                if let help = parameter.documentation { details.append([AttributedString(documentation: help)]) }
                 if parameter.isInput {
                     details.append([.init(parameter.type.isList ? "(or the whole pipeline input)" : "(or each pipeline input item)", DisplayStyle.comment)])
                 }
-                if let defaultValue = parameter.defaultValue, defaultValue != .literal(.nothing) {
+                if let defaultValue = parameter.defaultValue, defaultValue.kind != .nothing {
                     details.append(defaultDetail(describe(defaultValue)))
-                } else if let source = parameter.externalDefault, source != "[]" {
-                    // An empty array as the default says "none", which is no news.
-                    details.append(defaultDetail(source))
                 }
                 if let label = parameter.label {
-                    let negatable = parameter.type == .bool && parameter.defaultValue == .literal(.bool(true))
+                    let negatable = parameter.type.isBool && parameter.defaultValue == Value(true)
                     let long = "--" + (negatable ? "[no-]" : "") + kebabCase(label)
                     var key: [AttributedString] = parameter.shortFlag.map { [.init("-\($0)", DisplayStyle.flag), .init(", ")] } ?? [.init("    ")]
                     key.append(.init(long, DisplayStyle.flag))
@@ -111,18 +108,18 @@ extension Shell {
     }
 
     /// `ls [--all] [<paths>...]`, in pieces by what each is.
-    private func usage(of function: Function, named name: String) -> [AttributedString] {
+    private func usage(of parameters: [CommandParameter], named name: String) -> [AttributedString] {
         var parts: [AttributedString] = [.init(name, .command)]
-        for parameter in function.parameters where parameter.label != nil {
-            var flag = commandLineName(of: parameter)
-            if parameter.type == .bool && parameter.defaultValue == .literal(.bool(true)) {
+        for parameter in parameters where parameter.label != nil {
+            var flag = parameter.commandLineName
+            if parameter.type.isBool && parameter.defaultValue == Value(true) {
                 flag = "--no-" + flag.dropFirst(2)
             }
-            let optional = parameter.hasDefault || parameter.type == .bool || parameter.type.isList
+            let optional = parameter.hasDefault || parameter.type.isBool || parameter.type.isList
             parts += [.init(" ")] + (optional ? [.init("[")] : []) + [.init(flag, .flag)]
                 + valuePlaceholder(for: parameter) + (optional ? [.init("]")] : [])
         }
-        for parameter in function.parameters where parameter.label == nil {
+        for parameter in parameters where parameter.label == nil {
             let argument = AttributedString("<\(parameter.name)>", .variable)
             if takesRemainingWords(parameter) || (parameter.isInput && parameter.type.isList) {
                 parts += [.init(" "), .init("["), argument, .init("...]")]
@@ -137,31 +134,27 @@ extension Shell {
 
     /// ` <Int>` after a flag that takes a value; a list flag takes one
     /// element per use.
-    private func valuePlaceholder(for parameter: Parameter) -> [AttributedString] {
-        let type: TypeAnnotation
-        switch parameter.type {
-        case .bool: return []
-        case .list(let element): type = element
-        default: type = parameter.type
-        }
+    private func valuePlaceholder(for parameter: CommandParameter) -> [AttributedString] {
+        let type: ValueType
+        if parameter.type.isBool { return [] }
+        type = parameter.type.listElement ?? parameter.type
         return [.init(" <"), .init(placeholder(type), DisplayStyle.type), .init(">")]
     }
 
     /// A type as `--help` shows it: an enum as its choices.
-    private func placeholder(_ type: TypeAnnotation) -> String {
-        if case .named(let name) = type, let enumType = interpreter.enumType(named: name) {
-            return enumType.cases.filter(\.labels.isEmpty).map(\.name).joined(separator: "|")
+    private func placeholder(_ type: ValueType) -> String {
+        if case .named(let name, _) = type, let description = interpreter.typeDescription(named: name), description.kind == "enum" {
+            return description.members.filter { $0.kind == .case && !$0.hasPayload }.map(\.name).joined(separator: "|")
         }
         return type.description
     }
 
-    private func describe(_ defaultValue: Expr) -> String {
-        switch defaultValue {
-        case .literal(.string(let text)): "\"\(text)\""
-        case .literal(.nothing): "nil"
+    private func describe(_ defaultValue: Value) -> String {
+        switch defaultValue.kind {
+        case .string: "\"\(defaultValue.description)\""
+        case .nothing: "nil"
         // As Swift writes it: `"/tmp"` for a FilePath made from a literal.
-        case .literal(let value): value.debugDescription
-        default: "computed"
+        default: defaultValue.debugDescription
         }
     }
 }
@@ -169,65 +162,51 @@ extension Shell {
 /// `help`: every function you can call, as records (so `help | filter …`
 /// works), sequence methods included; `help name`: one of them in full.
 extension Shell {
-    /// The builtins that aren't functions, since they change the shell
-    /// itself: their usage and what they do.
-    func help() -> Function {
-        Function(
-            name: "help",
-            parameters: [Parameter(label: nil, name: "name", type: .optional(.string), defaultValue: .literal(.nothing))],
-            returnType: nil,
-            body: .native { [unowned self] _, args in
-                guard case .string(let name)? = args["name"] else { return .list(self.helpIndex()) }
-                return .list(try self.helpOutput(for: name).map(Value.attributed))
-            },
-            documentation: Documentation(
-                summary: "Lists every function you can call, or shows one in full, or what a type has.",
-                parameters: ["name": "a function, shell builtin, type or program"]
-            )
-        )
+    /// The body of `help`: the index, or one entry in full.
+    func helpBody(_ arguments: [String: Value]) throws -> Value {
+        guard let name = arguments["name"]?.cast(to: String.self) else { return Value(helpIndex()) }
+        return Value(try helpOutput(for: name).map { Value.attributed($0) })
     }
 
     /// One record per function (its overloads together), sorted by name: the
     /// builtins, yours, and imported ones, whose source is their module.
     func helpIndex() -> [Value] {
-        var rows: [(String, Record)] = []
+        var rows: [(String, Value)] = []
         var seen: Set<String> = []
-        for scope in interpreter.scopes.reversed() {
-            for (name, binding) in scope.bindings where seen.insert(name).inserted {
-                // A name you can't write, like `$json`, is the shell's own.
-                guard Lex.isIdentifier(name), case .function(let set as OverloadSet) = binding.value,
-                      let first = set.candidates.first else { continue }
-                // One row a name: its overloads' usages, and what each says it does.
-                let source = first.isBuiltin ? "builtin" : "yours"
-                var summaries: [String] = []
-                for candidate in set.candidates {
-                    let summary = candidate.documentation?.summary ?? ""
-                    if !summary.isEmpty && !summaries.contains(summary) { summaries.append(summary) }
-                }
-                rows.append((name, helpRecord(name, source: source, usage: set.candidates.map(\.signature).joined(separator: " or "),
-                                              descriptions: summaries)))
+        let functions = Dictionary(grouping: interpreter.symbols().filter { $0.function != nil }, by: \.name)
+        for (name, candidates) in functions where seen.insert(name).inserted {
+            // A name you can't write, like `$json`, is the shell's own.
+            guard Lex.isIdentifier(name), let first = candidates.first else { continue }
+            // One row a name: its overloads' usages, and what each says it does.
+            let source = first.isBuiltin ? "builtin" : "yours"
+            var summaries: [String] = []
+            for candidate in candidates {
+                let summary = candidate.summary ?? ""
+                if !summary.isEmpty && !summaries.contains(summary) { summaries.append(summary) }
             }
+            rows.append((name, helpRecord(name, source: source, usage: candidates.map(signature(of:)).joined(separator: " or "),
+                                          descriptions: summaries)))
         }
         for builtin in Shell.shellBuiltins.values where builtin.works && !seen.contains(builtin.name) {
             rows.append((builtin.name, helpRecord(builtin.name, source: "shell", usage: builtin.usage, descriptions: [builtin.summary])))
         }
-        return rows.sorted { $0.0 < $1.0 }.map { .record($0.1) }
+        return rows.sorted { $0.0 < $1.0 }.map(\.1)
     }
 
     /// `descriptions`: each overload's doc comment, the distinct ones.
-    private func helpRecord(_ name: String, source: String, usage: String, descriptions: [String]) -> Record {
+    private func helpRecord(_ name: String, source: String, usage: String, descriptions: [String]) -> Value {
         // Each one's first sentence, for the table.
         let summary = descriptions.map(\.firstSentence).joined(separator: " ")
-        return Record([
-            "name": .string(name), "source": .string(source), "summary": .string(summary),
-            "usage": .string(usage), "description": .string(descriptions.joined(separator: "\n\n")),
-        ], typeName: "Help")
+        return Value(struct: "Help", fields: [
+            "name": Value(name), "source": Value(source), "summary": Value(summary),
+            "usage": Value(usage), "description": Value(descriptions.joined(separator: "\n\n")),
+        ])
     }
 
     /// What `name --help` shows, or what a shell builtin or program is.
     func helpOutput(for name: String) throws -> [AttributedString] {
-        if let set = interpreter.commandFunctions(named: name) ?? stageMethods(named: name) ?? functionSet(named: name) {
-            return helpLines(for: set)
+        if let callee = commandFunctions(named: name) ?? stageMethods(named: name) {
+            return helpLines(for: callee)
         } else if let builtin = Shell.shellBuiltins[name], builtin.works {
             return [
                 AttributedString(documentation: builtin.summary), AttributedString(""), HelpStyle.heading("Usage:"),
@@ -235,7 +214,7 @@ extension Shell {
             ]
         } else if let type = interpreter.typeDescription(named: name) {
             // `help String`: what the type has.
-            return interpreter.helpLines(for: type)
+            return helpLines(for: type)
         } else if let path = findExecutable(name) {
             return [AttributedString(joining: [.init(name, DisplayStyle.command), .init(" is a program, "), .init(path, DisplayStyle.command), .init(": try `")]
                 + HelpStyle.usage("\(name) --help") + [.init("` or `")] + HelpStyle.usage("man \(name)") + [.init("`.")])]
@@ -243,10 +222,39 @@ extension Shell {
         throw RuntimeError("help: no function, shell builtin, type or program named '\(name)'; `help` lists them all")
     }
 
-    /// A function that isn't a command, like `with`.
-    private func functionSet(named name: String) -> OverloadSet? {
-        guard case .function(let set as OverloadSet)? = interpreter.lookup(name)?.value else { return nil }
-        return set
+    /// What `help Type` shows: its members, grouped by kind, each with its
+    /// signature (highlighted as Swift) and, on the line below, what its
+    /// documentation says.
+    func helpLines(for type: TypeDescription) -> [AttributedString] {
+        var lines = [AttributedString(joining: [.init(type.kind, DisplayStyle.keyword), .init(" "), .init(type.name, DisplayStyle.type)])]
+        let groups = Dictionary(grouping: type.members, by: \.kind)
+        for kind in TypeDescription.Kind.allCases {
+            guard let members = groups[kind], !members.isEmpty else { continue }
+            lines += [AttributedString(""), HelpStyle.heading("\(kind.heading):")]
+            for (index, member) in members.sorted(by: { $0.name < $1.name }).enumerated() {
+                // A blank line between them, so a signature and its description read as one.
+                if index > 0 { lines.append(AttributedString("")) }
+                lines.append(AttributedString(joining: [AttributedString("  "), member.signature]))
+                if !member.summary.isEmpty { lines.append(AttributedString("    ") + AttributedString(documentation: member.summary)) }
+            }
+        }
+        return lines
+    }
+
+    /// A function as Swift declares it: `greet(_ name: String, times: Int) -> String`. What a pipe feeds is marked `@input`.
+    func signature(of symbol: Symbol) -> String {
+        guard let function = symbol.function else { return symbol.name }
+        let parameters = function.parameters.map { parameter -> String in
+            let marked = CommandParameter(parameter, of: symbol.name)
+            var text = marked.isInput ? "@input " : ""
+            if parameter.label == parameter.name {
+                text += parameter.name
+            } else {
+                text += "\(parameter.label ?? "_") \(parameter.name)"
+            }
+            return text + ": \(parameter.type)" + (parameter.isVariadic ? "..." : "")
+        }
+        return "\(symbol.name)(\(parameters.joined(separator: ", ")))" + (function.returns.map { " -> \($0)" } ?? "")
     }
 }
 

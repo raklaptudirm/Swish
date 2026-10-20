@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 import Foundation
 import SwiitStandardLibrary
 
@@ -7,19 +7,18 @@ extension Interpreter.Host {
     /// descriptors (as redirected for a `$(…)`), and a signal asks it to stop.
     init(process shell: Shell) {
         self.init(
-            name: "swish",
             output: OutputSink(write: { [unowned shell] in writeAll(shell.stdoutFD, $0) },
                                traits: { [unowned shell] in OutputSink.Traits(fd: shell.stdoutFD) }),
             error: OutputSink(write: { [unowned shell] in writeAll(shell.stderrFD, $0) },
                               traits: { [unowned shell] in OutputSink.Traits(fd: shell.stderrFD) }),
-            interrupt: { takeInterruptSignal().map(StopReason.init) }
+            shouldStop: { [unowned shell] in
+                // The signal that asked is kept, for the shell to end by once the run has stopped.
+                guard let signal = takeInterruptSignal() else { return false }
+                shell.stoppedBySignal = signal
+                return true
+            }
         )
     }
-}
-
-extension Interrupted {
-    /// The signal that asked the shell to stop: the shell's reason is one.
-    var signal: Int32 { reason.code }
 }
 
 extension OutputSink.Traits {

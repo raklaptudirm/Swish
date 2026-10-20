@@ -1,21 +1,21 @@
-@_spi(Layer) import Swiit
+import Swiit
 
 extension Shell {
     /// `jobs`, the jobs in the background oldest first, and what `await` waits
     /// for (a `Job`, or with no operand the latest one).
     func installJobs() {
-        interpreter.bind(computed: "jobs", type: .list(.named("Job"))) { [unowned self] in
+        interpreter.register(computed: "jobs", type: .list(.named("Job"))) { [unowned self] in
             updateJobs() // So their states are current.
-            return .list(jobs.map { .object($0) })
+            return Value(jobs.map { Value($0) })
         }
-        interpreter.awaiting = Awaiting(
-            operand: .named("Job"), result: .output, isHandle: { if case .object(_ as Job) = $0 { true } else { false } },
+        interpreter.register(Awaiting(
+            operand: .named("Job"), result: .named("Output"), isHandle: { $0.cast(to: Job.self) != nil },
             // `async f()`'s job holds what `f` gives, which awaiting it gives.
-            resultOf: { if case .generic("Job", let held) = $0, held.count == 1 { held[0] } else { nil } }
+            resultOf: { if case .named("Job", let held) = $0, held.count == 1 { held[0] } else { nil } }
         ) { [unowned self] value, throwing in
             let job: Job
             if let value {
-                guard case .object(let object as Job) = value else {
+                guard let object = value.cast(to: Job.self) else {
                     throw RuntimeError("await needs a Job, not \(value.typeName)")
                 }
                 job = object
@@ -27,13 +27,13 @@ extension Shell {
             if let task = job.task, !job.givesOutput {
                 _ = try awaitJob(job)
                 if case .success(let value)? = task.result { return value }
-                return .nothing
+                return .null
             }
             let output = try awaitJob(job)
             if throwing && !output.succeeded {
                 throw RuntimeError.commandFailure("\(job.source) failed with status \(job.status)", status: job.status, output: output)
             }
             return .output(output)
-        }
+        })
     }
 }

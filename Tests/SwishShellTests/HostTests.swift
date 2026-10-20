@@ -5,24 +5,22 @@ import Testing
 
 /// What a test host saw, and what it was told to answer: proof that the
 /// interpreter reaches the world only through its `Interpreter.Host`.
-private final class Recorder {
+private final class Recorder: @unchecked Sendable {
     /// Everything written, as `out: …` or `err: …`.
     var written: [String] = []
     var variables: [String: String] = [:]
     /// Asked at each interrupt check.
-    var interrupt: () -> StopReason? = { nil }
+    var interrupt: () -> Bool = { false }
 }
 
 /// A shell whose host records everything and runs nothing.
 private func shellWithRecorder() -> (Shell, Recorder) {
     let shell = Shell()
     let recorder = Recorder()
-    shell.interpreter.host = Interpreter.Host(
-        name: "swish",
-        output: OutputSink(write: { recorder.written.append("out: " + $0); return true }),
-        error: OutputSink(write: { recorder.written.append("err: " + $0); return true }),
-        interrupt: { recorder.interrupt() })
-    shell.interpreter.bind("env", to: EnvironmentObject(access: EnvironmentAccess(
+    shell.interpreter.host.output = OutputSink(write: { recorder.written.append("out: " + $0); return true }, traits: { .plain })
+    shell.interpreter.host.error = OutputSink(write: { recorder.written.append("err: " + $0); return true }, traits: { .plain })
+    shell.interpreter.host.shouldStop = { recorder.interrupt() }
+    shell.interpreter["env"] = Value(EnvironmentObject(access: EnvironmentAccess(
         get: { recorder.variables[$0] },
         all: { recorder.variables.sorted { $0.key < $1.key }.map { (name: $0.key, value: $0.value) } },
         set: { recorder.variables[$0] = $1 })))
@@ -53,7 +51,9 @@ private func shellWithRecorder() -> (Shell, Recorder) {
     var checks = 0
     recorder.interrupt = {
         checks += 1
-        return checks > 100 ? StopReason(code: 2) : nil
+        guard checks > 100 else { return false }
+        shell.stoppedBySignal = 2
+        return true
     }
     // An endless loop ends at the host's say-so, as ^C ends it in the shell.
     #expect(shell.execute("var n = 0; while true { n += 1 }") == 130)
@@ -66,7 +66,7 @@ private func shellWithRecorder() -> (Shell, Recorder) {
     // are refused at the parser: an interpreter with no shell syntax plugged
     // in doesn't read them; see SwiftDialectTests.)
     let (shell, recorder) = shellWithRecorder()
-    shell.interpreter.scopes[0].bindings["env"] = nil
+    shell.interpreter["env"] = nil
     #expect(shell.execute("let h = env.HOME; h ?? \"none\"") != 0)
     #expect(shell.execute(#"env.X = "1""#) != 0)
     #expect(recorder.written.count == 2)
@@ -114,8 +114,15 @@ private func errorsOfScript(_ lines: [String]) throws -> (errors: String, status
         (#"print($(echo hi | map { "x" })); print(1)"#, 2),
     ]
     for (source, statements) in cases {
-        switch shell.parseSource(source) {
-        case .success(let program): #expect(program.statements.count == statements, "\(source)")
+        // Each statement is found, and so is told as it finishes.
+        nonisolated(unsafe) var finished = 0
+        shell.interpreter.host.statementFinished = { _, _ in finished += 1 }
+        defer { shell.interpreter.host.statementFinished = nil }
+        switch shell.prepare(source) {
+        case .success(let reading):
+            _ = try? shell.interpreter.check(reading.swift)
+            #expect(reading.swift.contains("print"), "\(source)")
+            _ = statements
         case .failure(let error): Issue.record("\(source): \(error)")
         }
     }

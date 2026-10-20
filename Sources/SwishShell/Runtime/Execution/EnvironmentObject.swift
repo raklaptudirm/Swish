@@ -1,5 +1,5 @@
 import Foundation
-@_spi(Layer) import Swiit
+import Swiit
 
 /// The process's variables, for `env`.
 struct EnvironmentAccess {
@@ -43,7 +43,7 @@ final class EnvironmentObject: DynamicObject, @unchecked Sendable {
     var memberNames: [String] { access.all().map(\.name) }
     var description: String { "Environment" }
 
-    func member(_ name: String) -> Value? { access.get(name).map(Value.string) }
+    func member(_ name: String) -> Value? { access.get(name).map { Value($0) } }
 
     var fields: ValueDictionary? {
         var fields = ValueDictionary()
@@ -52,13 +52,13 @@ final class EnvironmentObject: DynamicObject, @unchecked Sendable {
     }
 
     func read(_ name: String) throws -> Value {
-        access.get(name).map(Value.string) ?? .nothing
+        access.get(name).map { Value($0) } ?? Value.null
     }
 
     func write(_ name: String, _ value: Value) throws {
         guard !name.isEmpty, !name.contains("=") else {
             throw RuntimeError("an environment variable's name must be a String without '=', not \(name)")
         }
-        access.set(name, value == .nothing ? nil : value.description)
+        access.set(name, value.kind == .nothing ? nil : value.description)
     }
 }

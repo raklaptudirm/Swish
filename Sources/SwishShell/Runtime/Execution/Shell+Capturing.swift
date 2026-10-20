@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 import Foundation
 
 extension Shell {
@@ -15,7 +15,7 @@ extension Shell {
         let result = Result { try body() }
         stdoutFD = savedOutput
         close(pipe.write)
-        let output = interpreter.suspend { collector.finish() }
+        let output = Interpreter.whileWaiting { collector.finish() }
         try result.get()
         return output
     }

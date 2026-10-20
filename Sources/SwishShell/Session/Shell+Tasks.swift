@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 import Foundation
 
 extension Shell {
@@ -7,13 +7,13 @@ extension Shell {
     /// task (or `--help`) lists them.
     public func runTasks(at path: String, task: String?, arguments: [String]) -> Int32 {
         catchInterrupts([SIGINT, SIGTERM, SIGHUP])
-        return runFile(at: path, arguments: []) { program in
+        return runFile(at: path, arguments: []) { [self] reading in
             guard let task, task != "--help", task != "-h" else {
-                listTasks(program)
+                listTasks(reading)
                 return
             }
-            guard let function = topLevelFunction(task) else {
-                interpreter.report("run: no task named '\(task)' in \(path); `run` lists them")
+            guard let function = topLevelFunction(task, in: reading) else {
+                report("run: no task named '\(task)' in \(path); `run` lists them")
                 lastStatus = 127
                 return
             }
@@ -24,10 +24,11 @@ extension Shell {
 
 extension Shell {
     /// `run` alone: each task, with the first sentence of its doc comment.
-    private func listTasks(_ program: Program) {
-        let tasks: [(name: String, summary: String)] = program.statements.compactMap {
-            guard case .function(let decl) = $0, !decl.name.hasPrefix("_") else { return nil }
-            return (decl.name, decl.documentation?.summary.firstSentence ?? "")
+    private func listTasks(_ reading: Reading) {
+        var seen: Set<String> = []
+        let tasks: [(name: String, summary: String)] = reading.declared.symbols.compactMap {
+            guard $0.function != nil, !$0.name.hasPrefix("_"), seen.insert($0.name).inserted else { return nil }
+            return ($0.name, $0.summary?.firstSentence ?? "")
         }
         guard !tasks.isEmpty else {
             writeAll(stdoutFD, "No tasks: a task is a function in the file.\n")

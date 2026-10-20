@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 import Foundation
 
 // Spike: what a stage is, decided from what flows into it, when it flows. The front end emits `Command("sorted")` and nothing
@@ -36,51 +36,48 @@ extension Shell {
             return try upstream.next()
         }
         let name = deferred.name
-        let checker = TypeChecker(interpreter: interpreter)
-        let element = first.map(checker.type(of:)) ?? .unknown
+        let element = first.map(interpreter.valueType(of:)) ?? .any
 
-        func function(_ set: OverloadSet) -> Stage {
-            .function(set, deferred.arguments, redirects: deferred.redirects, environment: deferred.environment)
-        }
-        func bridged(_ receiverType: TypeAnnotation, _ receiver: StageReceiver) -> Stage? {
-            guard let (type, bindings) = checker.bridged(receiverType) else { return nil }
-            return bridgedStage(type.name, name, receiver: receiver, bindings: bindings).map(function)
+        func function(_ callee: Callee) -> Stage {
+            .function(callee, deferred.arguments, redirects: deferred.redirects, environment: deferred.environment)
         }
 
         var candidates: [() -> Stage?] = []
         // The one value a pipeline started from: its own members.
-        if let single, index0(single, checker) {
-            candidates.append { bridged(checker.type(of: single), .value) }
+        if let single, single.items == nil {
+            candidates.append { self.stageCallee(name, of: self.interpreter.valueType(of: single), receiver: .value).map(function) }
         }
-        candidates.append { self.bridgedStage("Flow", name, receiver: .flow, bindings: ["Element": element]).map(function) }
-        candidates.append { self.interpreter.sequenceMethods[name].map(function) }
-        candidates.append { bridged(.list(element), .collected) }
-        // A method of each item.
-        candidates.append {
-            guard let first else { return nil }
-            switch first {
-            case .record(let record) where record.typeName != nil:
-                return (try? self.interpreter.value(of: name, in: first)) != nil ? .method(name, deferred.arguments, redirects: deferred.redirects, environment: deferred.environment) : nil
-            case .object(let object) where !(object is SwiftValue):
-                return object.member(name) != nil ? .method(name, deferred.arguments, redirects: deferred.redirects, environment: deferred.environment) : nil
-            default: return nil
-            }
-        }
-        // A member of each item's Swift type.
-        if first != nil, !element.isUnknownType {
-            candidates.append { bridged(element, .each) }
+        candidates.append { self.stageCallee(name, of: .named("Flow", [element]), receiver: .flow).map(function) }
+        // The items collected: what every sequence has, and the list's own.
+        candidates.append { self.stageCallee(name, of: .list(element), receiver: .collected).map(function) }
+        // A member of each item's type: a struct's method, an object's, a Swift type's.
+        if first != nil, !element.isUnknown {
+            candidates.append { self.stageCallee(name, of: element, receiver: .each).map(function) }
         }
 
         var firstFailure: Error?
         for candidate in candidates {
             guard let stage = candidate() else { continue }
             // It fits if its words bind to it: a stage is built to find out.
-            if case .function(let set, let args, _, _) = stage {
+            if case .function(let callee, let args, _, _) = stage {
+                // A stage written as a call is bound as a call is: by the labels and types of its arguments.
+                let written = args.compactMap { argument -> ValueType.Element? in
+                    if case .call(let call) = argument { ValueType.Element(label: call.label, type: self.interpreter.valueType(of: call.value)) } else { nil }
+                }
                 do {
-                    let (chosen, _) = try interpreter.resolve(set) { try self.bind(commandLine: args, to: $0, excludingInput: true) }
+                    if !written.isEmpty {
+                        _ = try interpreter.resolveOverload(among: callee.overloads, arguments: written)
+                        return (stage, replay)
+                    }
+                    let shapes = args.map { argument -> CommandWordShape in
+                        if case .text(let text) = argument { .text(text) } else { .closure }
+                    }
+                    let binding = try bindCommandLine(shapes, to: callee, excludingInput: true)
                     // `[K.a] | sorted` needs its Element to be Comparable.
-                    if first != nil, !element.isUnknownType,
-                       let missing = (chosen.generics["Element"] ?? []).first(where: { !$0.hasPrefix("=") && !checker.conforms(element, to: $0) }) {
+                    if first != nil, !element.isUnknown,
+                       let missing = (callee.overloads[binding.overload].function?.generics["Element"] ?? []).first(where: {
+                           !$0.hasPrefix("=") && !self.interpreter.conforms(element, to: $0)
+                       }) {
                         throw ConstraintFailure(message: "\(name) needs Element to be \(missing), and \(element) isn't")
                     }
                 } catch let failure as ConstraintFailure {
@@ -103,25 +100,5 @@ extension Shell {
             }
         }
         return (try deferred.fallback(), replay)
-    }
-
-    /// Whether a value is the one value a pipeline starts from, not a sequence of items (as the checker told them apart).
-    private func index0(_ value: Value, _ checker: TypeChecker) -> Bool {
-        let type = checker.type(of: value)
-        switch type {
-        case .list: return false
-        case .generic: return checker.bridgedElement(type) == nil
-        case .named(let name): return Bridge.types[name]?.conformances["Sequence"] == nil
-        default: return true
-        }
-    }
-}
-
-extension TypeAnnotation {
-    var isUnknownType: Bool {
-        switch self {
-        case .unknown, .any: true
-        default: false
-        }
     }
 }

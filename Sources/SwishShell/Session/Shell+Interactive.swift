@@ -1,28 +1,22 @@
-@_spi(Layer) import Swiit
+import Swiit
 import Foundation
 
 extension Shell {
     /// Runs the read-eval loop until EOF or `exit`.
     public func runInteractive() -> Int32 {
-        // Held but where it waits for a line (`suspend`), when tasks run.
-        interpreter.lock.acquire()
-        interpreter.task = interpreter.mainTask
-        defer { interpreter.lock.release() }
         takeTerminal()
         if !interactive {
-            return runScript { [unowned self] in interpreter.suspend { Swift.readLine() } }
+            return runScript { [unowned self] in Interpreter.whileWaiting { Swift.readLine() } }
         }
         editor.history = History(path: History.defaultPath)
         editor.continuationPrompt = "…".styled(DisplayStyle.dim) + " "
-        // These run while a line is read, when the lock is let go: they take it.
+        // These run while a line is read, when nothing else runs.
         editor.isComplete = { [unowned self] text in
-            interpreter.withMainTask {
-                if case .failure(let error) = parseSource(text), error.incomplete { return false }
-                return true
-            }
+            if case .failure(let error) = prepare(text), error.isIncomplete { return false }
+            return true
         }
-        editor.highlight = { [unowned self] text in interpreter.withMainTask { highlightStyles(text) } }
-        editor.complete = { [unowned self] text, cursor in interpreter.withMainTask { completions(for: text, cursor: cursor) } }
+        editor.highlight = { [unowned self] text in highlightStyles(text) }
+        editor.complete = { [unowned self] text, cursor in completions(for: text, cursor: cursor) }
         loadConfig()
         // Lines of a statement that isn't finished yet, like an open `if` block.
         var pending = ""
@@ -32,7 +26,7 @@ extension Shell {
                 for notice in announceJobs(styled: DisplayStyle.enabled(for: STDERR_FILENO)) { writeAll(STDERR_FILENO, notice + "\n") }
             }
             let prompt = pending.isEmpty ? prompt() : "…".styled(DisplayStyle.dim) + " "
-            switch interpreter.suspend({ editor.readLine(prompt: prompt) }) {
+            switch Interpreter.whileWaiting({ editor.readLine(prompt: prompt) }) {
             case .eof:
                 if !pending.isEmpty { enter(pending) }
                 return lastStatus
@@ -41,15 +35,14 @@ extension Shell {
             case .line(let line):
                 pending = pending.isEmpty ? line : pending + "\n" + line
                 diagnosticSource = (pending, nil)
-                switch parseSource(pending) {
-                case .failure(let error) where error.incomplete:
+                switch prepare(pending) {
+                case .failure(let error) where error.isIncomplete:
                     continue
                 case .failure(let error):
-                    reportDiagnostic(.syntax, "\(error)", at: error.range)
-                    lastStatus = 2
-                case .success(let program):
+                    reportReadingFailure(error)
+                case .success(let reading):
                     // Checked first, as everywhere else: a type error runs nothing.
-                    if let program = typeCheck(program) { runReportingErrors(program, atPrompt: true) }
+                    runReportingErrors(reading, atPrompt: true)
                 }
                 pending = ""
             }
@@ -64,14 +57,13 @@ extension Shell {
         while let line = nextLine() {
             pending = pending.isEmpty ? line : pending + "\n" + line
             diagnosticSource = (pending, nil)
-            switch parseSource(pending) {
-            case .failure(let error) where error.incomplete:
+            switch prepare(pending) {
+            case .failure(let error) where error.isIncomplete:
                 continue
             case .failure(let error):
-                reportDiagnostic(.syntax, "\(error)", at: error.range)
-                lastStatus = 2
-            case .success(let program):
-                if let program = typeCheck(program) { runReportingErrors(program) }
+                reportReadingFailure(error)
+            case .success(let reading):
+                runReportingErrors(reading)
                 if scriptStopped { return lastStatus }
             }
             pending = ""
@@ -105,7 +97,7 @@ extension Shell {
         do {
             if let custom = try customPrompt() { return custom }
         } catch {
-            interpreter.report("prompt: \(error)")
+            report("prompt: \(error)")
         }
         return defaultPrompt()
     }
