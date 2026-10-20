@@ -1,5 +1,5 @@
-import Swiit
 import Foundation
+import Swiit
 
 extension Shell {
     // MARK: Highlighting
@@ -13,16 +13,18 @@ extension Shell {
         // string) is painted over them.
         for span in highlightSpans(text).sorted(by: { $0.range.count > $1.range.count }) {
             let range = span.range.clamped(to: 0..<characters.count)
-            let style: String? = switch span.kind {
-            case .keyword, .punctuation: DisplayStyle.keyword.escape
-            case .command: commandStyle(String(characters[range]), piped: Shell.isPiped(characters, before: range.lowerBound))
-            case .flag: DisplayStyle.flag.escape
-            case .string: DisplayStyle.string.escape
-            case .number, .constant: DisplayStyle.constant.escape
-            case .variable: DisplayStyle.variable.escape
-            case .comment: DisplayStyle.comment.escape
-            case .type: DisplayStyle.type.escape
-            }
+            let style: String? =
+                switch span.kind {
+                case .keyword, .punctuation: DisplayStyle.keyword.escape
+                case .command:
+                    commandStyle(String(characters[range]), piped: Shell.isPiped(characters, before: range.lowerBound))
+                case .flag: DisplayStyle.flag.escape
+                case .string: DisplayStyle.string.escape
+                case .number, .constant: DisplayStyle.constant.escape
+                case .variable: DisplayStyle.variable.escape
+                case .comment: DisplayStyle.comment.escape
+                case .type: DisplayStyle.type.escape
+                }
             for index in range { styles[index] = style }
         }
         return styles
@@ -41,8 +43,11 @@ extension Shell {
         // Names built at run time can't be checked while typing.
         guard !name.isEmpty, !name.contains(where: { "$\\\"'(".contains($0) }) else { return nil }
         let known: Bool
-        if !external && (commandFunctions(named: name) != nil || stageNames.sequence.contains(name) || stageNames.flow.contains(name)
-                         || Shell.shellBuiltins[name] != nil) {
+        if !external
+            && (commandFunctions(named: name) != nil || stageNames.sequence.contains(name)
+                || stageNames.flow.contains(name)
+                || Shell.shellBuiltins[name] != nil)
+        {
             known = true
         } else if !external && piped && isMemberName(name) {
             // After a `|`, a method of what's piped in: which type's isn't

@@ -27,8 +27,13 @@ final class DisplayFormatter {
 
     /// `useViews: false` shows every column, as `table` does.
     init(
-        maxWidth: Int = .max, styled: Bool = false, useViews: Bool = true, header: Bool = true,
-        columnCap: Int = 40, registry: DisplayRegistry = DisplayRegistry(), write: @escaping (String) -> Bool
+        maxWidth: Int = .max,
+        styled: Bool = false,
+        useViews: Bool = true,
+        header: Bool = true,
+        columnCap: Int = 40,
+        registry: DisplayRegistry = DisplayRegistry(),
+        write: @escaping (String) -> Bool
     ) {
         self.registry = registry
         self.maxWidth = maxWidth
@@ -70,7 +75,9 @@ final class DisplayFormatter {
         guard !pending.isEmpty else { return true }
         columns = layout(for: pending)
         if header {
-            var line = trimmingTrailingSpaces(columns!.map { pad($0.key, $0, DisplayStyle.label) }.joined(separator: "  "))
+            var line = trimmingTrailingSpaces(
+                columns!.map { pad($0.key, $0, DisplayStyle.label) }.joined(separator: "  ")
+            )
             if droppedColumns { line += "  " + "…".styled(DisplayStyle.dim, styled) }
             guard emit(line) else { return false }
         }
@@ -82,7 +89,8 @@ final class DisplayFormatter {
     private func layout(for sample: [Fields]) -> [Column] {
         var keys: [String]
         if useViews, let typeName = sample.first?.typeName, let view = registry.columns(for: typeName),
-           sample.allSatisfy({ $0.typeName == typeName }) {
+            sample.allSatisfy({ $0.typeName == typeName })
+        {
             keys = view.map(\.name)
         } else {
             keys = []
@@ -93,14 +101,18 @@ final class DisplayFormatter {
         }
 
         var widths = keys.map { key in
-            min(columnCap, max(header ? key.count : 0, sample.map { DisplayFormatter.cell($0[key] ?? .null).count }.max() ?? 0))
+            min(
+                columnCap,
+                max(header ? key.count : 0, sample.map { DisplayFormatter.cell($0[key] ?? .null).count }.max() ?? 0)
+            )
         }
         // Shrink the widest columns until the table fits, down to 6 each;
         // if that isn't enough, leave off columns from the right, keeping
         // room for the `…` that says so.
         func tableWidth() -> Int { widths.reduce(0, +) + 2 * (widths.count - 1) + (droppedColumns ? 3 : 0) }
         while tableWidth() > maxWidth,
-              let widest = widths.indices.max(by: { widths[$0] < widths[$1] }), widths[widest] > 6 {
+            let widest = widths.indices.max(by: { widths[$0] < widths[$1] }), widths[widest] > 6
+        {
             widths[widest] -= 1
         }
         while tableWidth() > maxWidth && keys.count > 1 {
@@ -110,21 +122,31 @@ final class DisplayFormatter {
         }
         return keys.indices.map { index in
             let values = sample.compactMap { $0[keys[index]] }.filter { $0 != .null }
-            let numeric = !values.isEmpty && values.allSatisfy {
-                switch $0.kind {
-                case .int, .double: true
-                default: $0.displayShape.isNumeric
+            let numeric =
+                !values.isEmpty
+                && values.allSatisfy {
+                    switch $0.kind {
+                    case .int, .double: true
+                    default: $0.displayShape.isNumeric
+                    }
                 }
-            }
             return Column(key: keys[index], width: widths[index], rightAligned: numeric)
         }
     }
 
     private func row(_ record: Fields) -> String {
-        trimmingTrailingSpaces(columns!.map { column in
-            let value = record[column.key] ?? .null
-            return pad(DisplayFormatter.cell(value), column, DisplayFormatter.style(of: value, key: column.key, in: record, registry: registry))
-        }.joined(separator: "  "))
+        trimmingTrailingSpaces(
+            columns!
+                .map { column in
+                    let value = record[column.key] ?? .null
+                    return pad(
+                        DisplayFormatter.cell(value),
+                        column,
+                        DisplayFormatter.style(of: value, key: column.key, in: record, registry: registry)
+                    )
+                }
+                .joined(separator: "  ")
+        )
     }
 
     /// What stands out in a table: a column the type gives a style, or says
@@ -132,11 +154,14 @@ final class DisplayFormatter {
     /// are shown (a file's name by its type, a job's state by itself). Else
     /// it's plain.
     static func style(of value: Value, key: String, in record: Fields, registry: DisplayRegistry) -> DisplayStyle? {
-        guard let typeName = record.typeName, let column = registry.columns(for: typeName)?.first(where: { $0.name == key }) else { return nil }
+        guard let typeName = record.typeName,
+            let column = registry.columns(for: typeName)?.first(where: { $0.name == key })
+        else { return nil }
         if let fixed = column.style { return fixed }
         guard let source = column.styledBy,
-              let found = record[source]?.enumCase,
-              let style = registry.enumStyles[found.type]?(found.name) else { return nil }
+            let found = record[source]?.enumCase,
+            let style = registry.enumStyles[found.type]?(found.name)
+        else { return nil }
         return style
     }
 
@@ -159,7 +184,11 @@ final class DisplayFormatter {
     }
 
     /// `name  value` lines, with keys aligned.
-    static func keyValueLines(_ record: Fields, styled: Bool = false, registry: DisplayRegistry = DisplayRegistry()) -> [String] {
+    static func keyValueLines(
+        _ record: Fields,
+        styled: Bool = false,
+        registry: DisplayRegistry = DisplayRegistry()
+    ) -> [String] {
         let width = record.keys.map(\.count).max() ?? 0
         return record.map { key, value in
             key.styled(DisplayStyle.label, styled) + String(repeating: " ", count: width - key.count + 2)

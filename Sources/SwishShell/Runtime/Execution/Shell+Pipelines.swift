@@ -1,5 +1,5 @@
-import Swiit
 import Foundation
+import Swiit
 
 struct SpawnFailure: Error {
     let message: String
@@ -8,7 +8,8 @@ struct SpawnFailure: Error {
 
 enum Stage {
     case external([String], skipBuiltins: Bool, redirects: [ResolvedRedirect], environment: [(String, String)])
-    /// A Swish function, which runs in the shell's own process; or a method of what flows in, as in `[p1, p2] | describe`.
+    /// A Swish function, which runs in the shell's own process; or a method of what flows in, as in `[p1, p2] |
+    /// describe`.
     case function(Callee, [CommandArgument], redirects: [ResolvedRedirect], environment: [(String, String)])
     /// A value feeding the pipeline, as in `[3, 1, 2] | sorted`.
     case value(Value)
@@ -47,12 +48,13 @@ extension Shell {
         if stages.count == 1 {
             switch stages[0] {
             // A function reading a file (`double < numbers`) streams it, below.
-            case .function(let callee, let args, let redirects, let environment) where callee.receiver == nil && !redirects.contains(where: { $0.fd == 0 }):
+            case .function(let callee, let args, let redirects, let environment)
+            where callee.receiver == nil && !redirects.contains(where: { $0.fd == 0 }):
                 return try withEnvironment(environment) {
                     try withRedirects(redirects) { _, _ in try callCommand(callee, args, display: display) }
                 }
             case .external(let argv, let skipBuiltins, let redirects, let environment)
-                where !skipBuiltins && Shell.shellBuiltins[argv[0]] != nil:
+            where !skipBuiltins && Shell.shellBuiltins[argv[0]] != nil:
                 return try withEnvironment(environment) {
                     try withRedirects(redirects) { _, _ in runBuiltin(argv)! }
                 }
@@ -74,11 +76,14 @@ extension Shell {
         if let segment {
             for index in segment {
                 for redirect in stages[index].redirects {
-                    let allowed = redirect.fd == 2
+                    let allowed =
+                        redirect.fd == 2
                         || (redirect.fd == 0 && index == segment.lowerBound)
                         || (redirect.fd != 0 && index == segment.upperBound)
                     guard allowed else {
-                        throw RuntimeError("only the first and last Swish functions in a pipeline can redirect their input and output")
+                        throw RuntimeError(
+                            "only the first and last Swish functions in a pipeline can redirect their input and output"
+                        )
                     }
                     segmentRedirects.append(redirect)
                 }
@@ -111,9 +116,15 @@ extension Shell {
                 continue
             }
 
-            let result = launch(argv, redirects: redirects, environment: environment,
-                                input: input, output: next?.write ?? stdoutFD,
-                                pgid: interactive ? job.pgid : -1, foreground: ownsTerminal)
+            let result = launch(
+                argv,
+                redirects: redirects,
+                environment: environment,
+                input: input,
+                output: next?.write ?? stdoutFD,
+                pgid: interactive ? job.pgid : -1,
+                foreground: ownsTerminal
+            )
             if input >= 0 { close(input) }
             if let next { close(next.write) }
 
@@ -134,12 +145,16 @@ extension Shell {
             do {
                 let pipeOutput = segmentOutput >= 0 ? segmentOutput : stdoutFD
                 try withEnvironment(stages[segment].flatMap(\.environment)) {
-                try withRedirects(segmentRedirects, input: segmentInput, output: pipeOutput) { input, output in
-                    // Text for the next program, or, if it went to a file or
-                    // the terminal, formatted as it would be displayed.
-                    try runSegment(stages[segment], input: input, output: output,
-                                   toExternal: segmentOutput >= 0 && output == segmentOutput)
-                }
+                    try withRedirects(segmentRedirects, input: segmentInput, output: pipeOutput) { input, output in
+                        // Text for the next program, or, if it went to a file or
+                        // the terminal, formatted as it would be displayed.
+                        try runSegment(
+                            stages[segment],
+                            input: input,
+                            output: output,
+                            toExternal: segmentOutput >= 0 && output == segmentOutput
+                        )
+                    }
                 }
             } catch {
                 failure = error
@@ -162,8 +177,13 @@ extension Shell {
     /// A redirect that can't be opened fails the stage like a missing
     /// command: the rest of the pipeline still runs.
     func launch(
-        _ argv: [String], redirects: [ResolvedRedirect], environment: [(String, String)],
-        input: Int32, output: Int32, pgid: pid_t, foreground: Bool
+        _ argv: [String],
+        redirects: [ResolvedRedirect],
+        environment: [(String, String)],
+        input: Int32,
+        output: Int32,
+        pgid: pid_t,
+        foreground: Bool
     ) -> Result<pid_t, SpawnFailure> {
         var descriptors = DescriptorTable([0: input >= 0 ? input : 0, 1: output, 2: stderrFD])
         do {
@@ -242,7 +262,12 @@ extension Shell {
         return 1
     }
 
-    private func spawn(_ argv: [String], pgid: pid_t, descriptors: DescriptorTable, foreground: Bool) -> Result<pid_t, SpawnFailure> {
+    private func spawn(
+        _ argv: [String],
+        pgid: pid_t,
+        descriptors: DescriptorTable,
+        foreground: Bool
+    ) -> Result<pid_t, SpawnFailure> {
         let name = argv[0]
         guard let path = findExecutable(name) else {
             return .failure(SpawnFailure(message: "\(name): command not found", status: 127))
@@ -265,7 +290,13 @@ extension Shell {
         defer { copies.forEach { close($0) } }
 
         let code: Int32
-        switch spawnProcess(path, argv, pgid: pgid, descriptors: mapped, terminal: interactive && foreground ? terminal : nil) {
+        switch spawnProcess(
+            path,
+            argv,
+            pgid: pgid,
+            descriptors: mapped,
+            terminal: interactive && foreground ? terminal : nil
+        ) {
         case .success(let pid): return .success(pid)
         case .failure(let error): code = error.code
         }
@@ -281,8 +312,9 @@ extension Shell {
             let candidate = (directory.isEmpty ? "." : String(directory)) + "/" + name
             var isDirectory: ObjCBool = false
             if FileManager.default.fileExists(atPath: candidate, isDirectory: &isDirectory),
-               !isDirectory.boolValue,
-               access(candidate, X_OK) == 0 {
+                !isDirectory.boolValue,
+                access(candidate, X_OK) == 0
+            {
                 return candidate
             }
         }

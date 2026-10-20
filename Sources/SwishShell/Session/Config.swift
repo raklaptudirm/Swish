@@ -1,5 +1,5 @@
-import Swiit
 import Foundation
+import Swiit
 
 /// The config file: a Swish script the interactive shell runs as it
 /// starts, whose functions and variables stay defined at the prompt. A
@@ -8,9 +8,12 @@ extension Shell {
     /// `$SWISH_CONFIG` (empty for none), or the first `swish/config.swish`
     /// in the XDG config directories: `$XDG_CONFIG_HOME` (or `~/.config`),
     /// then each of `$XDG_CONFIG_DIRS` (or `/etc/xdg`).
-    static func configPath(environment: [String: String], exists: (String) -> Bool = {
-        FileManager.default.fileExists(atPath: $0)
-    }) -> String? {
+    static func configPath(
+        environment: [String: String],
+        exists: (String) -> Bool = {
+            FileManager.default.fileExists(atPath: $0)
+        }
+    ) -> String? {
         if let path = environment["SWISH_CONFIG"] { return path.isEmpty ? nil : path }
         let directories = [XDG.configHome(environment)].compactMap { $0 } + XDG.configDirectories(environment)
         return directories.map { $0 + "/swish/config.swish" }.first(where: exists)
@@ -31,14 +34,20 @@ extension Shell {
         let overloads = interpreter.symbols(named: "prompt").compactMap { $0.function }
         guard !overloads.isEmpty else { return nil }
         let withStatus = overloads.first { $0.parameters.map(\.label) == ["status"] && $0.parameters[0].type == .int }
-        guard let function = withStatus ?? overloads.first(where: { $0.parameters.isEmpty }), function.returns == .string else {
+        guard let function = withStatus ?? overloads.first(where: { $0.parameters.isEmpty }),
+            function.returns == .string
+        else {
             throw RuntimeError("declare it as `func prompt() -> String` or `func prompt(status: Int) -> String`")
         }
         let status = lastStatus
-        defer { lastStatus = status } // Drawing the prompt isn't a command.
-        let value = try invoke(Callee(name: "prompt", overloads: [], receiver: nil),
-                               withStatus != nil ? [("status", Value(Int(status)))] : [])
-        guard let text = value.cast(to: String.self) else { throw RuntimeError("it gave \(value.typeName), not a String") }
+        defer { lastStatus = status }  // Drawing the prompt isn't a command.
+        let value = try invoke(
+            Callee(name: "prompt", overloads: [], receiver: nil),
+            withStatus != nil ? [("status", Value(Int(status)))] : []
+        )
+        guard let text = value.cast(to: String.self) else {
+            throw RuntimeError("it gave \(value.typeName), not a String")
+        }
         return text
     }
 }

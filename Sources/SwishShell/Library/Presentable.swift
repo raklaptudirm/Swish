@@ -2,11 +2,13 @@ import Foundation
 import Swiit
 import SystemPackage
 
-/// What a table and a terminal need to know of a Swift type's values beyond their text: a type says only what is true of it.
+/// What a table and a terminal need to know of a Swift type's values beyond their text: a type says only what is true
+/// of it.
 protocol Presentable {
     /// One cell of a table.
     var cell: String { get }
-    /// It with terminal color escapes, if it has colors to show: what is written to a terminal, where the text is for a pipe or file.
+    /// It with terminal color escapes, if it has colors to show: what is written to a terminal, where the text is for a
+    /// pipe or file.
     var styledText: String? { get }
     /// What else the printers need to know of how it looks.
     var shape: DisplayShape { get }

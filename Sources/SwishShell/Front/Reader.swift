@@ -1,8 +1,11 @@
 import Foundation
 
-// Spike: the shell's grammar, read by the shell. A `Reader` stands on the text of one source at the start of a form of the
-// shell's (a command, a pipeline, `$(…)`, `$name`, `async …`) and reads it as characters; where the form holds Swift (an
-// argument, `\(…)`, a closure, the program in `$(…)`) it finds the extent with the lexical scanner and has the front end cure
+// Spike: the shell's grammar, read by the shell. A `Reader` stands on the text of one source at the start of a form of
+// the
+// shell's (a command, a pipeline, `$(…)`, `$name`, `async …`) and reads it as characters; where the form holds Swift
+// (an
+// argument, `\(…)`, a closure, the program in `$(…)`) it finds the extent with the lexical scanner and has the front
+// end cure
 // that text in turn. What it gives back is Swift: the form as the calls it means, which a plain Swift front end reads.
 
 struct Failure: Error, CustomStringConvertible {
@@ -126,15 +129,20 @@ struct Reader {
     }
 
     static let statementKeywords: Set<String> = [
-        "let", "var", "func", "return", "break", "continue", "do", "catch", "enum", "fallthrough", "import", "struct", "defer", "guard", "throw", "repeat",
+        "let", "var", "func", "return", "break", "continue", "do", "catch", "enum", "fallthrough", "import", "struct",
+        "defer", "guard", "throw", "repeat",
         "class", "actor", "protocol", "extension", "typealias",
     ]
-    /// The keywords a line can begin with: a statement's, a unit's (`if make { … }`), or an expression's (`await job`). Completion
+    /// The keywords a line can begin with: a statement's, a unit's (`if make { … }`), or an expression's (`await job`).
+    /// Completion
     /// offers them where a command could go.
-    static let lineStarts = statementKeywords.subtracting(["catch"]).union(["if", "for", "while", "switch", "try", "async", "await"])
+    static let lineStarts = statementKeywords.subtracting(["catch"])
+        .union(["if", "for", "while", "switch", "try", "async", "await"])
     /// The words a command can follow directly and still be in command position.
     static let beforeCommand: Set<String> = ["if", "while", "else", "foreign"]
-    static let reservedStarts = statementKeywords.union(["if", "for", "while", "switch", "else", "case", "default", "in"])
+    static let reservedStarts = statementKeywords.union([
+        "if", "for", "while", "switch", "else", "case", "default", "in",
+    ])
 
     // MARK: Highlighting
 
@@ -143,12 +151,27 @@ struct Reader {
         if start < end { spans.append(HighlightSpan(range: start..<end, kind: kind)) }
     }
 
-    /// The Swift in a slice of this text, cured; its highlighting joins this reader's. `prefix`: characters put before the slice
+    /// The Swift in a slice of this text, cured; its highlighting joins this reader's. `prefix`: characters put before
+    /// the slice
     /// that are not in the text.
-    mutating func cureSlice(_ slice: String, from start: Int, prefix: Int = 0, asExpression: Bool = true) throws -> String {
-        let cured = try front.cureWithSpans(slice, names: names.snapshot(atByte: text.byteOf[min(start, text.count)]), asExpression: asExpression)
+    mutating func cureSlice(
+        _ slice: String,
+        from start: Int,
+        prefix: Int = 0,
+        asExpression: Bool = true
+    ) throws -> String {
+        let cured = try front.cureWithSpans(
+            slice,
+            names: names.snapshot(atByte: text.byteOf[min(start, text.count)]),
+            asExpression: asExpression
+        )
         for span in cured.spans where span.range.lowerBound >= prefix {
-            spans.append(HighlightSpan(range: (span.range.lowerBound - prefix + start)..<(span.range.upperBound - prefix + start), kind: span.kind))
+            spans.append(
+                HighlightSpan(
+                    range: (span.range.lowerBound - prefix + start)..<(span.range.upperBound - prefix + start),
+                    kind: span.kind
+                )
+            )
         }
         return cured.text
     }
@@ -211,7 +234,8 @@ struct Reader {
 
     // MARK: Chains
 
-    /// Commands joined by `&&` and `||`, with Swift between them or not; nil (having looked ahead) when there is no command in
+    /// Commands joined by `&&` and `||`, with Swift between them or not; nil (having looked ahead) when there is no
+    /// command in
     /// it, which is Swift's.
     mutating func parseCommandChain(condition: Bool) throws -> Chain? {
         let start = self
@@ -291,7 +315,14 @@ struct Reader {
     }
 
     private func swiftExpression(logical: Bool) -> Probe? {
-        let probe = SwiftProbe.expression(in: blanked, at: pos, logical: logical, names: names, strictNames: false, inCondition: conditionDepth > 0)
+        let probe = SwiftProbe.expression(
+            in: blanked,
+            at: pos,
+            logical: logical,
+            names: names,
+            strictNames: false,
+            inCondition: conditionDepth > 0
+        )
         return probe.failure == nil ? probe : nil
     }
 
@@ -331,7 +362,9 @@ struct Reader {
         defer { self = saved }
         skipSpaces()
         guard let c = peek() else { return .expression }
-        if c == "^" || (c == "$" && peek(1).map(Lex.isIdentifierStart) ?? false) { return .command(notAnExpression: nil) }
+        if c == "^" || (c == "$" && peek(1).map(Lex.isIdentifierStart) ?? false) {
+            return .command(notAnExpression: nil)
+        }
         // `'raw'` is a string, which Swift has no spelling of: an expression if it is the whole unit.
         if c == "'", let close = chars[(pos + 1)...].firstIndex(of: "'") {
             pos = close + 1
@@ -344,11 +377,19 @@ struct Reader {
                 return .command(notAnExpression: nil)
             }
             if after == "(" { return .expression }
-            if names.role(of: word, at: here) == .function { return after != "." && after != "[" ? .command(notAnExpression: nil) : .expression }
+            if names.role(of: word, at: here) == .function {
+                return after != "." && after != "[" ? .command(notAnExpression: nil) : .expression
+            }
         }
         var wordEnd = pos
         while wordEnd < chars.count, !isWordBoundary(chars[wordEnd]) { wordEnd += 1 }
-        let probe = SwiftProbe.expression(in: blanked, at: pos, logical: true, names: names, inCondition: conditionDepth > 0)
+        let probe = SwiftProbe.expression(
+            in: blanked,
+            at: pos,
+            logical: true,
+            names: names,
+            inCondition: conditionDepth > 0
+        )
         if let failure = probe.failure {
             guard failure <= wordEnd else { return .expression }
             return .command(notAnExpression: nil)
@@ -372,9 +413,13 @@ struct Reader {
         let start = start ?? pos
         var commands = [try parseCommand()]
         // A method with nothing piped in, and no function or program by that name, has nothing to work on.
-        if input == nil, !commands[0].external, case .text(let pieces)? = commands[0].words.first, pieces.count == 1, case .literal(let name) = pieces[0],
-           names.role(of: name, at: here) != .function, front.isMethodWithoutInput(name) {
-            throw Failure("\(name) is a method: pipe something into it, as in `ls | \(name)`, or call it on a value, as in `xs.\(name)(…)`")
+        if input == nil, !commands[0].external, case .text(let pieces)? = commands[0].words.first, pieces.count == 1,
+            case .literal(let name) = pieces[0],
+            names.role(of: name, at: here) != .function, front.isMethodWithoutInput(name)
+        {
+            throw Failure(
+                "\(name) is a method: pipe something into it, as in `ls | \(name)`, or call it on a value, as in `xs.\(name)(…)`"
+            )
         }
         var end = pos
         while true {
@@ -387,15 +432,21 @@ struct Reader {
         }
         let source = text.slice(start..<end).trimmingCharacters(in: .whitespacesAndNewlines)
         front.record(.pipeline, source)
-        for (index, command) in commands.enumerated() where !command.external && command.call == nil && command.redirects.isEmpty {
-            guard case .text(let first)? = command.words.first, first.count == 1, case .literal(let name) = first[0] else { continue }
+        for (index, command) in commands.enumerated()
+        where !command.external && command.call == nil && command.redirects.isEmpty {
+            guard case .text(let first)? = command.words.first, first.count == 1, case .literal(let name) = first[0]
+            else { continue }
             var words: [String] = []
             for word in command.words.dropFirst() {
-                guard case .text(let pieces) = word, pieces.allSatisfy({ if case .literal = $0 { true } else { false } }) else { words = []; break }
+                guard case .text(let pieces) = word,
+                    pieces.allSatisfy({ if case .literal = $0 { true } else { false } })
+                else { words = []; break }
                 words.append(pieces.map { if case .literal(let t) = $0 { t } else { "" } }.joined())
             }
             if command.words.count - 1 == words.count {
-                front.record(use: Front.CommandUse(name: name, words: words, piped: index > 0 || input != nil, source: source))
+                front.record(
+                    use: Front.CommandUse(name: name, words: words, piped: index > 0 || input != nil, source: source)
+                )
             }
         }
         return PipelineOut(commands: commands, source: source, input: input, throwing: nil)
@@ -425,7 +476,9 @@ struct Reader {
                 continue
             }
             // `sorted(by: "size")`: a name touching its arguments is a call; a trailing closure may follow.
-            if c == "(", command.words.count == 1, command.call == nil, !external, pos > 0, Lex.isIdentifierPart(chars[pos - 1]) {
+            if c == "(", command.words.count == 1, command.call == nil, !external, pos > 0,
+                Lex.isIdentifierPart(chars[pos - 1])
+            {
                 var arguments = try parseArguments()
                 skipSpaces()
                 if peek() == "{" {
@@ -455,7 +508,10 @@ struct Reader {
             let wordStart = pos
             let word = try parseWord()
             if command.words.isEmpty {
-                mark(.command, from: command.redirects.isEmpty && command.environment.isEmpty ? caretStart ?? wordStart : wordStart)
+                mark(
+                    .command,
+                    from: command.redirects.isEmpty && command.environment.isEmpty ? caretStart ?? wordStart : wordStart
+                )
             } else if chars[wordStart] == "-" {
                 mark(.flag, from: wordStart)
             }
@@ -463,7 +519,9 @@ struct Reader {
         }
         guard !command.words.isEmpty else {
             if let assignment = command.environment.first {
-                throw Failure("\(assignment.name)=… sets a variable for one command; use env.\(assignment.name) = … to set it for the session")
+                throw Failure(
+                    "\(assignment.name)=… sets a variable for one command; use env.\(assignment.name) = … to set it for the session"
+                )
             }
             if let c = peek() { throw Failure(c == "\n" ? "unexpected newline" : "unexpected '\(c)'") }
             throw Failure.incomplete("expected a command")
@@ -539,7 +597,9 @@ struct Reader {
         case ("1", _) where rest.hasPrefix(">"): swish = rest.hasPrefix(">>") ? ">>" : ">"
         case ("0", _) where rest.hasPrefix("<"): swish = "<"
         case let (number, _) where !number.isEmpty && (rest.hasPrefix(">") || rest.hasPrefix("<")):
-            throw Failure("numbered descriptors like \(number)\(rest.prefix(1)) aren't part of Swish; redirect with >, e>, e>o, o>e or o+e>")
+            throw Failure(
+                "numbered descriptors like \(number)\(rest.prefix(1)) aren't part of Swish; redirect with >, e>, e>o, o>e or o+e>"
+            )
         default: swish = nil
         }
         if let swish { throw Failure("that's a POSIX redirect; in Swish it's \(swish)") }
@@ -653,7 +713,10 @@ struct Reader {
                 case "0": literal.append("\0")
                 case "\\", "\"", "'", "$": literal.append(next)
                 case "u": literal.append(try parseUnicodeEscape())
-                default: throw Failure("invalid escape '\\\(next)' in string: write \\\\ for a backslash, or use single quotes to keep every backslash")
+                default:
+                    throw Failure(
+                        "invalid escape '\\\(next)' in string: write \\\\ for a backslash, or use single quotes to keep every backslash"
+                    )
                 }
             case "$":
                 if let expr = try parseDollar() {
@@ -710,7 +773,11 @@ struct Reader {
         // A closure word takes what its stage gives it; Swift's closure without parameters or `$0` takes none.
         if SwiftProbe.isParameterlessClosure(source), cured.range(of: #"\$\d"#, options: .regularExpression) == nil {
             var name: String?
-            if let command, case .text(let pieces)? = command.words.first, pieces.count == 1, case .literal(let literal) = pieces[0] { name = literal }
+            if let command, case .text(let pieces)? = command.words.first, pieces.count == 1,
+                case .literal(let literal) = pieces[0]
+            {
+                name = literal
+            }
             let arity = name.flatMap { names.closureArities[$0] ?? front.closureArity($0) } ?? 1
             if arity > 0 {
                 let body = cured.dropFirst().dropLast().trimmingCharacters(in: .whitespacesAndNewlines)
@@ -795,10 +862,26 @@ struct Reader {
             let inner = text.slice((open + 2)..<close)
             mark(.punctuation, from: close, to: close + 1)
             pos = close + 1
-            var reader = Reader(front: front, text: Text(inner), blanked: Text(Lex.blankingSubstitutions(Array(inner))), names: names.snapshot(atByte: here), at: 0)
-            defer { for span in reader.spans { spans.append(HighlightSpan(range: (span.range.lowerBound + open + 2)..<(span.range.upperBound + open + 2), kind: span.kind)) } }
+            var reader = Reader(
+                front: front,
+                text: Text(inner),
+                blanked: Text(Lex.blankingSubstitutions(Array(inner))),
+                names: names.snapshot(atByte: here),
+                at: 0
+            )
+            defer {
+                for span in reader.spans {
+                    spans.append(
+                        HighlightSpan(
+                            range: (span.range.lowerBound + open + 2)..<(span.range.upperBound + open + 2),
+                            kind: span.kind
+                        )
+                    )
+                }
+            }
             guard let chain = try reader.parseCommandChain(condition: false), chain.links.isEmpty,
-                  case .command(let pipeline) = chain.first else {
+                case .command(let pipeline) = chain.first
+            else {
                 throw Failure("async $(…) runs one pipeline of commands")
             }
             return "\(emit(pipeline)).startCapturing()"
@@ -849,8 +932,11 @@ struct Reader {
             }
         }
         // `exit 1` alone leaves the program, which a `guard` knows when it is a call that never returns.
-        if chain.links.isEmpty, !chain.isCondition, case .command(let pipeline) = chain.first, pipeline.throwing == nil, pipeline.input == nil,
-           pipeline.commands.count == 1, case .text(let pieces)? = pipeline.commands[0].words.first, pieces == [.literal("exit")] {
+        if chain.links.isEmpty, !chain.isCondition, case .command(let pipeline) = chain.first, pipeline.throwing == nil,
+            pipeline.input == nil,
+            pipeline.commands.count == 1, case .text(let pieces)? = pipeline.commands[0].words.first,
+            pieces == [.literal("exit")]
+        {
             return "exitShell(\(emit(pipeline)))"
         }
         var result = status(chain.first)
@@ -868,15 +954,22 @@ struct Reader {
     }
 
     func emit(_ command: CommandOut) -> String {
-        var out = "Command(" + command.words.map { word in
-            switch word {
-            case .text(let pieces): emit(word: pieces)
-            case .closure(let source): source
+        var out =
+            "Command("
+            + command.words
+            .map { word in
+                switch word {
+                case .text(let pieces): emit(word: pieces)
+                case .closure(let source): source
+                }
             }
-        }.joined(separator: ", ") + ")"
+            .joined(separator: ", ") + ")"
         if command.external { out += ".external()" }
         if !command.environment.isEmpty {
-            out += ".environment([" + command.environment.map { "\(Reader.string(literal: $0.name)): \(emit(text: $0.value))" }.joined(separator: ", ") + "])"
+            out +=
+                ".environment(["
+                + command.environment.map { "\(Reader.string(literal: $0.name)): \(emit(text: $0.value))" }
+                .joined(separator: ", ") + "])"
         }
         for redirect in command.redirects {
             switch redirect.target {

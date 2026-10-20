@@ -18,7 +18,11 @@ let interpreter = Thread {
         exit(status)
     // What `run` starts: a task file, and the task to run from it.
     case "--tasks" where arguments.count >= 2:
-        let status = shell.runTasks(at: arguments[1], task: arguments.dropFirst(2).first, arguments: Array(arguments.dropFirst(3)))
+        let status = shell.runTasks(
+            at: arguments[1],
+            task: arguments.dropFirst(2).first,
+            arguments: Array(arguments.dropFirst(3))
+        )
         shell.finishTasks()
         shell.endBySignal()
         exit(status)
@@ -28,7 +32,9 @@ let interpreter = Thread {
         shell.endBySignal()
         exit(status)
     default:
-        FileHandle.standardError.write(Data("usage: swish [-c command | script [arguments…] | --tasks file [task [arguments…]]]\n".utf8))
+        FileHandle.standardError.write(
+            Data("usage: swish [-c command | script [arguments…] | --tasks file [task [arguments…]]]\n".utf8)
+        )
         exit(2)
     }
 }

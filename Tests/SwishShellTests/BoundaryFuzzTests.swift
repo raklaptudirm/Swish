@@ -1,7 +1,8 @@
 import Foundation
 import Swiit
-@testable import SwishShell
 import Testing
+
+@testable import SwishShell
 
 // Swish's text is Swift's with the shell's in it (`$(…)`, commands, `async`), and SwiftParser is what finds where each
 // begins and ends. A program built from pieces that each print one marker must print every marker, in order, whatever
@@ -115,25 +116,36 @@ private let programs = ProcessInfo.processInfo.environment["SWISH_FUZZ"].flatMap
 }
 
 @Test func blocksNestedInTheBlocksOfALayerStillReadTheirFirstCommand() throws {
-    // A command-style call's closure, or a task's, holding another: each window of the source that is read ends mid-block
+    // A command-style call's closure, or a task's, holding another: each window of the source that is read ends
+    // mid-block
     // until the last, and the layer's "ran out of text" must win over what SwiftParser makes of the unfinished text.
     #expect(try run("let t = async {\nlet u = async {\necho m0\necho m1\n}\nawait u\n}\nawait t\n") == "m0\nm1\n")
     #expect(try run("func go(_ w: () -> Void) { w() }\ngo {\ngo {\necho m0\necho m1\n}\n}\n") == "m0\nm1\n")
-    #expect(try run("func go(_ w: () -> Void) { w() }\ngo {\nlet t = async {\necho m0\necho m1\n}\nawait t\n}\n") == "m0\nm1\n")
+    #expect(
+        try run("func go(_ w: () -> Void) { w() }\ngo {\nlet t = async {\necho m0\necho m1\n}\nawait t\n}\n")
+            == "m0\nm1\n"
+    )
     #expect(try run("let t = async {\n{\necho m0\necho m1\n}()\n}\nawait t\n") == "m0\nm1\n")
 }
 
 @Test func whatIsLeftOpenByTheWindowIsNotAnError() throws {
     // Blank lines, comments and a pipe at the end of a line, inside a closure of a command-style call.
-    let source = "func go(_ w: () -> Void) { w() }\ngo {\n\n  echo m0 |\n    map { $0 } // x\n\n  let g = $(\n    echo m1\n  ); print(g)\n\n}\n"
+    let source =
+        "func go(_ w: () -> Void) { w() }\ngo {\n\n  echo m0 |\n    map { $0 } // x\n\n  let g = $(\n    echo m1\n  ); print(g)\n\n}\n"
     #expect(try run(source) == "m0\nm1\n")
     // And a real mistake is still reported, where it is.
     let shell = Shell()
-    #expect(throws: Diagnostic.self) { try shell.interpreter.check("func go(_ w: () -> Void) { w() }\ngo {\n  let x = (1 +\n}\n") }
+    #expect(throws: Diagnostic.self) {
+        try shell.interpreter.check("func go(_ w: () -> Void) { w() }\ngo {\n  let x = (1 +\n}\n")
+    }
 }
 
 @Test func labeledLoopsAndRepeatLoopsHoldCommands() throws {
-    #expect(try run("outer: for _ in 1...2 { for _ in 1...2 { echo a; continue outer } }\nvar n = 0\nrepeat { n += 1; echo b } while n < 2") == "a\na\nb\nb\n")
+    #expect(
+        try run(
+            "outer: for _ in 1...2 { for _ in 1...2 { echo a; continue outer } }\nvar n = 0\nrepeat { n += 1; echo b } while n < 2"
+        ) == "a\na\nb\nb\n"
+    )
 }
 
 @Test func aClosureThatCatchesWhatItTriesDoesNotThrow() throws {

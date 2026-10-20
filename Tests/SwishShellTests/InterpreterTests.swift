@@ -1,6 +1,7 @@
 import Swiit
-@testable import SwishShell
 import Testing
+
+@testable import SwishShell
 
 /// Runs `source` in `shell`, returning what it wrote to standard output.
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
@@ -42,7 +43,10 @@ private func status(_ source: String) -> Int32 {
 }
 
 @Test func commandSubstitution() throws {
-    #expect(try output("let b = $(echo hi | tr a-z A-Z); b") == "Output(text: \"HI\", status: Status(code: 0, signal: nil, succeeded: true))\n")
+    #expect(
+        try output("let b = $(echo hi | tr a-z A-Z); b")
+            == "Output(text: \"HI\", status: Status(code: 0, signal: nil, succeeded: true))\n"
+    )
     #expect(try output(#"echo "[$(printf 'x\n\n')]""#) == "[x]\n")
 }
 
@@ -86,7 +90,7 @@ private func status(_ source: String) -> Int32 {
     #expect(status("let c = 1; c = 2") == 2)
     #expect(status("1 / 0") == 1)
     #expect(status("[1][5]") == 1)
-    #expect(status("(undefined)") == 2) // an unknown name in an expression
+    #expect(status("(undefined)") == 2)  // an unknown name in an expression
     #expect(status("9223372036854775807 + 1") == 1)
     #expect(status("echo $SWISH_SURELY_UNSET") == 1)
 }
@@ -139,10 +143,21 @@ private func withVariable(_ name: String, _ value: Any) -> Shell {
 
 @Test func functionsInExpressionMode() throws {
     #expect(try output("func square(_ x: Int) -> Int { x * x }; square(7)") == "49\n")
-    #expect(try output("func fib(_ n: Int) -> Int { if n < 2 { return n }; return fib(n - 1) + fib(n - 2) }; fib(15)") == "610\n")
-    #expect(try output(#"func greet(_ name: String, times: Int = 1) -> String { "\(name)x\(times)" }; greet("a"); greet("b", times: 2)"#) == "\"ax1\"\n\"bx2\"\n")
+    #expect(
+        try output("func fib(_ n: Int) -> Int { if n < 2 { return n }; return fib(n - 1) + fib(n - 2) }; fib(15)")
+            == "610\n"
+    )
+    #expect(
+        try output(
+            #"func greet(_ name: String, times: Int = 1) -> String { "\(name)x\(times)" }; greet("a"); greet("b", times: 2)"#
+        ) == "\"ax1\"\n\"bx2\"\n"
+    )
     #expect(try output("func half(_ x: Double) -> Double { x / 2 }; half(3)") == "1.5\n")
-    #expect(try output("func sum(_ xs: Int...) -> Int { var t = 0; for x in xs { t = t + x }; return t }; sum(); sum(1, 2, 3)") == "0\n6\n")
+    #expect(
+        try output(
+            "func sum(_ xs: Int...) -> Int { var t = 0; for x in xs { t = t + x }; return t }; sum(); sum(1, 2, 3)"
+        ) == "0\n6\n"
+    )
 }
 
 @Test func argumentErrors() {
@@ -166,39 +181,55 @@ private func withVariable(_ name: String, _ value: Any) -> Shell {
 }
 
 @Test func closuresCaptureByReference() throws {
-    #expect(try output("func counter() -> (Int) -> Int { var c = 0; return { c = c + $0; return c } }; let next = counter(); next(1); next(5)") == "1\n6\n")
-    #expect(try output("var fs: [() -> Int] = []; for i in 1...3 { fs = fs + [{ i * 10 }] }; fs[0](); fs[2]()") == "10\n30\n")
+    #expect(
+        try output(
+            "func counter() -> (Int) -> Int { var c = 0; return { c = c + $0; return c } }; let next = counter(); next(1); next(5)"
+        ) == "1\n6\n"
+    )
+    #expect(
+        try output("var fs: [() -> Int] = []; for i in 1...3 { fs = fs + [{ i * 10 }] }; fs[0](); fs[2]()")
+            == "10\n30\n"
+    )
 }
 
 // MARK: Command-mode calls
 
-private let greet = #"func greet(_ name: String, times: Int = 1, loud: Bool = false) { var word = "hi"; if loud { word = "HI" }; for _ in 1...times { echo "\(word) \(name)" } };"#
+private let greet =
+    #"func greet(_ name: String, times: Int = 1, loud: Bool = false) { var word = "hi"; if loud { word = "HI" }; for _ in 1...times { echo "\(word) \(name)" } };"#
 
 @Test func commandModeBinding() throws {
-    let f = #"func f(_ a: String, count: Int = 0, dryRun: Bool = false, color: Bool = true, include: [String]) -> String { "\(a) \(count) \(dryRun) \(color) \(include)" };"#
-    #expect(try output(f + "f x --count 3 --dry-run --no-color --include a --include=b") == "x 3 true false [\"a\", \"b\"]\n")
+    let f =
+        #"func f(_ a: String, count: Int = 0, dryRun: Bool = false, color: Bool = true, include: [String]) -> String { "\(a) \(count) \(dryRun) \(color) \(include)" };"#
+    #expect(
+        try output(f + "f x --count 3 --dry-run --no-color --include a --include=b")
+            == "x 3 true false [\"a\", \"b\"]\n"
+    )
     #expect(try output(f + "f --count=2 -- --x") == "--x 2 false true []\n")
 }
 
 @Test func commandModeNumbersAndVariadics() throws {
     #expect(try output("func add(_ a: Int, _ b: Int) -> Int { a + b }; add 2 -5") == "-3\n")
-    #expect(try output("func sum(_ xs: Double...) -> Double { var t = 0.0; for x in xs { t = t + x }; return t }; sum 1 2.5") == "3.5\n")
+    #expect(
+        try output(
+            "func sum(_ xs: Double...) -> Double { var t = 0.0; for x in xs { t = t + x }; return t }; sum 1 2.5"
+        ) == "3.5\n"
+    )
 }
 
 @Test func commandModeErrors() {
     let f = "func f(_ n: Int, name: String) {};"
-    #expect(status(f + "f 1") == 2)                  // missing --name
-    #expect(status(f + "f abc --name x") == 2)       // not an Int
-    #expect(status(f + "f 1 --name x --bogus") == 2) // unknown option
-    #expect(status(f + "f 1 2 --name x") == 2)       // extra positional
-    #expect(status(f + "f 1 --name") == 2)           // flag without a value
-    #expect(status(f + "f 1 --name x -v") == 2)      // no short flags
+    #expect(status(f + "f 1") == 2)  // missing --name
+    #expect(status(f + "f abc --name x") == 2)  // not an Int
+    #expect(status(f + "f 1 --name x --bogus") == 2)  // unknown option
+    #expect(status(f + "f 1 2 --name x") == 2)  // extra positional
+    #expect(status(f + "f 1 --name") == 2)  // flag without a value
+    #expect(status(f + "f 1 --name x -v") == 2)  // no short flags
 }
 
 @Test func functionsInPipelinesAndSubstitutions() throws {
     #expect(try output(greet + "greet Rak --times 2 | tr a-z A-Z") == "HI RAK\nHI RAK\n")
     #expect(try output(greet + #"let s = $(greet Rak --loud); echo "[\(s)]""#) == "[HI Rak]\n")
-    #expect(try output(greet + "^greet Rak; foreign greet Rak") == "") // no external named greet
+    #expect(try output(greet + "^greet Rak; foreign greet Rak") == "")  // no external named greet
 }
 
 @Test func boolResultsAreStatuses() throws {
@@ -209,13 +240,13 @@ private let greet = #"func greet(_ name: String, times: Int = 1, loud: Bool = fa
 // MARK: Pipeline input
 
 private let streaming = """
-func double(@input _ n: Int) -> Int { n * 2 }
-func total(@input _ xs: [Int]) -> Int { var t = 0; for x in xs { t = t + x }; return t }
-func evens(@input _ n: Int) -> Int? { if n % 2 == 0 { return n }; return nil }
-var calls = 0
-func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
+    func double(@input _ n: Int) -> Int { n * 2 }
+    func total(@input _ xs: [Int]) -> Int { var t = 0; for x in xs { t = t + x }; return t }
+    func evens(@input _ n: Int) -> Int? { if n % 2 == 0 { return n }; return nil }
+    var calls = 0
+    func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
 
-"""
+    """
 
 @Test func perItemInput() throws {
     #expect(try output(streaming + "seq 4 | double") == "2\n4\n6\n8\n")
@@ -246,21 +277,25 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
 }
 
 @Test func streamErrors() {
-    #expect(status(streaming + "printf 'x\\n' | double") == 1) // not an Int
+    #expect(status(streaming + "printf 'x\\n' | double") == 1)  // not an Int
     #expect(status(streaming + "double | cat | double") == 2)  // two in-process runs
 }
 
 // MARK: Flags, overloads, help
 
 @Test func shortFlags() throws {
-    let f = #"func f(@flag("n") times: Int = 1, @flag("v") verbose: Bool = false, @flag("q") quiet: Bool = false) -> String { "\(times) \(verbose) \(quiet)" };"#
+    let f =
+        #"func f(@flag("n") times: Int = 1, @flag("v") verbose: Bool = false, @flag("q") quiet: Bool = false) -> String { "\(times) \(verbose) \(quiet)" };"#
     #expect(try output(f + "f -n 3; f -n3 -vq; f -qv --times=2") == "3 false false\n3 true true\n2 true true\n")
     #expect(status(f + "f -x") == 2)
     #expect(status(f + "f -vx") == 2)
 }
 
 @Test func negativeNumbersVersusShortFlags() throws {
-    #expect(try output(#"func f(_ x: Int, @flag("5") five: Bool = false) -> String { "\(x) \(five)" }; f -5 -3"#) == "-3 true\n")
+    #expect(
+        try output(#"func f(_ x: Int, @flag("5") five: Bool = false) -> String { "\(x) \(five)" }; f -5 -3"#)
+            == "-3 true\n"
+    )
 }
 
 @Test func overloads() throws {
@@ -268,7 +303,10 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
     #expect(try output(byType + "f 5; f abc; f(5); f(\"a\")") == "int\nstring\n\"int\"\n\"string\"\n")
     let byLabel = #"func f(a: Int) -> String { "a" }; func f(b: Int) -> String { "b" };"#
     #expect(try output(byLabel + "f --b 1; f(a: 2)") == "b\n\"a\"\n")
-    #expect(try output(#"func f(_ x: Double) -> String { "double" }; func f(_ x: Int) -> String { "int" }; f(5); f(5.5)"#) == "\"int\"\n\"double\"\n")
+    #expect(
+        try output(#"func f(_ x: Double) -> String { "double" }; func f(_ x: Int) -> String { "int" }; f(5); f(5.5)"#)
+            == "\"int\"\n\"double\"\n"
+    )
 }
 
 @Test func redeclaringReplaces() throws {
@@ -278,32 +316,34 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
 @Test func overloadErrors() {
     #expect(status("func g(_ x: Int, _ y: Int) {}; func g(_ s: String) {}; g 1 2 3") == 2)
     #expect(status("func g(a: Int) {}; func g(b: Int) {}; g(c: 1)") == 2)
-    #expect(status(#"func g(_ x: Int, y: Int = 0) -> Int { 1 }; func g(_ x: Int, z: Int = 0) -> Int { 2 }; g(1)"#) == 2) // ambiguous
+    #expect(status(#"func g(_ x: Int, y: Int = 0) -> Int { 1 }; func g(_ x: Int, z: Int = 0) -> Int { 2 }; g(1)"#) == 2)  // ambiguous
 }
 
 @Test func generatedHelp() throws {
     let source = """
-    /// Greets someone.
-    /// - Parameter name: who to greet
-    func greet(_ name: String, @flag("n") times: Int = 1, color: Bool = true, tags: [String]) {}
-    greet --help
-    """
-    #expect(try output(source) == """
-    Greets someone.
+        /// Greets someone.
+        /// - Parameter name: who to greet
+        func greet(_ name: String, @flag("n") times: Int = 1, color: Bool = true, tags: [String]) {}
+        greet --help
+        """
+    #expect(
+        try output(source) == """
+            Greets someone.
 
-    Usage:
-      greet [--times <Int>] [--no-color] [--tags <String>] <name>
+            Usage:
+              greet [--times <Int>] [--no-color] [--tags <String>] <name>
 
-    Arguments:
-      <name>               who to greet (String)
+            Arguments:
+              <name>               who to greet (String)
 
-    Options:
-      -n, --times <Int>    (default: 1)
-          --[no-]color     (default: true)
-          --tags <String>  (repeatable)
-      -h, --help           Show this help
+            Options:
+              -n, --times <Int>    (default: 1)
+                  --[no-]color     (default: true)
+                  --tags <String>  (repeatable)
+              -h, --help           Show this help
 
-    """)
+            """
+    )
 }
 
 @Test func helpCanBeClaimed() throws {
@@ -313,7 +353,11 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
 
 @Test func which() throws {
     let text = try output("func greet(_ name: String) {}; which greet cd prefix cat")
-    #expect(text.hasPrefix("greet: function greet(_ name: String)\ncd: shell builtin\nprefix: sequence method prefix(_ maxLength: Int) -> Flow<Any>\n/"))
+    #expect(
+        text.hasPrefix(
+            "greet: function greet(_ name: String)\ncd: shell builtin\nprefix: sequence method prefix(_ maxLength: Int) -> Flow<Any>\n/"
+        )
+    )
     #expect(text.hasSuffix("/cat\n"))
     #expect(status("which surely-not-a-command") == 1)
 }
@@ -334,15 +378,21 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
 }
 
 @Test func fileSizes() throws {
-    #expect(try output("1.5.gb + 500.mb; 1.kib.bytes; 10.mb / 4; 1.mb > 999.kb; 4.mb / 2.mb; -1.kb") == "2.0 GB\n1024\n2.5 MB\ntrue\n2.0\n-1.0 KB\n")
+    #expect(
+        try output("1.5.gb + 500.mb; 1.kib.bytes; 10.mb / 4; 1.mb > 999.kb; 4.mb / 2.mb; -1.kb")
+            == "2.0 GB\n1024\n2.5 MB\ntrue\n2.0\n-1.0 KB\n"
+    )
     #expect(try output(#"func f(_ s: FileSize) -> FileSize { s }; f 1.5mb; f 2048"#) == "1.5 MB\n2.0 KB\n")
-    // A unit is a property of a number, so it works on a variable too; one that isn't a unit is a number's missing member.
+    // A unit is a property of a number, so it works on a variable too; one that isn't a unit is a number's missing
+    // member.
     #expect(try output("let n = 3; n.mb; (n * 2).kib; n.mb.bytes") == "3.0 MB\n6.1 KB\n3000000\n")
     #expect(status("1.parsecs") == 2)
 }
 
 @Test func listsOfRecordsDisplayAsTables() throws {
-    #expect(try output(#"let rows: [Any] = [(n: 5, s: "a"), (n: 100, t: "b")]; rows"#) == "  n  s  t\n  5  a\n100     b\n")
+    #expect(
+        try output(#"let rows: [Any] = [(n: 5, s: "a"), (n: 100, t: "b")]; rows"#) == "  n  s  t\n  5  a\n100     b\n"
+    )
     #expect(try output(#"[(n: 5), (n: 100)] | filter { $0.n > 10 }"#) == "  n\n100\n")
 }
 
@@ -351,19 +401,24 @@ func counted(@input _ n: Int) -> Int { calls = calls + 1; return n }
 private func fixture() throws -> String {
     let shell = Shell()
     let directory = try output("mktemp -d", in: shell).trimmingCharacters(in: .newlines)
-    shell.execute("""
-    mkdir \(directory)/sub
-    head -c 1500 /dev/zero | dd of=\(directory)/big.bin status=none
-    printf hi | dd of=\(directory)/small.txt status=none
-    touch \(directory)/.hidden
-    """)
+    shell.execute(
+        """
+        mkdir \(directory)/sub
+        head -c 1500 /dev/zero | dd of=\(directory)/big.bin status=none
+        printf hi | dd of=\(directory)/small.txt status=none
+        touch \(directory)/.hidden
+        """
+    )
     return directory
 }
 
 @Test func lsGivesTypedRecords() throws {
     let dir = try fixture()
     #expect(try output("ls \(dir) | get type") == "file\nfile\ndirectory\n")
-    #expect(try output("ls \(dir) | filter { $0.type == .file } | select name size") == "name         size\nbig.bin    1.5 KB\nsmall.txt     2 B\n")
+    #expect(
+        try output("ls \(dir) | filter { $0.type == .file } | select name size")
+            == "name         size\nbig.bin    1.5 KB\nsmall.txt     2 B\n"
+    )
     #expect(try output("ls \(dir) | filter { $0.type != FileType.file } | get name") == "sub\n")
     #expect(try output("ls -a \(dir) | count; ls \(dir) | count") == "4\n3\n")
     #expect(try output("ls \(dir) | prefix 1 | members | filter { $0.name == \"size\" } | get kind") == "FileSize\n")
@@ -390,28 +445,33 @@ private func fixture() throws -> String {
     #expect(try output(data + "xs | sorted --by n | get s") == "a\nb\nc\n")
     #expect(try output(data + "xs | sorted -b s | reversed | prefix 2 | get n") == "3\n2\n")
     #expect(try output(data + "xs | reversed | get n; xs | count") == "2\n1\n3\n3\n")
-    #expect(errorText(data + "xs | sorted")?.contains("Comparable") == true) // tuples aren't Comparable: sort them by a field
-    #expect(try output("printf 'b\\n10\\n9\\na\\n' | sorted; printf '10\\n9\\n9\\n10\\n' | uniqued") == "10\n9\na\nb\n10\n9\n")
+    #expect(errorText(data + "xs | sorted")?.contains("Comparable") == true)  // tuples aren't Comparable: sort them by a field
+    #expect(
+        try output("printf 'b\\n10\\n9\\na\\n' | sorted; printf '10\\n9\\n9\\n10\\n' | uniqued")
+            == "10\n9\na\nb\n10\n9\n"
+    )
     #expect(try output("[3, 1.5, 2] | sorted") == "1.5\n2\n3\n")
     #expect(try output("seq 1000000 | prefix 2; yes | prefix 1") == "1\n2\ny\n")
 }
 
 @Test func json() throws {
-    #expect(try output(#"echo '{"z": 1, "a": {"b": [1, 2.5, null, true]}, "u": "é\n"}' | from json | to json"#) == """
-    {
-      "z": 1,
-      "a": {
-        "b": [
-          1,
-          2.5,
-          null,
-          true
-        ]
-      },
-      "u": "é\\n"
-    }
+    #expect(
+        try output(#"echo '{"z": 1, "a": {"b": [1, 2.5, null, true]}, "u": "é\n"}' | from json | to json"#) == """
+            {
+              "z": 1,
+              "a": {
+                "b": [
+                  1,
+                  2.5,
+                  null,
+                  true
+                ]
+              },
+              "u": "é\\n"
+            }
 
-    """)
+            """
+    )
     #expect(try output(#"echo '[{"n": 1}, {"n": 2}]' | from json | get n"#) == "1\n2\n")
     #expect(status(#"echo '{"a": }' | from json"#) == 1)
 }
@@ -427,13 +487,17 @@ private func fixture() throws -> String {
     let long = String(repeating: "x", count: 60)
     #expect(try output(#"[(a: 1, b: "x y"), (a: 22, b: "\#(long)")] | cat"#) == " 1  x y\n22  \(long)\n")
     #expect(try output(#"[["a": 1]] | to json | tr -d ' \n'"#) == #"{"a":1}"#)
-    #expect(status("func f() {}; [f] | cat") == 1) // functions have no text form
+    #expect(status("func f() {}; [f] | cat") == 1)  // functions have no text form
 }
 
 @Test func formatterFitsTheWidth() {
     var lines: [String] = []
-    let formatter = DisplayFormatter(maxWidth: 20) { lines.append($0); return true }
-    formatter.add(Value(struct: nil, fields: ["name": Value("a-rather-long-file-name"), "size": FileSize(bytes: 1).value]))
+    let formatter = DisplayFormatter(maxWidth: 20) {
+        lines.append($0); return true
+    }
+    formatter.add(
+        Value(struct: nil, fields: ["name": Value("a-rather-long-file-name"), "size": FileSize(bytes: 1).value])
+    )
     formatter.finish()
     // The name column shrinks from 23 to 14 so the table fits in 20.
     #expect(lines == ["name            size\n", "a-rather-long…   1 B\n"])
@@ -441,8 +505,15 @@ private func fixture() throws -> String {
 
 @Test func formatterDropsColumnsThatCantFit() {
     var lines: [String] = []
-    let formatter = DisplayFormatter(maxWidth: 20) { lines.append($0); return true }
-    formatter.add(Value(struct: nil, fields: ["alpha": Value("aaaaaaaa"), "bravo": Value("bbbbbbbb"), "charlie": Value("cccccccc")]))
+    let formatter = DisplayFormatter(maxWidth: 20) {
+        lines.append($0); return true
+    }
+    formatter.add(
+        Value(
+            struct: nil,
+            fields: ["alpha": Value("aaaaaaaa"), "bravo": Value("bbbbbbbb"), "charlie": Value("cccccccc")]
+        )
+    )
     formatter.finish()
     // Even at 6 wide, three columns need 22; the last is left off.
     #expect(lines == ["alpha   bravo  …\n", "aaaaa…  bbbbb…\n"])
@@ -452,15 +523,21 @@ private func fixture() throws -> String {
 
 @Test func failingSubstitutionsGiveTheirStatus() throws {
     // Without `try`, a failure is just what `.status` says.
-    #expect(try output("let x = $(sh -c 'echo partial; exit 3'); x.status.code; x.text; echo after") == "3\n\"partial\"\nafter\n")
+    #expect(
+        try output("let x = $(sh -c 'echo partial; exit 3'); x.status.code; x.text; echo after")
+            == "3\n\"partial\"\nafter\n"
+    )
     #expect(try output("echo $(false) x") == " x\n")
-    #expect(try output("let x = $(echo fine); x") == "Output(text: \"fine\", status: Status(code: 0, signal: nil, succeeded: true))\n")
+    #expect(
+        try output("let x = $(echo fine); x")
+            == "Output(text: \"fine\", status: Status(code: 0, signal: nil, succeeded: true))\n"
+    )
 }
 
 @Test func tryMakesASubstitutionThrow() throws {
     #expect(status("let x = try $(false)") == 1)
     #expect(try output("let x = try $(false); echo unreachable") == "")
-    #expect(status("let x = try $(sh -c 'exit 3')") == 3) // the command's own status
+    #expect(status("let x = try $(sh -c 'exit 3')") == 3)  // the command's own status
     // `try` covers what's to its right, including a command's arguments…
     #expect(try output("try echo $(false) x; echo unreachable") == "")
     // …but not a function's body, which decides for itself.
@@ -472,8 +549,11 @@ private func fixture() throws -> String {
     #expect(try output(#"(try? $(false)) ?? "fallback""#) == "\"fallback\"\n")
     #expect(try output("try? $(grep -q nope /dev/null) != nil || echo missing") == "missing\n")
     #expect(try output(#"if let h = try? $(echo hi) { echo "got \(h)" } else { echo none }"#) == "got hi\n")
-    #expect(try output(#"if let h = try? $(false) { print(h) } else if let g = try? $(echo second) { print(g) }"#) == "second\n")
-    #expect(status("if let h = try? $(false) { }; h") == 127) // h is only bound inside: here it's a command
+    #expect(
+        try output(#"if let h = try? $(false) { print(h) } else if let g = try? $(echo second) { print(g) }"#)
+            == "second\n"
+    )
+    #expect(status("if let h = try? $(false) { }; h") == 127)  // h is only bound inside: here it's a command
     // Any runtime error, not just a failed command.
     #expect(try output("try? [1][5] == nil; try? 1 / 0 == nil") == "")
     #expect(try output("(try? [1][5]) == nil; (try? 1 / 0) == nil") == "true\ntrue\n")
@@ -484,14 +564,19 @@ private func fixture() throws -> String {
     // As in Swift: the `??` is inside the `try?`, so a failure makes it all nil.
     let shell = Shell()
     #expect(try output(#"try? $(false) ?? "fallback""#, in: shell) == "")
-    #expect(shell.lastStatus == 1) // nil is a failure
-    #expect(try output("let y = try $(echo plain); y") == "Output(text: \"plain\", status: Status(code: 0, signal: nil, succeeded: true))\n")
+    #expect(shell.lastStatus == 1)  // nil is a failure
+    #expect(
+        try output("let y = try $(echo plain); y")
+            == "Output(text: \"plain\", status: Status(code: 0, signal: nil, succeeded: true))\n"
+    )
 }
 
 @Test func tryBangStopsAScript() throws {
     let shell = Shell()
     let path = try output("mktemp", in: shell).trimmingCharacters(in: .newlines)
-    shell.execute(#"printf '%s\n' 'echo one' 'let a = $(false)' 'echo two' 'let b = try! $(sh -c "exit 4")' 'echo three' > \#(path)"#)
+    shell.execute(
+        #"printf '%s\n' 'echo one' 'let a = $(false)' 'echo two' 'let b = try! $(sh -c "exit 4")' 'echo three' > \#(path)"#
+    )
     let script = Shell()
     var status: Int32 = 0
     let printed = try script.capturing { status = script.runScript(at: path) }
@@ -514,7 +599,11 @@ private func fixture() throws -> String {
 
 @Test func environmentValue() throws {
     let name = "SWISH_TEST_\(Int.random(in: 0..<1_000_000))"
-    #expect(try output("env.\(name) == nil; env.\(name) = \"one two\"; echo $\(name); env[\"\(name)\"]; env.\(name) = nil; env.\(name) == nil") == "true\none two\n\"one two\"\ntrue\n")
+    #expect(
+        try output(
+            "env.\(name) == nil; env.\(name) = \"one two\"; echo $\(name); env[\"\(name)\"]; env.\(name) = nil; env.\(name) == nil"
+        ) == "true\none two\n\"one two\"\ntrue\n"
+    )
     #expect(try output("env.HOME == \"\(env("HOME")!)\"") == "true\n")
     // `env.NAME` is always the variable NAME, even one called `count`.
     #expect(try output("env.count == nil") == "true\n")
@@ -524,11 +613,14 @@ private func fixture() throws -> String {
     let name = "SWISH_TEST_\(Int.random(in: 0..<1_000_000))"
     #expect(try output(#"\#(name)="a b" sh -c 'echo "$\#(name)"'; env.\#(name) == nil"#) == "a b\ntrue\n")
     #expect(try output(#"func show() { sh -c 'echo "$\#(name)"' }; \#(name)=fn show"#) == "fn\n")
-    #expect(try output(#"with(env: ["\#(name)": "block"]) { sh -c 'echo "$\#(name)"' }; env.\#(name) == nil"#) == "block\ntrue\n")
+    #expect(
+        try output(#"with(env: ["\#(name)": "block"]) { sh -c 'echo "$\#(name)"' }; env.\#(name) == nil"#)
+            == "block\ntrue\n"
+    )
 }
 
 @Test func noGlobalStatus() {
-    #expect(status("false; status") == 127) // just a command name now
+    #expect(status("false; status") == 127)  // just a command name now
 }
 
 // MARK: Command output
@@ -542,22 +634,36 @@ private func fixture() throws -> String {
 }
 
 @Test func outputIsItsTextWhereAStringIsWanted() throws {
-    #expect(try output(#"let b = $(echo main); b == "main"; "on \(b)"; echo $(echo hi) there"#) == "true\n\"on main\"\nhi there\n")
+    #expect(
+        try output(#"let b = $(echo main); b == "main"; "on \(b)"; echo $(echo hi) there"#)
+            == "true\n\"on main\"\nhi there\n"
+    )
     #expect(try output(#"func up(_ s: String) -> String { s }; up($(echo hi))"#) == "\"hi\"\n")
     #expect(try output("$(echo x).text + \"y\"") == "\"xy\"\n")
     // `description` is every value's textual form, as in Swift; `.text` is
     // the Output's data.
-    #expect(try output(#"$(echo x).description == $(echo x).text; 1.5.kb.description; ["a": 1].description"#) == "true\n\"1.5 KB\"\n\"[\\\"a\\\": 1]\"\n")
+    #expect(
+        try output(#"$(echo x).description == $(echo x).text; 1.5.kb.description; ["a": 1].description"#)
+            == "true\n\"1.5 KB\"\n\"[\\\"a\\\": 1]\"\n"
+    )
     #expect(try output(#"(description: "mine", n: 1).description"#) == "\"mine\"\n")
-    #expect(status("$(echo x) + \"y\"") == 2) // other String operations go through .text
+    #expect(status("$(echo x) + \"y\"") == 2)  // other String operations go through .text
     #expect(try output("$(printf '3\\n1\\n2') | sorted") == "1\n2\n3\n")
 }
 
 // MARK: do/catch
 
 @Test func catchingAFailedCapture() throws {
-    #expect(try output(#"do { let r = try $(sh -c 'echo partial; exit 3') } catch { if let f = error as? CommandFailure { print(f.status.code); print(f.text) } }"#) == "Optional(3)\npartial\n")
-    #expect(try output(#"do { let r = try $(sh -c 'kill -TERM $$') } catch { if let f = error as? CommandFailure { print(f.status.signal); print(f.status.code == nil) } }"#) == "Optional(15)\ntrue\n")
+    #expect(
+        try output(
+            #"do { let r = try $(sh -c 'echo partial; exit 3') } catch { if let f = error as? CommandFailure { print(f.status.code); print(f.text) } }"#
+        ) == "Optional(3)\npartial\n"
+    )
+    #expect(
+        try output(
+            #"do { let r = try $(sh -c 'kill -TERM $$') } catch { if let f = error as? CommandFailure { print(f.status.signal); print(f.status.code == nil) } }"#
+        ) == "Optional(15)\ntrue\n"
+    )
     // Without `try`, nothing throws, so the catch doesn't run.
     #expect(try output(#"do { let r = $(false) } catch { echo never }; echo done"#) == "done\n")
 }
@@ -565,15 +671,19 @@ private func fixture() throws -> String {
 @Test func catchingAnyRuntimeError() throws {
     #expect(try output("do { 1 / 0 } catch let e { print(e.localizedDescription) }") == "division by zero\n")
     #expect(try output("do { echo fine } catch { echo never }") == "fine\n")
-    #expect(try output("do { let x = 1; print(x) }") == "1\n") // do alone is a scope
-    #expect(status("do { 1 / 0 }") == 1) // no catch: still an error
+    #expect(try output("do { let x = 1; print(x) }") == "1\n")  // do alone is a scope
+    #expect(status("do { 1 / 0 }") == 1)  // no catch: still an error
 }
 
 @Test func tryMakesACommandThrow() throws {
-    #expect(try output("do { try sh -c 'exit 4' } catch { if let failure = error as? CommandFailure { echo \"failed with \\(failure.status.code)\" } }") == "failed with 4\n")
+    #expect(
+        try output(
+            "do { try sh -c 'exit 4' } catch { if let failure = error as? CommandFailure { echo \"failed with \\(failure.status.code)\" } }"
+        ) == "failed with 4\n"
+    )
     #expect(try output("try false; echo unreachable") == "")
     #expect(try output("try true && echo ok") == "ok\n")
-    #expect(status("try? make") == 2) // try? needs a value: a syntax error
+    #expect(status("try? make") == 2)  // try? needs a value: a syntax error
 }
 
 @Test func tryBangCommandStopsAScript() throws {
@@ -594,23 +704,35 @@ private func fixture() throws -> String {
 @Test func scriptsGetArgsAndMain() throws {
     let shell = Shell()
     let path = try output("mktemp", in: shell).trimmingCharacters(in: .newlines)
-    shell.execute(#"printf '%s\n' '/// Greets someone.' 'func main(_ name: String, loud: Bool = false) { if loud { echo "HI \(name)" } else { echo "hi \(name)" } }' 'echo "args \(args.count)"' > \#(path)"#)
+    shell.execute(
+        #"printf '%s\n' '/// Greets someone.' 'func main(_ name: String, loud: Bool = false) { if loud { echo "HI \(name)" } else { echo "hi \(name)" } }' 'echo "args \(args.count)"' > \#(path)"#
+    )
     let script = Shell()
     var status: Int32 = 0
-    #expect(try script.capturing { status = script.runScript(at: path, arguments: ["Rak", "--loud"]) } == "args 2\nHI Rak\n")
+    #expect(
+        try script.capturing { status = script.runScript(at: path, arguments: ["Rak", "--loud"]) } == "args 2\nHI Rak\n"
+    )
     #expect(status == 0)
     let helper = Shell()
     let help = try helper.capturing { _ = helper.runScript(at: path, arguments: ["--help"]) }
     #expect(help.contains("Greets someone.") && help.contains("[--loud] <name>"))
     let missing = Shell()
-    #expect(missing.runScript(at: path) == 1) // main needs a name
+    #expect(missing.runScript(at: path) == 1)  // main needs a name
 }
 
 @Test func bareValuesShowTheirDebugDescription() throws {
-    #expect(try output(#"let r = $(echo Hello); r"#) == #"Output(text: "Hello", status: Status(code: 0, signal: nil, succeeded: true))"# + "\n")
-    #expect(try output(#""tab\there"; let xs: [Any] = [1, "x", nil]; xs; ["k": "v"].debugDescription"#) == #""tab\there""# + "\n" + #"[1, "x", nil]"# + "\n" + #""[\"k\": \"v\"]""# + "\n")
-    #expect(try output(#"enum E { case a, b(code: Int, String) }; E.b(code: 2, "no"); "\(E.b(code: 2, "no"))""#)
-        == #"E.b(code: 2, "no")"# + "\n" + #""b(code: 2, \"no\")""# + "\n")
+    #expect(
+        try output(#"let r = $(echo Hello); r"#)
+            == #"Output(text: "Hello", status: Status(code: 0, signal: nil, succeeded: true))"# + "\n"
+    )
+    #expect(
+        try output(#""tab\there"; let xs: [Any] = [1, "x", nil]; xs; ["k": "v"].debugDescription"#) == #""tab\there""#
+            + "\n" + #"[1, "x", nil]"# + "\n" + #""[\"k\": \"v\"]""# + "\n"
+    )
+    #expect(
+        try output(#"enum E { case a, b(code: Int, String) }; E.b(code: 2, "no"); "\(E.b(code: 2, "no"))""#)
+            == #"E.b(code: 2, "no")"# + "\n" + #""b(code: 2, \"no\")""# + "\n"
+    )
     // Interpolation, commands and pipelines use the plain text.
     #expect(try output(#"let r = $(echo Hello); echo $r "\(r)"; ["a", "b"] | prefix 2"#) == "Hello Hello\na\nb\n")
     // Awaiting a job that wrote to the terminal shows nothing more.
@@ -620,8 +742,10 @@ private func fixture() throws -> String {
 @Test func aCommandsListReadsLikePipelineOutput() throws {
     // In command form, an item per line, as `names | cat` would give; called
     // as Swift, the list as a value.
-    #expect(try output(#"func names() -> [String] { ["a", "b"] }; names; names(); names | cat"#)
-        == "a\nb\n" + #"["a", "b"]"# + "\na\nb\n")
+    #expect(
+        try output(#"func names() -> [String] { ["a", "b"] }; names; names(); names | cat"#)
+            == "a\nb\n" + #"["a", "b"]"# + "\na\nb\n"
+    )
     #expect(try output("func none() -> [Int] { [] }; none").isEmpty)
 }
 
@@ -642,10 +766,14 @@ private func fixture() throws -> String {
 @Test func aCaughtErrorIsAnErrorUntilCast() throws {
     // As in Swift: `error` tells what went wrong, and a cast gets at more.
     #expect(try output("do { 1 / 0 } catch { print(error.localizedDescription) }") == "division by zero\n")
-    #expect(status("do { 1 / 0 } catch { error.status }") == 2) // no `status` on an Error
+    #expect(status("do { 1 / 0 } catch { error.status }") == 2)  // no `status` on an Error
     #expect(status("do { 1 / 0 } catch { error.message }") == 2)
     // A plain runtime error isn't a command failure; a failed `try $(…)` is.
     #expect(try output("do { 1 / 0 } catch { print(error as? CommandFailure == nil) }") == "true\n")
-    #expect(try output(#"do { try $(sh -c 'echo no >&2; exit 2') } catch { if let f = error as? CommandFailure { print(f.status.code); print(f.localizedDescription) } }"#)
-        == "Optional(2)\n$(…) failed with status 2\n")
+    #expect(
+        try output(
+            #"do { try $(sh -c 'echo no >&2; exit 2') } catch { if let f = error as? CommandFailure { print(f.status.code); print(f.localizedDescription) } }"#
+        )
+            == "Optional(2)\n$(…) failed with status 2\n"
+    )
 }

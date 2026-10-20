@@ -1,6 +1,7 @@
 import Swiit
-@testable import SwishShell
 import Testing
+
+@testable import SwishShell
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
     try onLargeStack { try shell.capturing { shell.enter(source) } }
@@ -22,13 +23,18 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
     #expect(try output(mine + #"help | filter { $0.name == "hi" } | get summary"#) == "Says hi.\n")
     // One row a name, with each overload's usage.
     #expect(try output(#"help | filter { $0.name == "help" } | count"#) == "1\n")
-    #expect(try output(#"func f(_ a: Int) {}; func f(_ a: String) {}; help | filter { $0.name == "f" } | get usage"#)
-        == "f(_ a: Int) or f(_ a: String)\n")
+    #expect(
+        try output(#"func f(_ a: Int) {}; func f(_ a: String) {}; help | filter { $0.name == "f" } | get usage"#)
+            == "f(_ a: Int) or f(_ a: String)\n"
+    )
 }
 
 @Test func helpShowsOneInFull() throws {
     #expect(try output("help prefix").hasPrefix("The first items; stops reading after them.\n\nUsage:\n  prefix"))
-    #expect(try output("help cd") == "Changes the working directory: to <dir>, back to the previous one (-), or home.\n\nUsage:\n  cd [<dir> | -]\n")
+    #expect(
+        try output("help cd")
+            == "Changes the working directory: to <dir>, back to the previous one (-), or home.\n\nUsage:\n  cd [<dir> | -]\n"
+    )
     #expect(try output("help sh").hasPrefix("sh is a program, "))
     // A nil default isn't worth saying.
     #expect(!(try output("help help")).contains("default: nil"))
@@ -50,19 +56,28 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
     let filePath = try output("help FilePath")
     #expect(filePath.hasPrefix("Swift type FilePath\n"))
     #expect(filePath.contains("  extension: String? { get set }"))
-    #expect(filePath.contains("lastComponent: FilePath.Component?") && filePath.contains("Returns the final component of the path."))
+    #expect(
+        filePath.contains("lastComponent: FilePath.Component?")
+            && filePath.contains("Returns the final component of the path.")
+    )
     // A sequence has the shell's additions too.
     #expect(try output("help Array").contains("  select(_ fields: String...) -> [Any]"))
     // Yours, from their declarations.
     let shell = Shell()
     _ = try output("struct P { var x: Int; func twice() -> Int { x * 2 } }; enum K { case a, b(n: Int) }", in: shell)
-    #expect(try output("help P", in: shell) == "struct P\n\nInitializers:\n  init(x: Int)\n\nProperties:\n  var x: Int\n\nMethods:\n  twice() -> Int\n")
+    #expect(
+        try output("help P", in: shell)
+            == "struct P\n\nInitializers:\n  init(x: Int)\n\nProperties:\n  var x: Int\n\nMethods:\n  twice() -> Int\n"
+    )
     #expect(try output("help K", in: shell) == "enum K\n\nCases:\n  case a\n\n  case b(n: Int)\n")
 }
 
 @Test func membersDescribesEachItemsType() throws {
     // Its own fields, then what its type has, as `help` shows it.
-    #expect(try output("struct P { var x: Int; func twice() -> Int { x * 2 } }; [P(x: 1)] | members | get name") == "x\ntwice\n")
+    #expect(
+        try output("struct P { var x: Int; func twice() -> Int { x * 2 } }; [P(x: 1)] | members | get name")
+            == "x\ntwice\n"
+    )
     #expect(try output(#""a" | members | filter { $0.name == "uppercased" } | get kind"#) == "method\n")
 }
 
@@ -106,5 +121,8 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
     // What Markdown doesn't take for its own stays: angle brackets, brackets.
     #expect(documentationLine("to <dir>, or [Element] back").plain == "to <dir>, or [Element] back")
     // A doc comment of your own is read the same way.
-    #expect(try output("/// Doubles the `x`, **fast**.\nfunc d(_ x: Int) -> Int { x * 2 }\nhelp d | prefix 1") == "Doubles the x, fast.\n")
+    #expect(
+        try output("/// Doubles the `x`, **fast**.\nfunc d(_ x: Int) -> Int { x * 2 }\nhelp d | prefix 1")
+            == "Doubles the x, fast.\n"
+    )
 }

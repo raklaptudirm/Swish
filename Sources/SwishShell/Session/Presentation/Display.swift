@@ -10,13 +10,19 @@ extension DisplayFormatter {
     /// Writes with `write`, fitting what the stream is: a terminal's width
     /// and a styled header, or every character for a file.
     convenience init(traits: OutputSink.Traits, registry: DisplayRegistry, write: @escaping (String) -> Bool) {
-        self.init(maxWidth: traits.width ?? .max, styled: traits.styled,
-                  columnCap: traits.isTerminal ? 40 : .max, registry: registry, write: write)
+        self.init(
+            maxWidth: traits.width ?? .max,
+            styled: traits.styled,
+            columnCap: traits.isTerminal ? 40 : .max,
+            registry: registry,
+            write: write
+        )
     }
 }
 
 extension Shell {
-    /// How types show in a table: the shell's own (`Job`, `Help`, `FileEntry`), and the columns of the structs declared in
+    /// How types show in a table: the shell's own (`Job`, `Help`, `FileEntry`), and the columns of the structs declared
+    /// in
     /// Swish that say so (`Tabular`), found when a table of one is laid out.
     var displayRegistry: DisplayRegistry { tableRegistry() }
 
@@ -39,7 +45,8 @@ extension Shell {
     /// The `columns` a struct of the program's declares by being `Tabular`.
     private func declaredColumns(of typeName: String) -> [DisplayColumn]? {
         guard let type = interpreter[typeName], let list = try? interpreter.value(of: "columns", in: type),
-              let items = list.cast(to: [Value].self) else { return nil }
+            let items = list.cast(to: [Value].self)
+        else { return nil }
         let columns = items.compactMap { try? $0.unboxed(DisplayColumn.self) }
         return columns.isEmpty ? nil : columns
     }
@@ -55,7 +62,7 @@ extension Shell {
         case .nothing:
             return
         case .tuple where fields?.count == 0:
-            return // `()`: what a Void call gives as a value.
+            return  // `()`: what a Void call gives as a value.
         case .object where value.displayShape.isEmpty && !debug:
             return
         case .structure where !debug, .tuple where !debug:

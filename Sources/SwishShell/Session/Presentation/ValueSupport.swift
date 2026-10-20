@@ -1,7 +1,8 @@
 import Foundation
 import Swiit
 
-// What the shell's printers read of a value, over Swiit's public inspection: a struct's or an object's fields, and how a
+// What the shell's printers read of a value, over Swiit's public inspection: a struct's or an object's fields, and how
+// a
 // value held as a Swift one looks.
 
 /// The fields of a struct, a tuple, or an object that is data, in order, and the name of the struct's type.

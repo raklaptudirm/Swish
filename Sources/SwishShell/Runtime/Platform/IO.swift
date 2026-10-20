@@ -1,5 +1,5 @@
-import Swiit
 import Foundation
+import Swiit
 
 /// Writes unbuffered, so output from the shell and its children never
 /// interleaves out of order. False if the write failed, as when the

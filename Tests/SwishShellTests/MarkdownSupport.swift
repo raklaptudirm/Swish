@@ -1,5 +1,6 @@
 import Foundation
 import Swiit
+
 @testable import SwishShell
 
 // Foundation's AttributedString for the Markdown tests, in a file of its own:

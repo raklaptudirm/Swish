@@ -1,5 +1,5 @@
-import Swiit
 import Foundation
+import Swiit
 
 /// The shell: a process with a terminal, jobs and a line editor, over an
 /// `Interpreter` that knows none of that. It supplies the interpreter's host
@@ -122,7 +122,9 @@ public final class Shell: @unchecked Sendable {
             let state = task
             if !state.inForeground {
                 let cancellation = interpreter.cancellation
-                guard Interpreter.whileWaiting(wake: { state.poke() }, { state.waitForForeground(unless: cancellation) }) else {
+                guard
+                    Interpreter.whileWaiting(wake: { state.poke() }, { state.waitForForeground(unless: cancellation) })
+                else {
                     return
                 }
             }
@@ -156,12 +158,13 @@ extension Shell {
         // Where errors go decides whether the source is shown in color, as the line editor shows it.
         var style: Diagnostic.Style?
         if interpreter.host.error.traits().styled {
-            nonisolated(unsafe) let shell = self // safe: called holding the interpreter lock, as the report is
+            nonisolated(unsafe) let shell = self  // safe: called holding the interpreter lock, as the report is
             style = Diagnostic.Style(
                 source: { shell.highlightStyles($0) },
                 frame: { $0.styled(DisplayStyle.boldBlue) },
                 mark: { $0.styled(DisplayStyle.error) },
-                reset: DisplayStyle.reset)
+                reset: DisplayStyle.reset
+            )
         }
         report(diagnostic.rendered(in: text, path: path, style: style))
     }
@@ -217,7 +220,10 @@ extension Shell {
         } else if diagnostic.kind == .syntax {
             report((file.map { "\($0): " } ?? "") + "syntax error: \(diagnostic.message)")
         } else {
-            let place = file.map { "\($0):\(diagnostic.line.map(String.init) ?? "")" + (diagnostic.line == nil ? "" : ":") + " " } ?? ""
+            let place =
+                file.map {
+                    "\($0):\(diagnostic.line.map(String.init) ?? "")" + (diagnostic.line == nil ? "" : ":") + " "
+                } ?? ""
             report("\(place)error: \(diagnostic.message)")
         }
         lastStatus = 2
@@ -233,10 +239,13 @@ extension Shell {
         // Only the prompt shows values; running code prints what it prints. A script goes on with the next statement
         // after an error in one.
         let observer: ((Interpreter.Observation) throws -> Void)? = atPrompt ? { [unowned self] in present($0) } : nil
-        let onError: ((Diagnostic) -> Bool)? = atPrompt ? nil : { [unowned self] diagnostic in
-            handled = true
-            return handleRunFailure(diagnostic)
-        }
+        let onError: ((Diagnostic) -> Bool)? =
+            atPrompt
+            ? nil
+            : { [unowned self] diagnostic in
+                handled = true
+                return handleRunFailure(diagnostic)
+            }
         do {
             try interpreter.execute(reading.swift, observing: observer, onError: onError, then: finish)
         } catch {
@@ -247,7 +256,7 @@ extension Shell {
     /// Reports how a run failed, and says whether a script goes on with its next statement.
     func handleRunFailure(_ diagnostic: Diagnostic) -> Bool {
         if diagnostic.cause is JobSuspended {
-            lastStatus = 128 + SIGTSTP // Already announced; the job is in `jobs`.
+            lastStatus = 128 + SIGTSTP  // Already announced; the job is in `jobs`.
             return false
         }
         if diagnostic.kind == .cancelled, let signal = stoppedBySignal {
@@ -296,7 +305,8 @@ final class ShellTask {
     /// Where errors are reported, and programs' standard error goes, while
     /// running something with `2>`.
     var stderrFD = STDERR_FILENO
-    /// Problems with single items reported so far (a file `ls` couldn't read), and how many the last statement had seen.
+    /// Problems with single items reported so far (a file `ls` couldn't read), and how many the last statement had
+    /// seen.
     var itemErrors = 0
     var itemErrorsSeen = 0
     /// The status the last statement gave, kept as statements run

@@ -1,5 +1,5 @@
-import Swiit
 import Foundation
+import Swiit
 
 extension Shell {
     // MARK: Completion
@@ -17,21 +17,26 @@ extension Shell {
         } else if context.words.isEmpty && context.quote == nil {
             let external = word.hasPrefix("^")
             let name = external ? String(word.dropFirst()) : word
-            candidates = name.contains("/")
+            candidates =
+                name.contains("/")
                 ? pathCandidates(for: name, quote: nil, executablesOnly: true)
                 : commandCandidates(prefix: name, externalOnly: external)
             if external {
-                candidates = candidates.map { var candidate = $0; candidate.replacement = "^" + candidate.replacement; return candidate }
+                candidates = candidates.map {
+                    var candidate = $0; candidate.replacement = "^" + candidate.replacement; return candidate
+                }
             }
         } else if ["help", "which"].contains(context.words[0]) && context.quote == nil
-                    && !word.hasPrefix("-") && !word.contains("/") {
+            && !word.hasPrefix("-") && !word.contains("/")
+        {
             // `help <name>`: anything that runs, as for the first word.
             candidates = commandCandidates(prefix: word, externalOnly: false)
                 .filter { !["variable", "keyword"].contains($0.description) }
         } else if word.hasPrefix("-") && context.quote == nil,
-                  let functions = stageCallee(context.words[0], of: .named("Flow", [.any]), receiver: .flow)
-                    ?? stageCallee(context.words[0], of: .list(.any), receiver: .collected)
-                    ?? commandFunctions(named: context.words[0]) ?? stageFunctions(named: context.words[0]) {
+            let functions = stageCallee(context.words[0], of: .named("Flow", [.any]), receiver: .flow)
+                ?? stageCallee(context.words[0], of: .list(.any), receiver: .collected)
+                ?? commandFunctions(named: context.words[0]) ?? stageFunctions(named: context.words[0])
+        {
             candidates = flagCandidates(for: functions, prefix: word)
         } else {
             candidates = pathCandidates(for: word, quote: context.quote, executablesOnly: false)
@@ -42,24 +47,33 @@ extension Shell {
     private func variableCandidates(prefix: String) -> [LineEditor.Candidate] {
         var names = Set(ProcessInfo.processInfo.environment.keys)
         for (name, role) in interpreter.names() where role != .function { names.insert(name) }
-        return names.filter { $0.hasPrefix(prefix) }.sorted().map {
-            LineEditor.Candidate(replacement: "$" + $0, suffix: "", display: "$" + $0)
-        }
+        return names.filter { $0.hasPrefix(prefix) }.sorted()
+            .map {
+                LineEditor.Candidate(replacement: "$" + $0, suffix: "", display: "$" + $0)
+            }
     }
 
     private func commandCandidates(prefix: String, externalOnly: Bool) -> [LineEditor.Candidate] {
         var described: [String: String] = [:]
         if !externalOnly {
             for (name, _) in interpreter.names() { described[name] = "variable" }
-            for (name, symbols) in Dictionary(grouping: interpreter.symbols().filter { $0.function != nil }, by: \.name) {
+            for (name, symbols) in Dictionary(grouping: interpreter.symbols().filter { $0.function != nil }, by: \.name)
+            {
                 let summary = symbols.compactMap(\.summary).first { !$0.isEmpty }
                 described[name] = summary.map { String($0.prefix { $0 != "\n" }) } ?? "function"
             }
             for builtin in Shell.shellBuiltins.values where builtin.works { described[builtin.name] = "shell builtin" }
             for name in stageNames.methods {
-                let callee = stageCallee(name, of: .named("Flow", [.any]), receiver: .flow) ?? stageCallee(name, of: .list(.any), receiver: .collected)
-                guard let callee, stageNames.flow.contains(name) || interpreter.symbols(named: name, of: .list(.any)).contains(where: { $0.function != nil }) else { continue }
-                described[name] = callee.overloads.compactMap(\.summary).first.map { String($0.prefix { $0 != "\n" }) } ?? "sequence method"
+                let callee =
+                    stageCallee(name, of: .named("Flow", [.any]), receiver: .flow)
+                    ?? stageCallee(name, of: .list(.any), receiver: .collected)
+                guard let callee,
+                    stageNames.flow.contains(name)
+                        || interpreter.symbols(named: name, of: .list(.any)).contains(where: { $0.function != nil })
+                else { continue }
+                described[name] =
+                    callee.overloads.compactMap(\.summary).first.map { String($0.prefix { $0 != "\n" }) }
+                    ?? "sequence method"
             }
             for keyword in Reader.lineStarts {
                 described[keyword] = "keyword"
@@ -111,11 +125,19 @@ extension Shell {
             var isDirectory: ObjCBool = false
             let path = directory + name
             guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else { continue }
-            if executablesOnly && !isDirectory.boolValue && !FileManager.default.isExecutableFile(atPath: path) { continue }
+            if executablesOnly && !isDirectory.boolValue && !FileManager.default.isExecutableFile(atPath: path) {
+                continue
+            }
             let text = typedDirectory + name
             let replacement = quote.map { String($0) + text } ?? escaped(text)
             let suffix = isDirectory.boolValue ? "/" : quote.map { String($0) + " " } ?? " "
-            candidates.append(LineEditor.Candidate(replacement: replacement, suffix: suffix, display: name + (isDirectory.boolValue ? "/" : "")))
+            candidates.append(
+                LineEditor.Candidate(
+                    replacement: replacement,
+                    suffix: suffix,
+                    display: name + (isDirectory.boolValue ? "/" : "")
+                )
+            )
         }
         return candidates
     }

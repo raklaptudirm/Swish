@@ -1,7 +1,8 @@
-import Swiit
-@testable import SwishShell
 import Foundation
+import Swiit
 import Testing
+
+@testable import SwishShell
 
 @Test func whatTheShellsOwnFrontEndGivesRunsAsTheOldOneDid() throws {
     let count = ProcessInfo.processInfo.environment["SWISH_FUZZ"].flatMap(Int.init) ?? 300
@@ -23,13 +24,17 @@ import Testing
         ran += 1
         let shell = Shell()
         let actual = (try? onLargeStack { try shell.capturing { shell.execute(cured) } }) ?? "<threw>"
-        if actual == expected { matched += 1 } else {
+        if actual == expected {
+            matched += 1
+        } else {
             let why = actual.prefix(100).replacingOccurrences(of: "\n", with: "⏎")
             failures[String(why), default: []].append("\(source)\n   => \(cured)")
         }
     }
     print("RUN programs \(ran), ran as expected \(matched)")
     for (why, cases) in failures.sorted(by: { $0.value.count > $1.value.count }).prefix(10) {
-        print("RUN FAILED x\(cases.count): \(why)\n   e.g. \(cases.min(by: { $0.count < $1.count })!.replacingOccurrences(of: "\n", with: "⏎"))")
+        print(
+            "RUN FAILED x\(cases.count): \(why)\n   e.g. \(cases.min(by: { $0.count < $1.count })!.replacingOccurrences(of: "\n", with: "⏎"))"
+        )
     }
 }

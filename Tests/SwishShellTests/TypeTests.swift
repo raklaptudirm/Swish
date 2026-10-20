@@ -1,6 +1,7 @@
 import Swiit
-@testable import SwishShell
 import Testing
+
+@testable import SwishShell
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
     try onLargeStack { try shell.capturing { shell.enter(source) } }
@@ -19,7 +20,10 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
 }
 
 @Test func declarationsAndInference() {
-    #expect(typeError("let xs: [Int] = []; let d: [String: Int] = [:]; let t: (Int, name: String) = (1, name: \"x\")") == nil)
+    #expect(
+        typeError("let xs: [Int] = []; let d: [String: Int] = [:]; let t: (Int, name: String) = (1, name: \"x\")")
+            == nil
+    )
     #expect(typeError("let xs = []")?.hasPrefix("an empty list needs a type") == true)
     #expect(typeError("let x = nil")?.hasPrefix("'nil' needs a type") == true)
     #expect(typeError(#"let xs = [1, "x"]"#)?.hasPrefix("a list's elements must have one type") == true)
@@ -51,7 +55,9 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
 @Test func tuplesAndDictionaries() throws {
     #expect(try output(#"let t = (name: "x", 2); t.name; t.1; t"#) == "\"x\"\n2\n(name: \"x\", 2)\n")
     #expect(try output(#"[(n: 5, s: "a"), (n: 1, s: "b")] | sorted --by n | get s"#) == "b\na\n")
-    #expect(try output(#"var d = ["a": 1]; d["b"] = 2; d["a"]; d["a"]! + 1; d.keys.sorted()"#) == "1\n2\n[\"a\", \"b\"]\n")
+    #expect(
+        try output(#"var d = ["a": 1]; d["b"] = 2; d["a"]; d["a"]! + 1; d.keys.sorted()"#) == "1\n2\n[\"a\", \"b\"]\n"
+    )
     #expect(typeError(#"let t = (name: "x", 2); t.nope"#) == "(name: String, Int) has no element 'nope'")
 }
 
@@ -61,7 +67,7 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
     #expect(typeError("let s = \"ab\"; s!")?.hasPrefix("'!' unwraps an optional") == true)
     let shell = Shell()
     _ = try output("let x: Int? = nil; x!", in: shell)
-    #expect(shell.lastStatus == 1) // at run time: nil can only be found then
+    #expect(shell.lastStatus == 1)  // at run time: nil can only be found then
 }
 
 @Test func closuresTakeTypesFromContext() throws {
@@ -73,8 +79,13 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
 @Test func structsAndEnumsAreChecked() {
     let point = "struct Point { var x: Int; let id = 0; mutating func move() { x += 1 } }; "
     #expect(typeError(point + #"Point(x: "a")"#) == "Point: 'x' must be Int, not String")
-    #expect(typeError(point + "let p = Point(x: 1); p.move()") == "cannot use mutating method 'move' on 'p': it's a 'let' constant")
-    #expect(typeError(point + "var p = Point(x: 1); p.id = 2") == "cannot assign to 'id': it's a 'let' property of Point")
+    #expect(
+        typeError(point + "let p = Point(x: 1); p.move()")
+            == "cannot use mutating method 'move' on 'p': it's a 'let' constant"
+    )
+    #expect(
+        typeError(point + "var p = Point(x: 1); p.id = 2") == "cannot assign to 'id': it's a 'let' property of Point"
+    )
     let kind = "enum Kind { case file, dir }; "
     #expect(typeError(kind + "let k: Kind = .file; k == .dir") == nil)
     #expect(typeError(kind + "let k: Kind = .socket") == "Kind has no case 'socket'")
@@ -87,7 +98,7 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
     // A fresh shell runs the file: the error on line 3 stops line 1 too.
     let script = Shell()
     let printed = try onLargeStack { try script.capturing { _ = script.runScript(at: path) } }
-    #expect(printed == "") // `echo one` didn't run
+    #expect(printed == "")  // `echo one` didn't run
     #expect(script.lastStatus == 2)
 }
 
@@ -97,9 +108,14 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
     let g = #"func g(_ x: Any) -> String { "any" }; func g(_ x: Int) -> String { "int" }; "#
     // The static type decides, as in Swift: `a` is an Any, though it holds an Int.
     #expect(try output(g + "let a: Any = 5; g(a); g(5)") == "\"any\"\n\"int\"\n")
-    #expect(try output(#"func f(_ x: Int) -> String { "int" }; func f(_ x: Double) -> String { "double" }; f(5); f(5.5)"#)
-        == "\"int\"\n\"double\"\n")
-    #expect(typeError("func h(_ x: Int, y: Int = 0) {}; func h(_ x: Int, z: Int = 0) {}; h(1)")?.hasPrefix("h: ambiguous call") == true)
+    #expect(
+        try output(#"func f(_ x: Int) -> String { "int" }; func f(_ x: Double) -> String { "double" }; f(5); f(5.5)"#)
+            == "\"int\"\n\"double\"\n"
+    )
+    #expect(
+        typeError("func h(_ x: Int, y: Int = 0) {}; func h(_ x: Int, z: Int = 0) {}; h(1)")?
+            .hasPrefix("h: ambiguous call") == true
+    )
 }
 
 @Test func functionsAreValues() throws {
@@ -108,7 +124,10 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
     let conv = #"func conv(_ x: Int) -> String { "int" }; func conv(_ x: String) -> String { "string" }; "#
     #expect(try output(conv + "let f: (String) -> String = conv; f(\"a\")") == "\"string\"\n")
     #expect(try output("func apply(_ f: (Int) -> Int, _ x: Int) -> Int { f(x) }; apply({ $0 * 3 }, 2)") == "6\n")
-    #expect(typeError("func apply(_ f: (Int) -> Int) -> Int { f(1) }; apply({ $0 + \"a\" })") == "'+' can't be applied to Int and String")
+    #expect(
+        typeError("func apply(_ f: (Int) -> Int) -> Int { f(1) }; apply({ $0 + \"a\" })")
+            == "'+' can't be applied to Int and String"
+    )
 }
 
 @Test func closuresInferTheirResult() throws {
@@ -119,26 +138,40 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
 
 @Test func throwingNeedsTryAndAHandler() throws {
     let risky = "func risky(_ fail: Bool) throws -> Int { if fail { try $(false) }; return 1 }\n"
-    #expect(try output(risky + "try risky(false); do { try risky(true) } catch { echo caught }; (try? risky(true)) ?? 0")
-        == "1\ncaught\n0\n")
+    #expect(
+        try output(risky + "try risky(false); do { try risky(true) } catch { echo caught }; (try? risky(true)) ?? 0")
+            == "1\ncaught\n0\n"
+    )
     #expect(typeError(risky + "risky(false)") == "'risky' can throw, but isn't marked with 'try'")
-    #expect(typeError(risky + "func safe() -> Int { try risky(false) }")?.hasPrefix("this can throw, but safe isn't 'throws'") == true)
+    #expect(
+        typeError(risky + "func safe() -> Int { try risky(false) }")?
+            .hasPrefix("this can throw, but safe isn't 'throws'") == true
+    )
     #expect(typeError(risky + "func safe() -> Int { (try? risky(false)) ?? 0 }") == nil)
     #expect(typeError("func build() { try $(swift build) }")?.contains("build isn't 'throws'") == true)
     #expect(typeError("func build() { try false }")?.contains("build isn't 'throws'") == true)
     // Closures throw if their body does; passing one on makes the call throw.
     #expect(typeError(risky + "[true].map { try risky($0) }") == "'map' can throw, but isn't marked with 'try'")
     #expect(typeError(risky + "let r = try [false].map { try risky($0) }") == nil)
-    #expect(typeError(risky + "func apply(_ f: (Bool) -> Int) -> Int { f(true) }; apply({ try risky($0) })")
-        == "apply: 'f' must be (Bool) -> Int, not (Bool) throws -> Int")
+    #expect(
+        typeError(risky + "func apply(_ f: (Bool) -> Int) -> Int { f(true) }; apply({ try risky($0) })")
+            == "apply: 'f' must be (Bool) -> Int, not (Bool) throws -> Int"
+    )
     #expect(typeError(risky + "func apply(_ f: (Bool) throws -> Int) rethrows -> Int { 0 }") == nil)
-    #expect(typeError(risky + "func apply(_ f: (Bool) throws -> Int) throws -> Int { try f(true) }; try apply({ try risky($0) })") == nil)
+    #expect(
+        typeError(
+            risky + "func apply(_ f: (Bool) throws -> Int) throws -> Int { try f(true) }; try apply({ try risky($0) })"
+        ) == nil
+    )
 }
 
 @Test func tryOnAVoidCallTellsSuccessFromFailure() throws {
     let funcs = "func build() throws { try $(true) }; func fail() throws { try $(false) }; "
     #expect(try output(funcs + "(try? build()) != nil; (try? fail()) != nil; try? build()") == "true\nfalse\n")
-    #expect(try output(funcs + "if try? build() { echo yes }; if try? fail() { echo no } else { echo failed }") == "yes\nfailed\n")
+    #expect(
+        try output(funcs + "if try? build() { echo yes }; if try? fail() { echo no } else { echo failed }")
+            == "yes\nfailed\n"
+    )
     #expect(typeError("let x: Int? = 1; if x { echo y }") == "a condition must be a Bool, not Int?")
 }
 
@@ -147,8 +180,14 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
 @Test func protocolsAreDeclaredAndChecked() throws {
     #expect(try output("struct P: Equatable { var x: Int }; P(x: 1) == P(x: 1)") == "true\n")
     #expect(typeError("struct P { var x: Int }; P(x: 1) == P(x: 1)")?.hasPrefix("'==' needs Equatable values") == true)
-    #expect(typeError("struct P: Equatable { var f: (Int) -> Int }") == "P can't be Equatable: its 'f' is (Int) -> Int, which isn't")
-    #expect(typeError("struct P: Comparable { var x: Int }")?.hasPrefix("P can't be Comparable without a '<' of its own") == true)
+    #expect(
+        typeError("struct P: Equatable { var f: (Int) -> Int }")
+            == "P can't be Equatable: its 'f' is (Int) -> Int, which isn't"
+    )
+    #expect(
+        typeError("struct P: Comparable { var x: Int }")?.hasPrefix("P can't be Comparable without a '<' of its own")
+            == true
+    )
     #expect(typeError("struct P: Frobbable {}")?.hasPrefix("syntax error") == true)
     // An enum without associated values is Equatable anyway; one with them says so.
     #expect(typeError("enum K { case a, b }; K.a == .b") == nil)
@@ -158,7 +197,10 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
 }
 
 @Test func keyPaths() throws {
-    #expect(try output(#"let xs = [(n: 2, s: "b"), (n: 1, s: "a")]; xs.sorted(by: \.n).map(\.s); xs.map(\.n)"#) == "[\"a\", \"b\"]\n[2, 1]\n")
+    #expect(
+        try output(#"let xs = [(n: 2, s: "b"), (n: 1, s: "a")]; xs.sorted(by: \.n).map(\.s); xs.map(\.n)"#)
+            == "[\"a\", \"b\"]\n[2, 1]\n"
+    )
     #expect(typeError(#"let xs = [(n: 2, s: "b")]; xs.sorted(by: \.m)"#) == "(n: Int, s: String) has no element 'm'")
     #expect(typeError("let k = \\.size")?.hasPrefix("\\.size needs a type here") == true)
     #expect(typeError("let k = \\FileEntry.size") == nil)
@@ -199,7 +241,10 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
 
 @Test func comparableEnumsCompareInDeclarationOrder() throws {
     let level = "enum Level: Int, Comparable { case low, mid, high }; "
-    #expect(try output(level + "Level.low < .high; Level.high <= .mid; [Level.high, .low] | sorted") == "true\nfalse\nlow\nhigh\n")
+    #expect(
+        try output(level + "Level.low < .high; Level.high <= .mid; [Level.high, .low] | sorted")
+            == "true\nfalse\nlow\nhigh\n"
+    )
 }
 
 // MARK: Phase 4: Any and JSON
@@ -213,18 +258,23 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
     #expect(typeError("let x = 5; let y = x as Any") == nil)
     let shell = Shell()
     _ = try output(#"let a: Any = "s"; a as! Int"#, in: shell)
-    #expect(shell.lastStatus == 1) // at run time, as in Swift
+    #expect(shell.lastStatus == 1)  // at run time, as in Swift
     // Casts bind tighter than ??, looser than ranges, as in Swift.
     #expect(try output(#"let a: Any = "s"; a as? Int ?? 0"#) == "0\n")
 }
 
 @Test func jsonIsReadByFieldAndElement() throws {
     let json = #"let j = try from(.json, ['{"server": {"port": 8080}, "tags": ["a", "b"], "on": true}']); "#
-    #expect(try output(json + #"j.server?.port?.int ?? 1; j.missing?.port?.int ?? 1; j["tags"]?[1]?.string; j.tags?.array?.count; j.on?.bool"#)
-        == "8080\n1\n\"b\"\n2\ntrue\n")
+    #expect(
+        try output(
+            json
+                + #"j.server?.port?.int ?? 1; j.missing?.port?.int ?? 1; j["tags"]?[1]?.string; j.tags?.array?.count; j.on?.bool"#
+        )
+            == "8080\n1\n\"b\"\n2\ntrue\n"
+    )
     // A missing field and a JSON null are both nil, so isNull is true for either.
     #expect(try output(json + "j.server?.port?.string == nil; j.nothing?.isNull") == "true\ntrue\n")
-    #expect(typeError(json + "j.server + 1") != nil)          // a JSON? isn't a number
+    #expect(typeError(json + "j.server + 1") != nil)  // a JSON? isn't a number
     // The `!` is part of the chain, as in Swift: the chain is still optional, and `(…)!` unwraps all of it.
     #expect(typeError(json + "(j.server?.port?.int)! + 1") == nil)
     #expect(typeError(json + "j.server?.port?.int! + 1") != nil)

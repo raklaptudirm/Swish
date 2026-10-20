@@ -1,5 +1,5 @@
-import Swiit
 import Foundation
+import Swiit
 
 /// A pipeline of processes, one running in the foreground or a job in the
 /// background (from `async` or ^Z), or Swish code running as a task of its
@@ -81,16 +81,19 @@ final class Job: HostObject, @unchecked Sendable {
         guard let collector = capture else {
             return Value(boxing: Flow<Value>((output?.lines ?? []).map { Value($0) }), as: "Flow")
         }
-        return Value(boxing: Flow<Value> { [unowned self] in
-            while true {
-                switch Interpreter.whileWaiting({ collector.nextLine(timeout: 0.05) }) {
-                case .line(let line): return Value(line)
-                case .end: return nil
-                // Waiting for a line is where Ctrl-C has to be noticed.
-                case .pending: try shell.interpreter.checkForStop()
+        return Value(
+            boxing: Flow<Value> { [unowned self] in
+                while true {
+                    switch Interpreter.whileWaiting({ collector.nextLine(timeout: 0.05) }) {
+                    case .line(let line): return Value(line)
+                    case .end: return nil
+                    // Waiting for a line is where Ctrl-C has to be noticed.
+                    case .pending: try shell.interpreter.checkForStop()
+                    }
                 }
-            }
-        }, as: "Flow")
+            },
+            as: "Flow"
+        )
     }
 
     // MARK: HostObject
@@ -104,9 +107,15 @@ final class Job: HostObject, @unchecked Sendable {
     static let members: [(name: String, type: String, value: @Sendable (Job) -> Value)] = [
         ("id", "Int", { Value($0.id) }),
         ("command", "String", { Value($0.source) }),
-        ("state", "JobState", { job in
-            job.shell.interpreter.value(ofCase: job.cancelled && job.state == .done ? "cancelled" : job.state.rawValue, in: "JobState") ?? .null
-        }),
+        (
+            "state", "JobState",
+            { job in
+                job.shell.interpreter.value(
+                    ofCase: job.cancelled && job.state == .done ? "cancelled" : job.state.rawValue,
+                    in: "JobState"
+                ) ?? .null
+            }
+        ),
         ("pids", "[Int]", { Value($0.running.map { Value(Int($0)) }) }),
         ("output", "Output?", { $0.output.map { Value.output($0) } ?? .null }),
         // A method, as it's not data: a table or `to json` of jobs can't read it.
@@ -122,7 +131,8 @@ final class Job: HostObject, @unchecked Sendable {
                 return "func \(member.name)()" + (result == "Void" ? "" : " -> \(result)")
             }
             return "var \(member.name): \(member.type) { get }"
-        }.joined(separator: "; ")
+        }
+        .joined(separator: "; ")
     }
 
     var memberNames: [String] { Job.members.map(\.name) }
@@ -145,14 +155,16 @@ final class Job: HostObject, @unchecked Sendable {
     /// `[1] running  make`, in pieces to color: the number dim, the state
     /// by how it's going.
     var segments: [DisplaySegment] {
-        let (label, style): (String, DisplayStyle?) = switch state {
-        case .running: ("running", DisplayStyle.green)
-        case .stopped: ("stopped", DisplayStyle.yellow)
-        case .done where cancelled: ("cancelled", DisplayStyle.dim)
-        case .done where signal != nil: ("failed (\(String(cString: strsignal(signal!)).lowercased()))", DisplayStyle.red)
-        case .done where status != 0: ("failed (\(status))", DisplayStyle.red)
-        case .done: ("done", nil)
-        }
+        let (label, style): (String, DisplayStyle?) =
+            switch state {
+            case .running: ("running", DisplayStyle.green)
+            case .stopped: ("stopped", DisplayStyle.yellow)
+            case .done where cancelled: ("cancelled", DisplayStyle.dim)
+            case .done where signal != nil:
+                ("failed (\(String(cString: strsignal(signal!)).lowercased()))", DisplayStyle.red)
+            case .done where status != 0: ("failed (\(status))", DisplayStyle.red)
+            case .done: ("done", nil)
+            }
         return [("[\(id)]", DisplayStyle.dim), (" ", nil), (label, style), ("  " + source, nil)]
     }
 
@@ -234,9 +246,15 @@ extension Shell {
             }
             // Its own process group, but not the terminal: reading it stops
             // the job until it's awaited.
-            let result = launch(argv, redirects: redirects, environment: environment,
-                                input: input, output: next?.write ?? output,
-                                pgid: interactive ? job.pgid : -1, foreground: false)
+            let result = launch(
+                argv,
+                redirects: redirects,
+                environment: environment,
+                input: input,
+                output: next?.write ?? output,
+                pgid: interactive ? job.pgid : -1,
+                foreground: false
+            )
             if input >= 0 { close(input) }
             if let next { close(next.write) }
             input = next?.read ?? -1
@@ -280,7 +298,9 @@ extension Shell {
             jobs.removeAll { $0 === job }
             if case .failure(let error) = result, !job.givesOutput {
                 // How it ended is the awaiting task's error, not a reason for it to stop too.
-                if error.kind == .runtime { throw ScriptError(error.message, status: error.status, isReported: error.isReported) }
+                if error.kind == .runtime {
+                    throw ScriptError(error.message, status: error.status, isReported: error.isReported)
+                }
                 if error.kind == .cancelled { throw RuntimeError("\(job.source) was cancelled") }
                 throw RuntimeError("\(job.source) stopped: \(error)")
             }
@@ -318,7 +338,7 @@ extension Shell {
         job.cancelled = true
         job.send(SIGTERM)
         if job.state == .stopped {
-            job.send(SIGCONT) // So it can act on the SIGTERM.
+            job.send(SIGCONT)  // So it can act on the SIGTERM.
             job.state = .running
         }
     }
@@ -330,9 +350,12 @@ extension Shell {
         var notices: [String] = []
         for job in jobs where job.state != .running && !job.reported {
             job.reported = true
-            notices.append(job.state == .stopped
-                ? job.line(styled: styled) + "  (waiting for the terminal: await it)".styled(DisplayStyle.dim, styled)
-                : job.line(styled: styled))
+            notices.append(
+                job.state == .stopped
+                    ? job.line(styled: styled)
+                        + "  (waiting for the terminal: await it)".styled(DisplayStyle.dim, styled)
+                    : job.line(styled: styled)
+            )
         }
         jobs.removeAll { $0.state == .done }
         return notices
@@ -383,7 +406,7 @@ extension Shell {
         state.inForeground = false
         state.stdoutFD = pipe.write
         state.stderrFD = stderrFD
-        nonisolated(unsafe) let body = body // safe: runs holding the interpreter lock
+        nonisolated(unsafe) let body = body  // safe: runs holding the interpreter lock
         do {
             job.task = try interpreter.startTask(state: state) {
                 defer { close(pipe.write) }

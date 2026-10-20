@@ -1,6 +1,7 @@
 import Swiit
-@testable import SwishShell
 import Testing
+
+@testable import SwishShell
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
     try onLargeStack { try shell.capturing { shell.enter(source) } }
@@ -37,7 +38,10 @@ private func status(_ source: String, in shell: Shell = Shell()) -> Int32 {
     for name in ["alias ll=ls", "export A=1", "wait", "read x", "trap x INT", "set -e", "unset A"] {
         #expect(status(name) == 2)
     }
-    #expect(try output("which export umask") == "export: not Swish; `env.NAME = value` sets an environment variable for the programs you run\numask: shell builtin\n")
+    #expect(
+        try output("which export umask")
+            == "export: not Swish; `env.NAME = value` sets an environment variable for the programs you run\numask: shell builtin\n"
+    )
     // A function of the same name still wins, as for any builtin.
     #expect(try output(#"func read() { echo mine }; read"#) == "mine\n")
 }
@@ -45,9 +49,12 @@ private func status(_ source: String, in shell: Shell = Shell()) -> Int32 {
 @Test func sourceRunsAFileInThisShell() throws {
     let shell = Shell()
     let directory = try output("mktemp -d", in: shell).trimmingCharacters(in: .newlines)
-    _ = try output(#"""
-    "let greeting = \"hi\"\nfunc hello(_ n: String) { echo \"\\(greeting) \\(n) \\(args)\" }\n" | to text > \#(directory)/lib.swish
-    """#, in: shell)
+    _ = try output(
+        #"""
+        "let greeting = \"hi\"\nfunc hello(_ n: String) { echo \"\\(greeting) \\(n) \\(args)\" }\n" | to text > \#(directory)/lib.swish
+        """#,
+        in: shell
+    )
     _ = try output("source \(directory)/lib.swish a b", in: shell)
     // What it declared stays; args and #filePath are the shell's again.
     #expect(try output("hello Rak; args; #filePath", in: shell) == "hi Rak []\n[]\n\"<prompt>\"\n")

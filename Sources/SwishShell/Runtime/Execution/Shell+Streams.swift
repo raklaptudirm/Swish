@@ -1,5 +1,5 @@
-import Swiit
 import Foundation
+import Swiit
 
 /// Items read one at a time, as the stages of a pipeline pass them on.
 final class ValueStream {
@@ -13,7 +13,8 @@ final class ValueStream {
 
     static var empty: ValueStream { ValueStream { nil } }
 
-    /// A list flows as its elements, as does a Swift sequence (a Set, a range of Ints, a command's output, a flow); nothing
+    /// A list flows as its elements, as does a Swift sequence (a Set, a range of Ints, a command's output, a flow);
+    /// nothing
     /// as no items, anything else as a single item.
     static func elements(of value: Value) -> ValueStream {
         if value.kind == .nothing { return .empty }
@@ -105,7 +106,13 @@ extension Shell {
                 stream = .elements(of: value)
                 single = value
             case .function(let callee, let args, _, _):
-                stream = try functionStream(callee, args, upstream: stream, single: single, upstreamIsExternal: upstreamIsExternal)
+                stream = try functionStream(
+                    callee,
+                    args,
+                    upstream: stream,
+                    single: single,
+                    upstreamIsExternal: upstreamIsExternal
+                )
             case .external(let argv, _, _, _):
                 // A name that might have been a method, and was a program after all (Shell+Resolving.swift).
                 throw RuntimeError("\(argv[0]) isn't a method of what flows into it, and a program can't run here")
@@ -149,7 +156,11 @@ extension Shell {
     }
 
     private func functionStream(
-        _ callee: Callee, _ args: [CommandArgument], upstream: ValueStream?, single: Value?, upstreamIsExternal: Bool
+        _ callee: Callee,
+        _ args: [CommandArgument],
+        upstream: ValueStream?,
+        single: Value?,
+        upstreamIsExternal: Bool
     ) throws -> ValueStream {
         if helpRequested(args, for: callee) {
             writeAll(stdoutFD, helpText(for: callee, styled: DisplayStyle.enabled(for: stdoutFD)))
@@ -218,10 +229,15 @@ extension Shell {
 
     // MARK: Methods
 
-    /// A method of what flows in: of each item (`[p1, p2] | describe`), of the items collected, of the one value the pipeline
+    /// A method of what flows in: of each item (`[p1, p2] | describe`), of the items collected, of the one value the
+    /// pipeline
     /// started from, or of the items as they come, lazily.
     private func methodStream(
-        _ callee: Callee, _ args: [CommandArgument], receiver: StageReceiver, upstream: ValueStream, single: Value?
+        _ callee: Callee,
+        _ args: [CommandArgument],
+        receiver: StageReceiver,
+        upstream: ValueStream,
+        single: Value?
     ) throws -> ValueStream {
         let call = try bind(commandLine: args, to: callee, excludingInput: true)
         let overload = callee.overloads[call.overload]
@@ -266,7 +282,8 @@ extension Shell {
                 return try output!.next()
             }
         case .flow:
-            // Lazily: the stage reads upstream only as its own reader is asked, and the Flow it gives is read as the next
+            // Lazily: the stage reads upstream only as its own reader is asked, and the Flow it gives is read as the
+            // next
             // stage asks.
             let flow = Value(boxing: Flow<Value> { try upstream.next() }, as: "Flow")
             let result = try apply(to: flow)

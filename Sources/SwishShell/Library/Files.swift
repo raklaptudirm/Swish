@@ -1,3 +1,7 @@
+import Foundation
+import Swiit
+import SystemPackage
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
@@ -5,9 +9,6 @@ import Glibc
 #elseif canImport(Musl)
 import Musl
 #endif
-import Foundation
-import Swiit
-import SystemPackage
 
 /// What kind of entry `ls` found: `ls | filter { $0.type == .directory }`.
 /// In this order, so `ls | sorted --by type` puts files first.
@@ -93,15 +94,27 @@ private func entry(named name: String, at path: String, into entries: inout [Fil
         errors.append(PathError(path: path, reason: String(cString: strerror(error.rawValue)).lowercased()))
         return
     }
-    let (type, letter): (FileType, String) = status.isDirectory ? (.directory, "d") : status.isSymlink ? (.symlink, "l")
-        : status.isFile ? (.file, "-") : (.other, "?")
+    let (type, letter): (FileType, String) =
+        status.isDirectory
+        ? (.directory, "d")
+        : status.isSymlink
+            ? (.symlink, "l")
+            : status.isFile ? (.file, "-") : (.other, "?")
     let target = status.isSymlink ? try? FileManager.default.destinationOfSymbolicLink(atPath: path) : nil
-    entries.append(FileEntry(
-        name: name, type: type, size: FileSize(bytes: Int(status.size)), modified: status.modified,
-        permissions: letter + status.permissions, owner: userName(status.owner),
-        created: status.created ?? status.modified, accessed: status.accessed,
-        path: FilePath(path), target: target.map { FilePath($0) }
-    ))
+    entries.append(
+        FileEntry(
+            name: name,
+            type: type,
+            size: FileSize(bytes: Int(status.size)),
+            modified: status.modified,
+            permissions: letter + status.permissions,
+            owner: userName(status.owner),
+            created: status.created ?? status.modified,
+            accessed: status.accessed,
+            path: FilePath(path),
+            target: target.map { FilePath($0) }
+        )
+    )
 }
 
 /// What `lstat` says about a path, named the same on every platform.
@@ -141,7 +154,8 @@ struct FileStatus {
     /// `rwxr-xr-x`.
     var permissions: String {
         let bits = [S_IRUSR, S_IWUSR, S_IXUSR, S_IRGRP, S_IWGRP, S_IXGRP, S_IROTH, S_IWOTH, S_IXOTH]
-        return bits.enumerated().map { index, bit in mode & mode_t(bit) != 0 ? ["r", "w", "x"][index % 3] : "-" }.joined()
+        return bits.enumerated().map { index, bit in mode & mode_t(bit) != 0 ? ["r", "w", "x"][index % 3] : "-" }
+            .joined()
     }
 
     private static func date(_ time: timespec) -> Date {

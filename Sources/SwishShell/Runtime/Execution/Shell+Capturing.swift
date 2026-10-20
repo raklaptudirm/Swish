@@ -1,5 +1,5 @@
-import Swiit
 import Foundation
+import Swiit
 
 extension Shell {
     // MARK: Capturing output
@@ -38,7 +38,13 @@ final class Relay: @unchecked Sendable {
                         var written = 0
                         while written < buffer.count {
                             let count = write(fd, buffer.baseAddress! + written, buffer.count - written)
-                            if count > 0 { written += count } else if count == -1 && errno == EINTR { continue } else { break }
+                            if count > 0 {
+                                written += count
+                            } else if count == -1 && errno == EINTR {
+                                continue
+                            } else {
+                                break
+                            }
                         }
                     }
                     offset += chunk.count
@@ -110,7 +116,8 @@ final class OutputCollector: @unchecked Sendable {
         }
     }
 
-    /// Writes all of it to `fd`, what is collected already and what comes: a task awaited from the foreground shows its output.
+    /// Writes all of it to `fd`, what is collected already and what comes: a task awaited from the foreground shows its
+    /// output.
     func relay(to fd: Int32) -> Relay { Relay(self, to: fd) }
 
     /// All of it, once it ends.

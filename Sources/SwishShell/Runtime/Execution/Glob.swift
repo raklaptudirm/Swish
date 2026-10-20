@@ -1,5 +1,5 @@
-import Swiit
 import Foundation
+import Swiit
 
 /// Filename patterns: `*`, `[a-z]`, and `**` for any depth of directories.
 /// `?` isn't a wildcard, as in fish, so `curl https://x.com/?q=1` needs no
@@ -49,7 +49,9 @@ enum Glob {
             var next: [String] = []
             for base in paths {
                 if segment == "**" {
-                    next += isLast ? descendants(of: base, directoriesOnly: wantsDirectories)
+                    next +=
+                        isLast
+                        ? descendants(of: base, directoriesOnly: wantsDirectories)
                         : [base] + descendants(of: base, directoriesOnly: true)
                 } else if !hasWildcards(segment) {
                     let path = join(base, unescape(segment))

@@ -26,7 +26,9 @@ struct InlineMarkdown {
         while i < range.upperBound {
             let c = chars[i]
             // `\*`: the character itself.
-            if c == "\\", i + 1 < range.upperBound, chars[i + 1].isASCII, chars[i + 1].isPunctuation || chars[i + 1].isSymbol {
+            if c == "\\", i + 1 < range.upperBound, chars[i + 1].isASCII,
+                chars[i + 1].isPunctuation || chars[i + 1].isSymbol
+            {
                 plain.append(chars[i + 1])
                 i += 2
             } else if c == "`", let (content, next) = codeSpan(at: i, in: range) {
@@ -67,7 +69,9 @@ struct InlineMarkdown {
                 let m = run(of: "`", at: j, before: range.upperBound)
                 if m == n {
                     var content = String(chars[(i + n)..<j])
-                    if content.count > 1, content.hasPrefix(" "), content.hasSuffix(" "), content.contains(where: { $0 != " " }) {
+                    if content.count > 1, content.hasPrefix(" "), content.hasSuffix(" "),
+                        content.contains(where: { $0 != " " })
+                    {
                         content = String(content.dropFirst().dropLast())
                     }
                     return (content, j + n)
@@ -98,7 +102,9 @@ struct InlineMarkdown {
                 let m = run(of: c, at: j, before: range.upperBound)
                 let after = j + m
                 let intraword = c == "_" && after < range.upperBound && (chars[after].isLetter || chars[after].isNumber)
-                if m == n, !chars[j - 1].isWhitespace, !intraword, j > i + n { return Emphasis(inner: (i + n)..<j, next: after, strength: n) }
+                if m == n, !chars[j - 1].isWhitespace, !intraword, j > i + n {
+                    return Emphasis(inner: (i + n)..<j, next: after, strength: n)
+                }
                 j += m
             } else {
                 j += 1
@@ -107,7 +113,8 @@ struct InlineMarkdown {
         return nil
     }
 
-    /// Emphasized text: where its words are, where reading goes on after its closer, and how many marks it has (1 italic, 2 bold).
+    /// Emphasized text: where its words are, where reading goes on after its closer, and how many marks it has (1
+    /// italic, 2 bold).
     private struct Emphasis {
         var inner: Range<Int>
         var next: Int
@@ -143,8 +150,10 @@ struct InlineMarkdown {
 }
 
 extension AttributedString {
-    /// Text written in Markdown, as documentation is: its code, strong text, emphasis and links as styles, which show where
-    /// there are colors, and the plain words anywhere else. Only the inline syntax, which is what a description is made of;
+    /// Text written in Markdown, as documentation is: its code, strong text, emphasis and links as styles, which show
+    /// where
+    /// there are colors, and the plain words anywhere else. Only the inline syntax, which is what a description is made
+    /// of;
     /// see `InlineMarkdown`. (Foundation on Linux does not parse Markdown, so documentation's is read here.)
     init(documentation text: String) {
         self = InlineMarkdown(Array(text)).parse(0..<text.count, style: nil)

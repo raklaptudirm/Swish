@@ -1,6 +1,7 @@
 import Foundation
 
-// Spike: the shell's own text, read by the shell. Nothing here knows the interpreter: this is the lexical level of Swift's
+// Spike: the shell's own text, read by the shell. Nothing here knows the interpreter: this is the lexical level of
+// Swift's
 // text with the shell's in it (strings and their interpolations, comments, brackets), enough to find where a form ends.
 
 /// The characters of a source, and what its bytes are (SwiftParser's positions are bytes).
@@ -74,7 +75,8 @@ enum Lex {
         return nil
     }
 
-    /// Past a double-quoted string starting at `start`, its interpolations (`\(…)`, and `$(…)` as a command's word has it) included.
+    /// Past a double-quoted string starting at `start`, its interpolations (`\(…)`, and `$(…)` as a command's word has
+    /// it) included.
     static func skipString(_ chars: [Character], from start: Int) -> Int {
         var i = start + 1
         while i < chars.count {
@@ -114,12 +116,15 @@ enum Lex {
         var depth = 0
         var i = start
         while i < chars.count {
-            if chars[i] == "/", i + 1 < chars.count, chars[i + 1] == "*" { depth += 1; i += 2 }
-            else if chars[i] == "*", i + 1 < chars.count, chars[i + 1] == "/" {
+            if chars[i] == "/", i + 1 < chars.count, chars[i + 1] == "*" {
+                depth += 1; i += 2
+            } else if chars[i] == "*", i + 1 < chars.count, chars[i + 1] == "/" {
                 depth -= 1
                 i += 2
                 if depth == 0 { return i }
-            } else { i += 1 }
+            } else {
+                i += 1
+            }
         }
         return chars.count
     }
@@ -134,7 +139,9 @@ enum Lex {
     /// Each `'…'` in the code, outside the substitutions: the shell's raw strings, which Swift has no spelling for.
     static func rawStrings(in chars: [Character]) -> [Range<Int>] { scan(chars).rawStrings }
 
-    private static func scan(_ chars: [Character]) -> (substitutions: [Range<Int>], rawStrings: [Range<Int>], unclosed: Bool) {
+    private static func scan(
+        _ chars: [Character]
+    ) -> (substitutions: [Range<Int>], rawStrings: [Range<Int>], unclosed: Bool) {
         var ranges: [Range<Int>] = []
         var raws: [Range<Int>] = []
         var unclosed = false
@@ -195,24 +202,30 @@ enum Lex {
         }
 
         _ = code(from: 0, inInterpolation: false)
-        return (ranges.sorted { $0.lowerBound < $1.lowerBound }, raws.sorted { $0.lowerBound < $1.lowerBound }, unclosed)
+        return (
+            ranges.sorted { $0.lowerBound < $1.lowerBound }, raws.sorted { $0.lowerBound < $1.lowerBound }, unclosed
+        )
     }
 
-    /// The code with what is inside each `$(…)` replaced by blanks (newlines stay), so SwiftParser reads the call `$()` and
+    /// The code with what is inside each `$(…)` replaced by blanks (newlines stay), so SwiftParser reads the call `$()`
+    /// and
     /// leaves the shell's text to the reader; the same length, so positions agree.
     static func blankingSubstitutions(_ chars: [Character]) -> [Character] {
         let found = substitutions(in: chars)
         guard !found.ranges.isEmpty else { return chars }
         var blanked = chars
         for range in found.ranges {
-            let inner = (range.lowerBound + 2)..<(found.unclosed && range.upperBound == chars.count ? range.upperBound : range.upperBound - 1)
+            let start = range.lowerBound + 2
+            let end = found.unclosed && range.upperBound == chars.count ? range.upperBound : range.upperBound - 1
+            let inner = start..<end
             guard inner.lowerBound < inner.upperBound else { continue }
             for index in inner where blanked[index] != "\n" { blanked[index] = " " }
         }
         return blanked
     }
 
-    /// The code with what is inside each outermost `{ … }` replaced by blanks: the statements in a closure's body are read
+    /// The code with what is inside each outermost `{ … }` replaced by blanks: the statements in a closure's body are
+    /// read
     /// in their turn, so what a stretch of code is (where it ends) is asked with the bodies left out.
     static func blankingBlocks(_ chars: [Character]) -> [Character] {
         var blanked = chars

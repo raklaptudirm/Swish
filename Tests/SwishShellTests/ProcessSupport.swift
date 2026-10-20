@@ -1,6 +1,7 @@
-import Swiit
-@testable import SwishShell
 import Foundation
+import Swiit
+
+@testable import SwishShell
 
 // What the tests need to know about the process they run in. In a file of
 // its own: Foundation can't be imported next to Testing here.
@@ -10,7 +11,8 @@ func currentProcessID() -> Int {
     Int(ProcessInfo.processInfo.processIdentifier)
 }
 
-/// What `source` says when it fails, as written to the shell's error output (its first line), or nil if it ran without a word:
+/// What `source` says when it fails, as written to the shell's error output (its first line), or nil if it ran without
+/// a word:
 /// a failure of a pipeline's stage is found when the pipeline starts.
 func errorText(_ source: String, in shell: Shell = Shell()) -> String? {
     guard let pipe = makePipe() else { return nil }

@@ -5,13 +5,16 @@ import Swiit
 
 extension FileSize {
     static let native = NativeType.Builder<FileSize>(
-        "FileSize", conformances: ["Equatable", "Hashable", "Comparable", "CustomStringConvertible", "Encodable"],
+        "FileSize",
+        conformances: ["Equatable", "Hashable", "Comparable", "CustomStringConvertible", "Encodable"],
         parse: { FileSize($0) }
     )
     .property("bytes", \.bytes)
     .property("description", \.description)
     .initializer(labels: ["bytes"]) { (bytes: Int) in FileSize(bytes: bytes) }
-    .initializer(labels: [nil, "multiplier"]) { (amount: Double, multiplier: Int) in FileSize(amount, multiplier: multiplier) }
+    .initializer(labels: [nil, "multiplier"]) { (amount: Double, multiplier: Int) in
+        FileSize(amount, multiplier: multiplier)
+    }
     .failableInitializer(labels: [nil, "unit"]) { (amount: Double, unit: String) in FileSize(amount, unit: unit) }
     .failableInitializer { (text: String) in FileSize(text) }
     .static("+", labels: [nil, nil], throwing: true) { (a: FileSize, b: FileSize) throws -> FileSize in try a + b }
@@ -28,7 +31,9 @@ extension FileSize {
 
 extension DisplayColumn {
     static let native = NativeType.Builder<DisplayColumn>(
-        "DisplayColumn", conformances: ["ExpressibleByStringLiteral"], literal: { DisplayColumn($0) }
+        "DisplayColumn",
+        conformances: ["ExpressibleByStringLiteral"],
+        literal: { DisplayColumn($0) }
     )
     .property("name", \.name)
     .property("styledBy", \.styledBy)
@@ -40,13 +45,18 @@ extension Status: ValueConvertible {
         guard value.typeName == "Status", let succeeded = value.field("succeeded")?.cast(to: Bool.self) else {
             throw LibraryError("expected a Status, not \(value)")
         }
-        self.init(code: value.field("code")?.cast(to: Int.self), signal: value.field("signal")?.cast(to: Int.self), succeeded: succeeded)
+        self.init(
+            code: value.field("code")?.cast(to: Int.self),
+            signal: value.field("signal")?.cast(to: Int.self),
+            succeeded: succeeded
+        )
     }
 }
 
 extension Output {
     static let native = NativeType.Builder<Output>(
-        "Output", conformances: ["Equatable", "Hashable", "Sequence", "StandsForText", "CustomStringConvertible"],
+        "Output",
+        conformances: ["Equatable", "Hashable", "Sequence", "StandsForText", "CustomStringConvertible"],
         associatedTypes: ["Element": .string, "Index": .int]
     )
     .property("text", \.text)

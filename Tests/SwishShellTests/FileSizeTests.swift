@@ -1,6 +1,7 @@
 import Swiit
-@testable import SwishShell
 import Testing
+
+@testable import SwishShell
 
 @Test func formatsFileSizes() {
     #expect(FileSize(bytes: 532).description == "532 B")

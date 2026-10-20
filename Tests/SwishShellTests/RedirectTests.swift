@@ -1,6 +1,7 @@
 import Swiit
-@testable import SwishShell
 import Testing
+
+@testable import SwishShell
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
     try onLargeStack { try shell.capturing { shell.enter(source) } }
@@ -11,10 +12,12 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 private func scratch() throws -> String {
     let shell = Shell()
     let dir = try output("mktemp -d", in: shell).trimmingCharacters(in: .newlines)
-    shell.execute("""
-    mkdir -p \(dir)/src/deep '\(dir)/with space' \(dir)/.secret
-    touch \(dir)/a.txt \(dir)/b.txt \(dir)/c.md \(dir)/.hidden \(dir)/src/x.swift \(dir)/src/deep/y.swift '\(dir)/with space/z.txt' \(dir)/.secret/s.swift
-    """)
+    shell.execute(
+        """
+        mkdir -p \(dir)/src/deep '\(dir)/with space' \(dir)/.secret
+        touch \(dir)/a.txt \(dir)/b.txt \(dir)/c.md \(dir)/.hidden \(dir)/src/x.swift \(dir)/src/deep/y.swift '\(dir)/with space/z.txt' \(dir)/.secret/s.swift
+        """
+    )
     return dir
 }
 
@@ -25,10 +28,10 @@ private func scratch() throws -> String {
     #expect(Glob.expand("\(d)/*.txt") == ["\(d)/a.txt", "\(d)/b.txt"])
     #expect(Glob.expand("\(d)/[ac].*") == ["\(d)/a.txt", "\(d)/c.md"])
     #expect(Glob.expand("\(d)/[c].md") == ["\(d)/c.md"])
-    #expect(Glob.expand("\(d)/?.md").isEmpty) // `?` is literal: no file is named "?.md"
+    #expect(Glob.expand("\(d)/?.md").isEmpty)  // `?` is literal: no file is named "?.md"
     #expect(Glob.expand("\(d)/.*") == ["\(d)/.hidden", "\(d)/.secret"])
     #expect(Glob.expand("\(d)/*/") == ["\(d)/src/", "\(d)/with space/"])
-    #expect(Glob.expand("\(d)/**/*.swift") == ["\(d)/src/deep/y.swift", "\(d)/src/x.swift"]) // not .secret
+    #expect(Glob.expand("\(d)/**/*.swift") == ["\(d)/src/deep/y.swift", "\(d)/src/x.swift"])  // not .secret
     #expect(Glob.expand("\(d)/nothing*").isEmpty)
     #expect(Glob.expand(Glob.escape("\(d)/with space") + "/*") == ["\(d)/with space/z.txt"])
 }
@@ -38,11 +41,11 @@ private func scratch() throws -> String {
     #expect(matches("*.txt", "a.txt") && matches("a*b*c", "aXbYbc") && matches("*", "x"))
     #expect(!matches("*.txt", "a.md") && !matches("a*b", "ac"))
     #expect(matches("[a-c]x", "bx") && !matches("[!a-c]x", "bx") && matches("[^a-c]x", "dx") && matches("[]]", "]"))
-    #expect(matches("?", "?") && !matches("?", "a")) // `?` is literal
+    #expect(matches("?", "?") && !matches("?", "a"))  // `?` is literal
     #expect(matches(#"\*"#, "*") && !matches(#"\*"#, "a"))
     // A leading dot is matched only by a dot.
     #expect(!matches("*", ".hidden") && !matches("[.]h", ".h") && matches(".*", ".hidden"))
-    #expect(matches("[ab", "[ab")) // An unclosed class is literal.
+    #expect(matches("[ab", "[ab"))  // An unclosed class is literal.
 }
 
 @Test func wildcardDetection() {
@@ -59,7 +62,7 @@ private func scratch() throws -> String {
     #expect(try output("echo \(d)/*.txt") == "\(d)/a.txt \(d)/b.txt\n")
     #expect(try output("let dir = \"\(d)/with space\"; echo \"$dir\"/*.txt") == "\(d)/with space/z.txt\n")
     #expect(try output("echo '\(d)/*.txt'") == "\(d)/*.txt\n")
-    #expect(try output("ls \(d)/*.md | get name") == "\(d)/c.md\n") // builtins get the paths too
+    #expect(try output("ls \(d)/*.md | get name") == "\(d)/c.md\n")  // builtins get the paths too
     #expect(try output("test [ = [ && echo ok") == "ok\n")
     let shell = Shell()
     #expect(try output("echo \(d)/*.nope", in: shell) == "")
@@ -82,7 +85,9 @@ private func scratch() throws -> String {
     #expect(try output("sh -c 'echo out; echo err >&2' e>o > \(d)/only | tr a-z A-Z; cat \(d)/only") == "ERR\nout\n")
     #expect(try output("sh -c 'echo out; echo err >&2' o+e> \(d)/amp; cat \(d)/amp") == "out\nerr\n")
     #expect(try output("sh -c 'echo err >&2' e> \(d)/e; cat \(d)/e") == "err\n")
-    #expect(try output("sh -c 'echo err >&2' e> \(d)/e2; sh -c 'echo more >&2' e>> \(d)/e2; cat \(d)/e2") == "err\nmore\n")
+    #expect(
+        try output("sh -c 'echo err >&2' e> \(d)/e2; sh -c 'echo more >&2' e>> \(d)/e2; cat \(d)/e2") == "err\nmore\n"
+    )
 }
 
 @Test func swapThroughDuplicates() throws {

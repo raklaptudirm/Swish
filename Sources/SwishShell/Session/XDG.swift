@@ -1,5 +1,5 @@
-import Swiit
 import Foundation
+import Swiit
 
 /// Where files go, by the XDG Base Directory spec. A relative directory in
 /// any of its variables is ignored, as the spec says.

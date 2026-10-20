@@ -1,5 +1,5 @@
-import Swiit
 import Foundation
+import Swiit
 
 /// A redirect with its file name worked out.
 enum RedirectMode: Equatable, Sendable { case read, write, append }
@@ -31,11 +31,12 @@ struct DescriptorTable {
         for redirect in redirects {
             switch redirect.action {
             case .open(let path, let mode):
-                let flags = switch mode {
-                case .read: O_RDONLY
-                case .write: O_WRONLY | O_CREAT | O_TRUNC
-                case .append: O_WRONLY | O_CREAT | O_APPEND
-                }
+                let flags =
+                    switch mode {
+                    case .read: O_RDONLY
+                    case .write: O_WRONLY | O_CREAT | O_TRUNC
+                    case .append: O_WRONLY | O_CREAT | O_APPEND
+                    }
                 let fd = open(path, flags | O_CLOEXEC, 0o666)
                 guard fd >= 0 else {
                     let message = "\(path): \(errorMessage(errno).lowercased())"
@@ -68,7 +69,9 @@ extension Shell {
     /// itself, and the programs it starts, go where its redirects say.
     /// `body` gets the input (-1 for the shell's own) and output to use.
     func withRedirects<T>(
-        _ redirects: [ResolvedRedirect], input: Int32 = -1, output: Int32? = nil,
+        _ redirects: [ResolvedRedirect],
+        input: Int32 = -1,
+        output: Int32? = nil,
         _ body: (_ input: Int32, _ output: Int32) throws -> T
     ) throws -> T {
         let output = output ?? stdoutFD

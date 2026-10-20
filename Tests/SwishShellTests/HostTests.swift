@@ -1,7 +1,8 @@
 import Foundation
 import Swiit
-@testable import SwishShell
 import Testing
+
+@testable import SwishShell
 
 /// What a test host saw, and what it was told to answer: proof that the
 /// interpreter reaches the world only through its `Interpreter.Host`.
@@ -17,13 +18,28 @@ private final class Recorder: @unchecked Sendable {
 private func shellWithRecorder() -> (Shell, Recorder) {
     let shell = Shell()
     let recorder = Recorder()
-    shell.interpreter.host.output = OutputSink(write: { recorder.written.append("out: " + $0); return true }, traits: { .plain })
-    shell.interpreter.host.error = OutputSink(write: { recorder.written.append("err: " + $0); return true }, traits: { .plain })
+    shell.interpreter.host.output = OutputSink(
+        write: {
+            recorder.written.append("out: " + $0); return true
+        },
+        traits: { .plain }
+    )
+    shell.interpreter.host.error = OutputSink(
+        write: {
+            recorder.written.append("err: " + $0); return true
+        },
+        traits: { .plain }
+    )
     shell.interpreter.host.shouldStop = { recorder.interrupt() }
-    shell.interpreter["env"] = Value(EnvironmentObject(access: EnvironmentAccess(
-        get: { recorder.variables[$0] },
-        all: { recorder.variables.sorted { $0.key < $1.key }.map { (name: $0.key, value: $0.value) } },
-        set: { recorder.variables[$0] = $1 })))
+    shell.interpreter["env"] = Value(
+        EnvironmentObject(
+            access: EnvironmentAccess(
+                get: { recorder.variables[$0] },
+                all: { recorder.variables.sorted { $0.key < $1.key }.map { (name: $0.key, value: $0.value) } },
+                set: { recorder.variables[$0] = $1 }
+            )
+        )
+    )
     return (shell, recorder)
 }
 
@@ -90,7 +106,9 @@ private func errorsOfScript(_ lines: [String]) throws -> (errors: String, status
     #expect(runtime.errors.contains("error: index 7 is out of range for a list of 2\n --> \(runtime.path):3:1\n"))
     #expect(runtime.errors.contains("3 | print(xs[7])\n  | ^^^^^^^^^^^^"))
     // Inside a function: where it was called from too.
-    let called = try errorsOfScript(["func half(_ n: Int) -> Int {", "    let h = 10 / n", "    return h", "}", "print(half(0))"])
+    let called = try errorsOfScript([
+        "func half(_ n: Int) -> Int {", "    let h = 10 / n", "    return h", "}", "print(half(0))",
+    ])
     #expect(called.errors.contains("note: in 'half', called from here\n --> \(called.path):5:1"))
     #expect(called.errors.contains(" --> \(called.path):2:5\n"))
     // A type error: the part of the line that is wrong.
@@ -129,10 +147,13 @@ private func errorsOfScript(_ lines: [String]) throws -> (errors: String, status
 }
 
 @Test func anUnknownOptionSaysWhichSideOfAShadowedCommandItIs() throws {
-    // `ps` is Swish's function, not the program: a flag it lacks says how to reach the program, and never runs it instead.
+    // `ps` is Swish's function, not the program: a flag it lacks says how to reach the program, and never runs it
+    // instead.
     let (shell, recorder) = shellWithRecorder()
     #expect(shell.execute("ps -ax") != 0)
-    #expect(recorder.written.contains { $0.contains("unknown option -a in -ax; this is Swish's ps: ^ps runs the program") })
+    #expect(
+        recorder.written.contains { $0.contains("unknown option -a in -ax; this is Swish's ps: ^ps runs the program") }
+    )
 }
 
 @Test func anInvalidEscapeSaysWhatToWriteInstead() throws {

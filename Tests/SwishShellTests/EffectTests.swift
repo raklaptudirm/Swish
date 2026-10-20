@@ -1,6 +1,7 @@
 import Swiit
-@testable import SwishShell
 import Testing
+
+@testable import SwishShell
 
 // The shell's waits (`$(…)`, commands, `await job`) are blocking calls, not
 // effects: a function that runs commands is an ordinary function, and only
@@ -33,7 +34,13 @@ private func run(_ source: String, in shell: Shell = Shell()) throws -> (output:
     #expect(try run("func fetch() -> Int { 1 }; func use() -> Int { fetch() }", in: shell).status == 0)
     #expect(try run("func fetch() async -> Int { 2 }", in: shell).status == 2)
     // Redeclaring its caller with an `await` too is fine.
-    #expect(try run("func use() async -> Int { await fetch() }; func fetch() async -> Int { 2 }; print(await use())", in: shell).output == "2\n")
+    #expect(
+        try run(
+            "func use() async -> Int { await fetch() }; func fetch() async -> Int { 2 }; print(await use())",
+            in: shell
+        )
+        .output == "2\n"
+    )
 }
 
 @Test func becomingAsyncSaysWhoCallsIt() throws {
@@ -53,11 +60,11 @@ private func run(_ source: String, in shell: Shell = Shell()) throws -> (output:
 
 @Test func errorsOfYourOwnInTheShell() throws {
     let source = """
-    struct Oops: Error { let code: Int }
-    func f() throws { throw Oops(code: 4) }
-    do { try f() } catch let e as Oops { echo "oops \\(e.code)" }
-    do { try $(sh -c 'exit 3') } catch let failure as CommandFailure { echo "status \\(failure.status.code)" }
-    """
+        struct Oops: Error { let code: Int }
+        func f() throws { throw Oops(code: 4) }
+        do { try f() } catch let e as Oops { echo "oops \\(e.code)" }
+        do { try $(sh -c 'exit 3') } catch let failure as CommandFailure { echo "status \\(failure.status.code)" }
+        """
     #expect(try run(source).output == "oops 4\nstatus 3\n")
     // Nothing catching it, it's reported, and the status is a failure.
     let uncaught = try run("struct Oops: Error {}; throw Oops()")

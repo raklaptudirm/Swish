@@ -1,6 +1,7 @@
 import Swiit
-@testable import SwishShell
 import Testing
+
+@testable import SwishShell
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
     try onLargeStack { try shell.capturing { shell.enter(source) } }
@@ -14,11 +15,17 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
     let home = "/h/.config/swish/config.swish"
     #expect(path(["HOME": "/h"], existing: [home]) == home)
     #expect(path(["HOME": "/h"], existing: []) == nil)
-    #expect(path(["HOME": "/h", "XDG_CONFIG_HOME": "/c"], existing: [home, "/c/swish/config.swish"]) == "/c/swish/config.swish")
+    #expect(
+        path(["HOME": "/h", "XDG_CONFIG_HOME": "/c"], existing: [home, "/c/swish/config.swish"])
+            == "/c/swish/config.swish"
+    )
     #expect(path(["HOME": "/h", "XDG_CONFIG_HOME": "relative"], existing: [home]) == home)
     // Then the system's: $XDG_CONFIG_DIRS, or /etc/xdg.
     #expect(path(["HOME": "/h"], existing: ["/etc/xdg/swish/config.swish"]) == "/etc/xdg/swish/config.swish")
-    #expect(path(["HOME": "/h", "XDG_CONFIG_DIRS": "/a:rel:/b"], existing: ["/b/swish/config.swish"]) == "/b/swish/config.swish")
+    #expect(
+        path(["HOME": "/h", "XDG_CONFIG_DIRS": "/a:rel:/b"], existing: ["/b/swish/config.swish"])
+            == "/b/swish/config.swish"
+    )
     // $SWISH_CONFIG picks one outright, or none when it's empty.
     #expect(path(["HOME": "/h", "SWISH_CONFIG": "/mine.swish"], existing: [home]) == "/mine.swish")
     #expect(path(["HOME": "/h", "SWISH_CONFIG": ""], existing: [home]) == nil)
@@ -40,5 +47,8 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 }
 
 @Test func styledTextIsPlainOffATerminal() throws {
-    #expect(try output(#""x".styled(.red, .bold); let c = true ? TextStyle.green : .red; "y".styled(c) + "!""#) == "\"x\"\n\"y!\"\n")
+    #expect(
+        try output(#""x".styled(.red, .bold); let c = true ? TextStyle.green : .red; "y".styled(c) + "!""#)
+            == "\"x\"\n\"y!\"\n"
+    )
 }

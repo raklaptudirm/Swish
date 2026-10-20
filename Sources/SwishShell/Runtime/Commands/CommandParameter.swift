@@ -14,7 +14,11 @@ struct CommandParameter {
     /// `-a` for `--all`.
     var shortFlag: Character?
 
-    init(_ parameter: Symbol.Parameter, of function: String, marks table: [String: CommandMarks.Marks] = CommandMarks.table) {
+    init(
+        _ parameter: Symbol.Parameter,
+        of function: String,
+        marks table: [String: CommandMarks.Marks] = CommandMarks.table
+    ) {
         label = parameter.label
         name = parameter.name
         type = parameter.type
@@ -27,7 +31,14 @@ struct CommandParameter {
         shortFlag = marks?.shortFlag
     }
 
-    init(label: String? = nil, name: String, type: ValueType, hasDefault: Bool = false, isVariadic: Bool = false, isInput: Bool = false) {
+    init(
+        label: String? = nil,
+        name: String,
+        type: ValueType,
+        hasDefault: Bool = false,
+        isVariadic: Bool = false,
+        isInput: Bool = false
+    ) {
         self.label = label
         self.name = name
         self.type = type
@@ -52,7 +63,8 @@ func kebabCase(_ label: String) -> String {
     }
 }
 
-/// What the shell knows about a function's parameters that Swift's declaration can't say: which one a pipe feeds, and the short
+/// What the shell knows about a function's parameters that Swift's declaration can't say: which one a pipe feeds, and
+/// the short
 /// flag of an option. Keyed `function.parameter`.
 enum CommandMarks {
     struct Marks: Sendable {
@@ -89,6 +101,8 @@ struct Callee {
     var label: String { shownName ?? name }
 
     var parameters: [[CommandParameter]] {
-        overloads.map { symbol in (symbol.function?.parameters ?? []).map { CommandParameter($0, of: name, marks: marks) } }
+        overloads.map { symbol in
+            (symbol.function?.parameters ?? []).map { CommandParameter($0, of: name, marks: marks) }
+        }
     }
 }

@@ -1,7 +1,8 @@
-import Swiit
-@testable import SwishShell
 import Foundation
+import Swiit
 import Testing
+
+@testable import SwishShell
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
     try onLargeStack { try shell.capturing { shell.enter(source) } }
@@ -14,29 +15,46 @@ private func status(_ source: String) -> Int32 {
 }
 
 @Test func asyncStartsAJobAndAwaitWaitsForIt() throws {
-    #expect(try output("let j = async sleep 0.2; j.state; j.id; let r = await j; j.state; r.status.code") == "JobState.running\n1\nJobState.done\n0\n")
+    #expect(
+        try output("let j = async sleep 0.2; j.state; j.id; let r = await j; j.state; r.status.code")
+            == "JobState.running\n1\nJobState.done\n0\n"
+    )
     #expect(try output("async sleep 0.1") == "[1] running  sleep 0.1\n")
 }
 
 @Test func asyncCapturesOutput() throws {
-    #expect(try output(#"let p = async $(sh -c 'sleep 0.1; echo fetched'); echo meanwhile; (await p).text"#) == "meanwhile\n\"fetched\"\n")
+    #expect(
+        try output(#"let p = async $(sh -c 'sleep 0.1; echo fetched'); echo meanwhile; (await p).text"#)
+            == "meanwhile\n\"fetched\"\n"
+    )
 }
 
 @Test func awaitGivesTheOutputAndTryThrows() throws {
     #expect(try output(#"let f = async sh -c 'exit 3'; let r = await f; r.status.code"#) == "3\n")
-    #expect(try output(#"let f = async sh -c 'exit 3'; do { try await f } catch { if let f = error as? CommandFailure { echo "caught \(f.status.code)" } }"#) == "caught 3\n")
+    #expect(
+        try output(
+            #"let f = async sh -c 'exit 3'; do { try await f } catch { if let f = error as? CommandFailure { echo "caught \(f.status.code)" } }"#
+        ) == "caught 3\n"
+    )
     #expect(status(#"let f = async sh -c 'exit 3'; try await f"#) == 3)
     // An awaited Output's status is the statement's.
-    #expect(try output("let j = async true; await j && echo ok; let k = async false; await k || echo failed") == "ok\nfailed\n")
+    #expect(
+        try output("let j = async true; await j && echo ok; let k = async false; await k || echo failed")
+            == "ok\nfailed\n"
+    )
 }
 
 @Test func jobsAndBareAwait() throws {
     // Which jobs there are, not how far along: a slow machine may finish one,
     // or both, already. A bare `await` waits for the latest; the other is
     // awaited by name, as a finished job may have been announced and gone.
-    #expect(try output("let a = async sleep 0.1; let b = async sleep 0.2; jobs.map { $0.command }; jobs.count; await; await a; jobs.count")
-        == "[\"sleep 0.1\", \"sleep 0.2\"]\n2\n0\n")
-    #expect(status("await") == 1) // nothing to await
+    #expect(
+        try output(
+            "let a = async sleep 0.1; let b = async sleep 0.2; jobs.map { $0.command }; jobs.count; await; await a; jobs.count"
+        )
+            == "[\"sleep 0.1\", \"sleep 0.2\"]\n2\n0\n"
+    )
+    #expect(status("await") == 1)  // nothing to await
 }
 
 @Test func jobsAreDataForTablesAndPipelines() throws {
@@ -56,7 +74,10 @@ private func status(_ source: String) -> Int32 {
 }
 
 @Test func cancellingAJob() throws {
-    #expect(try output("let j = async sleep 5; j.cancel(); let r = await j; r.status.signal; j.state") == "15\nJobState.cancelled\n")
+    #expect(
+        try output("let j = async sleep 5; j.cancel(); let r = await j; r.status.signal; j.state")
+            == "15\nJobState.cancelled\n"
+    )
 }
 
 @Test func finishedJobsAreAnnouncedOnce() throws {
@@ -71,14 +92,17 @@ private func status(_ source: String) -> Int32 {
 }
 
 @Test func jobMembers() throws {
-    #expect(try output("let j = async sleep 0.1; j.command; j.pids.count; j.output == nil; await j; j.output!.status.code") == "\"sleep 0.1\"\n1\ntrue\n0\n")
+    #expect(
+        try output("let j = async sleep 0.1; j.command; j.pids.count; j.output == nil; await j; j.output!.status.code")
+            == "\"sleep 0.1\"\n1\ntrue\n0\n"
+    )
     let names = try output("let j = async sleep 0.1; j | members | get name; await j")
     #expect(names == "id\ncommand\nstate\npids\noutput\nlines\nresume\ncancel\n")
 }
 
 @Test func whatAsyncAndAwaitRefuse() {
     #expect(status("await 5") == 2)
-    #expect(status("await") == 1) // nothing to await
+    #expect(status("await") == 1)  // nothing to await
 }
 
 // Swish code as a task of its own, on a thread behind the interpreter's lock
@@ -91,7 +115,10 @@ private func run(_ source: String) throws -> String {
 
 @Test func aTaskGivesItsValueToAwait() throws {
     #expect(try run("let t = async 1 + 2; print(await t)") == "3\n")
-    #expect(try run("func twice(_ n: Int) -> Int { n * 2 }; let t = async twice(21); let n: Int = await t; print(n)") == "42\n")
+    #expect(
+        try run("func twice(_ n: Int) -> Int { n * 2 }; let t = async twice(21); let n: Int = await t; print(n)")
+            == "42\n"
+    )
     #expect(try run("let t = async { let a = 2; return a * 5 }; print(await t)") == "10\n")
     // A command with Swish in it runs as a task too, and gives its Output, as a command's job does.
     #expect(try run("func f() { echo hi }; let j = async f; print((await j).text)") == "hi\n")
@@ -100,37 +127,63 @@ private func run(_ source: String) throws -> String {
 @Test func tasksRunWhileOthersWait() throws {
     // Each waits 0.6 s on a program; together they take about that long, and one after the other they would take 1.2 s.
     let start = Date()
-    #expect(try run("let a = async { $(sleep 0.6); return 1 }; let b = async { $(sleep 0.6); return 2 }; print((await a) + (await b))") == "3\n")
+    #expect(
+        try run(
+            "let a = async { $(sleep 0.6); return 1 }; let b = async { $(sleep 0.6); return 2 }; print((await a) + (await b))"
+        ) == "3\n"
+    )
     #expect(Date().timeIntervalSince(start) < 1.15)
     // The task that started them carries on while they wait.
-    #expect(try run("let t = async { $(sleep 0.3); print(\"later\") }; print(\"now\"); await t; print(t.output!.text)") == "now\nlater\nlater\n")
+    #expect(
+        try run("let t = async { $(sleep 0.3); print(\"later\") }; print(\"now\"); await t; print(t.output!.text)")
+            == "now\nlater\nlater\n"
+    )
 }
 
 @Test func tasksShareTheGlobalsAndKeepTheirOutput() throws {
-    #expect(try run("var n = 0; let t = async { for _ in 1...3 { n += 1; $(sleep 0.05) } }; await t; print(n)") == "3\n")
+    #expect(
+        try run("var n = 0; let t = async { for _ in 1...3 { n += 1; $(sleep 0.05) } }; await t; print(n)") == "3\n"
+    )
     // What a task prints is kept on its job while it runs in the background, and written when it is awaited.
-    #expect(try run("let t = async { print(\"inside\") }; await t; print(\"[\" + t.output!.text + \"]\")") == "inside\n[inside]\n")
+    #expect(
+        try run("let t = async { print(\"inside\") }; await t; print(\"[\" + t.output!.text + \"]\")")
+            == "inside\n[inside]\n"
+    )
     #expect(try run("let t = async { print(\"inside\") }; $(sleep 0.2); print(t.output ?? \"running\")") != "inside\n")
 }
 
 @Test func awaitingATaskShowsWhatItPrintsAsItPrints() throws {
     // Printed so far, then the rest as it comes: the awaiting task writes it, in order, once.
-    #expect(try run(#"let t = async { print("a"); $(sleep 0.2); print("b"); return 1 }; $(sleep 0.1); print(await t)"#) == "a\nb\n1\n")
-    #expect(try run(#"func f() { print("in f"); print("twice") }; let j = async f(); await j; await j; print("end")"#) == "in f\ntwice\nend\n")
+    #expect(
+        try run(#"let t = async { print("a"); $(sleep 0.2); print("b"); return 1 }; $(sleep 0.1); print(await t)"#)
+            == "a\nb\n1\n"
+    )
+    #expect(
+        try run(#"func f() { print("in f"); print("twice") }; let j = async f(); await j; await j; print("end")"#)
+            == "in f\ntwice\nend\n"
+    )
     // A task that gives an Output keeps it for the value, and prints nothing itself.
     #expect(try run(#"let j = async $(echo hi); let o = await j; print("got", o)"#) == "got hi\n")
     // What is written while the awaiting is captured is part of the capture.
     #expect(try run(#"let t = async { print("x") }; let s = $(await t); print("[\(s)]")"#) == "[x]\n")
     // And a task awaited while it is still printing shows it live: the first line is out before the task ends.
-    let host = try run(#"let t = async { print("first"); $(sleep 0.6); print("last") }; let start = Date(); await t; print("took", Date().timeIntervalSince(start) > 0.5)"#)
+    let host = try run(
+        #"let t = async { print("first"); $(sleep 0.6); print("last") }; let start = Date(); await t; print("took", Date().timeIntervalSince(start) > 0.5)"#
+    )
     #expect(host == "first\nlast\ntook true\n")
 }
 
 @Test func aTaskIsCancelledAndItsErrorsReachAwait() throws {
     // A task that never waits stops when it's cancelled, at its next step.
-    #expect(try run("let t = async { var n = 0; while true { n += 1 } }; t.cancel(); let r = try? await t; print(t.state)") == "cancelled\n")
+    #expect(
+        try run("let t = async { var n = 0; while true { n += 1 } }; t.cancel(); let r = try? await t; print(t.state)")
+            == "cancelled\n"
+    )
     // What it threw, `try await` throws.
-    #expect(try run("let t = async { try $(sh -c 'exit 3') }; do { let r = try await t } catch { print(\"caught\") }") == "caught\n")
+    #expect(
+        try run("let t = async { try $(sh -c 'exit 3') }; do { let r = try await t } catch { print(\"caught\") }")
+            == "caught\n"
+    )
 }
 
 @Test func tasksAreJobs() throws {
@@ -148,10 +201,20 @@ private func run(_ source: String) throws -> String {
     let endless = #"let j = async $(sh -c 'echo first; echo second; exec sleep 30'); "#
     #expect(try output(endless + "j.lines() | prefix 1; j.cancel()") == "first\n")
     // Reading goes on from the last line read, in a loop as in a pipeline.
-    #expect(try output(endless + #"j.lines() | prefix 1; for line in j.lines() { echo "got \(line)"; break }; j.cancel()"#) == "first\ngot second\n")
-    #expect(try output(#"let k = async $(sh -c 'echo a; sleep 0.2; printf b'); for line in k.lines() { echo "line \(line)" }"#) == "line a\nline b\n")
+    #expect(
+        try output(endless + #"j.lines() | prefix 1; for line in j.lines() { echo "got \(line)"; break }; j.cancel()"#)
+            == "first\ngot second\n"
+    )
+    #expect(
+        try output(
+            #"let k = async $(sh -c 'echo a; sleep 0.2; printf b'); for line in k.lines() { echo "line \(line)" }"#
+        ) == "line a\nline b\n"
+    )
     // Done, what it has left is its output's lines, and the Output is whole.
-    #expect(try output(#"let k = async $(sh -c 'echo a; echo b'); await k; k.lines() | map { $0 + "!" }"#).hasSuffix("a!\nb!\n"))
+    #expect(
+        try output(#"let k = async $(sh -c 'echo a; echo b'); await k; k.lines() | map { $0 + "!" }"#)
+            .hasSuffix("a!\nb!\n")
+    )
 }
 
 // Cancellation wakes a wait, and a task ends with the scope that started it
@@ -159,16 +222,25 @@ private func run(_ source: String) throws -> String {
 
 @Test func cancellingATaskEndsWhatItWaitsFor() throws {
     let start = Date()
-    #expect(try run("let t = async { $(sleep 100) }; t.cancel(); let r = try? await t; print(t.state)") == "cancelled\n")
+    #expect(
+        try run("let t = async { $(sleep 100) }; t.cancel(); let r = try? await t; print(t.state)") == "cancelled\n"
+    )
     // A task awaiting another is woken too, and the other carries on.
-    #expect(try run("let a = async { $(sleep 0.3); return 1 }; let b = async { await a }; b.cancel(); let r = try? await b; print(b.state, await a)") == "cancelled 1\n")
+    #expect(
+        try run(
+            "let a = async { $(sleep 0.3); return 1 }; let b = async { await a }; b.cancel(); let r = try? await b; print(b.state, await a)"
+        ) == "cancelled 1\n"
+    )
     #expect(Date().timeIntervalSince(start) < 5)
 }
 
 @Test func aTaskEndsWithTheScopeThatStartedIt() throws {
     let start = Date()
     // A function returning cancels and waits for what it started.
-    #expect(try run("var done = false; func g() { let t = async { $(sleep 100); done = true } }; g(); print(done)") == "false\n")
+    #expect(
+        try run("var done = false; func g() { let t = async { $(sleep 100); done = true } }; g(); print(done)")
+            == "false\n"
+    )
     // So does a task's body, for its own tasks.
     #expect(try run("let outer = async { let inner = async { $(sleep 100) }; return 1 }; print(await outer)") == "1\n")
     #expect(Date().timeIntervalSince(start) < 5)
@@ -192,7 +264,8 @@ private func run(_ source: String) throws -> String {
     }
     _ = "hello\n".withCString { write(pipe.write, $0, 6) }
     close(pipe.write)
-    let source = "var read = false; let t = async { let line = readLine(); read = true; return line }; "
+    let source =
+        "var read = false; let t = async { let line = readLine(); read = true; return line }; "
         + "$(sleep 0.2); print(read); print((await t) ?? \"none\"); print(read)"
     #expect(try run(source) == "false\nhello\ntrue\n")
 }
@@ -201,21 +274,27 @@ private func run(_ source: String) throws -> String {
 
 @Test func swiftsTaskRunsInTheShell() throws {
     // Unlike `async { … }`, it isn't a job: it writes where its starter writes.
-    #expect(try run("let t = Task { print(\"inside\"); return 2 }; let n = await t.value; print(n * 3, jobs.count)") == "inside\n6 0\n")
+    #expect(
+        try run("let t = Task { print(\"inside\"); return 2 }; let n = await t.value; print(n * 3, jobs.count)")
+            == "inside\n6 0\n"
+    )
     #expect(try run("let t = Task { $(sh -c 'echo hi').text }; print(await t.value)") == "hi\n")
 }
 
 @Test func asyncLetAndForTryAwaitInTheShell() throws {
     let start = Date()
     let source = """
-    func slow(_ n: Int) async -> Int { try? await Task.sleep(nanoseconds: 300_000_000); return n }
-    async let a = slow(1)
-    async let b = slow(2)
-    print(await a + b)
-    """
+        func slow(_ n: Int) async -> Int { try? await Task.sleep(nanoseconds: 300_000_000); return n }
+        async let a = slow(1)
+        async let b = slow(2)
+        print(await a + b)
+        """
     #expect(try run(source) == "3\n")
     #expect(Date().timeIntervalSince(start) < 0.55)
-    #expect(try run(#"let j = async $(sh -c 'echo a; echo b'); for try await line in j.lines() { print("got", line) }"#) == "got a\ngot b\n")
+    #expect(
+        try run(#"let j = async $(sh -c 'echo a; echo b'); for try await line in j.lines() { print("got", line) }"#)
+            == "got a\ngot b\n"
+    )
     #expect(try run("_ = 1 + 1; let _ = 2; print(\"ok\")") == "ok\n")
 }
 

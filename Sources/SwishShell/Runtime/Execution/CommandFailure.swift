@@ -8,15 +8,25 @@ extension ScriptError {
     /// `CommandFailure`, with how it ended (`status.code`, `status.signal`)
     /// and the `text` it wrote.
     static func commandFailure(_ message: String, status: Int32, output: Output) -> ScriptError {
-        ScriptError(message, status: status, value: Value(struct: "CommandFailure", fields: [
-            "message": Value(message),
-            "status": Value(struct: "Status", fields: [
-                "code": output.code.map { Value($0) } ?? Value.null,
-                "signal": output.signal.map { Value($0) } ?? Value.null,
-                "succeeded": Value(false),
-            ]),
-            "text": Value(output.text),
-            "localizedDescription": Value(message),
-        ]))
+        ScriptError(
+            message,
+            status: status,
+            value: Value(
+                struct: "CommandFailure",
+                fields: [
+                    "message": Value(message),
+                    "status": Value(
+                        struct: "Status",
+                        fields: [
+                            "code": output.code.map { Value($0) } ?? Value.null,
+                            "signal": output.signal.map { Value($0) } ?? Value.null,
+                            "succeeded": Value(false),
+                        ]
+                    ),
+                    "text": Value(output.text),
+                    "localizedDescription": Value(message),
+                ]
+            )
+        )
     }
 }

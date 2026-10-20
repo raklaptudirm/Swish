@@ -1,5 +1,5 @@
-import Swiit
 import Foundation
+import Swiit
 
 // What a command and a pipeline are in Swift: the prelude's `Command` and
 // `Pipeline` (Library+Shell.swift), built by hand or by the rewrite of the
@@ -21,7 +21,9 @@ extension Shell {
             "runQuietly": { [unowned self] in statusValue(try run($0, from: $1, display: false)) },
             "check": { [unowned self] in try check($0, from: $1) },
             "output": { [unowned self] in .output(try output($0, from: $1)) },
-            "start": { [unowned self] in Value(try startJob(try stages($0, from: $1), source: source($0, from: $1), capture: false)) },
+            "start": { [unowned self] in
+                Value(try startJob(try stages($0, from: $1), source: source($0, from: $1), capture: false))
+            },
             "startCapturing": { [unowned self] in
                 Value(try startJob(try stages($0, from: $1), source: source($0, from: $1), capture: true))
             },
@@ -32,7 +34,9 @@ extension Shell {
             // A command alone, or a pipeline's commands and what it is fed.
             bodies["Command." + name] = { arguments in try method([arguments["self"] ?? .null], nil) }
             bodies["Pipeline." + name] = { arguments in
-                guard let pipeline = arguments["self"], let commands = pipeline.field("commands")?.cast(to: [Value].self) else {
+                guard let pipeline = arguments["self"],
+                    let commands = pipeline.field("commands")?.cast(to: [Value].self)
+                else {
                     throw RuntimeError("not a Pipeline")
                 }
                 return try method(commands, pipeline.field("input").flatMap { $0.kind == .nothing ? nil : $0 })
@@ -88,8 +92,11 @@ extension Shell {
         let status = try run(commands, from: input, display: true)
         if status != 0 {
             let (code, signal) = exitCode(status)
-            throw RuntimeError.commandFailure("\(source(commands, from: input)) failed with status \(status)", status: status,
-                                              output: Output(text: "", code: code, signal: signal))
+            throw RuntimeError.commandFailure(
+                "\(source(commands, from: input)) failed with status \(status)",
+                status: status,
+                output: Output(text: "", code: code, signal: signal)
+            )
         }
         return statusValue(status)
     }
@@ -113,7 +120,9 @@ extension Shell {
     /// `Output` how its command ended; anything else succeeded.
     func status(of value: Value) -> Int32 {
         if let truth = value.cast(to: Bool.self) { return truth ? 0 : 1 }
-        if value.kind == .structure, value.typeName == "Status", let succeeded = value.field("succeeded")?.cast(to: Bool.self) {
+        if value.kind == .structure, value.typeName == "Status",
+            let succeeded = value.field("succeeded")?.cast(to: Bool.self)
+        {
             if succeeded { return 0 }
             if let code = value.field("code")?.cast(to: Int.self) { return Int32(code) }
             if let signal = value.field("signal")?.cast(to: Int.self) { return 128 + Int32(signal) }
@@ -129,11 +138,14 @@ extension Shell {
     /// A command statement's value: how it ended.
     func statusValue(_ status: Int32) -> Value {
         let (code, signal) = exitCode(status)
-        return Value(struct: "Status", fields: [
-            "code": code.map { Value($0) } ?? Value.null,
-            "signal": signal.map { Value($0) } ?? Value.null,
-            "succeeded": Value(status == 0),
-        ])
+        return Value(
+            struct: "Status",
+            fields: [
+                "code": code.map { Value($0) } ?? Value.null,
+                "signal": signal.map { Value($0) } ?? Value.null,
+                "succeeded": Value(status == 0),
+            ]
+        )
     }
 
     func stages(_ commands: [Value], from input: Value?) throws -> [Stage] {
@@ -144,14 +156,17 @@ extension Shell {
     func source(_ commands: [Value], from input: Value?) -> String {
         let typed = commands.map { command -> String in
             guard let words = command.field("words")?.cast(to: [Value].self) else { return command.description }
-            return (command.field("isExternal")?.cast(to: Bool.self) == true ? "^" : "") + words.map(Shell.shellWord).joined(separator: " ")
+            return (command.field("isExternal")?.cast(to: Bool.self) == true ? "^" : "")
+                + words.map(Shell.shellWord).joined(separator: " ")
         }
         return ((input.map { [$0.debugDescription] } ?? []) + typed).joined(separator: " | ")
     }
 
     /// A word as a shell would show it: quoted when it has spaces or quotes.
     private static func shellWord(_ value: Value) -> String {
-        if value.kind == .structure, value.typeName == "Glob", let pattern = value.field("pattern")?.cast(to: String.self) {
+        if value.kind == .structure, value.typeName == "Glob",
+            let pattern = value.field("pattern")?.cast(to: String.self)
+        {
             return Glob.unescape(pattern)
         }
         guard let text = value.cast(to: String.self) else { return value.description }
@@ -187,12 +202,15 @@ extension Shell {
     }
 
     private func redirect(_ value: Value) throws -> ResolvedRedirect {
-        guard let fd = value.field("fd")?.cast(to: Int.self), let mode = value.field("mode")?.cast(to: String.self) else {
+        guard let fd = value.field("fd")?.cast(to: Int.self), let mode = value.field("mode")?.cast(to: String.self)
+        else {
             throw RuntimeError("\(value.typeName) isn't a Redirection")
         }
         let modes: [String: RedirectMode] = ["read": .read, "write": .write, "append": .append]
         guard let open = modes[mode] else {
-            guard mode == "send", let other = value.field("other")?.cast(to: Int.self) else { throw RuntimeError("no redirection '\(mode)'") }
+            guard mode == "send", let other = value.field("other")?.cast(to: Int.self) else {
+                throw RuntimeError("no redirection '\(mode)'")
+            }
             return ResolvedRedirect(fd: Int32(fd), action: .duplicate(Int32(other)))
         }
         let paths = try arguments(value.field("path") ?? .null)
@@ -214,7 +232,9 @@ extension Shell {
             guard let pattern = word.field("pattern")?.cast(to: String.self) else { return [] }
             return try expand(pattern).map(CommandArgument.text)
         case .structure where word.typeName == "Spread":
-            guard let items = word.field("value")?.cast(to: [Value].self) else { return [.text(word.field("value")?.description ?? "")] }
+            guard let items = word.field("value")?.cast(to: [Value].self) else {
+                return [.text(word.field("value")?.description ?? "")]
+            }
             return items.map { .text($0.description) }
         default:
             return [.text(word.description)]

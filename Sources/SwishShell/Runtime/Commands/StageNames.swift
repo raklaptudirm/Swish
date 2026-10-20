@@ -7,7 +7,8 @@ import Swiit
 struct StageNames {
     /// Every member of Swift's own types a stage could call: one that reads its receiver without changing it.
     var all: Set<String> = []
-    /// Those that are methods: a bare one, with nothing piped in, has nothing to work on (a property's name could be a program's).
+    /// Those that are methods: a bare one, with nothing piped in, has nothing to work on (a property's name could be a
+    /// program's).
     var methods: Set<String> = []
     /// The methods of the items as they come, which return the items as they come.
     var flow: Set<String> = []
@@ -60,31 +61,42 @@ extension Shell {
         return names
     }
 
-    /// Whether some type has a member called `name` that a stage could call: a Swift type's, a struct's in scope, or a job's.
+    /// Whether some type has a member called `name` that a stage could call: a Swift type's, a struct's in scope, or a
+    /// job's.
     func isMemberName(_ name: String) -> Bool {
         if stageNames.all.contains(name) || Job.members.contains(where: { $0.name == name }) { return true }
-        return interpreter.types().contains { type in
-            !type.isBuiltin && interpreter.symbols(named: name, of: .named(type.name)).contains { $0.function != nil }
-        }
+        return interpreter.types()
+            .contains { type in
+                !type.isBuiltin
+                    && interpreter.symbols(named: name, of: .named(type.name)).contains { $0.function != nil }
+            }
     }
 
-    /// Whether `name` is a method some type has that a stage could call, and that makes no sense without something piped in.
+    /// Whether `name` is a method some type has that a stage could call, and that makes no sense without something
+    /// piped in.
     func isStageMethod(_ name: String) -> Bool {
         stageNames.methods.contains(name)
     }
 
     /// The members of a type named `name`, as a callee a stage can call on a receiver made as `receiver` says.
-    func stageCallee(_ name: String, of type: ValueType, receiver: StageReceiver, includingMutating: Bool = false) -> Callee? {
-        let members = interpreter.symbols(named: name, of: type).filter { symbol in
-            if let function = symbol.function { return includingMutating || !function.isMutating }
-            if case .variable = symbol.declaration { return true }
-            return false
-        }
+    func stageCallee(
+        _ name: String,
+        of type: ValueType,
+        receiver: StageReceiver,
+        includingMutating: Bool = false
+    ) -> Callee? {
+        let members = interpreter.symbols(named: name, of: type)
+            .filter { symbol in
+                if let function = symbol.function { return includingMutating || !function.isMutating }
+                if case .variable = symbol.declaration { return true }
+                return false
+            }
         guard !members.isEmpty else { return nil }
         return Callee(name: name, overloads: members, receiver: receiver)
     }
 
-    /// What `name` is after a `|`: a method of the items as they come (a `Flow`'s), or what every sequence has, or one of any
+    /// What `name` is after a `|`: a method of the items as they come (a `Flow`'s), or what every sequence has, or one
+    /// of any
     /// type's. In the order the stage looks.
     func stageMethods(named name: String) -> Callee? {
         stageCallee(name, of: .named("Flow", [.any]), receiver: .flow)
@@ -92,12 +104,14 @@ extension Shell {
             ?? stageFunctions(named: name)
     }
 
-    /// Every Swift type's stage members named `name`, as one callee: what's known of a stage while typing, before the type of
+    /// Every Swift type's stage members named `name`, as one callee: what's known of a stage while typing, before the
+    /// type of
     /// what's piped into it is.
     func stageFunctions(named name: String) -> Callee? {
-        let candidates = interpreter.types().filter(\.isBuiltin).sorted { $0.name < $1.name }.flatMap {
-            stageCallee(name, of: .named($0.name), receiver: .collected)?.overloads ?? []
-        }
+        let candidates = interpreter.types().filter(\.isBuiltin).sorted { $0.name < $1.name }
+            .flatMap {
+                stageCallee(name, of: .named($0.name), receiver: .collected)?.overloads ?? []
+            }
         return candidates.isEmpty ? nil : Callee(name: name, overloads: candidates, receiver: .collected)
     }
 }

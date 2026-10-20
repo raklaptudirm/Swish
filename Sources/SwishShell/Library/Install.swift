@@ -2,8 +2,10 @@ import Foundation
 import Swiit
 import SystemPackage
 
-// What the shell adds to the language, told to the interpreter through its public interface: Swift types it holds as they
-// are (a size, a column, a command's output), and the declarations of its own functions and types, whose bodies are in Swift.
+// What the shell adds to the language, told to the interpreter through its public interface: Swift types it holds as
+// they
+// are (a size, a column, a command's output), and the declarations of its own functions and types, whose bodies are in
+// Swift.
 
 extension Shell {
     /// Teaches the interpreter the shell's own: `ls`, `ps`, `pwd`, `from`, `to`, `help`, and the types they use.
@@ -55,7 +57,9 @@ extension Shell {
         add("pwd") { _ in Value(boxing: pwd(), as: "FilePath") }
         add("with") { [unowned self] arguments in
             var variables: [String: String] = [:]
-            for (key, value) in arguments["variables"]?.entries ?? ValueDictionary() { variables[key.description] = value.description }
+            for (key, value) in arguments["variables"]?.entries ?? ValueDictionary() {
+                variables[key.description] = value.description
+            }
             guard let body = arguments["body"] else { return .null }
             return try with(env: variables) { try callBlock(body) }
         }
@@ -68,7 +72,8 @@ extension Shell {
         add("ps") { [unowned self] _ in Value(ps().map { $0.value(in: interpreter) }) }
         add("history") { [unowned self] _ in Value(historyEntries.map { Value($0) }) }
         add("readLine") { arguments in
-            readLine(strippingNewline: arguments["strippingNewline"]?.cast(to: Bool.self) ?? true).map { Value($0) } ?? .null
+            readLine(strippingNewline: arguments["strippingNewline"]?.cast(to: Bool.self) ?? true).map { Value($0) }
+                ?? .null
         }
         add("shellStyled") { [unowned self] arguments in
             let text = arguments["text"]?.description ?? ""
@@ -90,7 +95,9 @@ extension Shell {
         add("capture") { [unowned self] arguments in try captureBody(arguments) }
         add("captureThrowing") { [unowned self] arguments in try captureThrowingBody(arguments) }
         add("startTask") { [unowned self] arguments in
-            guard let source = arguments["source"]?.cast(to: String.self), let body = arguments["body"] else { return .null }
+            guard let source = arguments["source"]?.cast(to: String.self), let body = arguments["body"] else {
+                return .null
+            }
             return Value(try startTask(source: source) { try self.callBlock(body) })
         }
         add("displayItems") { [unowned self] arguments in
@@ -126,43 +133,57 @@ extension Shell {
 extension FileEntry {
     /// The struct `ls` gives for it.
     func value(in interpreter: Interpreter) -> Value {
-        Value(struct: "FileEntry", fields: [
-            "name": Value(name), "type": interpreter.value(ofCase: "\(type)", in: "FileType") ?? .null,
-            "size": size.value, "modified": Value(boxing: modified, as: "Date"), "permissions": Value(permissions),
-            "owner": Value(owner), "created": Value(boxing: created, as: "Date"), "accessed": Value(boxing: accessed, as: "Date"),
-            "path": Value(boxing: path, as: "FilePath"), "target": target.map { Value(boxing: $0, as: "FilePath") } ?? .null,
-        ])
+        Value(
+            struct: "FileEntry",
+            fields: [
+                "name": Value(name), "type": interpreter.value(ofCase: "\(type)", in: "FileType") ?? .null,
+                "size": size.value, "modified": Value(boxing: modified, as: "Date"), "permissions": Value(permissions),
+                "owner": Value(owner), "created": Value(boxing: created, as: "Date"),
+                "accessed": Value(boxing: accessed, as: "Date"),
+                "path": Value(boxing: path, as: "FilePath"),
+                "target": target.map { Value(boxing: $0, as: "FilePath") } ?? .null,
+            ]
+        )
     }
 }
 
 extension ProcessEntry {
     /// The struct `ps` gives for it.
     func value(in interpreter: Interpreter) -> Value {
-        Value(struct: "ProcessEntry", fields: [
-            "pid": Value(pid), "ppid": Value(ppid), "name": Value(name), "user": Value(user),
-            "memory": memory.map { $0.value } ?? .null, "cpuTime": cpuTime.map { Value($0) } ?? .null,
-            "threads": threads.map { Value($0) } ?? .null,
-        ])
+        Value(
+            struct: "ProcessEntry",
+            fields: [
+                "pid": Value(pid), "ppid": Value(ppid), "name": Value(name), "user": Value(user),
+                "memory": memory.map { $0.value } ?? .null, "cpuTime": cpuTime.map { Value($0) } ?? .null,
+                "threads": threads.map { Value($0) } ?? .null,
+            ]
+        )
     }
 }
 
 extension InputFormat {
     init(_ value: Value) throws {
-        guard let found = Self.allCases.first(where: { "\($0)" == value.enumCase?.name }) else { throw LibraryError("expected an InputFormat") }
+        guard let found = Self.allCases.first(where: { "\($0)" == value.enumCase?.name }) else {
+            throw LibraryError("expected an InputFormat")
+        }
         self = found
     }
 }
 
 extension OutputFormat {
     init(_ value: Value) throws {
-        guard let found = Self.allCases.first(where: { "\($0)" == value.enumCase?.name }) else { throw LibraryError("expected an OutputFormat") }
+        guard let found = Self.allCases.first(where: { "\($0)" == value.enumCase?.name }) else {
+            throw LibraryError("expected an OutputFormat")
+        }
         self = found
     }
 }
 
 extension TextStyle {
     init(_ value: Value) throws {
-        guard let found = Self.allCases.first(where: { "\($0)" == value.enumCase?.name }) else { throw LibraryError("expected a TextStyle") }
+        guard let found = Self.allCases.first(where: { "\($0)" == value.enumCase?.name }) else {
+            throw LibraryError("expected a TextStyle")
+        }
         self = found
     }
 }

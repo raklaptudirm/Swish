@@ -1,6 +1,7 @@
-import Swiit
-@testable import SwishShell
 import Foundation
+import Swiit
+
+@testable import SwishShell
 
 // What the help tests need from Foundation's AttributedString. In a file of
 // their own: Foundation can't be imported next to Testing here.
@@ -10,7 +11,8 @@ import Foundation
 /// run's own style (itself possibly nil) otherwise.
 func runStyle(of word: String, inSignature signature: String, ofType type: String, shell: Shell) -> DisplayStyle?? {
     guard let members = shell.interpreter.typeDescription(named: type)?.members,
-          let text = members.first(where: { $0.signature.plain == signature })?.signature else { return nil }
+        let text = members.first(where: { $0.signature.plain == signature })?.signature
+    else { return nil }
     return text.runs.first { String(text[$0.range].characters) == word }.map { $0.swiit.displayStyle }
 }
 

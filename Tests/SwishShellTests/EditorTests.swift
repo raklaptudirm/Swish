@@ -1,6 +1,7 @@
 import Swiit
-@testable import SwishShell
 import Testing
+
+@testable import SwishShell
 
 // MARK: History
 
@@ -20,7 +21,7 @@ import Testing
     history.add("if x {\n}")
     #expect(History(path: path).entries == ["echo one", "if x {\n}"])
     #expect(History(path: path, limit: 1).entries == ["if x {\n}"])
-    #expect(History(path: path).entries == ["if x {\n}"]) // trimmed on disk too
+    #expect(History(path: path).entries == ["if x {\n}"])  // trimmed on disk too
 }
 
 @Test func historyReadsItsFileAsBytes() {
@@ -59,16 +60,18 @@ import Testing
     History(path: path).add("echo one")
     #expect(History(path: path).entries == ["echo one"])
     // Private to you: the permissions `ls` shows, which is the same on every platform (`stat`'s flags aren't).
-    #expect(try shell.capturing {
-        shell.execute("ls \(directory)/state | filter { $0.name == \"swish\" } | get permissions")
-    } == "drwx------\n")
+    #expect(
+        try shell.capturing {
+            shell.execute("ls \(directory)/state | filter { $0.name == \"swish\" } | get permissions")
+        } == "drwx------\n"
+    )
 }
 
 // MARK: Layout
 
 @Test func layoutWrapsAtTheWidth() {
     var layout = LineEditor.Layout(width: 10)
-    layout.advance(over: "\u{1B}[32m❯\u{1B}[0m ") // escapes take no room
+    layout.advance(over: "\u{1B}[32m❯\u{1B}[0m ")  // escapes take no room
     #expect(layout.position == (0, 2))
     for _ in 0..<8 { layout.advance(by: 1) }
     // Exactly full: the terminal waits to wrap, so the cursor reads as the
@@ -107,10 +110,12 @@ private func completion(_ text: String, in shell: Shell = Shell()) -> (start: In
     let shell = Shell()
     shell.execute("/// Greets.\nfunc zzgreet() {}")
     let result = shell.completions(for: "zzg", cursor: 3)
-    #expect(result?.candidates == [LineEditor.Candidate(replacement: "zzgreet", display: "zzgreet", description: "Greets.")])
+    #expect(
+        result?.candidates == [LineEditor.Candidate(replacement: "zzgreet", display: "zzgreet", description: "Greets.")]
+    )
     #expect(completion("ech").replacements.contains("echo"))
-    #expect(completion("if tru && ls | filt").replacements.contains("filter")) // after a pipe: command position
-    #expect(completion("^zzg", in: shell).replacements.isEmpty) // ^ is externals only
+    #expect(completion("if tru && ls | filt").replacements.contains("filter"))  // after a pipe: command position
+    #expect(completion("^zzg", in: shell).replacements.isEmpty)  // ^ is externals only
     #expect(completion("foreign ech").replacements.contains("echo"))
     #expect(completion("EDITOR=vim ech").replacements.contains("echo"))
 }
@@ -180,7 +185,12 @@ private func completion(_ text: String, in shell: Shell = Shell()) -> (start: In
     let shell = Shell()
     let line = "[1, 2] | contains 2; contains 2; [1] | nosuchmemberzz"
     let styles = shell.highlightStyles(line)
-    let at = { (word: String, from: Int) in styles[line.range(of: word, range: line.index(line.startIndex, offsetBy: from)..<line.endIndex)!.lowerBound.utf16Offset(in: line)] }
+    let at = { (word: String, from: Int) in
+        styles[
+            line.range(of: word, range: line.index(line.startIndex, offsetBy: from)..<line.endIndex)!.lowerBound
+                .utf16Offset(in: line)
+        ]
+    }
     #expect(at("contains", 0) == "\u{1B}[32m")
     #expect(at("contains", 20) == "\u{1B}[31m")
     #expect(at("nosuchmemberzz", 0) == "\u{1B}[31m")

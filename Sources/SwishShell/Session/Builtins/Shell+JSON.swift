@@ -10,15 +10,19 @@ extension Shell {
     /// (Resources/Prelude.swift), typed in its declarations like any others.
     func installJSON() {
         let json = ValueType.named("JSON")
-        interpreter.registerDynamic(named: "JSON", field: "jsonField", views: [
-            "string": ("jsonString", .optional(.string)),
-            "int": ("jsonInt", .optional(.int)),
-            "double": ("jsonDouble", .optional(.double)),
-            "bool": ("jsonBool", .optional(.bool)),
-            "array": ("jsonArray", .optional(.list(json))),
-            "object": ("jsonObject", .optional(.dictionary(.string, json))),
-            "isNull": ("jsonIsNull", .bool),
-        ])
+        interpreter.registerDynamic(
+            named: "JSON",
+            field: "jsonField",
+            views: [
+                "string": ("jsonString", .optional(.string)),
+                "int": ("jsonInt", .optional(.int)),
+                "double": ("jsonDouble", .optional(.double)),
+                "bool": ("jsonBool", .optional(.bool)),
+                "array": ("jsonArray", .optional(.list(json))),
+                "object": ("jsonObject", .optional(.dictionary(.string, json))),
+                "isNull": ("jsonIsNull", .bool),
+            ]
+        )
     }
 
     /// The bodies of the JSON functions the declarations name.
@@ -35,7 +39,9 @@ extension Shell {
                     return value.field(name) ?? .null
                 case .dictionary: return value.entries?[key] ?? .null
                 case .list:
-                    guard let index = key.cast(to: Int.self), let items = value.cast(to: [Value].self) else { return .null }
+                    guard let index = key.cast(to: Int.self), let items = value.cast(to: [Value].self) else {
+                        return .null
+                    }
                     return items.indices.contains(index) ? items[index] : .null
                 default: return .null
                 }
@@ -55,7 +61,8 @@ extension Shell {
             "jsonArray": view { $0.kind == .list ? $0 : .null },
             "jsonObject": view {
                 switch $0.kind {
-                case .structure, .tuple: $0.fields.map { Value(ValueDictionary($0.entries.map { (Value($0.key), $0.value) })) } ?? .null
+                case .structure, .tuple:
+                    $0.fields.map { Value(ValueDictionary($0.entries.map { (Value($0.key), $0.value) })) } ?? .null
                 case .dictionary: $0
                 default: .null
                 }

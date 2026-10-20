@@ -1,5 +1,5 @@
-import Swiit
 import Foundation
+import Swiit
 import SystemPackage
 
 /// A call a command line was bound to: the overload it means, and the values its words made for each parameter.
@@ -55,7 +55,11 @@ extension Shell {
     }
 
     /// Calls the function a callee names, or its method on `receiver`. A failure is the shell's own error.
-    func invoke(_ callee: Callee, _ arguments: [(label: String?, value: Value)], on receiver: Value? = nil) throws -> Value {
+    func invoke(
+        _ callee: Callee,
+        _ arguments: [(label: String?, value: Value)],
+        on receiver: Value? = nil
+    ) throws -> Value {
         do {
             return try interpreter.call(callee.name, on: receiver, arguments: arguments)
         } catch {
@@ -98,16 +102,20 @@ extension Shell {
             case .words(let pieces)?:
                 let what = parameter.commandLineName
                 if parameter.isVariadic {
-                    bound[parameter.name] = try pieces.map { try take($0.word, text: $0.text, as: parameter.type, for: what) }
+                    bound[parameter.name] = try pieces.map {
+                        try take($0.word, text: $0.text, as: parameter.type, for: what)
+                    }
                 } else if let (element, make) = Shell.collection(parameter.type) {
-                    bound[parameter.name] = [make(try pieces.map { try take($0.word, text: $0.text, as: element, for: what) })]
+                    bound[parameter.name] = [
+                        make(try pieces.map { try take($0.word, text: $0.text, as: element, for: what) })
+                    ]
                 } else if let piece = pieces.first {
                     bound[parameter.name] = [try take(piece.word, text: piece.text, as: parameter.type, for: what)]
                 }
             case .flag(let on)?:
                 bound[parameter.name] = [Value(on)]
             case .defaulted?:
-                break // The function fills in its own default.
+                break  // The function fills in its own default.
             case .omitted?:
                 if parameter.type.isBool {
                     bound[parameter.name] = [Value(false)]
@@ -120,7 +128,13 @@ extension Shell {
                 break
             }
         }
-        return BoundCall(callee: callee, overload: binding.overload, penalty: binding.penalty, bound: bound, written: nil)
+        return BoundCall(
+            callee: callee,
+            overload: binding.overload,
+            penalty: binding.penalty,
+            bound: bound,
+            written: nil
+        )
     }
 
     /// What a parameter given several words is made of, and how: a
@@ -140,7 +154,8 @@ extension Shell {
 
     /// `text` as a value of `type`, or the error that says why it can't be.
     func converted(_ text: String, to type: ValueType, for what: String, of function: String) throws -> Value {
-        // Checking a program before it runs: an enum it declares has no cases yet, so the word is read against what was declared.
+        // Checking a program before it runs: an enum it declares has no cases yet, so the word is read against what was
+        // declared.
         if case .named(let name, _) = type.optionalWrapped ?? type, let declared = staticEnums[name] {
             let bare = text.hasPrefix(".") ? String(text.dropFirst()) : text
             guard declared.cases.contains(bare) || declared.hasRawValues else {
@@ -152,12 +167,15 @@ extension Shell {
         // A command's output, which is text, is what a word is for it.
         if type == .named("Output") { return .output(Output(text: text, code: 0)) }
         guard takesWords(type) else {
-            throw RuntimeError("\(function): \(what) is \(type), which a word can't be: call it with parentheses, as in \(function)(…)")
+            throw RuntimeError(
+                "\(function): \(what) is \(type), which a word can't be: call it with parentheses, as in \(function)(…)"
+            )
         }
         throw RuntimeError("\(function): \(what) must be \(type), got '\(text)'")
     }
 
-    /// Whether a word can be a value of `type` at all: a Swift type text can be, an enum, or one of Swish's own that's read
+    /// Whether a word can be a value of `type` at all: a Swift type text can be, an enum, or one of Swish's own that's
+    /// read
     /// from text.
     func takesWords(_ type: ValueType) -> Bool {
         type == .named("Output") || interpreter.acceptsWords(as: type)

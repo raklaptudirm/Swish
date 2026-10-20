@@ -2,7 +2,8 @@ import Foundation
 import SwiftParser
 import SwiftSyntax
 
-// Spike: what the shell asks of Swift's grammar, answered by SwiftParser's tree: where an expression ends, whether one is
+// Spike: what the shell asks of Swift's grammar, answered by SwiftParser's tree: where an expression ends, whether one
+// is
 // there at all, and which names the text around declares. The text is the shell's with Swift in it, so a probe reads a
 // stretch of it as Swift and says how far Swift gets.
 
@@ -21,7 +22,8 @@ struct NameDeclaration {
     var staticOnly = false
 }
 
-/// The names there are where a stretch of the text is: those the interpreter has, and those the text declares, each in its scope.
+/// The names there are where a stretch of the text is: those the interpreter has, and those the text declares, each in
+/// its scope.
 struct Names {
     var base: [String: NameRole]
     var declarations: [NameDeclaration] = []
@@ -34,8 +36,13 @@ struct Names {
     func role(of name: String, at byte: Int? = nil) -> NameRole? {
         guard let byte else { return declarations.last { $0.name == name }?.role ?? base[name] }
         var best: NameDeclaration?
-        for declaration in declarations where declaration.name == name && declaration.scope.contains(byte) && declaration.from <= byte {
-            if declaration.staticOnly, !staticBodies.contains(where: { $0.contains(byte) && declaration.scope.contains($0.lowerBound) }) { continue }
+        for declaration in declarations
+        where declaration.name == name && declaration.scope.contains(byte) && declaration.from <= byte {
+            if declaration.staticOnly,
+                !staticBodies.contains(where: { $0.contains(byte) && declaration.scope.contains($0.lowerBound) })
+            {
+                continue
+            }
             if let current = best {
                 let narrower = declaration.scope.count < current.scope.count
                 let later = declaration.scope.count == current.scope.count && declaration.from >= current.from
@@ -83,8 +90,10 @@ private final class DeclarationFinder: SyntaxVisitor {
     private func scope(around node: Syntax) -> Range<Int> {
         var current = node.parent
         while let candidate = current {
-            if candidate.is(CodeBlockSyntax.self) || candidate.is(ClosureExprSyntax.self) || candidate.is(MemberBlockSyntax.self)
-                || candidate.is(SwitchCaseSyntax.self) || candidate.is(SourceFileSyntax.self) {
+            if candidate.is(CodeBlockSyntax.self) || candidate.is(ClosureExprSyntax.self)
+                || candidate.is(MemberBlockSyntax.self)
+                || candidate.is(SwitchCaseSyntax.self) || candidate.is(SourceFileSyntax.self)
+            {
                 // A file's scope is all of it, trivia included.
                 if candidate.is(SourceFileSyntax.self) { return 0..<Int.max }
                 return range(candidate)
@@ -110,12 +119,19 @@ private final class DeclarationFinder: SyntaxVisitor {
         for parameter in node.signature.parameterClause.parameters {
             var type = parameter.type
             if let attributed = type.as(AttributedTypeSyntax.self) { type = attributed.baseType }
-            if let function = type.as(FunctionTypeSyntax.self) { closureArities[node.name.text] = function.parameters.count; break }
+            if let function = type.as(FunctionTypeSyntax.self) {
+                closureArities[node.name.text] = function.parameters.count; break
+            }
         }
         if let body = node.body {
             if staticFunction { staticBodies.append(range(body)) }
             for parameter in node.signature.parameterClause.parameters {
-                declare((parameter.secondName ?? parameter.firstName).text, .variable, in: range(body), from: range(body).lowerBound)
+                declare(
+                    (parameter.secondName ?? parameter.firstName).text,
+                    .variable,
+                    in: range(body),
+                    from: range(body).lowerBound
+                )
             }
         }
         return .visitChildren
@@ -124,7 +140,12 @@ private final class DeclarationFinder: SyntaxVisitor {
     override func visit(_ node: InitializerDeclSyntax) -> SyntaxVisitorContinueKind {
         if let body = node.body {
             for parameter in node.signature.parameterClause.parameters {
-                declare((parameter.secondName ?? parameter.firstName).text, .variable, in: range(body), from: range(body).lowerBound)
+                declare(
+                    (parameter.secondName ?? parameter.firstName).text,
+                    .variable,
+                    in: range(body),
+                    from: range(body).lowerBound
+                )
             }
         }
         return .visitChildren
@@ -137,14 +158,23 @@ private final class DeclarationFinder: SyntaxVisitor {
         case .simpleInput(let list)?:
             for parameter in list { declare(parameter.name.text, .variable, in: whole, from: whole.lowerBound) }
         case .parameterClause(let clause)?:
-            for parameter in clause.parameters { declare((parameter.secondName ?? parameter.firstName).text, .variable, in: whole, from: whole.lowerBound) }
+            for parameter in clause.parameters {
+                declare(
+                    (parameter.secondName ?? parameter.firstName).text,
+                    .variable,
+                    in: whole,
+                    from: whole.lowerBound
+                )
+            }
         case nil: break
         }
         return .visitChildren
     }
 
     override func visit(_ node: CatchClauseSyntax) -> SyntaxVisitorContinueKind {
-        if node.catchItems.isEmpty { declare("error", .variable, in: range(node.body), from: range(node.body).lowerBound) }
+        if node.catchItems.isEmpty {
+            declare("error", .variable, in: range(node.body), from: range(node.body).lowerBound)
+        }
         return .visitChildren
     }
 
@@ -152,11 +182,21 @@ private final class DeclarationFinder: SyntaxVisitor {
         let name = node.identifier.text
         var current: Syntax? = node.parent
         while let candidate = current {
-            if let binding = candidate.as(PatternBindingSyntax.self), let declaration = binding.parent?.parent?.as(VariableDeclSyntax.self) {
+            if let binding = candidate.as(PatternBindingSyntax.self),
+                let declaration = binding.parent?.parent?.as(VariableDeclSyntax.self)
+            {
                 let outer = scope(around: Syntax(declaration))
-                if declaration.parent?.parent?.is(MemberBlockSyntax.self) == true || declaration.parent?.is(MemberBlockItemSyntax.self) == true {
+                if declaration.parent?.parent?.is(MemberBlockSyntax.self) == true
+                    || declaration.parent?.is(MemberBlockItemSyntax.self) == true
+                {
                     let staticMember = isStatic(declaration.modifiers)
-                    declare(name, staticMember ? .staticMember : .member, in: outer, from: outer.lowerBound, staticOnly: staticMember)
+                    declare(
+                        name,
+                        staticMember ? .staticMember : .member,
+                        in: outer,
+                        from: outer.lowerBound,
+                        staticOnly: staticMember
+                    )
                     if staticMember { staticBodies.append(range(declaration)) }
                 } else {
                     declare(name, .variable, in: outer, from: range(declaration).upperBound)
@@ -165,7 +205,9 @@ private final class DeclarationFinder: SyntaxVisitor {
             }
             if candidate.is(OptionalBindingConditionSyntax.self) || candidate.is(MatchingPatternConditionSyntax.self) {
                 var statement: Syntax? = candidate.parent
-                while let owner = statement, !(owner.is(IfExprSyntax.self) || owner.is(GuardStmtSyntax.self) || owner.is(WhileStmtSyntax.self)) { statement = owner.parent }
+                while let owner = statement,
+                    !(owner.is(IfExprSyntax.self) || owner.is(GuardStmtSyntax.self) || owner.is(WhileStmtSyntax.self))
+                { statement = owner.parent }
                 if let owner = statement {
                     if owner.is(GuardStmtSyntax.self) {
                         let outer = scope(around: owner)
@@ -180,11 +222,15 @@ private final class DeclarationFinder: SyntaxVisitor {
                 declare(name, .variable, in: range(loop.body), from: range(loop.body).lowerBound)
                 return .visitChildren
             }
-            if let item = candidate.as(SwitchCaseItemSyntax.self), let switchCase = item.parent?.parent?.as(SwitchCaseSyntax.self) {
+            if let item = candidate.as(SwitchCaseItemSyntax.self),
+                let switchCase = item.parent?.parent?.as(SwitchCaseSyntax.self)
+            {
                 declare(name, .variable, in: range(switchCase), from: range(switchCase).lowerBound)
                 return .visitChildren
             }
-            if let item = candidate.as(CatchItemSyntax.self), let clause = item.parent?.parent?.as(CatchClauseSyntax.self) {
+            if let item = candidate.as(CatchItemSyntax.self),
+                let clause = item.parent?.parent?.as(CatchClauseSyntax.self)
+            {
                 declare(name, .variable, in: range(clause.body), from: range(clause.body).lowerBound)
                 return .visitChildren
             }
@@ -198,12 +244,24 @@ private final class DeclarationFinder: SyntaxVisitor {
         declare(name, .type, in: outer, from: outer.lowerBound)
     }
 
-    override func visit(_ node: StructDeclSyntax) -> SyntaxVisitorContinueKind { declareType(node.name.text, node); return .visitChildren }
-    override func visit(_ node: EnumDeclSyntax) -> SyntaxVisitorContinueKind { declareType(node.name.text, node); return .visitChildren }
-    override func visit(_ node: ClassDeclSyntax) -> SyntaxVisitorContinueKind { declareType(node.name.text, node); return .visitChildren }
-    override func visit(_ node: ActorDeclSyntax) -> SyntaxVisitorContinueKind { declareType(node.name.text, node); return .visitChildren }
-    override func visit(_ node: ProtocolDeclSyntax) -> SyntaxVisitorContinueKind { declareType(node.name.text, node); return .visitChildren }
-    override func visit(_ node: TypeAliasDeclSyntax) -> SyntaxVisitorContinueKind { declareType(node.name.text, node); return .visitChildren }
+    override func visit(_ node: StructDeclSyntax) -> SyntaxVisitorContinueKind {
+        declareType(node.name.text, node); return .visitChildren
+    }
+    override func visit(_ node: EnumDeclSyntax) -> SyntaxVisitorContinueKind {
+        declareType(node.name.text, node); return .visitChildren
+    }
+    override func visit(_ node: ClassDeclSyntax) -> SyntaxVisitorContinueKind {
+        declareType(node.name.text, node); return .visitChildren
+    }
+    override func visit(_ node: ActorDeclSyntax) -> SyntaxVisitorContinueKind {
+        declareType(node.name.text, node); return .visitChildren
+    }
+    override func visit(_ node: ProtocolDeclSyntax) -> SyntaxVisitorContinueKind {
+        declareType(node.name.text, node); return .visitChildren
+    }
+    override func visit(_ node: TypeAliasDeclSyntax) -> SyntaxVisitorContinueKind {
+        declareType(node.name.text, node); return .visitChildren
+    }
     override func visit(_ node: GenericParameterSyntax) -> SyntaxVisitorContinueKind {
         var owner: Syntax? = node.parent
         while let candidate = owner, !candidate.is(DeclSyntax.self) { owner = candidate.parent }
@@ -224,7 +282,14 @@ enum SwiftProbe {
     /// The expression starting at `start`: where it ends, and where it stops being Swift. The expression stops before a
     /// single `|` (the shell's pipe) and, when `logical`, before `&&` and `||`.
     /// `text` has its substitutions blanked.
-    static func expression(in text: Text, at start: Int, logical: Bool, names: Names, strictNames: Bool = true, inCondition: Bool = false) -> Probe {
+    static func expression(
+        in text: Text,
+        at start: Int,
+        logical: Bool,
+        names: Names,
+        strictNames: Bool = true,
+        inCondition: Bool = false
+    ) -> Probe {
         var tail = Array(text.chars[start...])
         if inCondition { tail = Lex.truncatingAtBlock(tail) }
         let rest = Text(Lex.blankingBlocks(tail))
@@ -234,7 +299,8 @@ enum SwiftProbe {
             return Probe(end: 0, failure: 0)
         }
         var endByte = expr.endPositionBeforeTrailingTrivia.utf8Offset
-        // A sequence of operands and operators, as SwiftParser leaves it unfolded: cut at the first operator that is the shell's.
+        // A sequence of operands and operators, as SwiftParser leaves it unfolded: cut at the first operator that is
+        // the shell's.
         var sequenceOwner: ExprSyntax = expr
         if let attempt = expr.as(TryExprSyntax.self) { sequenceOwner = attempt.expression }
         if let sequence = sequenceOwner.as(SequenceExprSyntax.self) {
@@ -250,13 +316,18 @@ enum SwiftProbe {
         let problems = Problems(names: names, limit: endByte, checkNames: strictNames)
         problems.walk(tree)
         // Statement-level tokens left over after the item are not the expression's.
-        return Probe(end: rest.character(atByte: endByte) + start, failure: problems.first.map { rest.character(atByte: $0) + start })
+        return Probe(
+            end: rest.character(atByte: endByte) + start,
+            failure: problems.first.map { rest.character(atByte: $0) + start }
+        )
     }
 
     /// Whether the text is a closure that names no parameters.
     static func isParameterlessClosure(_ source: String) -> Bool {
         let tree = Parser.parse(source: String(Lex.blankingSubstitutions(Array(source))))
-        guard let first = tree.statements.first, case .expr(let expr) = first.item, let closure = expr.as(ClosureExprSyntax.self) else { return false }
+        guard let first = tree.statements.first, case .expr(let expr) = first.item,
+            let closure = expr.as(ClosureExprSyntax.self)
+        else { return false }
         return closure.signature == nil
     }
 
@@ -307,7 +378,9 @@ private final class Problems: SyntaxVisitor {
     override func visit(_ node: DeclReferenceExprSyntax) -> SyntaxVisitorContinueKind {
         guard checkNames, node.argumentNames == nil else { return .visitChildren }
         // `count` in `xs.count` is a member's, not a name in scope.
-        if let access = node.parent?.as(MemberAccessExprSyntax.self), access.declName.id == node.id { return .visitChildren }
+        if let access = node.parent?.as(MemberAccessExprSyntax.self), access.declName.id == node.id {
+            return .visitChildren
+        }
         let token = node.baseName
         guard case .identifier = token.tokenKind else { return .visitChildren }
         let name = token.text

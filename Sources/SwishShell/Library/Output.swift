@@ -76,11 +76,14 @@ extension Output {
 extension Status {
     /// The struct `output.status` is, with every field there.
     var value: Value {
-        Value(struct: "Status", fields: [
-            "code": code.map { Value($0) } ?? Value.null,
-            "signal": signal.map { Value($0) } ?? Value.null,
-            "succeeded": Value(succeeded),
-        ])
+        Value(
+            struct: "Status",
+            fields: [
+                "code": code.map { Value($0) } ?? Value.null,
+                "signal": signal.map { Value($0) } ?? Value.null,
+                "succeeded": Value(succeeded),
+            ]
+        )
     }
 }
 

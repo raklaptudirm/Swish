@@ -1,6 +1,7 @@
 import Swiit
-@testable import SwishShell
 import Testing
+
+@testable import SwishShell
 
 private let reset = "\u{1B}[0m"
 private func code(_ text: String) -> String { "\u{1B}[36m\(text)\(reset)" }
@@ -9,8 +10,10 @@ private func italic(_ text: String) -> String { "\u{1B}[3m\(text)\(reset)" }
 private func underline(_ text: String) -> String { "\u{1B}[4m\(text)\(reset)" }
 
 @Test func codeStrongEmphasisAndLinksAreStyles() {
-    #expect(documentation("a `b` **c** _d_ *e* [f](http://g)").colored
-        == "a \(code("b")) \(bold("c")) \(italic("d")) \(italic("e")) \(underline("f"))")
+    #expect(
+        documentation("a `b` **c** _d_ *e* [f](http://g)").colored
+            == "a \(code("b")) \(bold("c")) \(italic("d")) \(italic("e")) \(underline("f"))"
+    )
     // Anywhere without colors it's the words.
     #expect(documentation("a `b` **c** _d_ *e* [f](http://g)").plain == "a b c d e f")
 }

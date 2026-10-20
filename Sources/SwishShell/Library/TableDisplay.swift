@@ -33,7 +33,10 @@ struct DisplayRegistry: Sendable {
     /// The columns of a type the registry does not know yet: one a program declared.
     public var declared: (@Sendable (String) -> [DisplayColumn]?)?
 
-    public init(columns: [String: [DisplayColumn]] = [:], enumStyles: [String: @Sendable (String) -> DisplayStyle?] = [:]) {
+    public init(
+        columns: [String: [DisplayColumn]] = [:],
+        enumStyles: [String: @Sendable (String) -> DisplayStyle?] = [:]
+    ) {
         self.columns = columns
         self.enumStyles = enumStyles
     }
@@ -55,4 +58,3 @@ protocol Tabular {
 protocol DisplayStyled {
     var displayStyle: DisplayStyle? { get }
 }
-

@@ -1,5 +1,5 @@
-import Swiit
 import Foundation
+import Swiit
 
 /// An interactive line editor: syntax highlighting, completion, history
 /// with prefix and incremental search, and multi-line input that wraps.
@@ -181,7 +181,8 @@ final class LineEditor {
     private static let indentation = "    "
 
     /// A new line after the cursor, indented as the line it follows is, and a level deeper if that one opens a block
-    /// (`{`, `(`, `[`, or a `case …:`). Text pasted arrives with its own indentation, so with more input waiting there is none.
+    /// (`{`, `(`, `[`, or a `case …:`). Text pasted arrives with its own indentation, so with more input waiting there
+    /// is none.
     private func insertNewline() {
         guard !inputPending() else { return insert(["\n"]) }
         let line = buffer[lineStart(from: cursor)..<cursor]
@@ -316,7 +317,8 @@ final class LineEditor {
         func show() {
             if let match {
                 buffer = Array(entries[match])
-                let offset = entries[match].range(of: query).map { entries[match].distance(from: entries[match].startIndex, to: $0.lowerBound) }
+                let offset = entries[match].range(of: query)
+                    .map { entries[match].distance(from: entries[match].startIndex, to: $0.lowerBound) }
                 cursor = offset ?? buffer.count
             }
             let label = failing ? "failing search" : "search"
@@ -380,9 +382,10 @@ final class LineEditor {
             replace(range, with: candidates[0].replacement + candidates[0].suffix)
             return
         }
-        let shared = candidates.dropFirst().reduce(candidates[0].replacement) { common, candidate in
-            String(zip(common, candidate.replacement).prefix { $0 == $1 }.map(\.0))
-        }
+        let shared = candidates.dropFirst()
+            .reduce(candidates[0].replacement) { common, candidate in
+                String(zip(common, candidate.replacement).prefix { $0 == $1 }.map(\.0))
+            }
         if shared.count > range.count {
             replace(range, with: shared)
             return
@@ -398,7 +401,11 @@ final class LineEditor {
         if shown.contains(where: { $0.description != nil }) {
             let nameWidth = min(shown.map { LineEditor.displayWidth(of: $0.display) }.max()!, 30)
             for candidate in shown {
-                var line = candidate.display.padding(toLength: max(nameWidth, candidate.display.count), withPad: " ", startingAt: 0)
+                var line = candidate.display.padding(
+                    toLength: max(nameWidth, candidate.display.count),
+                    withPad: " ",
+                    startingAt: 0
+                )
                 if let description = candidate.description {
                     let room = max(width - nameWidth - 2, 10)
                     let text = description.count > room ? description.prefix(room - 1) + "…" : description
@@ -543,8 +550,8 @@ final class LineEditor {
         }
         switch scalar.value {
         case 0x1100...0x115F, 0x2E80...0x303E, 0x3041...0x33FF, 0x3400...0x4DBF, 0x4E00...0x9FFF,
-             0xA000...0xA4CF, 0xAC00...0xD7A3, 0xF900...0xFAFF, 0xFE30...0xFE4F, 0xFF00...0xFF60,
-             0xFFE0...0xFFE6, 0x20000...0x3FFFD:
+            0xA000...0xA4CF, 0xAC00...0xD7A3, 0xF900...0xFAFF, 0xFE30...0xFE4F, 0xFF00...0xFF60,
+            0xFFE0...0xFFE6, 0x20000...0x3FFFD:
             return 2
         default:
             return 1
@@ -572,23 +579,23 @@ final class LineEditor {
         }
         guard let byte = readByte() else { return nil }
         switch byte {
-        case 1: return .home          // ^A
-        case 2: return .left          // ^B
-        case 3: return .interrupt     // ^C
-        case 4: return .eof           // ^D
-        case 5: return .end           // ^E
-        case 6: return .right         // ^F
-        case 7: return .cancel        // ^G
+        case 1: return .home  // ^A
+        case 2: return .left  // ^B
+        case 3: return .interrupt  // ^C
+        case 4: return .eof  // ^D
+        case 5: return .end  // ^E
+        case 6: return .right  // ^F
+        case 7: return .cancel  // ^G
         case 8, 127: return .backspace
         case 9: return .tab
         case 10, 13: return .enter
-        case 11: return .killToEnd    // ^K
+        case 11: return .killToEnd  // ^K
         case 12: return .clearScreen  // ^L
-        case 14: return .down         // ^N
-        case 16: return .up           // ^P
-        case 18: return .search       // ^R
+        case 14: return .down  // ^N
+        case 16: return .up  // ^P
+        case 18: return .search  // ^R
         case 21: return .killToStart  // ^U
-        case 23: return .deleteWord   // ^W
+        case 23: return .deleteWord  // ^W
         case 27: return readEscapeSequence()
         case 0..<32: return .ignored
         default: return readCharacter(startingWith: byte)
@@ -603,7 +610,7 @@ final class LineEditor {
         case UInt8(ascii: "b"): return .wordLeft
         case UInt8(ascii: "f"): return .wordRight
         case 127, 8: return .deleteWord
-        case 13, 10: return .newline   // Alt+Enter: a new line even in complete input.
+        case 13, 10: return .newline  // Alt+Enter: a new line even in complete input.
         case UInt8(ascii: "["), UInt8(ascii: "O"): break
         default: return .ignored
         }

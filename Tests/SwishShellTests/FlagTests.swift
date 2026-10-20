@@ -1,6 +1,7 @@
 import Swiit
-@testable import SwishShell
 import Testing
+
+@testable import SwishShell
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
     try onLargeStack { try shell.capturing { shell.enter(source) } }
@@ -9,8 +10,12 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 @Test func wordsConvertByWhatTheParameterIs() throws {
     // Through the type's own declarations: Int's failable initializer,
     // Character's literal rules, a FilePath literal.
-    #expect(try output(#"func f(n: Int, c: Character, p: FilePath) { echo "\(n + 1) \(c) \(p.lastComponent!)" }; f --n 2 --c x --p /a/b"#)
-        == "3 x b\n")
+    #expect(
+        try output(
+            #"func f(n: Int, c: Character, p: FilePath) { echo "\(n + 1) \(c) \(p.lastComponent!)" }; f --n 2 --c x --p /a/b"#
+        )
+            == "3 x b\n"
+    )
     // A type no word can be points to call syntax.
     let shell = Shell()
     _ = try output(#"func f(r: ClosedRange<Int>) { echo "\(r)" }"#, in: shell)
@@ -34,7 +39,10 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 }
 
 @Test func boolFlagsTakeAValueToo() throws {
-    #expect(try output(#"func f(v: Bool) { echo "\(v)" }; f --v; f --v false; f --v true; f"#) == "true\nfalse\ntrue\nfalse\n")
+    #expect(
+        try output(#"func f(v: Bool) { echo "\(v)" }; f --v; f --v false; f --v true; f"#)
+            == "true\nfalse\ntrue\nfalse\n"
+    )
     #expect(try output(#"func f(v: Bool = true) { echo "\(v)" }; f --no-v; f --v=false; f"#) == "false\nfalse\ntrue\n")
 }
 

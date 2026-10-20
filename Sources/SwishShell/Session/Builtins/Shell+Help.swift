@@ -1,5 +1,5 @@
-import Swiit
 import Foundation
+import Swiit
 import SystemPackage
 
 extension Shell {
@@ -23,7 +23,8 @@ extension Shell {
     /// Whether an unlabeled parameter is given every remaining word: a
     /// variadic one, or one that's a collection (`_ paths: [FilePath]`).
     func takesRemainingWords(_ parameter: CommandParameter) -> Bool {
-        parameter.isVariadic || (parameter.label == nil && !parameter.isInput && Shell.collection(parameter.type) != nil)
+        parameter.isVariadic
+            || (parameter.label == nil && !parameter.isInput && Shell.collection(parameter.type) != nil)
     }
 
     func helpClaimed(by callee: Callee) -> Bool {
@@ -44,7 +45,9 @@ extension Shell {
             lines += [AttributedString(documentation: summary), AttributedString("")]
         }
         lines.append(HelpStyle.heading("Usage:"))
-        lines += callee.parameters.indices.map { AttributedString(joining: [.init("  ")] + usage(of: callee.parameters[$0], named: callee.label)) }
+        lines += callee.parameters.indices.map {
+            AttributedString(joining: [.init("  ")] + usage(of: callee.parameters[$0], named: callee.label))
+        }
 
         var arguments: [Row] = []
         var options: [Row] = []
@@ -54,7 +57,12 @@ extension Shell {
                 var details: [[AttributedString]] = []
                 if let help = parameter.documentation { details.append([AttributedString(documentation: help)]) }
                 if parameter.isInput {
-                    details.append([.init(parameter.type.isList ? "(or the whole pipeline input)" : "(or each pipeline input item)", DisplayStyle.comment)])
+                    details.append([
+                        .init(
+                            parameter.type.isList ? "(or the whole pipeline input)" : "(or each pipeline input item)",
+                            DisplayStyle.comment
+                        )
+                    ])
                 }
                 if let defaultValue = parameter.defaultValue, defaultValue.kind != .nothing {
                     details.append(defaultDetail(describe(defaultValue)))
@@ -62,13 +70,17 @@ extension Shell {
                 if let label = parameter.label {
                     let negatable = parameter.type.isBool && parameter.defaultValue == Value(true)
                     let long = "--" + (negatable ? "[no-]" : "") + kebabCase(label)
-                    var key: [AttributedString] = parameter.shortFlag.map { [.init("-\($0)", DisplayStyle.flag), .init(", ")] } ?? [.init("    ")]
+                    var key: [AttributedString] =
+                        parameter.shortFlag.map { [.init("-\($0)", DisplayStyle.flag), .init(", ")] } ?? [.init("    ")]
                     key.append(.init(long, DisplayStyle.flag))
                     key += valuePlaceholder(for: parameter)
                     if parameter.type.isList { details.append([.init("(repeatable)", DisplayStyle.comment)]) }
-                    if seen.insert(AttributedString(joining: key).text).inserted { options.append((key, joined(details))) }
+                    if seen.insert(AttributedString(joining: key).text).inserted {
+                        options.append((key, joined(details)))
+                    }
                 } else {
-                    let key: [AttributedString] = [.init("<\(parameter.name)>", DisplayStyle.variable)]
+                    let key: [AttributedString] =
+                        [.init("<\(parameter.name)>", DisplayStyle.variable)]
                         + (takesRemainingWords(parameter) ? [.init("...")] : [])
                     if seen.insert(AttributedString(joining: key).text).inserted {
                         arguments.append((key, joined(details + [typeDetail(parameter.type.description)])))
@@ -84,7 +96,8 @@ extension Shell {
             lines += [AttributedString(""), HelpStyle.heading(title)]
             lines += entries.map { row in
                 let key = AttributedString(joining: row.key)
-                let padding = row.detail.isEmpty ? [] : [AttributedString(String(repeating: " ", count: width - key.width))]
+                let padding =
+                    row.detail.isEmpty ? [] : [AttributedString(String(repeating: " ", count: width - key.width))]
                 return AttributedString(joining: [.init("  ")] + row.key + padding + row.detail)
             }
         }
@@ -95,7 +108,10 @@ extension Shell {
 
     /// `(default: 1)`, the value as a constant.
     private func defaultDetail(_ value: String) -> [AttributedString] {
-        [.init("(default: ", DisplayStyle.comment), .init(value, DisplayStyle.constant), .init(")", DisplayStyle.comment)]
+        [
+            .init("(default: ", DisplayStyle.comment), .init(value, DisplayStyle.constant),
+            .init(")", DisplayStyle.comment),
+        ]
     }
 
     /// `(Int)`, the type as a type.
@@ -116,7 +132,8 @@ extension Shell {
                 flag = "--no-" + flag.dropFirst(2)
             }
             let optional = parameter.hasDefault || parameter.type.isBool || parameter.type.isList
-            parts += [.init(" ")] + (optional ? [.init("[")] : []) + [.init(flag, .flag)]
+            parts +=
+                [.init(" ")] + (optional ? [.init("[")] : []) + [.init(flag, .flag)]
                 + valuePlaceholder(for: parameter) + (optional ? [.init("]")] : [])
         }
         for parameter in parameters where parameter.label == nil {
@@ -143,7 +160,9 @@ extension Shell {
 
     /// A type as `--help` shows it: an enum as its choices.
     private func placeholder(_ type: ValueType) -> String {
-        if case .named(let name, _) = type, let description = interpreter.typeDescription(named: name), description.kind == "enum" {
+        if case .named(let name, _) = type, let description = interpreter.typeDescription(named: name),
+            description.kind == "enum"
+        {
             return description.members.filter { $0.kind == .case && !$0.hasPayload }.map(\.name).joined(separator: "|")
         }
         return type.description
@@ -184,11 +203,25 @@ extension Shell {
                 let summary = candidate.summary ?? ""
                 if !summary.isEmpty && !summaries.contains(summary) { summaries.append(summary) }
             }
-            rows.append((name, helpRecord(name, source: source, usage: candidates.map(signature(of:)).joined(separator: " or "),
-                                          descriptions: summaries)))
+            rows.append(
+                (
+                    name,
+                    helpRecord(
+                        name,
+                        source: source,
+                        usage: candidates.map(signature(of:)).joined(separator: " or "),
+                        descriptions: summaries
+                    )
+                )
+            )
         }
         for builtin in Shell.shellBuiltins.values where builtin.works && !seen.contains(builtin.name) {
-            rows.append((builtin.name, helpRecord(builtin.name, source: "shell", usage: builtin.usage, descriptions: [builtin.summary])))
+            rows.append(
+                (
+                    builtin.name,
+                    helpRecord(builtin.name, source: "shell", usage: builtin.usage, descriptions: [builtin.summary])
+                )
+            )
         }
         return rows.sorted { $0.0 < $1.0 }.map(\.1)
     }
@@ -197,10 +230,13 @@ extension Shell {
     private func helpRecord(_ name: String, source: String, usage: String, descriptions: [String]) -> Value {
         // Each one's first sentence, for the table.
         let summary = descriptions.map(\.firstSentence).joined(separator: " ")
-        return Value(struct: "Help", fields: [
-            "name": Value(name), "source": Value(source), "summary": Value(summary),
-            "usage": Value(usage), "description": Value(descriptions.joined(separator: "\n\n")),
-        ])
+        return Value(
+            struct: "Help",
+            fields: [
+                "name": Value(name), "source": Value(source), "summary": Value(summary),
+                "usage": Value(usage), "description": Value(descriptions.joined(separator: "\n\n")),
+            ]
+        )
     }
 
     /// What `name --help` shows, or what a shell builtin or program is.
@@ -216,8 +252,17 @@ extension Shell {
             // `help String`: what the type has.
             return helpLines(for: type)
         } else if let path = findExecutable(name) {
-            return [AttributedString(joining: [.init(name, DisplayStyle.command), .init(" is a program, "), .init(path, DisplayStyle.command), .init(": try `")]
-                + HelpStyle.usage("\(name) --help") + [.init("` or `")] + HelpStyle.usage("man \(name)") + [.init("`.")])]
+            return [
+                AttributedString(
+                    joining: [
+                        .init(name, DisplayStyle.command), .init(" is a program, "), .init(path, DisplayStyle.command),
+                        .init(": try `"),
+                    ]
+                        + HelpStyle.usage("\(name) --help") + [.init("` or `")] + HelpStyle.usage("man \(name)") + [
+                            .init("`.")
+                        ]
+                )
+            ]
         }
         throw RuntimeError("help: no function, shell builtin, type or program named '\(name)'; `help` lists them all")
     }
@@ -226,7 +271,11 @@ extension Shell {
     /// signature (highlighted as Swift) and, on the line below, what its
     /// documentation says.
     func helpLines(for type: TypeDescription) -> [AttributedString] {
-        var lines = [AttributedString(joining: [.init(type.kind, DisplayStyle.keyword), .init(" "), .init(type.name, DisplayStyle.type)])]
+        var lines = [
+            AttributedString(joining: [
+                .init(type.kind, DisplayStyle.keyword), .init(" "), .init(type.name, DisplayStyle.type),
+            ])
+        ]
         let groups = Dictionary(grouping: type.members, by: \.kind)
         for kind in TypeDescription.Kind.allCases {
             guard let members = groups[kind], !members.isEmpty else { continue }
@@ -235,13 +284,16 @@ extension Shell {
                 // A blank line between them, so a signature and its description read as one.
                 if index > 0 { lines.append(AttributedString("")) }
                 lines.append(AttributedString(joining: [AttributedString("  "), member.signature]))
-                if !member.summary.isEmpty { lines.append(AttributedString("    ") + AttributedString(documentation: member.summary)) }
+                if !member.summary.isEmpty {
+                    lines.append(AttributedString("    ") + AttributedString(documentation: member.summary))
+                }
             }
         }
         return lines
     }
 
-    /// A function as Swift declares it: `greet(_ name: String, times: Int) -> String`. What a pipe feeds is marked `@input`.
+    /// A function as Swift declares it: `greet(_ name: String, times: Int) -> String`. What a pipe feeds is marked
+    /// `@input`.
     func signature(of symbol: Symbol) -> String {
         guard let function = symbol.function else { return symbol.name }
         let parameters = function.parameters.map { parameter -> String in

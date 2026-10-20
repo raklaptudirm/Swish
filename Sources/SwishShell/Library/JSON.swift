@@ -38,12 +38,22 @@ struct JSON {
             guard let found = value.enumCase else { return "null" }
             if let raw = value.rawValue { return try text(raw, indent: indent) }
             guard !found.values.isEmpty else { return quoted(found.name) }
-            let fields = found.values.enumerated().map { index, item in (name: (found.labels.indices.contains(index) ? found.labels[index] : nil) ?? String(index), value: item) }
-            return try text(Value(struct: nil, fields: [(name: found.name, value: Value(struct: nil, fields: fields))]), indent: indent)
+            let fields = found.values.enumerated()
+                .map { index, item in
+                    (
+                        name: (found.labels.indices.contains(index) ? found.labels[index] : nil) ?? String(index),
+                        value: item
+                    )
+                }
+            return try text(
+                Value(struct: nil, fields: [(name: found.name, value: Value(struct: nil, fields: fields))]),
+                indent: indent
+            )
         case .list:
             let items = value.cast(to: [Value].self) ?? []
             guard !items.isEmpty else { return "[]" }
-            return "[\n" + (try items.map { inner + (try text($0, indent: inner)) }).joined(separator: ",\n") + "\n\(indent)]"
+            return "[\n" + (try items.map { inner + (try text($0, indent: inner)) }).joined(separator: ",\n")
+                + "\n\(indent)]"
         case .structure, .tuple:
             guard let record = value.fields, record.count > 0 else { return "{}" }
             let fields = try record.map { inner + quoted($0.key) + ": " + (try text($0.value, indent: inner)) }
@@ -60,7 +70,9 @@ struct JSON {
         case .function:
             throw LibraryError("to json: a function has no JSON form")
         case .object:
-            if let fields = value.fields { return try text(Value(struct: nil, fields: fields.entries.map { ($0.key, $0.value) }), indent: indent) }
+            if let fields = value.fields {
+                return try text(Value(struct: nil, fields: fields.entries.map { ($0.key, $0.value) }), indent: indent)
+            }
             // What stands for text is its text; else a Swift value is as Swift
             // encodes it (a file size is its bytes).
             if let held = try? value.unboxed(Any.self) {
@@ -151,7 +163,11 @@ private struct JSONParser {
             try expect(":")
             skipWhitespace()
             let value = try parseValue()
-            if let existing = fields.firstIndex(where: { $0.name == key }) { fields[existing].value = value } else { fields.append((key, value)) }
+            if let existing = fields.firstIndex(where: { $0.name == key }) {
+                fields[existing].value = value
+            } else {
+                fields.append((key, value))
+            }
             skipWhitespace()
             guard index < bytes.count else { throw error("unterminated object") }
             if bytes[index] == UInt8(ascii: "}") {
@@ -228,7 +244,9 @@ private struct JSONParser {
     }
 
     private mutating func parseHex4() throws -> UInt32 {
-        guard index + 4 <= bytes.count, let code = UInt32(String(decoding: bytes[index..<index + 4], as: UTF8.self), radix: 16) else {
+        guard index + 4 <= bytes.count,
+            let code = UInt32(String(decoding: bytes[index..<index + 4], as: UTF8.self), radix: 16)
+        else {
             throw error("invalid \\u escape")
         }
         index += 4

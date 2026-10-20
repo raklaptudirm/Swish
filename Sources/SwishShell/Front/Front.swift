@@ -2,8 +2,10 @@ import Foundation
 import SwiftParser
 import SwiftSyntax
 
-// Spike: the front end the shell owns. Source text that is Swift's with the shell's in it goes in; Swift comes out, which a
-// plain Swift front end reads. The loop: parse the text as Swift (with the insides of `$(…)` blanked), take the first place
+// Spike: the front end the shell owns. Source text that is Swift's with the shell's in it goes in; Swift comes out,
+// which a
+// plain Swift front end reads. The loop: parse the text as Swift (with the insides of `$(…)` blanked), take the first
+// place
 // at or after the cursor where a form of the shell's may start, and read it; if it is one, replace it with the Swift it
 // means, move the cursor past that, and parse again, so that everything before the cursor is Swift by the time anything
 // after it is asked about.
@@ -69,7 +71,8 @@ final class Front {
 
     struct Cured {
         var text: String
-        /// What the source is, for coloring it: the shell's forms and the Swift between them, in the source's characters.
+        /// What the source is, for coloring it: the shell's forms and the Swift between them, in the source's
+        /// characters.
         var spans: [HighlightSpan]
     }
 
@@ -78,7 +81,8 @@ final class Front {
     }
 
     /// The program the source is, with every form of the shell's in it read.
-    /// `asExpression`: the text is one expression (an argument, a closure, an interpolation), not a program: it is not read
+    /// `asExpression`: the text is one expression (an argument, a closure, an interpolation), not a program: it is not
+    /// read
     /// as a statement itself, only the forms inside it are.
     func cureWithSpans(_ source: String, names inherited: Names? = nil, asExpression: Bool = false) throws -> Cured {
         var chars = Array(source)
@@ -92,7 +96,9 @@ final class Front {
         func finish() -> Cured {
             // The Swift between the forms, read as Swift with the forms blanked.
             var blank = Array(source)
-            for form in forms { for index in form where index < blank.count && blank[index] != "\n" { blank[index] = " " } }
+            for form in forms {
+                for index in form where index < blank.count && blank[index] != "\n" { blank[index] = " " }
+            }
             let swift = swiftHighlight(String(blank))
             return Cured(text: String(chars), spans: spans + swift)
         }
@@ -104,9 +110,11 @@ final class Front {
             let cursorByte = text.byteOf[min(cursor, text.count)]
             var found: (start: Int, end: Int, replacement: String)?
             let content = chars.firstIndex { !$0.isWhitespace }.map { text.byteOf[$0] } ?? 0
-            let raws = Lex.rawStrings(in: chars).map { Site(byte: text.byteOf[$0.lowerBound], kind: .rawString(end: $0.upperBound)) }
+            let raws = Lex.rawStrings(in: chars)
+                .map { Site(byte: text.byteOf[$0.lowerBound], kind: .rawString(end: $0.upperBound)) }
             var retry = false
-            for site in (sites(in: tree) + raws).sorted(by: { ($0.byte, $0.kind.order) < ($1.byte, $1.kind.order) }) where site.byte >= cursorByte {
+            for site in (sites(in: tree) + raws).sorted(by: { ($0.byte, $0.kind.order) < ($1.byte, $1.kind.order) })
+            where site.byte >= cursorByte {
                 if asExpression, site.byte == content, site.kind.order < 2 { continue }
                 let start = text.character(atByte: site.byte)
                 var read: (end: Int, replacement: String, spans: [HighlightSpan])?
@@ -115,7 +123,12 @@ final class Front {
                     read = try self.read(site, at: start, text: text, blanked: blanked, names: names, partial: &partial)
                 } catch is Failure where recovering {
                     // What was read of it before the problem is colored, and the rest is Swift's.
-                    spans += partial.spans.map { HighlightSpan(range: ($0.range.lowerBound - delta)..<($0.range.upperBound - delta), kind: $0.kind) }
+                    spans += partial.spans.map {
+                        HighlightSpan(
+                            range: ($0.range.lowerBound - delta)..<($0.range.upperBound - delta),
+                            kind: $0.kind
+                        )
+                    }
                     let stopped = min(max(partial.end, start + 1), chars.count)
                     forms.append((start - delta)..<(stopped - delta))
                     // On, past what could not be read.
@@ -125,7 +138,12 @@ final class Front {
                 }
                 if let read {
                     found = (start, read.end, read.replacement)
-                    spans += read.spans.map { HighlightSpan(range: ($0.range.lowerBound - delta)..<($0.range.upperBound - delta), kind: $0.kind) }
+                    spans += read.spans.map {
+                        HighlightSpan(
+                            range: ($0.range.lowerBound - delta)..<($0.range.upperBound - delta),
+                            kind: $0.kind
+                        )
+                    }
                     forms.append((start - delta)..<(read.end - delta))
                     break
                 }
@@ -133,7 +151,9 @@ final class Front {
             if retry { continue }
             guard var found else { return finish() }
             // The spaces after a form belong to what follows it.
-            while found.end > found.start + 1, chars[found.end - 1] == " " || chars[found.end - 1] == "\t" { found.end -= 1 }
+            while found.end > found.start + 1, chars[found.end - 1] == " " || chars[found.end - 1] == "\t" {
+                found.end -= 1
+            }
             chars.replaceSubrange(found.start..<found.end, with: Array(found.replacement))
             delta += found.replacement.count - (found.end - found.start)
             cursor = found.start + found.replacement.count
@@ -141,19 +161,35 @@ final class Front {
         throw Failure("the front end did not settle")
     }
 
-    private func read(_ site: Site, at start: Int, text: Text, blanked: Text, names: Names, partial: inout (end: Int, spans: [HighlightSpan])) throws -> (end: Int, replacement: String, spans: [HighlightSpan])? {
+    private func read(
+        _ site: Site,
+        at start: Int,
+        text: Text,
+        blanked: Text,
+        names: Names,
+        partial: inout (end: Int, spans: [HighlightSpan])
+    ) throws -> (end: Int, replacement: String, spans: [HighlightSpan])? {
         var reader = Reader(front: self, text: text, blanked: blanked, names: names, at: start)
         defer { partial = (reader.pos, reader.spans) }
         func isStarting(_ info: StatementInfo?) -> Bool {
             // `$0` is a closure's parameter, found where Swift reads one.
             if reader.peek() == "$", let next = reader.peek(1), Lex.isDigit(next) { return false }
             let word = reader.identifier()
-            if let word, word != "try", Reader.statementKeywords.union(["if", "for", "while", "switch", "let", "var"]).contains(word) { return false }
+            if let word, word != "try",
+                Reader.statementKeywords.union(["if", "for", "while", "switch", "let", "var"]).contains(word)
+            {
+                return false
+            }
             if let info {
                 if info.isLabeled { return false }
                 if word == "_", info.isAssignment { return false }
                 if word == "async", info.isAsyncDeclaration { return false }
-                if let word, [.variable, .member, .type, .staticMember].contains(names.role(of: word, at: reader.here)), info.isAssignment { return false }
+                if let word,
+                    [.variable, .member, .type, .staticMember].contains(names.role(of: word, at: reader.here)),
+                    info.isAssignment
+                {
+                    return false
+                }
             }
             return true
         }
@@ -213,15 +249,25 @@ private final class SiteFinder: SyntaxVisitor {
         case .keyword(.if), .keyword(.while), .keyword(.guard):
             // The statement's keyword, not a label that is spelled like one (`prefix(while: …)`).
             let owner = token.parent
-            guard owner?.is(IfExprSyntax.self) == true || owner?.is(WhileStmtSyntax.self) == true || owner?.is(GuardStmtSyntax.self) == true
-                    || owner?.is(RepeatStmtSyntax.self) == true else { break }
+            guard
+                owner?.is(IfExprSyntax.self) == true || owner?.is(WhileStmtSyntax.self) == true
+                    || owner?.is(GuardStmtSyntax.self) == true
+                    || owner?.is(RepeatStmtSyntax.self) == true
+            else { break }
             if let next = token.nextToken(viewMode: .sourceAccurate) {
-                sites.append(Front.Site(byte: next.positionAfterSkippingLeadingTrivia.utf8Offset, kind: .condition(isGuard: token.tokenKind == .keyword(.guard))))
+                sites.append(
+                    Front.Site(
+                        byte: next.positionAfterSkippingLeadingTrivia.utf8Offset,
+                        kind: .condition(isGuard: token.tokenKind == .keyword(.guard))
+                    )
+                )
             }
         case .dollarIdentifier:
             let text = token.text
             if text == "$" {
-                if let next = token.nextToken(viewMode: .sourceAccurate), next.tokenKind == .leftParen, next.positionAfterSkippingLeadingTrivia == token.endPositionBeforeTrailingTrivia {
+                if let next = token.nextToken(viewMode: .sourceAccurate), next.tokenKind == .leftParen,
+                    next.positionAfterSkippingLeadingTrivia == token.endPositionBeforeTrailingTrivia
+                {
                     sites.append(Front.Site(byte: byte, kind: .substitution(underTry: SiteFinder.underTry(token))))
                 }
             }
@@ -243,7 +289,11 @@ private final class SiteFinder: SyntaxVisitor {
         var node = token.parent
         while let current = node {
             if current.is(TryExprSyntax.self) { return true }
-            if current.is(ClosureExprSyntax.self) || current.is(FunctionDeclSyntax.self) || current.is(InitializerDeclSyntax.self) || current.is(AccessorDeclSyntax.self) { return false }
+            if current.is(ClosureExprSyntax.self) || current.is(FunctionDeclSyntax.self)
+                || current.is(InitializerDeclSyntax.self) || current.is(AccessorDeclSyntax.self)
+            {
+                return false
+            }
             node = current.parent
         }
         return false
@@ -255,7 +305,9 @@ private final class SiteFinder: SyntaxVisitor {
             if let sequence = expr.as(SequenceExprSyntax.self) {
                 return sequence.elements.contains { element in
                     if element.is(AssignmentExprSyntax.self) { return true }
-                    if let op = element.as(BinaryOperatorExprSyntax.self)?.operator.text { return ["+=", "-=", "*=", "/=", "%=", "??="].contains(op) }
+                    if let op = element.as(BinaryOperatorExprSyntax.self)?.operator.text {
+                        return ["+=", "-=", "*=", "/=", "%=", "??="].contains(op)
+                    }
                     return false
                 }
             }

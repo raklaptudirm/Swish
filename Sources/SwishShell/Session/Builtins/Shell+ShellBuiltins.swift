@@ -1,5 +1,5 @@
-import Swiit
 import Foundation
+import Swiit
 
 /// A builtin that isn't a function: it changes the shell itself, so it
 /// can't be a program, and it takes words, as a program does. One table
@@ -37,28 +37,57 @@ extension Shell {
     /// shells' do, before Swish's binder; step 4 of the foundations makes
     /// them Swift functions with flags and help like the rest.
     private static let working: [ShellBuiltin] = [
-        ShellBuiltin(name: "cd", usage: "cd [<dir> | -]",
-                     summary: "Changes the working directory: to <dir>, back to the previous one (-), or home.",
-                     action: .run { $0.cd($1) }),
-        ShellBuiltin(name: "exec", usage: "exec <program> [<argument>...]", summary: "Runs a program in the shell's place.",
-                     action: .run { $0.exec($1) }),
-        ShellBuiltin(name: "exit", usage: "exit [<status>]", summary: "Leaves the shell, with <status> or the last command's.",
-                     action: .run { $0.exitShell($1) }),
-        ShellBuiltin(name: "run", usage: "run [<task> [<argument>...]]",
-                     summary: "Runs a task: a function in the nearest Tasks.swish, here or in a parent directory, in a Swish of its own. Alone, lists the tasks.",
-                     action: .program { try $0.taskCommand($1) }),
-        ShellBuiltin(name: "source", usage: "source <file> [<argument>...]",
-                     summary: "Runs a Swish file in this shell, so what it declares stays declared.",
-                     action: .run { $0.source($1) }),
-        ShellBuiltin(name: "ulimit", usage: "ulimit [-a] [-S|-H] [\(ResourceLimit.all.map { "-\($0.flag)" }.joined(separator: "|"))] [<limit>|unlimited]",
-                     summary: "Shows or sets a resource limit for the shell and what it runs: file size (-f) unless another is named.",
-                     action: .run { $0.ulimit($1) }),
-        ShellBuiltin(name: "umask", usage: "umask [<mask>]",
-                     summary: "Shows or sets, in octal, the permissions new files are made without.",
-                     action: .run { $0.umask($1) }),
-        ShellBuiltin(name: "which", usage: "which <name>...",
-                     summary: "Says what each name runs: a function, a shell builtin or a program.",
-                     action: .run { $0.which($1) }),
+        ShellBuiltin(
+            name: "cd",
+            usage: "cd [<dir> | -]",
+            summary: "Changes the working directory: to <dir>, back to the previous one (-), or home.",
+            action: .run { $0.cd($1) }
+        ),
+        ShellBuiltin(
+            name: "exec",
+            usage: "exec <program> [<argument>...]",
+            summary: "Runs a program in the shell's place.",
+            action: .run { $0.exec($1) }
+        ),
+        ShellBuiltin(
+            name: "exit",
+            usage: "exit [<status>]",
+            summary: "Leaves the shell, with <status> or the last command's.",
+            action: .run { $0.exitShell($1) }
+        ),
+        ShellBuiltin(
+            name: "run",
+            usage: "run [<task> [<argument>...]]",
+            summary:
+                "Runs a task: a function in the nearest Tasks.swish, here or in a parent directory, in a Swish of its own. Alone, lists the tasks.",
+            action: .program { try $0.taskCommand($1) }
+        ),
+        ShellBuiltin(
+            name: "source",
+            usage: "source <file> [<argument>...]",
+            summary: "Runs a Swish file in this shell, so what it declares stays declared.",
+            action: .run { $0.source($1) }
+        ),
+        ShellBuiltin(
+            name: "ulimit",
+            usage:
+                "ulimit [-a] [-S|-H] [\(ResourceLimit.all.map { "-\($0.flag)" }.joined(separator: "|"))] [<limit>|unlimited]",
+            summary:
+                "Shows or sets a resource limit for the shell and what it runs: file size (-f) unless another is named.",
+            action: .run { $0.ulimit($1) }
+        ),
+        ShellBuiltin(
+            name: "umask",
+            usage: "umask [<mask>]",
+            summary: "Shows or sets, in octal, the permissions new files are made without.",
+            action: .run { $0.umask($1) }
+        ),
+        ShellBuiltin(
+            name: "which",
+            usage: "which <name>...",
+            summary: "Says what each name runs: a function, a shell builtin or a program.",
+            action: .run { $0.which($1) }
+        ),
     ]
 
     private static let notSwish: [ShellBuiltin] = [
@@ -82,7 +111,10 @@ extension Shell {
         ("local", "a `var` in a function is its own"),
         ("readonly", "`let` declares a constant"),
         ("shift", "`args` is a list: `args.dropFirst()`"),
-    ].map { (name: String, instead: String) in ShellBuiltin(name: name, usage: "", summary: "", action: .notSwish(instead: instead)) }
+    ]
+    .map { (name: String, instead: String) in
+        ShellBuiltin(name: name, usage: "", summary: "", action: .notSwish(instead: instead))
+    }
 }
 
 extension Shell {
@@ -250,7 +282,8 @@ extension Shell {
             report("source: give a Swish file to run")
             return 2
         }
-        let resolved = path.hasPrefix("/") ? path : (scriptDirectory ?? FileManager.default.currentDirectoryPath) + "/" + path
+        let resolved =
+            path.hasPrefix("/") ? path : (scriptDirectory ?? FileManager.default.currentDirectoryPath) + "/" + path
         return sourceFile(resolved, arguments: Array(args.dropFirst()))
     }
 
@@ -272,7 +305,8 @@ extension Shell {
         var status: Int32 = 0
         for name in args {
             if let methods = stageCallee(name, of: .named("Flow", [.any]), receiver: .flow)
-                ?? (stageNames.sequence.contains(name) ? stageCallee(name, of: .list(.any), receiver: .collected) : nil) {
+                ?? (stageNames.sequence.contains(name) ? stageCallee(name, of: .list(.any), receiver: .collected) : nil)
+            {
                 for method in methods.overloads {
                     writeAll(stdoutFD, "\(name): sequence method \(signature(of: method))\n")
                 }

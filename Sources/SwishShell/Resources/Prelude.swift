@@ -1,3 +1,4 @@
+// swift-format-ignore-file
 // The shell's own declarations, in Swift, read after the language's prelude: the checker works from the signatures, and
 // the bodies are in Swift too, found by name (Library/Install.swift). Not compiled: it is embedded in the target.
 
@@ -11,7 +12,8 @@ enum OutputFormat: Equatable, Hashable {
     case json, text
 }
 
-/// What kind of entry `ls` found: `ls | filter { $0.type == .directory }`. In this order, so `ls | sorted --by type` puts files first.
+/// What kind of entry `ls` found: `ls | filter { $0.type == .directory }`. In this order, so `ls | sorted --by type`
+/// puts files first.
 enum FileType: Equatable, Hashable, Comparable {
     case file, directory, symlink, other
 }
@@ -21,7 +23,8 @@ enum JobState: Equatable, Hashable, Comparable {
     case running, stopped, done, cancelled
 }
 
-/// What `String.styled` can make text (the shell's: the core knows only `DisplayStyle`), each with its terminal code as its raw value.
+/// What `String.styled` can make text (the shell's: the core knows only `DisplayStyle`), each with its terminal code as
+/// its raw value.
 enum TextStyle: Equatable, Hashable {
     case bold, dim, italic, underline, red, green, yellow, blue, magenta, cyan, white, gray
 }
@@ -61,7 +64,7 @@ protocol Tabular {
 /// A command or task started in the background, which `await` joins and
 /// `jobs` lists. What scripts may use of it is what the shell's jobs have
 /// (Jobs.swift); a `Job<Int>` is one of these too.
-protocol Job { __JOB_MEMBERS__ }
+protocol Job { func __jobMembers() }
 
 /// How a command exited: `output.status`, and what `Command.run()` gives.
 /// A command statement is a `Status`, and `a && b || c` is

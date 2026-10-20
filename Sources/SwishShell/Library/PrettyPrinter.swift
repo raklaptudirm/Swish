@@ -43,19 +43,31 @@ struct PrettyPrinter: Sendable {
             return value.fields.map { node(for: $0) } ?? .segments([(value.debugDescription, nil)])
         case .dictionary:
             let dictionary = value.entries ?? ValueDictionary()
-            return dictionary.count == 0 ? .segments([("[:]", nil)]) : .group(open: [("[", nil)], items: dictionary.sortedForDisplay.map { key, value in
-                ([keySegment(key), (": ", nil)], node(for: value))
-            }, close: "]")
+            return dictionary.count == 0
+                ? .segments([("[:]", nil)])
+                : .group(
+                    open: [("[", nil)],
+                    items: dictionary.sortedForDisplay.map { key, value in
+                        ([keySegment(key), (": ", nil)], node(for: value))
+                    },
+                    close: "]"
+                )
         case .enumeration:
             return value.enumCase.map { node(for: $0) } ?? .segments([(value.debugDescription, nil)])
         case .object:
-            // A command's output is laid out as the struct it is; any other Swift value as its type says it looks, in a style.
+            // A command's output is laid out as the struct it is; any other Swift value as its type says it looks, in a
+            // style.
             if let output = value.commandOutput { return node(for: output.displayValue) }
             if let role = value.displayShape.role { return .segments([(value.description, role)]) }
-            guard let object = try? value.unboxed((any HostObject).self) else { return .segments([(value.debugDescription, nil)]) }
+            guard let object = try? value.unboxed((any HostObject).self) else {
+                return .segments([(value.debugDescription, nil)])
+            }
             if let segments = object.displaySegments { return .segments(segments) }
             if object.typeName == "enum", object.description.hasPrefix("enum ") {
-                return .segments([("enum", DisplayStyle.keyword), (" ", nil), (String(object.description.dropFirst(5)), DisplayStyle.type)])
+                return .segments([
+                    ("enum", DisplayStyle.keyword), (" ", nil),
+                    (String(object.description.dropFirst(5)), DisplayStyle.type),
+                ])
             }
             return value.fields.map { node(for: $0) } ?? .segments([(object.debugDescription, nil)])
         }
@@ -64,9 +76,13 @@ struct PrettyPrinter: Sendable {
     /// A struct's value, `Point(x: 1)`, or a tuple, `(name: "x", 2)`.
     private func node(for record: Fields) -> Node {
         let open: [Segment] = record.typeName.map { [($0, DisplayStyle.type), ("(", nil)] } ?? [("(", nil)]
-        return .group(open: open, items: record.map { field in
-            (Fields.isPosition(field.key) ? [] : label(field.key), node(for: field.value))
-        }, close: ")")
+        return .group(
+            open: open,
+            items: record.map { field in
+                (Fields.isPosition(field.key) ? [] : label(field.key), node(for: field.value))
+            },
+            close: ")"
+        )
     }
 
     private func keySegment(_ key: Value) -> Segment {
@@ -77,9 +93,10 @@ struct PrettyPrinter: Sendable {
     private func node(for value: (type: String, name: String, values: [Value], labels: [String?])) -> Node {
         let head: [Segment] = [(value.type, DisplayStyle.type), ("." + value.name, nil)]
         guard !value.values.isEmpty else { return .segments(head) }
-        let items = value.values.enumerated().map { index, item in
-            (index < value.labels.count ? value.labels[index].map(label) ?? [] : [], node(for: item))
-        }
+        let items = value.values.enumerated()
+            .map { index, item in
+                (index < value.labels.count ? value.labels[index].map(label) ?? [] : [], node(for: item))
+            }
         return .group(open: head + [("(", nil)], items: items, close: ")")
     }
 
@@ -96,25 +113,33 @@ struct PrettyPrinter: Sendable {
         if !mustBreak(node, indent: indent), used + line.plain.count + trailing <= width { return line.styled }
         switch node {
         case .segments:
-            return line.styled // Can't be broken.
+            return line.styled  // Can't be broken.
         case .string(let text):
             guard text.contains("\n") else { return line.styled }
             let inner = String(repeating: " ", count: indent + 2)
-            let body = text.split(separator: "\n", omittingEmptySubsequences: false).map { row in
-                row.isEmpty ? "" : inner + PrettyPrinter.escapedForBlock(String(row)).styled(DisplayStyle.string, styled)
-            }
+            let body = text.split(separator: "\n", omittingEmptySubsequences: false)
+                .map { row in
+                    row.isEmpty
+                        ? "" : inner + PrettyPrinter.escapedForBlock(String(row)).styled(DisplayStyle.string, styled)
+                }
             let quotes = "\"\"\"".styled(DisplayStyle.string, styled)
             return quotes + "\n" + body.joined(separator: "\n") + "\n" + inner + quotes
         case .group(let open, let items, let close):
             guard !items.isEmpty else { return line.styled }
             let inner = String(repeating: " ", count: indent + 2)
-            let rows = items.enumerated().map { index, item in
-                let isLast = index == items.count - 1
-                let label = paint(item.label)
-                return inner + label.styled
-                    + render(item.node, indent: indent + 2, used: indent + 2 + label.plain.count, trailing: isLast ? 0 : 1)
-                    + (isLast ? "" : ",")
-            }
+            let rows = items.enumerated()
+                .map { index, item in
+                    let isLast = index == items.count - 1
+                    let label = paint(item.label)
+                    return inner + label.styled
+                        + render(
+                            item.node,
+                            indent: indent + 2,
+                            used: indent + 2 + label.plain.count,
+                            trailing: isLast ? 0 : 1
+                        )
+                        + (isLast ? "" : ",")
+                }
             return paint(open).styled + "\n" + rows.joined(separator: "\n") + "\n"
                 + String(repeating: " ", count: indent) + close
         }

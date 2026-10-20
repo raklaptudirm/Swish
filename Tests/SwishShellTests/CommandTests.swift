@@ -1,6 +1,7 @@
 import Swiit
-@testable import SwishShell
 import Testing
+
+@testable import SwishShell
 
 // The library a command statement means (Docs/Design/desugaring.md), called by
 // hand: `Command(…).run()` gives a Status, `a && b || c` is
@@ -18,8 +19,14 @@ private func status(_ source: String) -> Int32 {
 
 @Test func aCommandRunsAndGivesItsStatus() throws {
     #expect(try output(#"let s = Command("echo", "hi").run(); print(s.succeeded)"#) == "hi\ntrue\n")
-    #expect(try output(#"let s = Command("sh", "-c", "exit 3").run(); print(s.code); print(s.succeeded)"#) == "Optional(3)\nfalse\n")
-    #expect(try output(#"let s = Command("sh", "-c", "kill -TERM $$").run(); print(s.signal); print(s.code == nil)"#) == "Optional(15)\ntrue\n")
+    #expect(
+        try output(#"let s = Command("sh", "-c", "exit 3").run(); print(s.code); print(s.succeeded)"#)
+            == "Optional(3)\nfalse\n"
+    )
+    #expect(
+        try output(#"let s = Command("sh", "-c", "kill -TERM $$").run(); print(s.signal); print(s.code == nil)"#)
+            == "Optional(15)\ntrue\n"
+    )
 }
 
 @Test func aStatusIsTheStatementsStatus() {
@@ -30,13 +37,22 @@ private func status(_ source: String) -> Int32 {
 }
 
 @Test func aCommandsOutputIsWhatSubstitutionGives() throws {
-    #expect(try output(#"let o = Command("echo", "hi").output(); print(o.text); print(o.status.succeeded)"#) == "hi\ntrue\n")
-    #expect(try output(#"let o = Command("sh", "-c", "echo partial; exit 2").output(); print(o.text); print(o.status.code)"#) == "partial\nOptional(2)\n")
+    #expect(
+        try output(#"let o = Command("echo", "hi").output(); print(o.text); print(o.status.succeeded)"#) == "hi\ntrue\n"
+    )
+    #expect(
+        try output(
+            #"let o = Command("sh", "-c", "echo partial; exit 2").output(); print(o.text); print(o.status.code)"#
+        ) == "partial\nOptional(2)\n"
+    )
 }
 
 @Test func theWordsAreTakenAsTheyAre() throws {
     // No `~`, `$name` or glob: that is what `Words` will do.
-    #expect(try output(#"Command("echo", "*.swift", "$HOME", "~").run(); print(Command("echo", "a b").words.count)"#) == "*.swift $HOME ~\n2\n")
+    #expect(
+        try output(#"Command("echo", "*.swift", "$HOME", "~").run(); print(Command("echo", "a b").words.count)"#)
+            == "*.swift $HOME ~\n2\n"
+    )
 }
 
 @Test func andAndOrRunOnTheStatusLeftToRight() throws {
@@ -53,9 +69,13 @@ private func status(_ source: String) -> Int32 {
     func command(_ words: [String]) -> String {
         "Command(" + words.map { "\"\($0)\"" }.joined(separator: ", ") + ").run()"
     }
-    for (a, aWords) in commands { for (b, bWords) in commands { for (c, cWords) in commands {
-        let shellWay = status("\(a) && \(b) || \(c)")
-        let swiftWay = status("\(command(aWords)).and { \(command(bWords)) }.or { \(command(cWords)) }")
-        #expect(shellWay == swiftWay, "\(a) && \(b) || \(c)")
-    } } }
+    for (a, aWords) in commands {
+        for (b, bWords) in commands {
+            for (c, cWords) in commands {
+                let shellWay = status("\(a) && \(b) || \(c)")
+                let swiftWay = status("\(command(aWords)).and { \(command(bWords)) }.or { \(command(cWords)) }")
+                #expect(shellWay == swiftWay, "\(a) && \(b) || \(c)")
+            }
+        }
+    }
 }

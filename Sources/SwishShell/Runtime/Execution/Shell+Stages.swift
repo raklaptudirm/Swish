@@ -1,5 +1,5 @@
-import Swiit
 import Foundation
+import Swiit
 
 /// A command as it runs: its words expanded, its redirects resolved.
 struct CommandSpec {
@@ -40,7 +40,17 @@ extension Shell {
                 return try program(arguments, name, command, redirects, environment)
             }
             if !command.external, (input != nil || !stages.isEmpty), isMemberName(name) || isStageMethod(name) {
-                stages.append(.deferred(DeferredStage(name: name, arguments: rest, redirects: redirects, environment: environment, fallback: fallback)))
+                stages.append(
+                    .deferred(
+                        DeferredStage(
+                            name: name,
+                            arguments: rest,
+                            redirects: redirects,
+                            environment: environment,
+                            fallback: fallback
+                        )
+                    )
+                )
             } else {
                 stages.append(try fallback())
             }
@@ -50,8 +60,11 @@ extension Shell {
 
     /// A builtin or a program on the path.
     private func program(
-        _ arguments: [CommandArgument], _ name: String, _ command: CommandSpec,
-        _ redirects: [ResolvedRedirect], _ environment: [(String, String)]
+        _ arguments: [CommandArgument],
+        _ name: String,
+        _ command: CommandSpec,
+        _ redirects: [ResolvedRedirect],
+        _ environment: [(String, String)]
     ) throws -> Stage {
         let argv = try arguments.map { argument -> String in
             guard case .text(let text) = argument else {
@@ -61,7 +74,12 @@ extension Shell {
         }
         // A builtin that becomes a program, as `run` becomes Swish on a task file.
         if !command.external, case .program(let make)? = Shell.shellBuiltins[name]?.action {
-            return .external(try make(self, Array(argv.dropFirst())), skipBuiltins: true, redirects: redirects, environment: environment)
+            return .external(
+                try make(self, Array(argv.dropFirst())),
+                skipBuiltins: true,
+                redirects: redirects,
+                environment: environment
+            )
         }
         return .external(argv, skipBuiltins: command.external, redirects: redirects, environment: environment)
     }

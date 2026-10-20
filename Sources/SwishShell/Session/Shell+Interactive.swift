@@ -1,5 +1,5 @@
-import Swiit
 import Foundation
+import Swiit
 
 extension Shell {
     /// Runs the read-eval loop until EOF or `exit`.
@@ -23,7 +23,9 @@ extension Shell {
         while true {
             // Finished and stopped background jobs, before the prompt.
             if pending.isEmpty {
-                for notice in announceJobs(styled: DisplayStyle.enabled(for: STDERR_FILENO)) { writeAll(STDERR_FILENO, notice + "\n") }
+                for notice in announceJobs(styled: DisplayStyle.enabled(for: STDERR_FILENO)) {
+                    writeAll(STDERR_FILENO, notice + "\n")
+                }
             }
             let prompt = pending.isEmpty ? prompt() : "…".styled(DisplayStyle.dim) + " "
             switch Interpreter.whileWaiting({ editor.readLine(prompt: prompt) }) {
@@ -84,7 +86,7 @@ extension Shell {
             signal(jobSignal, SIG_IGN)
         }
         catchInterrupts()
-        _ = setpgid(0, 0) // Fails harmlessly if we're already a session leader.
+        _ = setpgid(0, 0)  // Fails harmlessly if we're already a session leader.
         shellPgid = getpgrp()
         tcsetpgrp(terminal, shellPgid)
         tcgetattr(terminal, &shellModes)
@@ -109,6 +111,7 @@ extension Shell {
         }
         let failed = lastStatus != 0
         let status = failed ? "[\(lastStatus)]".styled(DisplayStyle.red) + " " : ""
-        return directory.styled(DisplayStyle.cyan) + " " + status + "❯".styled(failed ? DisplayStyle.red : DisplayStyle.green) + " "
+        return directory.styled(DisplayStyle.cyan) + " " + status
+            + "❯".styled(failed ? DisplayStyle.red : DisplayStyle.green) + " "
     }
 }

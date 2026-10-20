@@ -1,4 +1,6 @@
+import Foundation
 import Swiit
+
 #if canImport(Darwin)
 import Darwin
 #elseif canImport(Glibc)
@@ -6,7 +8,6 @@ import Glibc
 #elseif canImport(Musl)
 import Musl
 #endif
-import Foundation
 
 /// How a child ended or stopped, from `waitpid`'s status. The W… macros
 /// don't import into Swift; the encoding is the same on macOS and Linux.
@@ -78,7 +79,11 @@ func takeInterruptSignal() -> Int32? {
 ///
 /// Returns the child's pid, or the error number.
 func spawnProcess(
-    _ path: String, _ argv: [String], pgid: pid_t, descriptors: [(target: Int32, source: Int32)], terminal: Int32?
+    _ path: String,
+    _ argv: [String],
+    pgid: pid_t,
+    descriptors: [(target: Int32, source: Int32)],
+    terminal: Int32?
 ) -> Result<pid_t, Errno> {
     #if canImport(Darwin)
     var attributes: posix_spawnattr_t?
@@ -152,10 +157,15 @@ func spawnProcess(
 /// child take the terminal for its new group before it execs. Looked up
 /// when it runs, since Swift's Glibc module doesn't declare it and older
 /// glibcs don't have it.
-nonisolated(unsafe) private let addTerminalAction: (@convention(c) (UnsafeMutablePointer<posix_spawn_file_actions_t>, Int32) -> Int32)? = {
-    guard let symbol = dlsym(UnsafeMutableRawPointer(bitPattern: 0), "posix_spawn_file_actions_addtcsetpgrp_np") else { return nil }
-    return unsafeBitCast(symbol, to: (@convention(c) (UnsafeMutablePointer<posix_spawn_file_actions_t>, Int32) -> Int32).self)
-}()
+nonisolated(unsafe) private let addTerminalAction:
+    (@convention(c) (UnsafeMutablePointer<posix_spawn_file_actions_t>, Int32) -> Int32)? = {
+        guard let symbol = dlsym(UnsafeMutableRawPointer(bitPattern: 0), "posix_spawn_file_actions_addtcsetpgrp_np")
+        else { return nil }
+        return unsafeBitCast(
+            symbol,
+            to: (@convention(c) (UnsafeMutablePointer<posix_spawn_file_actions_t>, Int32) -> Int32).self
+        )
+    }()
 #endif
 
 /// An error number from the system, as `errno` has it.

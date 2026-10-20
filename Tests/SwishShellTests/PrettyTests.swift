@@ -1,6 +1,7 @@
 import Swiit
-@testable import SwishShell
 import Testing
+
+@testable import SwishShell
 
 private let wide = PrettyPrinter(width: .max)
 
@@ -24,37 +25,45 @@ private func fileType(_ name: String) -> Value {
 }
 
 @Test func whatDoesNotFitBreaksOverLines() {
-    let value = Value(ValueDictionary([
-        (Value("name"), Value("swish")), (Value("tags"), Value([Value("shell"), Value("swift")])),
-    ]))
-    #expect(PrettyPrinter(width: 30).format(value) == """
-    [
-      "name": "swish",
-      "tags": ["shell", "swift"]
-    ]
-    """)
-    #expect(PrettyPrinter(width: 20).format(value) == """
-    [
-      "name": "swish",
-      "tags": [
-        "shell",
-        "swift"
-      ]
-    ]
-    """)
+    let value = Value(
+        ValueDictionary([
+            (Value("name"), Value("swish")), (Value("tags"), Value([Value("shell"), Value("swift")])),
+        ])
+    )
+    #expect(
+        PrettyPrinter(width: 30).format(value) == """
+            [
+              "name": "swish",
+              "tags": ["shell", "swift"]
+            ]
+            """
+    )
+    #expect(
+        PrettyPrinter(width: 20).format(value) == """
+            [
+              "name": "swish",
+              "tags": [
+                "shell",
+                "swift"
+              ]
+            ]
+            """
+    )
 }
 
 @Test func multiLineStringsInsideAreBlocks() {
     let output = Value.output(Output(text: "one\ntwo \"\"\" \\ \u{1B}[1m", code: 0))
-    #expect(wide.format(output) == #"""
-    Output(
-      text: """
-        one
-        two \""" \\ \u{1B}[1m
-        """,
-      status: Status(code: 0, signal: nil, succeeded: true)
+    #expect(
+        wide.format(output) == #"""
+            Output(
+              text: """
+                one
+                two \""" \\ \u{1B}[1m
+                """,
+              status: Status(code: 0, signal: nil, succeeded: true)
+            )
+            """#
     )
-    """#)
     // On its own, a string is a literal on one line.
     #expect(wide.format(Value("a\nb")) == #""a\nb""#)
 }

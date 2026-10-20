@@ -1,5 +1,5 @@
-import Swiit
 import Foundation
+import Swiit
 
 /// Accepted input lines, newest last, kept in a file across sessions. Each
 /// entry is one line of the file, with newlines in multi-line entries
@@ -114,7 +114,9 @@ final class History {
     static func makeDirectory(for path: String) {
         let directory = URL(fileURLWithPath: path).deletingLastPathComponent().path
         try? FileManager.default.createDirectory(
-            atPath: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700]
+            atPath: directory,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
         )
     }
 }

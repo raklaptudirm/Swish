@@ -1,5 +1,5 @@
-import Swiit
 import Foundation
+import Swiit
 
 // A command line bound to a declaration's parameters: which overload the words
 // mean, and what each parameter is given. It looks at parameters and words
@@ -45,7 +45,9 @@ struct CommandLineBinding {
 extension Shell {
     /// Whether the shell answers `--help` or `-h` for these overloads, as it does unless one claims them.
     func helpRequested(_ words: [CommandWordShape], for callee: Callee) -> Bool {
-        guard !callee.parameters.contains(where: { $0.contains { $0.label == "help" || $0.shortFlag == "h" } }) else { return false }
+        guard !callee.parameters.contains(where: { $0.contains { $0.label == "help" || $0.shortFlag == "h" } }) else {
+            return false
+        }
         for case .text(let arg) in words {
             if arg == "--" { return false }
             if arg == "--help" || arg == "-h" { return true }
@@ -55,7 +57,9 @@ extension Shell {
 
     /// Picks the overload the words bind to with the lowest penalty, as a call by its arguments does.
     func bindCommandLine(
-        _ words: [CommandWordShape], to callee: Callee, excludingInput: Bool
+        _ words: [CommandWordShape],
+        to callee: Callee,
+        excludingInput: Bool
     ) throws -> CommandLineBinding {
         let name = callee.label
         let overloads = callee.parameters
@@ -65,31 +69,44 @@ extension Shell {
         var matches: [CommandLineBinding] = []
         for (position, parameters) in overloads.enumerated() {
             do {
-                matches.append(try bindWords(words, to: parameters, overload: position, name: name, excludingInput: excludingInput))
+                matches.append(
+                    try bindWords(words, to: parameters, overload: position, name: name, excludingInput: excludingInput)
+                )
             } catch is RuntimeError {
                 continue
             }
         }
         func rendered(_ symbol: Symbol) -> String { "  " + signature(of: symbol) }
         guard let best = matches.map(\.penalty).min() else {
-            throw RuntimeError("\(name): no overload accepts these arguments; candidates:\n" + callee.overloads.map(rendered).joined(separator: "\n"))
+            throw RuntimeError(
+                "\(name): no overload accepts these arguments; candidates:\n"
+                    + callee.overloads.map(rendered).joined(separator: "\n")
+            )
         }
         var bestMatches = matches.filter { $0.penalty == best }
         if bestMatches.count > 1 {
             // Of equals, a function that takes a type itself beats one that takes anything, as in Swift.
-            let generic = { (match: CommandLineBinding) in overloads[match.overload].filter { $0.type.isUnknown }.count }
+            let generic = { (match: CommandLineBinding) in overloads[match.overload].filter { $0.type.isUnknown }.count
+            }
             let fewest = bestMatches.map(generic).min()!
             bestMatches = bestMatches.filter { generic($0) == fewest }
         }
         guard bestMatches.count == 1 else {
-            throw RuntimeError("\(name): ambiguous call; these overloads all match:\n" + bestMatches.map { rendered(callee.overloads[$0.overload]) }.joined(separator: "\n"))
+            throw RuntimeError(
+                "\(name): ambiguous call; these overloads all match:\n"
+                    + bestMatches.map { rendered(callee.overloads[$0.overload]) }.joined(separator: "\n")
+            )
         }
         return bestMatches[0]
     }
 
-    /// `bind(commandLine:to:excludingInput:)`, deciding and not making: the same flags, positionals, collections and errors.
+    /// `bind(commandLine:to:excludingInput:)`, deciding and not making: the same flags, positionals, collections and
+    /// errors.
     func bindWords(
-        _ words: [CommandWordShape], to allParameters: [CommandParameter], overload: Int, name: String,
+        _ words: [CommandWordShape],
+        to allParameters: [CommandParameter],
+        overload: Int,
+        name: String,
         excludingInput: Bool
     ) throws -> CommandLineBinding {
         let parameters = allParameters.filter { !(excludingInput && $0.isInput) }
@@ -154,7 +171,8 @@ extension Shell {
                 if parameter.type.isBool && (inline == nil || negated) {
                     guard inline == nil else { throw RuntimeError("\(name): --\(flagName) doesn't take a value") }
                     if !negated, index < words.count, let next = textOf(index),
-                       (try? converted(next, to: parameter.type, for: "", of: name)) != nil {
+                        (try? converted(next, to: parameter.type, for: "", of: name)) != nil
+                    {
                         bound[parameter.name] = .words([Piece(word: index, text: next)])
                         index += 1
                     } else {
@@ -178,7 +196,9 @@ extension Shell {
             while cursor < letters.count {
                 let letter = letters[cursor]
                 guard let parameter = shortFlags[letter] else {
-                    throw RuntimeError("\(name): unknown option -\(letter)\(letters.count > 1 ? " in \(arg)" : "")" + programHint(name))
+                    throw RuntimeError(
+                        "\(name): unknown option -\(letter)\(letters.count > 1 ? " in \(arg)" : "")" + programHint(name)
+                    )
                 }
                 cursor += 1
                 if parameter.type.isBool {
@@ -202,17 +222,24 @@ extension Shell {
         for parameter in parameters where parameter.label == nil {
             let what = "<\(parameter.name)>"
             if parameter.isVariadic {
-                bound[parameter.name] = .words(try remaining.map { try take($0, text: textOf($0), as: parameter.type, for: what) })
+                bound[parameter.name] = .words(
+                    try remaining.map { try take($0, text: textOf($0), as: parameter.type, for: what) }
+                )
                 remaining = []
             } else if let (element, _) = Shell.collection(parameter.type) {
-                bound[parameter.name] = .words(try remaining.map { try take($0, text: textOf($0), as: element, for: what) })
+                bound[parameter.name] = .words(
+                    try remaining.map { try take($0, text: textOf($0), as: element, for: what) }
+                )
                 remaining = []
             } else if let word = remaining.popFirst() {
                 bound[parameter.name] = .words([try take(word, text: textOf(word), as: parameter.type, for: what)])
             }
         }
         if remaining.count == 1, textOf(remaining.first!) == nil,
-           let parameter = parameters.first(where: { $0.label != nil && bound[$0.name] == nil && $0.type.acceptsFunction }) {
+            let parameter = parameters.first(where: {
+                $0.label != nil && bound[$0.name] == nil && $0.type.acceptsFunction
+            })
+        {
             bound[parameter.name] = .words([Piece(word: remaining.first!, text: nil)])
             remaining = []
         }

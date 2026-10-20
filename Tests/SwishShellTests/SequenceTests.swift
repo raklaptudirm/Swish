@@ -1,6 +1,7 @@
 import Swiit
-@testable import SwishShell
 import Testing
+
+@testable import SwishShell
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
     try onLargeStack { try shell.capturing { shell.enter(source) } }
@@ -35,21 +36,31 @@ private let data = #"let xs = [(n: 2, s: "b"), (n: 1, s: "a"), (n: 3, s: "c")]; 
 
 @Test func sequenceMethodsOnValues() throws {
     #expect(try output(data + #"xs.sorted(by: \.s).map { $0.n }"#) == "[1, 2, 3]\n")
-    #expect(try output("[3, 1, 2].sorted(); [3, 1, 2].sorted { $0 > $1 }; [3, 1, 2].prefix(2)") == "[1, 2, 3]\n[3, 2, 1]\nArraySlice([3, 1])\n")
+    #expect(
+        try output("[3, 1, 2].sorted(); [3, 1, 2].sorted { $0 > $1 }; [3, 1, 2].prefix(2)")
+            == "[1, 2, 3]\n[3, 2, 1]\nArraySlice([3, 1])\n"
+    )
     #expect(try output("[1, 2, 3].count(where: { $0 > 1 }); [1, 2, 3].count") == "2\n3\n")
     // An Output's lines are a sequence too.
     #expect(try output(#"$(printf "b\na").sorted()"#) == #"["a", "b"]"# + "\n")
 }
 
 @Test func itemMethodsAsStages() throws {
-    let point = #"struct Point { var x: Int; func describe() -> String { "p\(x)" }; func scaled(by k: Int) -> Point { Point(x: x * k) }; mutating func bump() { x += 1 } }; "#
+    let point =
+        #"struct Point { var x: Int; func describe() -> String { "p\(x)" }; func scaled(by k: Int) -> Point { Point(x: x * k) }; mutating func bump() { x += 1 } }; "#
     #expect(try output(point + "[Point(x: 1), Point(x: 2)] | describe") == "p1\np2\n")
-    #expect(try output(point + "Point(x: 3) | scaled --by 2 | describe; Point(x: 3) | scaled(by: 3) | describe") == "p6\np9\n")
+    #expect(
+        try output(point + "Point(x: 3) | scaled --by 2 | describe; Point(x: 3) | scaled(by: 3) | describe")
+            == "p6\np9\n"
+    )
     // A piped value isn't a variable, so it can't be changed.
     #expect(errorText(point + "Point(x: 1) | bump")?.contains("mutating") == true)
     // Objects' methods too, found when the items arrive.
     let shell = Shell()
-    #expect(try output("async sleep 5; jobs | cancel; let j = jobs.first; await j!; j!.state", in: shell) == "[1] running  sleep 5\nJobState.cancelled\n")
+    #expect(
+        try output("async sleep 5; jobs | cancel; let j = jobs.first; await j!; j!.state", in: shell)
+            == "[1] running  sleep 5\nJobState.cancelled\n"
+    )
 }
 
 @Test func methodsComeFirstAfterAPipe() throws {
@@ -73,9 +84,14 @@ private func checkError(_ source: String) -> String? {
 
 @Test func swiftMembersAsStages() throws {
     // A member of the items collected, as an Array, in either syntax.
-    #expect(try output(#"[3, 1, 2] | max; [3, 1, 2] | min(); [1, 2] | contains(2); [1, 2, 3] | reduce(0) { $0 + $1 }"#)
-        == "3\n1\ntrue\n6\n")
-    #expect(try output(#"["a", "b"] | joined(separator: "-"); ["a", "b"] | joined --separator +; [4, 5] | first"#) == "a-b\na+b\n4\n")
+    #expect(
+        try output(#"[3, 1, 2] | max; [3, 1, 2] | min(); [1, 2] | contains(2); [1, 2, 3] | reduce(0) { $0 + $1 }"#)
+            == "3\n1\ntrue\n6\n"
+    )
+    #expect(
+        try output(#"["a", "b"] | joined(separator: "-"); ["a", "b"] | joined --separator +; [4, 5] | first"#)
+            == "a-b\na+b\n4\n"
+    )
     // A word converts to the Element it's compared with.
     #expect(try output(#"[1, 2] | contains 2; ["a"] | contains a"#) == "true\ntrue\n")
     // A list it gives flows as its items.
@@ -83,8 +99,12 @@ private func checkError(_ source: String) -> String? {
     // A member of each item, when the collected items have none by that name.
     #expect(try output(#"["abc", "de"] | uppercased; ["abc"] | hasPrefix("a")"#) == "ABC\nDE\ntrue\n")
     // A single value that isn't a sequence is the receiver itself.
-    #expect(try output(#""a b c" | split(separator: " ") | count; "abc" | count; let p: FilePath = "/a/b.txt"; p | lastComponent"#)
-        == "3\n3\nb.txt\n")
+    #expect(
+        try output(
+            #""a b c" | split(separator: " ") | count; "abc" | count; let p: FilePath = "/a/b.txt"; p | lastComponent"#
+        )
+            == "3\n3\nb.txt\n"
+    )
     // A word becomes a Character through Swift's LosslessStringConvertible.
     #expect(try output(#""a b c" | split --separator " " | count; "a-b" | split --separator - | count"#) == "3\n2\n")
     // A command's output has its lines' members.
@@ -95,12 +115,18 @@ private func checkError(_ source: String) -> String? {
 
 @Test func mapAndSortedAreSwifts() throws {
     // map keeps nils, as Swift's does; compactMap drops them.
-    #expect(try output("[1, 2, 3] | map { $0 > 1 ? $0 : nil } | count; [1, 2, 3] | compactMap { $0 > 1 ? $0 : nil } | count") == "3\n2\n")
+    #expect(
+        try output(
+            "[1, 2, 3] | map { $0 > 1 ? $0 : nil } | count; [1, 2, 3] | compactMap { $0 > 1 ? $0 : nil } | count"
+        ) == "3\n2\n"
+    )
     // Still a stream, so it stops reading once what's after it has enough.
     #expect(try output(#"yes | map { $0 + "!" } | prefix 2"#) == "y!\ny!\n")
     // sorted() and sorted(by:) are Swift's; sorting by a key path is the shell's addition.
-    #expect(try output("[3, 1, 2] | sorted; [3, 1, 2] | sorted { $0 > $1 }; [3, 1, 2] | sorted | reversed")
-        == "1\n2\n3\n3\n2\n1\n3\n2\n1\n")
+    #expect(
+        try output("[3, 1, 2] | sorted; [3, 1, 2] | sorted { $0 > $1 }; [3, 1, 2] | sorted | reversed")
+            == "1\n2\n3\n3\n2\n1\n3\n2\n1\n"
+    )
     #expect(try output(#"[(n: 2), (n: 1)] | sorted --by n | get n"#) == "1\n2\n")
     #expect(errorText("[(n: 1)] | sorted") == "swish: error: sorted needs Element to be Comparable, and (n: Int) isn't")
     #expect(errorText("ls | sorted --reverse") != nil)
