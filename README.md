@@ -237,7 +237,6 @@ is reported, and the default prompt drawn instead. History lives in the XDG stat
 swift build
 .build/debug/swish
 swift run swish -c 'run test'     # unit tests of the shell (Swiit's are in its repository), plus pty-driven job-control, editor and background-job tests
-swift run swish -c 'run bridge'   # regenerate the shell's bridge (after a toolchain update; Swiit's is Scripts/bridge there)
 ```
 
 The tasks are functions in [`Tasks.swish`](Tasks.swish); inside Swish, `run` lists them and
@@ -251,13 +250,12 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
 | Path | What |
 |---|---|
 | [`Swiit`](https://github.com/raklaptudirm/Swiit) | The interpreter, in a repository of its own, which knows nothing of the shell; the shell is a client of it, built against the version in `.swiit-version`. It is looked for beside this checkout (`../Swiit`; CI clones the tag), so work on both together by editing there. It holds the language, the bridges, the host API, `SwiitKit` (`Value`, and what a host converts through, a module of its own) and the bridge generator. |
-| `Sources/SwishShell` | The shell (Swish), a client of Swiit: |
+| `Sources/SwishShell` | The shell (Swish), a client of Swiit through its public interface alone: |
 | `…/Grammar` | The shell's syntax: `Syntax` (commands, pipelines, `$(…)`, redirects), `Checking` (types a pipeline's stages), `CommandLine` (binds `--flag` words to parameters) and the nodes they make. |
 | `…/Runtime` | Running it: `Execution` (pipelines, value streams, redirects, jobs, globs, `env`), `Platform` (`posix_spawn` with process groups and terminal handoff, resource limits, what differs between macOS and Linux). |
 | `…/Session` | The prompt: the `Shell` itself (loop, scripts, tasks, config), `Editor` (history, completion, highlighting) and the shell builtins and `help`. `Presentation` shows values: tables, key/value lists, and the prompt's echo of each value (the interpreter only tells it what a statement gave). |
-| `…/Bridge`, `…/Library` | The shell's generated bridge, and `SwishShellLibrary` (`pwd`, `readLine`, `history`, `ls`, `ps`, `from`, `to`, `table`, `list`, `JSON`). |
+| `…/Library` | The shell's own functions and types (`pwd`, `readLine`, `history`, `ls`, `ps`, `from`, `to`, `table`, `list`, `JSON`, `FileSize`, `Output`), told to the interpreter through its public interface (`Install.swift`, `Prelude.swift`, `Native.swift`). |
 | `Sources/Swish` | The executable. |
-| `Bridges` | Which members of each bridged type a platform has, one list a platform: what's bridged is what every platform has (`run bridge` keeps them current; CI checks). Swiit keeps its own the same way. |
 | `Tests/Interactive` | `expect` scripts that drive the shell through a real terminal. |
 
 </details>
