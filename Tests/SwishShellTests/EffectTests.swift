@@ -1,16 +1,15 @@
-@testable @_spi(Layer) import Swiit
-@_spi(Shell) @_spi(Layer) @testable import SwishShell
+import Swiit
+@testable import SwishShell
 import Testing
 
 // The shell's waits (`$(…)`, commands, `await job`) are blocking calls, not
 // effects: a function that runs commands is an ordinary function, and only
 // Swift's own `async` needs `await` (https://github.com/raklaptudirm/Swiit/blob/main/Docs/async.md).
 
-private func effect(of name: String, after source: String) throws -> Effect? {
+private func effect(of name: String, after source: String) throws -> Bool? {
     let shell = Shell()
     _ = try onLargeStack { try shell.capturing { shell.execute(source) } }
-    guard case .function(let set as OverloadSet)? = shell.interpreter.lookup(name)?.value else { return nil }
-    return set.candidates.first?.effect
+    return shell.interpreter.symbols(named: name).first?.function?.isAsync
 }
 
 private func run(_ source: String, in shell: Shell = Shell()) throws -> (output: String, status: Int32) {
@@ -19,9 +18,9 @@ private func run(_ source: String, in shell: Shell = Shell()) throws -> (output:
 }
 
 @Test func theShellsWaitsAreBlockingCalls() throws {
-    #expect(try effect(of: "build", after: "func build() { echo hi }") == .sync)
-    #expect(try effect(of: "text", after: "func text() -> String { $(echo hi).text }") == .sync)
-    #expect(try effect(of: "f", after: "func f() async -> Int { 1 }") == .async)
+    #expect(try effect(of: "build", after: "func build() { echo hi }") == false)
+    #expect(try effect(of: "text", after: "func text() -> String { $(echo hi).text }") == false)
+    #expect(try effect(of: "f", after: "func f() async -> Int { 1 }") == true)
     // Called by name or through a value, with no `await`; passed to Swift as any closure is.
     #expect(try run("func build() { echo hi }; build(); let f = build; f()").output == "hi\nhi\n")
     #expect(try run(#"print(["a", "b"].map { x in $(echo \(x)).text })"#).output == "[\"a\", \"b\"]\n")
@@ -40,11 +39,11 @@ private func run(_ source: String, in shell: Shell = Shell()) throws -> (output:
 @Test func becomingAsyncSaysWhoCallsIt() throws {
     let shell = Shell()
     _ = try run("func fetch() -> Int { 1 }; func use() -> Int { fetch() }", in: shell)
-    guard case .success(let program) = shell.interpreter.parse("func fetch() async -> Int { 2 }") else { Issue.record(); return }
-    #expect(throws: TypeError.self) { try TypeChecker(interpreter: shell.interpreter).check(program) }
     do {
-        _ = try TypeChecker(interpreter: shell.interpreter).check(program)
+        _ = try shell.interpreter.check("func fetch() async -> Int { 2 }")
+        Issue.record("it was allowed")
     } catch {
+        #expect(error.kind == .type)
         #expect(error.message == "fetch can't become async: 'use' calls it without 'await'")
     }
 }

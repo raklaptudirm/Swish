@@ -1,5 +1,5 @@
-@_spi(Layer) import Swiit
-@_spi(Shell) @_spi(Layer) @testable import SwishShell
+import Swiit
+@testable import SwishShell
 import SwiitStandardLibrary
 import Testing
 
@@ -434,7 +434,7 @@ private func fixture() throws -> String {
 @Test func formatterFitsTheWidth() {
     var lines: [String] = []
     let formatter = DisplayFormatter(maxWidth: 20) { lines.append($0); return true }
-    formatter.add(.record(Record(["name": .string("a-rather-long-file-name"), "size": FileSize(bytes: 1).value])))
+    formatter.add(Value(struct: nil, fields: ["name": Value("a-rather-long-file-name"), "size": FileSize(bytes: 1).value]))
     formatter.finish()
     // The name column shrinks from 23 to 14 so the table fits in 20.
     #expect(lines == ["name            size\n", "a-rather-long…   1 B\n"])
@@ -443,7 +443,7 @@ private func fixture() throws -> String {
 @Test func formatterDropsColumnsThatCantFit() {
     var lines: [String] = []
     let formatter = DisplayFormatter(maxWidth: 20) { lines.append($0); return true }
-    formatter.add(.record(Record(["alpha": .string("aaaaaaaa"), "bravo": .string("bbbbbbbb"), "charlie": .string("cccccccc")])))
+    formatter.add(Value(struct: nil, fields: ["alpha": Value("aaaaaaaa"), "bravo": Value("bbbbbbbb"), "charlie": Value("cccccccc")]))
     formatter.finish()
     // Even at 6 wide, three columns need 22; the last is left off.
     #expect(lines == ["alpha   bravo  …\n", "aaaaa…  bbbbb…\n"])

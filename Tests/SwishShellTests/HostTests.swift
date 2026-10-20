@@ -1,6 +1,6 @@
 import Foundation
-@testable @_spi(Layer) import Swiit
-@_spi(Shell) @_spi(Layer) @testable import SwishShell
+import Swiit
+@testable import SwishShell
 import Testing
 
 /// What a test host saw, and what it was told to answer: proof that the

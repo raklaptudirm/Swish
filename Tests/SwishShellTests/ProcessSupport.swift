@@ -1,5 +1,5 @@
-@_spi(Layer) import Swiit
-@_spi(Shell) @_spi(Layer) @testable import SwishShell
+import Swiit
+@testable import SwishShell
 import Foundation
 
 // What the tests need to know about the process they run in. In a file of
@@ -20,7 +20,7 @@ func errorText(_ source: String, in shell: Shell = Shell()) -> String? {
     _ = try? onLargeStack { try shell.capturing { shell.execute(source) } }
     shell.stderrFD = saved
     close(pipe.write)
-    let text = shell.interpreter.suspend { collector.finish() }
+    let text = Interpreter.whileWaiting { collector.finish() }
     return text.isEmpty ? nil : String(text.split(separator: "\n", omittingEmptySubsequences: false).first ?? "")
 }
 
@@ -30,4 +30,19 @@ func checkMessage(_ source: String, in shell: Shell) -> String? {
     case .success: return nil
     case .failure(let diagnostic): return diagnostic.kind == .syntax ? "syntax error" : diagnostic.message
     }
+}
+
+/// Runs `body` on a thread with a stack large enough for the interpreter's recursion, and waits for it.
+func onLargeStack<T>(_ body: @escaping () throws -> T) throws -> T {
+    nonisolated(unsafe) var result: Result<T, any Error>?
+    nonisolated(unsafe) let body = body
+    let done = DispatchSemaphore(value: 0)
+    let thread = Thread {
+        result = Result { try body() }
+        done.signal()
+    }
+    thread.stackSize = 1 << 30
+    thread.start()
+    done.wait()
+    return try result!.get()
 }

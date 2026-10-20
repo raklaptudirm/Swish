@@ -1,5 +1,5 @@
-@_spi(Layer) import Swiit
-@_spi(Shell) @_spi(Layer) @testable import SwishShell
+import Swiit
+@testable import SwishShell
 import Foundation
 
 // What the help tests need from Foundation's AttributedString. In a file of

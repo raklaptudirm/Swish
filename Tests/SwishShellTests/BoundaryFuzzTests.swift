@@ -1,6 +1,6 @@
 import Foundation
-@testable @_spi(Layer) import Swiit
-@_spi(Shell) @_spi(Layer) @testable import SwishShell
+import Swiit
+@testable import SwishShell
 import Testing
 
 // Swish's text is Swift's with the shell's in it (`$(…)`, commands, `async`), and SwiftParser is what finds where each
@@ -129,9 +129,7 @@ private let programs = ProcessInfo.processInfo.environment["SWISH_FUZZ"].flatMap
     #expect(try run(source) == "m0\nm1\n")
     // And a real mistake is still reported, where it is.
     let shell = Shell()
-    if case .success = shell.interpreter.parse("func go(_ w: () -> Void) { w() }\ngo {\n  let x = (1 +\n}\n") {
-        Issue.record("a program with an unfinished expression parsed")
-    }
+    #expect(throws: Diagnostic.self) { try shell.interpreter.check("func go(_ w: () -> Void) { w() }\ngo {\n  let x = (1 +\n}\n") }
 }
 
 @Test func labeledLoopsAndRepeatLoopsHoldCommands() throws {

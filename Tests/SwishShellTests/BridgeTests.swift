@@ -1,5 +1,5 @@
-@testable @_spi(Layer) import Swiit
-@_spi(Shell) @_spi(Layer) @testable import SwishShell
+import Swiit
+@testable import SwishShell
 import Testing
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {

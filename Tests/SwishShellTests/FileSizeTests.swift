@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 @testable import SwishShell
 import Testing
 

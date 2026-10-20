@@ -1,17 +1,23 @@
-@_spi(Layer) import Swiit
-@_spi(Shell) @_spi(Layer) @testable import SwishShell
+import Swiit
+@testable import SwishShell
 import SwiitStandardLibrary
 import Testing
 
 private let wide = PrettyPrinter(width: .max)
-private let fileType = EnumType(name: "FileType", cases: ["file", "directory"].map { .init(name: $0) })
+
+/// A case of an enum the interpreter was told of.
+private func fileType(_ name: String) -> Value {
+    let interpreter = Interpreter()
+    _ = try? interpreter.evaluate("enum FileType { case file, directory }")
+    return interpreter.value(ofCase: name, in: "FileType")!
+}
 
 @Test func onOneLineItIsTheDebugDescription() {
     let status = Output(text: "hi", code: 0)
     let values: [Value] = [
-        .nothing, .int(3), .string("tab\there"), .list([.int(1), .string("x"), .nothing]),
-        .record(Record(["k": .string("v")])), .record(Record()), .output(status), status.status.value,
-        .enumValue(EnumValue(type: fileType, name: "directory")),
+        .null, Value(3), Value("tab\there"), Value([Value(1), Value("x"), .null]),
+        Value(struct: nil, fields: ["k": Value("v")]), Value(struct: nil, fields: [(name: String, value: Value)]()),
+        .output(status), status.status.value, fileType("directory"),
     ]
     for value in values {
         #expect(wide.format(value) == value.debugDescription)
@@ -19,8 +25,8 @@ private let fileType = EnumType(name: "FileType", cases: ["file", "directory"].m
 }
 
 @Test func whatDoesNotFitBreaksOverLines() {
-    let value = Value.dictionary(ValueDictionary([
-        (.string("name"), .string("swish")), (.string("tags"), .list([.string("shell"), .string("swift")])),
+    let value = Value(ValueDictionary([
+        (Value("name"), Value("swish")), (Value("tags"), Value([Value("shell"), Value("swift")])),
     ]))
     #expect(PrettyPrinter(width: 30).format(value) == """
     [
@@ -51,11 +57,11 @@ private let fileType = EnumType(name: "FileType", cases: ["file", "directory"].m
     )
     """#)
     // On its own, a string is a literal on one line.
-    #expect(wide.format(.string("a\nb")) == #""a\nb""#)
+    #expect(wide.format(Value("a\nb")) == #""a\nb""#)
 }
 
 @Test func colorsFollowTheHighlighter() {
     let styled = PrettyPrinter(width: .max, styled: true)
-    #expect(styled.format(.list([.int(1), .string("x")])) == "[\u{1B}[95m1\u{1B}[0m, \u{1B}[33m\"x\"\u{1B}[0m]")
-    #expect(styled.format(.enumValue(EnumValue(type: fileType, name: "file"))) == "\u{1B}[93mFileType\u{1B}[0m.file")
+    #expect(styled.format(Value([Value(1), Value("x")])) == "[\u{1B}[95m1\u{1B}[0m, \u{1B}[33m\"x\"\u{1B}[0m]")
+    #expect(styled.format(fileType("file")) == "\u{1B}[93mFileType\u{1B}[0m.file")
 }
