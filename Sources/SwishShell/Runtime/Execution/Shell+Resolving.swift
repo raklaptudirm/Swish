@@ -60,7 +60,7 @@ extension Shell {
             guard let first else { return nil }
             switch first {
             case .record(let record) where record.typeName != nil:
-                return (try? self.interpreter.member(name, of: first)) != nil ? .method(name, deferred.arguments, redirects: deferred.redirects, environment: deferred.environment) : nil
+                return (try? self.interpreter.value(of: name, in: first)) != nil ? .method(name, deferred.arguments, redirects: deferred.redirects, environment: deferred.environment) : nil
             case .object(let object) where !(object is SwiftValue):
                 return object.member(name) != nil ? .method(name, deferred.arguments, redirects: deferred.redirects, environment: deferred.environment) : nil
             default: return nil

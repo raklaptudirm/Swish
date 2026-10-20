@@ -86,7 +86,7 @@ public final class Shell {
         // Library functions that ask are lent what was entered before, too.
         interpreter.contextProvider = { [unowned self] in
             var context = HostContext(history: historyEntries, colorOutput: interpreter.host.output.traits().styled)
-            context.display = interpreter.tableRegistry()
+            context.display = tableRegistry()
             return context
         }
         interpreter.owner = self
@@ -217,8 +217,8 @@ extension Shell {
         if interactive && interpreter.file == nil { _ = takeInterrupt() }
         do {
             // Only the prompt shows values; running code prints what it prints.
-            try interpreter.run(program, observing: atPrompt ? { [unowned interpreter] value, expression, discarded in
-                interpreter.present(value, from: expression, discarded: discarded)
+            try interpreter.run(program, observing: atPrompt ? { [unowned self] value, expression, discarded in
+                present(value, from: expression, discarded: discarded)
             } : nil)
         } catch let interrupt as Interrupted {
             if interactive && interpreter.file == nil {

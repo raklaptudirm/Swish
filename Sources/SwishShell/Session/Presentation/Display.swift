@@ -1,5 +1,5 @@
 import Foundation
-@_spi(Layer) import Swiit
+import Swiit
 import SwiitStandardLibrary
 
 /// How the standard library's and the shell's own types show in a table:
@@ -10,70 +10,64 @@ import SwiitStandardLibrary
 extension DisplayFormatter {
     /// Writes with `write`, fitting what the stream is: a terminal's width
     /// and a styled header, or every character for a file.
-    package convenience init(traits: StreamTraits, registry: DisplayRegistry, write: @escaping (String) -> Bool) {
+    convenience init(traits: OutputSink.Traits, registry: DisplayRegistry, write: @escaping (String) -> Bool) {
         self.init(maxWidth: traits.width ?? .max, styled: traits.styled,
                   columnCap: traits.isTerminal ? 40 : .max, registry: registry, write: write)
     }
 }
 
-extension Interpreter {
-    /// How types show in a table: every installed library's, the shell's own
-    /// (`Job`, `Help`), and the columns of the structs declared in Swish that
-    /// say so (`Tabular`).
+extension Shell {
+    /// How types show in a table: the shell's own (`Job`, `Help`, `FileEntry`), and the columns of the structs declared in
+    /// Swish that say so (`Tabular`), found when a table of one is laid out.
     var displayRegistry: DisplayRegistry { tableRegistry() }
 
     func tableRegistry() -> DisplayRegistry {
         var registry = DisplayRegistry()
-        registry.columns.merge(Bridge.shellColumns) { first, _ in first }
-        registry.enumStyles.merge(Bridge.shellEnumStyles) { first, _ in first }
-        registry.columns.merge(["Job": Job.columns, "Help": Shell.helpColumns]) { first, _ in first }
-        for scope in scopes {
-            for case .object(let type as StructType) in scope.bindings.values.map(\.value)
-            where type.conformances.contains("Tabular") && registry.columns[type.name] == nil {
-                guard case .list(let items)? = type.statics["columns"]?.value else { continue }
-                registry.columns[type.name] = items.compactMap { item in
-                    if case .object(let box as SwiftValue) = item { box.value as? DisplayColumn } else { nil }
-                }
-            }
-        }
+        registry.columns = [
+            "FileEntry": FileEntry.columns, "ProcessEntry": ProcessEntry.columns,
+            "Job": Job.columns, "Help": Shell.helpColumns,
+        ]
+        registry.enumStyles = [
+            "FileType": { name in FileType.allCases.first { "\($0)" == name }?.displayStyle },
+            "JobState": { name in JobState.allCases.first { "\($0)" == name }?.displayStyle },
+        ]
+        // Called holding the interpreter lock, as every table is laid out.
+        nonisolated(unsafe) let shell = self
+        registry.declared = { typeName in shell.declaredColumns(of: typeName) }
         return registry
     }
 
-    /// What the prompt does with an expression statement's value: shows it,
-    /// unless Swift would discard it or it is an `await` whose job already
-    /// wrote to the terminal.
-    func present(_ value: Value, from expression: Expr, discarded: Bool) {
-        let awaitedToTerminal = expression.isAwait && value.showsNothing
-        // A command's `Status` is recorded as the status, not shown.
-        if case .record(let record) = value, record.typeName == "Status" { return }
-        guard !discarded, !awaitedToTerminal else { return }
-        show(value, debug: true)
+    /// The `columns` a struct of the program's declares by being `Tabular`.
+    private func declaredColumns(of typeName: String) -> [DisplayColumn]? {
+        guard let type = interpreter[typeName], let list = try? interpreter.value(of: "columns", in: type),
+              let items = list.cast(to: [Value].self) else { return nil }
+        let columns = items.compactMap { try? $0.unboxed(DisplayColumn.self) }
+        return columns.isEmpty ? nil : columns
     }
-}
 
-extension Interpreter {
     /// Shows a value to a person: a table for a list of records, a
     /// key/value list for one record, and otherwise its text, or its
     /// `debugDescription` for a bare value (`let r = $(echo hi); r`).
-    package func show(_ value: Value, debug: Bool = false) {
-        let output = host.output
+    func show(_ value: Value, debug: Bool = false) {
+        let output = interpreter.host.output
         let traits = output.traits()
-        switch value {
+        let fields = value.fields
+        switch value.kind {
         case .nothing:
             return
-        case .record(let record) where record.count == 0 && record.typeName == nil:
+        case .tuple where fields?.count == 0:
             return // `()`: what a Void call gives as a value.
         case .object where value.displayShape.isEmpty && !debug:
             return
-        case .record(let record) where !debug:
-            for line in DisplayFormatter.keyValueLines(record, styled: traits.styled, registry: displayRegistry) {
+        case .structure where !debug, .tuple where !debug:
+            for line in DisplayFormatter.keyValueLines(fields!, styled: traits.styled, registry: displayRegistry) {
                 output.write(line + "\n")
             }
         // A command's list reads as a pipeline's output would: records as a
         // table, anything else an item per line. A bare list is a value.
-        case .list(let items) where !debug || items.contains(where: { $0.asRecord != nil }):
+        case .list where !debug || (value.cast(to: [Value].self) ?? []).contains(where: { $0.fields != nil }):
             let formatter = DisplayFormatter(traits: traits, registry: displayRegistry) { output.write($0) }
-            for item in items { formatter.add(item) }
+            for item in value.cast(to: [Value].self) ?? [] { formatter.add(item) }
             formatter.finish()
         case _ where debug:
             let printer = PrettyPrinter(width: traits.width ?? 80, styled: traits.styled)
@@ -86,7 +80,7 @@ extension Interpreter {
 
 extension Value {
     /// It has nothing to show, as a command that printed nothing.
-    package var showsNothing: Bool {
+    var showsNothing: Bool {
         displayShape.isEmpty
     }
 }

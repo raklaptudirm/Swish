@@ -1,5 +1,5 @@
 import Foundation
-@_spi(Layer) import Swiit
+import Swiit
 
 /// An amount of bytes, shown in decimal units as Finder shows them (`532 B`,
 /// `1.2 KB`, `123 MB`) and written `1.5.mb` in Swiit (each unit is a property of `Int` and `Double`). It adds and subtracts,
@@ -76,12 +76,12 @@ struct FileSize: Codable, Hashable, Comparable, Sendable, LosslessStringConverti
     /// A size from a number of bytes worked out in floating point; an error
     /// where it wouldn't fit.
     private static func scaled(_ bytes: Double) throws -> FileSize {
-        guard bytes.magnitude < Double(Int.max) else { throw SwiitError("arithmetic overflow") }
+        guard bytes.magnitude < Double(Int.max) else { throw LibraryError("arithmetic overflow") }
         return FileSize(bytes: Int(bytes))
     }
 
     private static func divided(_ bytes: Int, by divisor: Double) throws -> FileSize {
-        guard divisor != 0 else { throw SwiitError("division by zero") }
+        guard divisor != 0 else { throw LibraryError("division by zero") }
         return try scaled(Double(bytes) / divisor)
     }
 
@@ -109,13 +109,13 @@ extension FileSize: SwiitDisplayed {
 extension FileSize: ValueConvertible {
     static var valueType: ValueType { .named("FileSize") }
     init(_ swiitValue: Value) throws {
-        if case .object(let box as SwiftValue) = swiitValue, let size = box.value as? FileSize {
+        if let size = try? swiitValue.unboxed(FileSize.self) {
             self = size
-        } else if case .int(let bytes) = swiitValue {
+        } else if let bytes = swiitValue.cast(to: Int.self) {
             self.init(bytes: bytes)
         } else {
-            throw SwiitError("expected a FileSize, not \(swiitValue)")
+            throw LibraryError("expected a FileSize, not \(swiitValue)")
         }
     }
-    var value: Value { SwiftValue.make(self, as: "FileSize") }
+    var value: Value { Value(boxing: self, as: "FileSize") }
 }

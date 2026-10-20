@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 
 /// What you've entered at the prompt, oldest first.
 func history(in shell: HostContext) -> [String] {

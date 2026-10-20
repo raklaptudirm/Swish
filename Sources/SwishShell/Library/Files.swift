@@ -6,7 +6,7 @@ import Glibc
 import Musl
 #endif
 import Foundation
-@_spi(Layer) import Swiit
+import Swiit
 import SystemPackage
 
 /// What kind of entry `ls` found: `ls | filter { $0.type == .directory }`.

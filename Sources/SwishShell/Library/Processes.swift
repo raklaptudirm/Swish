@@ -6,7 +6,7 @@ import Glibc
 import Musl
 #endif
 import Foundation
-@_spi(Layer) import Swiit
+import Swiit
 import SystemPackage
 
 /// A user's name, or their number if they have none.

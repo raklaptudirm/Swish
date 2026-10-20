@@ -10,7 +10,7 @@ private let fileType = EnumType(name: "FileType", cases: ["file", "directory"].m
     let status = Output(text: "hi", code: 0)
     let values: [Value] = [
         .nothing, .int(3), .string("tab\there"), .list([.int(1), .string("x"), .nothing]),
-        .record(Record(["k": .string("v")])), .record(Record()), .output(status), .record(status.statusRecord),
+        .record(Record(["k": .string("v")])), .record(Record()), .output(status), status.status.value,
         .enumValue(EnumValue(type: fileType, name: "directory")),
     ]
     for value in values {

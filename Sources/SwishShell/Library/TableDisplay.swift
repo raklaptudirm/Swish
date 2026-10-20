@@ -1,5 +1,5 @@
 import Foundation
-@_spi(Layer) import Swiit
+import Swiit
 
 // How the shell shows values in a table: the vocabulary a type uses to say which of its fields a table starts with
 // and what stands out in them. The core knows none of it (the styles themselves, `DisplayStyle`, are its).
@@ -31,10 +31,17 @@ struct DisplayColumn: Sendable, ExpressibleByStringLiteral {
 struct DisplayRegistry: Sendable {
     public var columns: [String: [DisplayColumn]]
     public var enumStyles: [String: @Sendable (String) -> DisplayStyle?]
+    /// The columns of a type the registry does not know yet: one a program declared.
+    public var declared: (@Sendable (String) -> [DisplayColumn]?)?
 
     public init(columns: [String: [DisplayColumn]] = [:], enumStyles: [String: @Sendable (String) -> DisplayStyle?] = [:]) {
         self.columns = columns
         self.enumStyles = enumStyles
+    }
+
+    /// The columns a table of `typeName` starts with, if the type says.
+    func columns(for typeName: String) -> [DisplayColumn]? {
+        columns[typeName] ?? declared?(typeName)
     }
 }
 

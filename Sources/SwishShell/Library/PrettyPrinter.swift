@@ -1,5 +1,6 @@
 import Foundation
-@_spi(Layer) import Swiit
+import Swiit
+import SwiitStandardLibrary
 
 /// Shows a value as `debugDescription` spells it, but for a person: in the
 /// highlighter's colors, and, when it won't fit on one line, broken over
@@ -31,55 +32,54 @@ struct PrettyPrinter: Sendable {
     // MARK: Shapes
 
     func node(for value: Value) -> Node {
-        switch value {
-        case .nothing: .segments([("nil", DisplayStyle.constant)])
-        case .bool, .int, .double: .segments([(value.description, DisplayStyle.constant)])
-        case .function: .segments([(value.description, nil)])
-        case .string(let text): .string(text)
-        case .list(let items):
-            .group(open: [("[", nil)], items: items.map { ([], node(for: $0)) }, close: "]")
-        case .record(let record): node(for: record)
-        case .dictionary(let dictionary):
-            dictionary.count == 0 ? .segments([("[:]", nil)]) : .group(open: [("[", nil)], items: dictionary.sortedForDisplay.map { key, value in
+        switch value.kind {
+        case .nothing: return .segments([("nil", DisplayStyle.constant)])
+        case .bool, .int, .double: return .segments([(value.description, DisplayStyle.constant)])
+        case .function: return .segments([(value.description, nil)])
+        case .string: return .string(value.description)
+        case .list:
+            let items = value.cast(to: [Value].self) ?? []
+            return .group(open: [("[", nil)], items: items.map { ([], node(for: $0)) }, close: "]")
+        case .structure, .tuple:
+            return value.fields.map { node(for: $0) } ?? .segments([(value.debugDescription, nil)])
+        case .dictionary:
+            let dictionary = value.entries ?? ValueDictionary()
+            return dictionary.count == 0 ? .segments([("[:]", nil)]) : .group(open: [("[", nil)], items: dictionary.sortedForDisplay.map { key, value in
                 ([keySegment(key), (": ", nil)], node(for: value))
             }, close: "]")
-        // A command's output is laid out as the struct it is; any other Swift value as its type says it looks, in a style.
-        case .object where value.commandOutput != nil:
-            node(for: value.commandOutput!.displayRecord)
-        case .object where value.displayShape.role != nil:
-            .segments([(value.description, value.displayShape.role)])
-        case .enumValue(let value):
-            node(for: value)
-        case .object(let object) where object.objectDisplaySegments != nil:
-            .segments(object.objectDisplaySegments!)
-        case .object(let type as EnumType):
-            .segments([("enum", DisplayStyle.keyword), (" ", nil), (type.name, DisplayStyle.type)])
-        case .object(let object):
-            object.objectFields.map { node(for: $0) } ?? .segments([(object.debugDescription, nil)])
-        @unknown default:
-            .segments([(value.debugDescription, nil)])
+        case .enumeration:
+            return value.enumCase.map { node(for: $0) } ?? .segments([(value.debugDescription, nil)])
+        case .object:
+            // A command's output is laid out as the struct it is; any other Swift value as its type says it looks, in a style.
+            if let output = value.commandOutput { return node(for: output.displayValue) }
+            if let role = value.displayShape.role { return .segments([(value.description, role)]) }
+            guard let object = try? value.unboxed((any HostObject).self) else { return .segments([(value.debugDescription, nil)]) }
+            if let segments = object.displaySegments { return .segments(segments) }
+            if object.typeName == "enum", object.description.hasPrefix("enum ") {
+                return .segments([("enum", DisplayStyle.keyword), (" ", nil), (String(object.description.dropFirst(5)), DisplayStyle.type)])
+            }
+            return value.fields.map { node(for: $0) } ?? .segments([(object.debugDescription, nil)])
         }
     }
 
     /// A struct's value, `Point(x: 1)`, or a tuple, `(name: "x", 2)`.
-    private func node(for record: Record) -> Node {
+    private func node(for record: Fields) -> Node {
         let open: [Segment] = record.typeName.map { [($0, DisplayStyle.type), ("(", nil)] } ?? [("(", nil)]
         return .group(open: open, items: record.map { field in
-            (Record.isPosition(field.key) ? [] : label(field.key), node(for: field.value))
+            (Fields.isPosition(field.key) ? [] : label(field.key), node(for: field.value))
         }, close: ")")
     }
 
     private func keySegment(_ key: Value) -> Segment {
-        if case .string(let text) = key { return (Value.quoted(text), DisplayStyle.string) }
+        if key.kind == .string { return (key.debugDescription, DisplayStyle.string) }
         return (key.debugDescription, DisplayStyle.constant)
     }
 
-    private func node(for value: EnumValue) -> Node {
-        let head: [Segment] = [(value.type.name, DisplayStyle.type), ("." + value.name, nil)]
+    private func node(for value: (type: String, name: String, values: [Value], labels: [String?])) -> Node {
+        let head: [Segment] = [(value.type, DisplayStyle.type), ("." + value.name, nil)]
         guard !value.values.isEmpty else { return .segments(head) }
-        let labels = value.definition?.labels ?? []
         let items = value.values.enumerated().map { index, item in
-            (index < labels.count ? labels[index].map(label) ?? [] : [], node(for: item))
+            (index < value.labels.count ? value.labels[index].map(label) ?? [] : [], node(for: item))
         }
         return .group(open: head + [("(", nil)], items: items, close: ")")
     }
@@ -137,7 +137,7 @@ struct PrettyPrinter: Sendable {
         case .segments(let segments):
             return paint(segments)
         case .string(let text):
-            let quoted = Value.quoted(text)
+            let quoted = Value(text).debugDescription
             return (quoted, quoted.styled(DisplayStyle.string, styled))
         case .group(let open, let items, let close):
             var plain = paint(open).plain

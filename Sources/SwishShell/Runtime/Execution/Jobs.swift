@@ -6,7 +6,7 @@ import SwiitStandardLibrary
 /// background (from `async` or ^Z), or Swish code running as a task of its
 /// own (`async f()`). Jobs in the background are values: `await` brings one
 /// to the foreground and waits for it, and `resume()` and `cancel()` act on it.
-final class Job: ObjectDetails, @unchecked Sendable {
+final class Job: HostObject, @unchecked Sendable {
     enum State: String {
         case running, stopped, done
     }

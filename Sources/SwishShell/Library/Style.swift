@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 
 /// What `String.styled` can make text (the shell's: the core knows only `DisplayStyle`), each with its terminal code as its raw value.
 enum TextStyle: String, CaseIterable {

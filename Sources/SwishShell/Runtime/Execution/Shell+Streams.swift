@@ -107,7 +107,7 @@ extension Shell {
         do {
             if toExternal {
                 // Records as the rows they'd display as, so `ls | grep x` works.
-                let formatter = DisplayFormatter.forProgram(fd: output, registry: interpreter.displayRegistry)
+                let formatter = DisplayFormatter.forProgram(fd: output, registry: displayRegistry)
                 while let item = try stream.next() {
                     if case .function = item { throw RuntimeError("can't send a function to an external command") }
                     guard formatter.add(item) else { throw BrokenPipe() }
@@ -115,7 +115,7 @@ extension Shell {
                 guard formatter.finish() else { throw BrokenPipe() }
             } else {
                 // The end of the pipeline: format for a person.
-                let formatter = DisplayFormatter(fd: output, registry: interpreter.displayRegistry)
+                let formatter = DisplayFormatter(fd: output, registry: displayRegistry)
                 while let item = try stream.next() {
                     guard formatter.add(item) else { throw BrokenPipe() }
                 }
@@ -217,7 +217,7 @@ extension Shell {
         let type = if case .record(let record) = item { record.typeName ?? "Record" } else { item.typeName }
         // The method as a value, with the item as `self`, as `item.name` reads it.
         let member: Value? = switch item {
-        case .record(let record) where record.typeName != nil: try? interpreter.member(name, of: item)
+        case .record(let record) where record.typeName != nil: try? interpreter.value(of: name, in: item)
         case .object(let object): object.member(name)
         default: nil
         }

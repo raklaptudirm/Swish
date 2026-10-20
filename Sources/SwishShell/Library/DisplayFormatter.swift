@@ -1,5 +1,6 @@
 import Foundation
-@_spi(Layer) import Swiit
+import Swiit
+import SwiitStandardLibrary
 
 /// Lays out a stream of items as it arrives. Records become table rows:
 /// the first 100, or whatever arrives in the first 200ms, decide the
@@ -13,7 +14,7 @@ final class DisplayFormatter {
     private let header: Bool
     private let columnCap: Int
     private let registry: DisplayRegistry
-    private var pending: [Record] = []
+    private var pending: [Fields] = []
     private var firstArrival: Date?
     private var columns: [Column]?
     /// Some columns didn't fit and aren't shown.
@@ -42,14 +43,9 @@ final class DisplayFormatter {
     /// False once the reader is gone.
     @discardableResult
     func add(_ item: Value) -> Bool {
-        switch item {
-        case .nothing:
-            return true
-        case .list(let elements):
-            return elements.allSatisfy { add($0) }
-        case .object(let object) where object.objectFields != nil:
-            return add(.record(object.objectFields!))
-        case .record(let record):
+        if item.kind == .nothing { return true }
+        if item.kind == .list { return (item.cast(to: [Value].self) ?? []).allSatisfy { add($0) } }
+        if let record = item.fields {
             if columns != nil { return emit(row(record)) }
             pending.append(record)
             if firstArrival == nil { firstArrival = Date() }
@@ -57,14 +53,13 @@ final class DisplayFormatter {
                 return flush()
             }
             return true
-        default:
-            guard flush() else { return false }
-            // A Swift value with colors to show (help), on a terminal.
-            if styled, case .object(let box as SwiftValue) = item, let colored = (box.value as? any SwiitDisplayed)?.swiitColored {
-                return emit(colored)
-            }
-            return emit(item.description)
         }
+        guard flush() else { return false }
+        // A Swift value with colors to show (help), on a terminal.
+        if styled, let colored = (try? item.unboxed((any SwiitDisplayed).self))?.swiitColored {
+            return emit(colored)
+        }
+        return emit(item.description)
     }
 
     @discardableResult
@@ -85,9 +80,9 @@ final class DisplayFormatter {
         return rows.allSatisfy { emit(row($0)) }
     }
 
-    private func layout(for sample: [Record]) -> [Column] {
+    private func layout(for sample: [Fields]) -> [Column] {
         var keys: [String]
-        if useViews, let typeName = sample.first?.typeName, let view = registry.columns[typeName],
+        if useViews, let typeName = sample.first?.typeName, let view = registry.columns(for: typeName),
            sample.allSatisfy({ $0.typeName == typeName }) {
             keys = view.map(\.name)
         } else {
@@ -99,7 +94,7 @@ final class DisplayFormatter {
         }
 
         var widths = keys.map { key in
-            min(columnCap, max(header ? key.count : 0, sample.map { DisplayFormatter.cell($0[key] ?? .nothing).count }.max() ?? 0))
+            min(columnCap, max(header ? key.count : 0, sample.map { DisplayFormatter.cell($0[key] ?? .null).count }.max() ?? 0))
         }
         // Shrink the widest columns until the table fits, down to 6 each;
         // if that isn't enough, leave off columns from the right, keeping
@@ -115,9 +110,9 @@ final class DisplayFormatter {
             droppedColumns = true
         }
         return keys.indices.map { index in
-            let values = sample.compactMap { $0[keys[index]] }.filter { $0 != .nothing }
+            let values = sample.compactMap { $0[keys[index]] }.filter { $0 != .null }
             let numeric = !values.isEmpty && values.allSatisfy {
-                switch $0 {
+                switch $0.kind {
                 case .int, .double: true
                 default: $0.displayShape.isNumeric
                 }
@@ -126,9 +121,9 @@ final class DisplayFormatter {
         }
     }
 
-    private func row(_ record: Record) -> String {
+    private func row(_ record: Fields) -> String {
         trimmingTrailingSpaces(columns!.map { column in
-            let value = record[column.key] ?? .nothing
+            let value = record[column.key] ?? .null
             return pad(DisplayFormatter.cell(value), column, DisplayFormatter.style(of: value, key: column.key, in: record, registry: registry))
         }.joined(separator: "  "))
     }
@@ -137,12 +132,12 @@ final class DisplayFormatter {
     /// is styled by a field whose value is an enum that says how its cases
     /// are shown (a file's name by its type, a job's state by itself). Else
     /// it's plain.
-    static func style(of value: Value, key: String, in record: Record, registry: DisplayRegistry) -> DisplayStyle? {
-        guard let typeName = record.typeName, let column = registry.columns[typeName]?.first(where: { $0.name == key }) else { return nil }
+    static func style(of value: Value, key: String, in record: Fields, registry: DisplayRegistry) -> DisplayStyle? {
+        guard let typeName = record.typeName, let column = registry.columns(for: typeName)?.first(where: { $0.name == key }) else { return nil }
         if let fixed = column.style { return fixed }
         guard let source = column.styledBy,
-              case .enumValue(let found)? = record[source],
-              let style = registry.enumStyles[found.type.name]?(found.name) else { return nil }
+              let found = record[source]?.enumCase,
+              let style = registry.enumStyles[found.type]?(found.name) else { return nil }
         return style
     }
 
@@ -165,7 +160,7 @@ final class DisplayFormatter {
     }
 
     /// `name  value` lines, with keys aligned.
-    static func keyValueLines(_ record: Record, styled: Bool = false, registry: DisplayRegistry = DisplayRegistry()) -> [String] {
+    static func keyValueLines(_ record: Fields, styled: Bool = false, registry: DisplayRegistry = DisplayRegistry()) -> [String] {
         let width = record.keys.map(\.count).max() ?? 0
         return record.map { key, value in
             key.styled(DisplayStyle.label, styled) + String(repeating: " ", count: width - key.count + 2)
@@ -175,18 +170,19 @@ final class DisplayFormatter {
 
     /// A value as one table cell: one line, nested values summarized.
     static func cell(_ value: Value) -> String {
-        switch value {
-        case .string(let text):
-            text.replacingOccurrences(of: "\n", with: "↵")
-        case .list(let items):
-            "[\(items.count) item\(items.count == 1 ? "" : "s")]"
-        case .record(let record):
-            "{\(record.count) field\(record.count == 1 ? "" : "s")}"
-        // What a Swift value's type says a table shows: a date to the minute.
-        case .object(let box as SwiftValue):
-            box.cell
+        switch value.kind {
+        case .string:
+            return value.description.replacingOccurrences(of: "\n", with: "↵")
+        case .list:
+            let count = value.cast(to: [Value].self)?.count ?? 0
+            return "[\(count) item\(count == 1 ? "" : "s")]"
+        case .structure, .tuple:
+            let count = value.fields?.count ?? 0
+            return "{\(count) field\(count == 1 ? "" : "s")}"
         default:
-            value.description
+            // What a Swift value's type says a table shows: a date to the minute.
+            if let displayed = try? value.unboxed((any SwiitDisplayed).self) { return displayed.swiitCell }
+            return value.description
         }
     }
 }

@@ -29,7 +29,7 @@ extension EnvironmentAccess {
 /// `env`: the variables of the programs the shell runs. `env.HOME` is a
 /// `String?`, nil when unset; `env.PAGER = "less"` sets one and `= nil` removes
 /// it. It is a dynamic object, so the core knows nothing of it.
-final class EnvironmentObject: DynamicObject, ObjectDetails, @unchecked Sendable {
+final class EnvironmentObject: DynamicObject, @unchecked Sendable {
     let access: EnvironmentAccess
 
     init(access: EnvironmentAccess) {
@@ -45,10 +45,10 @@ final class EnvironmentObject: DynamicObject, ObjectDetails, @unchecked Sendable
 
     func member(_ name: String) -> Value? { access.get(name).map(Value.string) }
 
-    var fields: Record? {
-        var record = Record(typeName: "Environment")
-        for (name, value) in access.all() { record[name] = .string(value) }
-        return record
+    var fields: ValueDictionary? {
+        var fields = ValueDictionary()
+        for (name, value) in access.all() { fields[Value(name)] = Value(value) }
+        return fields
     }
 
     func read(_ name: String) throws -> Value {

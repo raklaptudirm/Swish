@@ -1,5 +1,5 @@
 import Foundation
-@_spi(Layer) import Swiit
+import Swiit
 
 /// A command's standard output (trailing newlines trimmed) and exit status.
 /// It's a collection of lines: iterating, counting and indexing go by line,
@@ -58,43 +58,51 @@ extension Output: CustomStringConvertible, CustomDebugStringConvertible, SwiitDi
     var swiitDescription: String { text }
     /// Shown as its text and status, and nothing at all if it's empty.
     var swiitShape: DisplayShape { DisplayShape(isEmpty: text.isEmpty) }
-    /// How a debug form lays it out: its text and status as the fields of a struct.
-    var displayRecord: Record {
-        Record(["text": .string(text), "status": .record(statusRecord)], typeName: "Output")
-    }
     /// One line in a table: its newlines shown as ↵.
     var swiitCell: String { text.replacingOccurrences(of: "\n", with: "↵") }
-    /// The record `output.status` is, with every field there.
-    var statusRecord: Record {
-        Record([
-            "code": code.map(Value.int) ?? .nothing,
-            "signal": signal.map(Value.int) ?? .nothing,
-            "succeeded": .bool(succeeded),
-        ], typeName: "Status")
-    }
     var debugDescription: String {
-        "Output(text: \(Value.quoted(text)), status: \(statusRecord.debugDescription))"
+        "Output(text: \(Value(text).debugDescription), status: \(status.value.debugDescription))"
     }
     var swiitDebugDescription: String { debugDescription }
 }
 
+extension Output {
+    /// How a debug form lays it out: its text and status as the fields of a struct.
+    var displayValue: Value {
+        Value(struct: "Output", fields: ["text": Value(text), "status": status.value])
+    }
+}
+
+extension Status {
+    /// The struct `output.status` is, with every field there.
+    var value: Value {
+        Value(struct: "Status", fields: [
+            "code": code.map { Value($0) } ?? Value.null,
+            "signal": signal.map { Value($0) } ?? Value.null,
+            "succeeded": Value(succeeded),
+        ])
+    }
+}
+
 extension Value {
     /// What `$(…)` gives: a command's output, held as the Swift value it is.
-    static func output(_ output: Output) -> Value {
-        SwiftValue.make(output, as: "Output")
-    }
+    static func output(_ output: Output) -> Value { Value(boxing: output, as: "Output") }
 
     /// The command output it holds, if it's one.
-    var commandOutput: Output? {
-        if case .object(let box as SwiftValue) = self { box.value as? Output } else { nil }
-    }
+    var commandOutput: Output? { try? unboxed(Output.self) }
 }
 
 extension Output: ValueConvertible {
     static var valueType: ValueType { .named("Output") }
     init(_ swiitValue: Value) throws {
-        guard let value = swiitValue.commandOutput else { throw SwiitError("expected an Output, not \(swiitValue)") }
+        guard let value = swiitValue.commandOutput else { throw LibraryError("expected an Output, not \(swiitValue)") }
         self = value
     }
     var value: Value { .output(self) }
+}
+
+/// What a library function says when a value is not what it takes.
+struct LibraryError: Error, CustomStringConvertible {
+    let description: String
+    init(_ description: String) { self.description = description }
 }

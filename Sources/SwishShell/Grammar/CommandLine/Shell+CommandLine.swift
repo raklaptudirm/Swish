@@ -22,7 +22,7 @@ extension Shell {
         let result = try interpreter.invoke(function, with: bindings)
         // A command that found nothing (`ls` of an empty directory) shows nothing.
         if shouldDisplay && result != .list([]) {
-            interpreter.show(result)
+            show(result)
         }
         if case .bool(let truth) = result { return truth ? 0 : 1 }
         return 0

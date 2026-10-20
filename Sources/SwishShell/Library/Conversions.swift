@@ -40,7 +40,7 @@ func list(@Input _ items: [SwiitValue], in shell: HostContext) -> [String] {
     var lines: [String] = []
     for item in items {
         if !lines.isEmpty { lines.append("") }
-        if let record = item.asRecord {
+        if let record = item.fields {
             lines += DisplayFormatter.keyValueLines(record, registry: shell.display)
         } else {
             lines.append(item.description)

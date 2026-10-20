@@ -28,6 +28,6 @@ import Testing
     #expect(try (kb / 4).bytes == 250)
     #expect(kb / FileSize(bytes: 500) == 2.0)
     #expect(kb < FileSize(bytes: 1001))
-    #expect(throws: SwiitError.self) { try kb / 0 }
-    #expect(throws: SwiitError.self) { try FileSize(bytes: .max) * 2 }
+    #expect(throws: LibraryError.self) { try kb / 0 }
+    #expect(throws: LibraryError.self) { try FileSize(bytes: .max) * 2 }
 }

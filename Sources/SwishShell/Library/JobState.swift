@@ -1,4 +1,4 @@
-@_spi(Layer) import Swiit
+import Swiit
 
 /// How a job is going: its `state`.
 enum JobState: Comparable, CaseIterable, DisplayStyled {

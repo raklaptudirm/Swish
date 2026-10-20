@@ -9,9 +9,9 @@ extension Interpreter.Host {
         self.init(
             name: "swish",
             output: OutputSink(write: { [unowned shell] in writeAll(shell.stdoutFD, $0) },
-                               traits: { [unowned shell] in StreamTraits(fd: shell.stdoutFD) }),
+                               traits: { [unowned shell] in OutputSink.Traits(fd: shell.stdoutFD) }),
             error: OutputSink(write: { [unowned shell] in writeAll(shell.stderrFD, $0) },
-                              traits: { [unowned shell] in StreamTraits(fd: shell.stderrFD) }),
+                              traits: { [unowned shell] in OutputSink.Traits(fd: shell.stderrFD) }),
             interrupt: { takeInterruptSignal().map(StopReason.init) }
         )
     }
@@ -22,7 +22,7 @@ extension Interrupted {
     var signal: Int32 { reason.code }
 }
 
-extension StreamTraits {
+extension OutputSink.Traits {
     /// What the descriptor is: a terminal of some width, or a file or pipe.
     init(fd: Int32) {
         self.init(isTerminal: isatty(fd) != 0, width: terminalWidth(fd), styled: DisplayStyle.enabled(for: fd))
@@ -33,7 +33,7 @@ extension DisplayFormatter {
     /// Writes to `fd`, fitting the terminal and styling the header when it
     /// is one. A file gets every character: nothing is cut to fit.
     convenience init(fd: Int32, registry: DisplayRegistry) {
-        self.init(traits: StreamTraits(fd: fd), registry: registry) { writeAll(fd, $0) }
+        self.init(traits: OutputSink.Traits(fd: fd), registry: registry) { writeAll(fd, $0) }
     }
 
     /// Rows for another program to read, as in `ls | grep x`: the view's
