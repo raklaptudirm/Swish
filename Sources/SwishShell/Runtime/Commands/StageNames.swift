@@ -52,9 +52,9 @@ extension Shell {
     }
 
     /// The members of a type named `name`, as a callee a stage can call on a receiver made as `receiver` says.
-    func stageCallee(_ name: String, of type: ValueType, receiver: StageReceiver) -> Callee? {
+    func stageCallee(_ name: String, of type: ValueType, receiver: StageReceiver, includingMutating: Bool = false) -> Callee? {
         let members = interpreter.symbols(named: name, of: type).filter { symbol in
-            if let function = symbol.function { return !function.isMutating }
+            if let function = symbol.function { return includingMutating || !function.isMutating }
             if case .variable = symbol.declaration { return true }
             return false
         }

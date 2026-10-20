@@ -229,7 +229,8 @@ extension Shell {
         if let function = overload.function, function.isMutating {
             throw RuntimeError("\(callee.name) is mutating, and a piped value can't change: call it on a variable")
         }
-        let isProperty = overload.function == nil
+        // A stage written as a call, with arguments, is a method.
+        let isProperty = overload.function == nil && (call.written ?? []).isEmpty
         func apply(to value: Value) throws -> Value {
             isProperty
                 ? try interpreter.value(of: callee.name, in: value)

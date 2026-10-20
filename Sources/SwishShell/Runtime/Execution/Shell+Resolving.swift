@@ -52,7 +52,7 @@ extension Shell {
         candidates.append { self.stageCallee(name, of: .list(element), receiver: .collected).map(function) }
         // A member of each item's type: a struct's method, an object's, a Swift type's.
         if first != nil, !element.isUnknown {
-            candidates.append { self.stageCallee(name, of: element, receiver: .each).map(function) }
+            candidates.append { self.stageCallee(name, of: element, receiver: .each, includingMutating: true).map(function) }
         }
 
         var firstFailure: Error?
@@ -61,12 +61,14 @@ extension Shell {
             // It fits if its words bind to it: a stage is built to find out.
             if case .function(let callee, let args, _, _) = stage {
                 // A stage written as a call is bound as a call is: by the labels and types of its arguments.
-                let written = args.compactMap { argument -> ValueType.Element? in
-                    if case .call(let call) = argument { ValueType.Element(label: call.label, type: self.interpreter.valueType(of: call.value)) } else { nil }
+                let written = args.compactMap { argument -> (label: String?, value: Value)? in
+                    if case .call(let call) = argument { call } else { nil }
                 }
                 do {
                     if !written.isEmpty {
-                        _ = try interpreter.resolveOverload(among: callee.overloads, arguments: written)
+                        guard callee.overloads.contains(where: { accepts($0, written) }) else {
+                            throw RuntimeError("\(name): no overload accepts these arguments")
+                        }
                         return (stage, replay)
                     }
                     let shapes = args.map { argument -> CommandWordShape in
@@ -100,5 +102,24 @@ extension Shell {
             }
         }
         return (try deferred.fallback(), replay)
+    }
+}
+
+extension Shell {
+    /// Whether a call with these arguments could mean the function: by their labels, and whether each converts to the type its
+    /// parameter has (a one-letter text to a `Character`).
+    func accepts(_ symbol: Symbol, _ arguments: [(label: String?, value: Value)]) -> Bool {
+        guard let parameters = symbol.function?.parameters else { return false }
+        var next = 0
+        var given: Set<String> = []
+        for argument in arguments {
+            guard let index = parameters[next...].firstIndex(where: { $0.label == argument.label })
+                    ?? parameters.firstIndex(where: { $0.isVariadic && $0.label == argument.label }) else { return false }
+            let parameter = parameters[index]
+            guard parameter.type.isUnknown || interpreter.convert(argument.value, to: parameter.type) != nil else { return false }
+            given.insert(parameter.name)
+            next = parameter.isVariadic ? index : index + 1
+        }
+        return parameters.allSatisfy { given.contains($0.name) || $0.hasDefault || $0.isVariadic }
     }
 }

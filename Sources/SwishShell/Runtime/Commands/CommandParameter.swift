@@ -69,7 +69,7 @@ enum CommandMarks {
         "members.items": Marks(isInput: true),
         "ls.all": Marks(shortFlag: "a"),
         // Swiit's `sorted(by:)`.
-        "sorted.by": Marks(shortFlag: "b"),
+        "sorted.key": Marks(shortFlag: "b"),
     ]
 }
 
