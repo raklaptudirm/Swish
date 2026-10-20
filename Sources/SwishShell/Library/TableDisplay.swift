@@ -26,8 +26,7 @@ struct DisplayColumn: Sendable, ExpressibleByStringLiteral {
 
 /// How the shell's types show in a table, by the name of the type: the
 /// columns of the structs that say so (`Tabular`), and how an enum's cases
-/// are styled (`DisplayStyled`). A function that lays values out is lent it
-/// in the `HostContext`.
+/// are styled (`DisplayStyled`).
 struct DisplayRegistry: Sendable {
     public var columns: [String: [DisplayColumn]]
     public var enumStyles: [String: @Sendable (String) -> DisplayStyle?]
@@ -57,11 +56,3 @@ protocol DisplayStyled {
     var displayStyle: DisplayStyle? { get }
 }
 
-
-extension HostContext {
-    /// How types show in a table, which the shell lends the functions that lay values out (`table`, `list`, `to`).
-    var display: DisplayRegistry {
-        get { extras["display"] as? DisplayRegistry ?? DisplayRegistry() }
-        set { extras["display"] = newValue }
-    }
-}

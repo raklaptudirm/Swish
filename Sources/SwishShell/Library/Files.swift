@@ -50,7 +50,7 @@ extension FileEntry: Tabular {
 /// Lists directory contents.
 /// - Parameter paths: files or directories to list (default: the current directory)
 /// - Parameter all: include hidden files
-func ls(@Rest _ paths: [FilePath] = [], @Flag all: Bool = false) -> Partial<[FileEntry]> {
+func ls(_ paths: [FilePath] = [], all: Bool = false) -> Partial<[FileEntry]> {
     var entries: [FileEntry] = []
     var errors: [any Error] = []
     for path in (paths.isEmpty ? [FilePath(".")] : paths).map(\.string) {
