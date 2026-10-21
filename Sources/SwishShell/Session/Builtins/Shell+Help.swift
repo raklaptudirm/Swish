@@ -348,7 +348,7 @@ extension Shell {
             return text + ": \(parameter.type)" + (parameter.arity == .variadic ? "..." : "")
         }
         return "\(symbol.name)(\(parameters.joined(separator: ", ")))"
-            + (function.returns.map { " -> \($0)" } ?? "")
+            + (function.returns == .void ? "" : " -> \(function.returns)")
     }
 }
 
