@@ -28,7 +28,7 @@ extension Date {
 
     var shown: String { Date.formatter.string(from: self) }
 
-    static let native = NativeType.Builder<Date>("Date", parse: { Date(isoText: $0) })
+    static let native = NativeType.Builder<Date>("Date")
         .failableInitializer { (text: String) in Date(isoText: text) }
         .static("-", labels: [nil, nil]) { (a: Date, b: Date) -> Double in a - b }
         .static("+", labels: [nil, nil]) { (a: Date, b: Int) -> Date in a + b }
@@ -37,4 +37,9 @@ extension Date {
 
 extension Date: SwiitDisplayed {
     public var swiitDescription: String { shown }
+}
+
+/// A word that is ISO 8601 text is a date, which is how `Date` takes one on a command line.
+extension Date: @retroactive LosslessStringConvertible {
+    public init?(_ description: String) { self.init(isoText: description) }
 }
