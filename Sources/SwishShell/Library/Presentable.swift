@@ -12,12 +12,19 @@ protocol Presentable {
     var styledText: String? { get }
     /// What else the printers need to know of how it looks.
     var shape: DisplayShape { get }
+    /// How it prints in the debug form, in pieces to color, if it has a form of its own (a job reads
+    /// `[1] running make`); nil to print as its fields.
+    var styledSegments: [Segment]? { get }
 }
+
+/// A piece of text and the style it is shown in.
+typealias Segment = (text: String, style: DisplayStyle?)
 
 extension Presentable {
     var cell: String { "\(self)" }
     var styledText: String? { nil }
     var shape: DisplayShape { DisplayShape() }
+    var styledSegments: [Segment]? { nil }
 }
 
 /// The facts about how a value looks that the printers need beyond its text.

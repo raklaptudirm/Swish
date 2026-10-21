@@ -14,8 +14,6 @@ struct PrettyPrinter: Sendable {
         self.styled = styled
     }
 
-    typealias Segment = DisplaySegment
-
     /// A value's shape: text that can't be broken, a string, or brackets
     /// around (labeled) elements.
     indirect enum Node {
@@ -63,7 +61,9 @@ struct PrettyPrinter: Sendable {
             guard let object = try? value.unboxed((any HostObject).self) else {
                 return .segments([(value.debugDescription, nil)])
             }
-            if let segments = object.displaySegments { return .segments(segments) }
+            if let segments = (object as? any Presentable)?.styledSegments {
+                return .segments(segments)
+            }
             if object.typeName == "enum", object.description.hasPrefix("enum ") {
                 return .segments([
                     ("enum", DisplayStyle.keyword), (" ", nil),

@@ -53,12 +53,6 @@ final class EnvironmentObject: HostObject, @unchecked Sendable {
 
     func member(_ name: String) -> Value? { access.get(name).map { Value($0) } }
 
-    var fields: ValueDictionary? {
-        var fields = ValueDictionary()
-        for (name, value) in access.all() { fields[Value(name)] = Value(value) }
-        return fields
-    }
-
     func read(_ name: String) throws -> Value {
         access.get(name).map { Value($0) } ?? Value.null
     }

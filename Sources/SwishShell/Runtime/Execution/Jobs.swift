@@ -5,7 +5,7 @@ import Swiit
 /// background (from `async` or ^Z), or Swish code running as a task of its
 /// own (`async f()`). Jobs in the background are values: `await` brings one
 /// to the foreground and waits for it, and `resume()` and `cancel()` act on it.
-final class Job: HostObject, @unchecked Sendable {
+final class Job: HostObject, Presentable, @unchecked Sendable {
     enum State: String {
         case running, stopped, done
     }
@@ -166,7 +166,7 @@ final class Job: HostObject, @unchecked Sendable {
 
     /// `[1] running  make`, in pieces to color: the number dim, the state
     /// by how it's going.
-    var segments: [DisplaySegment] {
+    var segments: [Segment] {
         let (label, style): (String, DisplayStyle?) =
             switch state {
             case .running: ("running", DisplayStyle.green)
@@ -180,7 +180,7 @@ final class Job: HostObject, @unchecked Sendable {
         return [("[\(id)]", DisplayStyle.dim), (" ", nil), (label, style), ("  " + source, nil)]
     }
 
-    var displaySegments: [DisplaySegment]? { segments }
+    var styledSegments: [Segment]? { segments }
 
     var description: String { line(styled: false) }
 
