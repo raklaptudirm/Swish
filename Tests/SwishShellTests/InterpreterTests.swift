@@ -605,7 +605,7 @@ private func fixture() throws -> String {
 
 @Test func tryQuestionMark() throws {
     #expect(try output("let x = try? $(false); x == nil") == "true\n")
-    #expect(try output(#"(try? $(false)) ?? "fallback""#) == "\"fallback\"\n")
+    #expect(try output(#"(try? $(false))?.text ?? "fallback""#) == "\"fallback\"\n")
     #expect(try output("try? $(grep -q nope /dev/null) != nil || echo missing") == "missing\n")
     #expect(
         try output(#"if let h = try? $(echo hi) { echo "got \(h)" } else { echo none }"#)
@@ -711,12 +711,14 @@ private func fixture() throws -> String {
     #expect(try output("$(true).isEmpty; $(true).count") == "true\n0\n")
 }
 
-@Test func outputIsItsTextWhereAStringIsWanted() throws {
+@Test func outputComparesWithTextAndGivesItsTextByName() throws {
     #expect(
         try output(#"let b = $(echo main); b == "main"; "on \(b)"; echo $(echo hi) there"#)
             == "true\n\"on main\"\nhi there\n"
     )
-    #expect(try output(#"func up(_ s: String) -> String { s }; up($(echo hi))"#) == "\"hi\"\n")
+    #expect(try output(#"func up(_ s: String) -> String { s }; up($(echo hi).text)"#) == "\"hi\"\n")
+    // There is no implicit conversion: a `String` parameter takes the text, by name.
+    #expect(errorText(#"func up(_ s: String) -> String { s }; up($(echo hi))"#) != nil)
     #expect(try output("$(echo x).text + \"y\"") == "\"xy\"\n")
     // `description` is every value's textual form, as in Swift; `.text` is
     // the Output's data.

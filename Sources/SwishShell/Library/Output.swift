@@ -4,7 +4,7 @@ import Swiit
 /// A command's standard output (trailing newlines trimmed) and exit status.
 /// It's a collection of lines: iterating, counting and indexing go by line,
 /// and where a String is wanted it's the whole text.
-struct Output: Sendable, Hashable, RandomAccessCollection, StandsForText {
+struct Output: Sendable, Hashable, RandomAccessCollection {
     /// All of it, as one String.
     public let text: String
     /// The exit code, or nil if a signal ended the command.

@@ -89,4 +89,17 @@ extension Output {
             (text: String, code: Int?, signal: Int?) in
             Output(text: text, code: code, signal: signal)
         }
+        // A command's output compares with text as its text does, on either side.
+        .static("==", labels: [nil, nil]) { (a: Output, b: String) -> Bool in a.text == b }
+        .static("==", labels: [nil, nil]) { (a: String, b: Output) -> Bool in a == b.text }
+        .static("!=", labels: [nil, nil]) { (a: Output, b: String) -> Bool in a.text != b }
+        .static("!=", labels: [nil, nil]) { (a: String, b: Output) -> Bool in a != b.text }
+        .static("<", labels: [nil, nil]) { (a: Output, b: String) -> Bool in a.text < b }
+        .static("<", labels: [nil, nil]) { (a: String, b: Output) -> Bool in a < b.text }
+        .static(">", labels: [nil, nil]) { (a: Output, b: String) -> Bool in a.text > b }
+        .static(">", labels: [nil, nil]) { (a: String, b: Output) -> Bool in a > b.text }
+        .static("<=", labels: [nil, nil]) { (a: Output, b: String) -> Bool in a.text <= b }
+        .static("<=", labels: [nil, nil]) { (a: String, b: Output) -> Bool in a <= b.text }
+        .static(">=", labels: [nil, nil]) { (a: Output, b: String) -> Bool in a.text >= b }
+        .static(">=", labels: [nil, nil]) { (a: String, b: Output) -> Bool in a >= b.text }
 }

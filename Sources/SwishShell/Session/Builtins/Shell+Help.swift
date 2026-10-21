@@ -87,14 +87,14 @@ extension Shell {
                     if parameter.type.isList {
                         details.append([.init("(repeatable)", DisplayStyle.comment)])
                     }
-                    if seen.insert(AttributedString(joining: key).text).inserted {
+                    if seen.insert(AttributedString(joining: key).plain).inserted {
                         options.append((key, joined(details)))
                     }
                 } else {
                     let key: [AttributedString] =
                         [.init("<\(parameter.name)>", DisplayStyle.variable)]
                         + (takesRemainingWords(parameter) ? [.init("...")] : [])
-                    if seen.insert(AttributedString(joining: key).text).inserted {
+                    if seen.insert(AttributedString(joining: key).plain).inserted {
                         arguments.append(
                             (key, joined(details + [typeDetail(parameter.type.description)]))
                         )

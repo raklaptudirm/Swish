@@ -87,10 +87,11 @@ struct JSON {
                     indent: indent
                 )
             }
-            // What stands for text is its text; else a Swift value is as Swift
+            // Rich text and a command's output are their text; else a Swift value is as Swift
             // encodes it (a file size is its bytes).
             if let held = try? value.unboxed(Any.self) {
-                if let text = (held as? any StandsForText)?.text { return quoted(text) }
+                if let text = (held as? AttributedString)?.plain { return quoted(text) }
+                if let output = held as? Output { return quoted(output.text) }
                 // What a text literal can be, like a FilePath.
                 if held is any ExpressibleByUnicodeScalarLiteral {
                     return quoted(value.description)
