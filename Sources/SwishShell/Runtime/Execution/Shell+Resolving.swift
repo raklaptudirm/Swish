@@ -143,7 +143,9 @@ extension Shell {
         for argument in arguments {
             guard
                 let index = parameters[next...].firstIndex(where: { $0.label == argument.label })
-                    ?? parameters.firstIndex(where: { $0.isVariadic && $0.label == argument.label })
+                    ?? parameters.firstIndex(where: {
+                        $0.arity == .variadic && $0.label == argument.label
+                    })
             else { return false }
             let parameter = parameters[index]
             guard
@@ -153,8 +155,8 @@ extension Shell {
                 return false
             }
             given.insert(parameter.name)
-            next = parameter.isVariadic ? index : index + 1
+            next = parameter.arity == .variadic ? index : index + 1
         }
-        return parameters.allSatisfy { given.contains($0.name) || $0.hasDefault || $0.isVariadic }
+        return parameters.allSatisfy { given.contains($0.name) || $0.arity != .required }
     }
 }

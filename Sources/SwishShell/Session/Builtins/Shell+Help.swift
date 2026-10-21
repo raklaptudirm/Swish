@@ -345,7 +345,7 @@ extension Shell {
             } else {
                 text += "\(parameter.label ?? "_") \(parameter.name)"
             }
-            return text + ": \(parameter.type)" + (parameter.isVariadic ? "..." : "")
+            return text + ": \(parameter.type)" + (parameter.arity == .variadic ? "..." : "")
         }
         return "\(symbol.name)(\(parameters.joined(separator: ", ")))"
             + (function.returns.map { " -> \($0)" } ?? "")

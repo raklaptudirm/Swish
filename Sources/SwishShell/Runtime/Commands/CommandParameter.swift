@@ -6,9 +6,7 @@ struct CommandParameter {
     var label: String?
     var name: String
     var type: ValueType
-    var hasDefault: Bool
-    var isVariadic: Bool
-    var defaultValue: Value?
+    var arity: Symbol.Parameter.Arity
     var documentation: String?
     /// Receives what is piped in, per item or whole.
     var isInput = false
@@ -23,9 +21,7 @@ struct CommandParameter {
         label = parameter.label
         name = parameter.name
         type = parameter.type
-        hasDefault = parameter.hasDefault
-        isVariadic = parameter.isVariadic
-        defaultValue = parameter.defaultValue
+        arity = parameter.arity
         documentation = parameter.documentation
         let marks =
             table["\(function).\(parameter.name)"]
@@ -38,16 +34,27 @@ struct CommandParameter {
         label: String? = nil,
         name: String,
         type: ValueType,
-        hasDefault: Bool = false,
-        isVariadic: Bool = false,
+        arity: Symbol.Parameter.Arity = .required,
         isInput: Bool = false
     ) {
         self.label = label
         self.name = name
         self.type = type
-        self.hasDefault = hasDefault
-        self.isVariadic = isVariadic
+        self.arity = arity
         self.isInput = isInput
+    }
+
+    var isVariadic: Bool { arity == .variadic }
+
+    var hasDefault: Bool {
+        if case .defaulted = arity { return true }
+        return false
+    }
+
+    /// What the call gets by leaving it out, when that is a plain value.
+    var defaultValue: Value? {
+        if case .defaulted(.value(let value)) = arity { return value }
+        return nil
     }
 
     /// The word the shell writes for it: `--all`, `<paths>`.
