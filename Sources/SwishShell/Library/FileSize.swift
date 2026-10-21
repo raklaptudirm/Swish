@@ -117,8 +117,7 @@ struct FileSize: Codable, Hashable, Comparable, Sendable, LosslessStringConverti
     }
 }
 
-extension FileSize: SwiitDisplayed, Presentable {
-    var swiitDescription: String { description }
+extension FileSize: Presentable {
     /// A number: in the constant color, and a column of them lines up on the right.
     var shape: DisplayShape { DisplayShape(role: .constant, isNumeric: true) }
 }

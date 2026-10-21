@@ -55,10 +55,8 @@ struct Status: Sendable, Hashable, Encodable {
     }
 }
 
-extension Output: CustomStringConvertible, CustomDebugStringConvertible, SwiitDisplayed, Presentable
-{
+extension Output: CustomStringConvertible, CustomDebugStringConvertible, Presentable {
     var description: String { text }
-    var swiitDescription: String { text }
     /// Shown as its text and status, and nothing at all if it's empty.
     var shape: DisplayShape { DisplayShape(isEmpty: text.isEmpty) }
     /// One line in a table: its newlines shown as ↵.
@@ -66,7 +64,6 @@ extension Output: CustomStringConvertible, CustomDebugStringConvertible, SwiitDi
     var debugDescription: String {
         "Output(text: \(Value(text).debugDescription), status: \(status.value.debugDescription))"
     }
-    var swiitDebugDescription: String { debugDescription }
 }
 
 extension Output {

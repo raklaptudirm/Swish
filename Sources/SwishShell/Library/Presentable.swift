@@ -15,7 +15,7 @@ protocol Presentable {
 }
 
 extension Presentable {
-    var cell: String { (self as? any SwiitDisplayed)?.swiitDescription ?? "\(self)" }
+    var cell: String { "\(self)" }
     var styledText: String? { nil }
     var shape: DisplayShape { DisplayShape() }
 }
@@ -32,7 +32,7 @@ struct DisplayShape: Sendable {
 
 extension Date: Presentable {
     /// `2026-09-27 14:03`.
-    var cell: String { String(swiitDescription.prefix(16)) }
+    var cell: String { String(shown.prefix(16)) }
 }
 
 extension FilePath: Presentable {
