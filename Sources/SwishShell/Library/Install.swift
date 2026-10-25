@@ -135,6 +135,20 @@ extension Shell {
         add("escapingWildcards") { arguments in
             Value(Glob.escape(arguments["text"]?.description ?? ""))
         }
+        add("environmentValue") { [unowned self] arguments in
+            environment.get(arguments["name"]?.description ?? "").map { Value($0) } ?? .null
+        }
+        add("setEnvironmentValue") { [unowned self] arguments in
+            let name = arguments["name"]?.description ?? ""
+            guard !name.isEmpty, !name.contains("=") else {
+                throw RuntimeError(
+                    "an environment variable's name must be a String without '=', not \(name)"
+                )
+            }
+            let value = arguments["value"] ?? .null
+            environment.set(name, value.kind == .nothing ? nil : value.description)
+            return .null
+        }
         for (name, body) in jsonBodies { add(name, body) }
         return bodies
     }

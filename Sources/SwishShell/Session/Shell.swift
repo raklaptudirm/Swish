@@ -54,6 +54,8 @@ public final class Shell: @unchecked Sendable {
     var warnedAboutJobs = false
     /// A `try!` failed in a script, which stops it.
     var scriptStopped = false
+    /// The variables `env` reads and writes: the process's own, unless a host gives others.
+    var environment = EnvironmentAccess.process
     /// The source being run, so an error can show the line it is in (and the file it is from, if it
     /// is one).
     var diagnosticSource: (text: String, path: String?)?
@@ -95,8 +97,11 @@ public final class Shell: @unchecked Sendable {
         interpreter = Interpreter()
         interpreter.taskState = ShellTask()
         interpreter.host = Interpreter.Host(process: self)
-        interpreter["env"] = Value(EnvironmentObject(access: .process))
         installLibrary()
+        // A prelude only declares, so `env` is made here.
+        do { try interpreter.evaluate("let env = Environment()") } catch {
+            preconditionFailure("the shell's env: \(error)")
+        }
         installJSON()
         installJobs()
         recordStatuses()

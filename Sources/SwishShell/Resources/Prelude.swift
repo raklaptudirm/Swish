@@ -280,6 +280,29 @@ struct Help: Equatable, Hashable, Encodable {
     let description: String
 }
 
+/// The variables of the programs the shell runs. `env.HOME` is a `String?`, nil when unset;
+/// `env.PAGER = "less"` sets one and `= nil` removes it. `env["HOME"]` is the same, for a name
+/// that isn't an identifier.
+@dynamicMemberLookup
+final class Environment: CustomStringConvertible {
+    subscript(dynamicMember name: String) -> String? {
+        get { environmentValue(name) }
+        set { setEnvironmentValue(name, newValue) }
+    }
+
+    subscript(name: String) -> String? {
+        get { environmentValue(name) }
+        set { setEnvironmentValue(name, newValue) }
+    }
+
+    var description: String { "Environment" }
+}
+
+/// What `env.NAME` reads: the variable, or nil.
+func environmentValue(_ name: String) -> String?
+/// What `env.NAME = value` does: sets the variable, or removes it for nil.
+func setEnvironmentValue(_ name: String, _ value: String?) throws
+
 /// Parsed JSON: read by field (json.name, json["name"]) or element
 /// (json[0]), each giving JSON?, and as a type with .string, .int,
 /// .double, .bool, .array, .object and .isNull.

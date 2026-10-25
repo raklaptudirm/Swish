@@ -182,6 +182,20 @@ private final class DeclarationFinder: SyntaxVisitor {
         return .visitChildren
     }
 
+    override func visit(_ node: SubscriptDeclSyntax) -> SyntaxVisitorContinueKind {
+        let whole = range(node)
+        for parameter in node.parameterClause.parameters {
+            declare(
+                (parameter.secondName ?? parameter.firstName).text,
+                .variable,
+                in: whole,
+                from: whole.lowerBound
+            )
+        }
+        declare("newValue", .variable, in: whole, from: whole.lowerBound)
+        return .visitChildren
+    }
+
     override func visit(_ node: ClosureExprSyntax) -> SyntaxVisitorContinueKind {
         guard let signature = node.signature else { return .visitChildren }
         let whole = range(node)

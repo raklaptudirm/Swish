@@ -132,6 +132,21 @@ struct Reader {
         "defer", "guard", "throw", "repeat",
         "class", "actor", "protocol", "extension", "typealias",
     ]
+    /// What can come before a declaration's keyword (`final class`, `private func`).
+    static let declarationModifiers: Set<String> = [
+        "final", "public", "private", "fileprivate", "internal", "open", "indirect",
+    ]
+
+    /// The identifier that follows the word at the reader, after spaces.
+    func wordAfter(_ word: String) -> String? {
+        var offset = word.count
+        while peek(offset) == " " || peek(offset) == "\t" { offset += 1 }
+        guard let first = peek(offset), Lex.isIdentifierStart(first) else { return nil }
+        var name = String(first)
+        while let c = peek(offset + name.count), Lex.isIdentifierPart(c) { name.append(c) }
+        return name
+    }
+
     /// The keywords a line can begin with: a statement's, a unit's (`if make { … }`), or an
     /// expression's (`await job`). Completion offers them where a command could go.
     static let lineStarts = statementKeywords.subtracting(["catch"])

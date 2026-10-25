@@ -31,17 +31,13 @@ private func shellWithRecorder() -> (Shell, Recorder) {
         traits: { .plain }
     )
     shell.interpreter.host.shouldStop = { recorder.interrupt() }
-    shell.interpreter["env"] = Value(
-        EnvironmentObject(
-            access: EnvironmentAccess(
-                get: { recorder.variables[$0] },
-                all: {
-                    recorder.variables.sorted { $0.key < $1.key }
-                        .map { (name: $0.key, value: $0.value) }
-                },
-                set: { recorder.variables[$0] = $1 }
-            )
-        )
+    shell.environment = EnvironmentAccess(
+        get: { recorder.variables[$0] },
+        all: {
+            recorder.variables.sorted { $0.key < $1.key }
+                .map { (name: $0.key, value: $0.value) }
+        },
+        set: { recorder.variables[$0] = $1 }
     )
     return (shell, recorder)
 }

@@ -199,7 +199,17 @@ final class Front {
         func isStarting(_ info: StatementInfo?) -> Bool {
             // `$0` is a closure's parameter, found where Swift reads one.
             if reader.peek() == "$", let next = reader.peek(1), Lex.isDigit(next) { return false }
+            // `@dynamicMemberLookup struct …`: an attribute on a declaration.
+            if reader.peek() == "@" { return false }
             let word = reader.identifier()
+            // `final class …`: a modifier on a declaration.
+            if let word, Reader.declarationModifiers.contains(word),
+                let next = reader.wordAfter(word),
+                Reader.statementKeywords.contains(next)
+                    || Reader.declarationModifiers.contains(next) || next == "func"
+            {
+                return false
+            }
             if let word, word != "try",
                 Reader.statementKeywords.union(["if", "for", "while", "switch", "let", "var"])
                     .contains(word)
