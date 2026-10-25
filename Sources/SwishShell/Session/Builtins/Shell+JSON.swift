@@ -6,50 +6,51 @@ extension Shell {
         func view(
             _ read: @escaping @Sendable (Value) -> Value
         ) -> @Sendable ([String: Value]) throws -> Value {
-            { arguments in read(arguments["raw"] ?? .null) }
+            { arguments in read(arguments["raw"] ?? .nothing) }
         }
         return [
             "jsonField": { arguments in
-                let value = arguments["raw"] ?? .null, key = arguments["key"] ?? .null
+                let value = arguments["raw"] ?? .nothing, key = arguments["key"] ?? .nothing
                 switch value.kind {
                 case .structure, .tuple:
-                    guard let name = key.cast(to: String.self) else { return .null }
+                    guard let name = key.cast(to: String.self) else { return .nothing }
                     return JSON.wrapping(value.field(name))
                 case .dictionary: return JSON.wrapping(value.entries?[key])
                 case .list:
                     guard let index = key.cast(to: Int.self),
                         let items = value.cast(to: [Value].self)
                     else {
-                        return .null
+                        return .nothing
                     }
                     return JSON.wrapping(items.indices.contains(index) ? items[index] : nil)
-                default: return .null
+                default: return .nothing
                 }
             },
-            "jsonString": view { $0.kind == .string ? $0 : .null },
+            "jsonString": view { $0.kind == .string ? $0 : .nothing },
             "jsonInt": view {
                 if $0.kind == .int { return $0 }
                 if let d = $0.cast(to: Double.self), d == d.rounded(), abs(d) < 9e15 {
                     return Value(Int(d))
                 }
-                return .null
+                return .nothing
             },
             "jsonDouble": view {
                 if $0.kind == .double { return $0 }
                 if let n = $0.cast(to: Int.self) { return Value(Double(n)) }
-                return .null
+                return .nothing
             },
-            "jsonBool": view { $0.kind == .bool ? $0 : .null },
+            "jsonBool": view { $0.kind == .bool ? $0 : .nothing },
             "jsonArray": view {
-                $0.kind == .list ? Value(($0.cast(to: [Value].self) ?? []).map(JSON.wrap)) : .null
+                $0.kind == .list
+                    ? Value(($0.cast(to: [Value].self) ?? []).map(JSON.wrap)) : .nothing
             },
             "jsonObject": view {
                 switch $0.kind {
                 case .structure, .tuple, .dictionary:
                     $0.entries.map { entries in
                         Value(ValueDictionary(entries.map { ($0.key, JSON.wrap($0.value)) }))
-                    } ?? .null
-                default: .null
+                    } ?? .nothing
+                default: .nothing
                 }
             },
             "jsonIsNull": view { Value($0.kind == .nothing) },

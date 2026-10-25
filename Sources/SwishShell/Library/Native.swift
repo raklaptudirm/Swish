@@ -5,7 +5,7 @@ import Swiit
 // command's output.
 
 extension FileSize {
-    static let native = NativeType.Builder<FileSize>("FileSize")
+    static let native = HostType.Builder<FileSize>("FileSize")
         .property("bytes", \.bytes)
         .property("description", \.description)
         .initializer(labels: ["bytes"]) { (bytes: Int) in FileSize(bytes: bytes) }
@@ -48,13 +48,13 @@ extension FileSize {
 }
 
 extension DisplayColumn {
-    static let native = NativeType.Builder<DisplayColumn>("DisplayColumn")
+    static let native = HostType.Builder<DisplayColumn>("DisplayColumn")
         .property("name", \.name)
         .property("styledBy", \.styledBy)
 }
 
-extension Status: ValueConvertible {
-    static var valueType: ValueType { .named("Status") }
+extension Status: ScriptConvertible {
+    static var scriptType: ScriptType { .named("Status") }
     init(_ value: Value) throws {
         guard value.typeName == "Status",
             let succeeded = value.field("succeeded")?.cast(to: Bool.self)
@@ -70,7 +70,7 @@ extension Status: ValueConvertible {
 }
 
 extension Output {
-    static let native = NativeType.Builder<Output>("Output")
+    static let native = HostType.Builder<Output>("Output")
         .property("text", \.text)
         .property("lines", \.lines)
         .property("code", \.code)

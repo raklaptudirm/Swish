@@ -12,7 +12,7 @@ struct JSON {
 
     /// As `wrap`, and nil for nothing, as a field that is not there.
     static func wrapping(_ value: Value?) -> Value {
-        guard let value, value.kind != .nothing else { return .null }
+        guard let value, value.kind != .nothing else { return .nothing }
         return wrap(value)
     }
 
@@ -167,7 +167,7 @@ private struct JSONParser {
         case UInt8(ascii: "\""): return Value(try parseString())
         case UInt8(ascii: "t"): try expect("true"); return Value(true)
         case UInt8(ascii: "f"): try expect("false"); return Value(false)
-        case UInt8(ascii: "n"): try expect("null"); return .null
+        case UInt8(ascii: "n"): try expect("null"); return .nothing
         default: return try parseNumber()
         }
     }

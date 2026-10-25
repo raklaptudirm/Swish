@@ -122,8 +122,8 @@ extension FileSize: Presentable {
     var shape: DisplayShape { DisplayShape(role: .constant, isNumeric: true) }
 }
 
-extension FileSize: ValueConvertible {
-    static var valueType: ValueType { .named("FileSize") }
+extension FileSize: ScriptConvertible {
+    static var scriptType: ScriptType { .named("FileSize") }
     init(_ swiitValue: Value) throws {
         if let size = try? swiitValue.unboxed(FileSize.self) {
             self = size

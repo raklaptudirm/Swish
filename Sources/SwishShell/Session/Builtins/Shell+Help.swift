@@ -169,14 +169,14 @@ extension Shell {
     /// ` <Int>` after a flag that takes a value; a list flag takes one
     /// element per use.
     private func valuePlaceholder(for parameter: CommandParameter) -> [AttributedString] {
-        let type: ValueType
+        let type: ScriptType
         if parameter.type.isBool { return [] }
         type = parameter.type.listElement ?? parameter.type
         return [.init(" <"), .init(placeholder(type), DisplayStyle.type), .init(">")]
     }
 
     /// A type as `--help` shows it: an enum as its choices.
-    private func placeholder(_ type: ValueType) -> String {
+    private func placeholder(_ type: ScriptType) -> String {
         if case .named(let name, _) = type,
             let description = interpreter.typeDescription(named: name),
             description.kind == "enum"
@@ -308,7 +308,7 @@ extension Shell {
     /// What `help Type` shows: its members, grouped by kind, each with its
     /// signature (highlighted as Swift) and, on the line below, what its
     /// documentation says.
-    func helpLines(for type: TypeDescription) -> [AttributedString] {
+    func helpLines(for type: TypeInfo) -> [AttributedString] {
         var lines = [
             AttributedString(joining: [
                 .init(type.kind, DisplayStyle.keyword), .init(" "),
@@ -316,7 +316,7 @@ extension Shell {
             ])
         ]
         let groups = Dictionary(grouping: type.members, by: \.kind)
-        for kind in TypeDescription.Kind.allCases {
+        for kind in TypeInfo.Kind.allCases {
             guard let members = groups[kind], !members.isEmpty else { continue }
             lines += [AttributedString(""), HelpStyle.heading("\(kind.heading):")]
             for (index, member) in members.sorted(by: { $0.name < $1.name }).enumerated() {

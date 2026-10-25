@@ -79,8 +79,8 @@ extension Status {
         Value(
             struct: "Status",
             fields: [
-                "code": code.map { Value($0) } ?? Value.null,
-                "signal": signal.map { Value($0) } ?? Value.null,
+                "code": code.map { Value($0) } ?? Value.nothing,
+                "signal": signal.map { Value($0) } ?? Value.nothing,
                 "succeeded": Value(succeeded),
             ]
         )
@@ -95,8 +95,8 @@ extension Value {
     var commandOutput: Output? { try? unboxed(Output.self) }
 }
 
-extension Output: ValueConvertible {
-    static var valueType: ValueType { .named("Output") }
+extension Output: ScriptConvertible {
+    static var scriptType: ScriptType { .named("Output") }
     init(_ swiitValue: Value) throws {
         guard let value = swiitValue.commandOutput else {
             throw LibraryError("expected an Output, not \(swiitValue)")

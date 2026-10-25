@@ -276,7 +276,7 @@ extension Shell {
         let isProperty = overload.function == nil && (call.written ?? []).isEmpty
         func apply(to value: Value) throws -> Value {
             isProperty
-                ? try interpreter.value(of: callee.name, in: value)
+                ? try interpreter.value(forMember: callee.name, of: value)
                 : try invoke(callee, call.arguments(), on: value)
         }
         switch receiver {
@@ -303,7 +303,7 @@ extension Shell {
             return ValueStream {
                 if output == nil {
                     // The one value is the receiver, not a sequence's items.
-                    let value = try single ?? upstream.next() ?? Value.null
+                    let value = try single ?? upstream.next() ?? Value.nothing
                     while try upstream.next() != nil {}
                     output = self.elements(of: try apply(to: value))
                 }
@@ -321,8 +321,8 @@ extension Shell {
 
     /// Input items as the parameter's type. Lines from external programs
     /// are text, so they're converted like command-line arguments.
-    private func inputValue(_ item: Value, as type: ValueType, of name: String) throws -> Value {
-        if let value = interpreter.convert(item, to: type) { return value }
+    private func inputValue(_ item: Value, as type: ScriptType, of name: String) throws -> Value {
+        if let value = interpreter.converted(item, to: type) { return value }
         if item.kind == .string,
             let value = try? converted(item.description, to: type, for: "input", of: name)
         {
@@ -339,7 +339,7 @@ extension Shell {
         var value = value
         while value.kind == .structure,
             interpreter.conforms(.named(value.typeName), to: "Wrapping"),
-            let inner = try? interpreter.value(of: "wrapped", in: value)
+            let inner = try? interpreter.value(forMember: "wrapped", of: value)
         {
             value = inner
         }

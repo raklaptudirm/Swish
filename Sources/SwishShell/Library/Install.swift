@@ -15,7 +15,7 @@ extension Shell {
         interpreter.register(DisplayColumn.native)
         interpreter.register(Output.native)
         do {
-            try interpreter.prelude(Shell.prelude, bodies: preludeBodies)
+            try interpreter.declare(prelude: Shell.prelude, bodies: preludeBodies)
         } catch {
             preconditionFailure("the shell's declarations: \(error)")
         }
@@ -29,14 +29,14 @@ extension Shell {
         }
 
         add("from") { arguments in
-            guard let text = arguments["text"]?.cast(to: [String].self) else { return .null }
-            switch try InputFormat(arguments["format"] ?? .null) {
+            guard let text = arguments["text"]?.cast(to: [String].self) else { return .nothing }
+            switch try InputFormat(arguments["format"] ?? .nothing) {
             case .json: return JSON.wrap(try JSON.parse(text.joined(separator: "\n")))
             }
         }
         add("to") { [unowned self] arguments in
             let items = arguments["items"]?.cast(to: [Value].self) ?? []
-            switch try OutputFormat(arguments["format"] ?? .null) {
+            switch try OutputFormat(arguments["format"] ?? .nothing) {
             case .json: return Value(try JSON.text(items.count == 1 ? items[0] : Value(items)))
             case .text: return Value(laidOut(items, useViews: true).joined(separator: "\n"))
             }
@@ -65,7 +65,7 @@ extension Shell {
             for (key, value) in arguments["variables"]?.entries ?? ValueDictionary() {
                 variables[key.description] = value.description
             }
-            guard let body = arguments["body"] else { return .null }
+            guard let body = arguments["body"] else { return .nothing }
             return try with(env: variables) { try callBlock(body) }
         }
         add("ls") { [unowned self] arguments in
@@ -80,13 +80,13 @@ extension Shell {
         add("readLine") { arguments in
             readLine(strippingNewline: arguments["strippingNewline"]?.cast(to: Bool.self) ?? true)
                 .map { Value($0) }
-                ?? .null
+                ?? .nothing
         }
         add("shellStyled") { [unowned self] arguments in
             let text = arguments["text"]?.description ?? ""
             let styles = try (arguments["styles"]?.cast(to: [Value].self) ?? [])
                 .map { try TextStyle($0) }
-            guard !styles.isEmpty, !text.isEmpty, interpreter.host.output.traits().styled else {
+            guard !styles.isEmpty, !text.isEmpty, interpreter.host.output.traits().isStyled else {
                 return Value(text)
             }
             return Value(
@@ -103,7 +103,7 @@ extension Shell {
                     throw RuntimeError("select: \(item.description) has no fields")
                 }
                 selected.append(
-                    Value(struct: nil, fields: fields.map { ($0, record[$0] ?? Value.null) })
+                    Value(struct: nil, fields: fields.map { ($0, record[$0] ?? Value.nothing) })
                 )
             }
             return Value(selected)
@@ -114,29 +114,29 @@ extension Shell {
             guard let source = arguments["source"]?.cast(to: String.self),
                 let body = arguments["body"]
             else {
-                return .null
+                return .nothing
             }
             return Value(try startTask(source: source) { try self.callBlock(body) })
         }
         add("displayItems") { [unowned self] arguments in
-            try displayItems(arguments["value"] ?? .null)
-            return .null
+            try displayItems(arguments["value"] ?? .nothing)
+            return .nothing
         }
         add("exitStatus") { [unowned self] arguments in
-            statusValue(status(of: arguments["value"] ?? .null))
+            statusValue(status(of: arguments["value"] ?? .nothing))
         }
         add("exitShell") { [unowned self] arguments in
-            _ = try run([arguments["command"] ?? .null], from: nil, display: true)
+            _ = try run([arguments["command"] ?? .nothing], from: nil, display: true)
             throw RuntimeError("exit did not leave")
         }
         add("shellText") { [unowned self] arguments in
-            Value(try interpreter.text(of: arguments["value"] ?? .null))
+            Value(try interpreter.description(of: arguments["value"] ?? .nothing))
         }
         add("escapingWildcards") { arguments in
             Value(Glob.escape(arguments["text"]?.description ?? ""))
         }
         add("environmentValue") { [unowned self] arguments in
-            environment.get(arguments["name"]?.description ?? "").map { Value($0) } ?? .null
+            environment.get(arguments["name"]?.description ?? "").map { Value($0) } ?? .nothing
         }
         add("setEnvironmentValue") { [unowned self] arguments in
             let name = arguments["name"]?.description ?? ""
@@ -145,9 +145,9 @@ extension Shell {
                     "an environment variable's name must be a String without '=', not \(name)"
                 )
             }
-            let value = arguments["value"] ?? .null
+            let value = arguments["value"] ?? .nothing
             environment.set(name, value.kind == .nothing ? nil : value.description)
-            return .null
+            return .nothing
         }
         for (name, body) in jsonBodies { add(name, body) }
         return bodies
@@ -175,13 +175,13 @@ extension FileEntry {
             struct: "FileEntry",
             fields: [
                 "name": Value(name),
-                "type": interpreter.value(ofCase: "\(type)", in: "FileType") ?? .null,
+                "type": interpreter.value(forCase: "\(type)", in: "FileType") ?? .nothing,
                 "size": size.value, "modified": Value(boxing: modified, as: "Date"),
                 "permissions": Value(permissions),
                 "owner": Value(owner), "created": Value(boxing: created, as: "Date"),
                 "accessed": Value(boxing: accessed, as: "Date"),
                 "path": Value(boxing: path, as: "FilePath"),
-                "target": target.map { Value(boxing: $0, as: "FilePath") } ?? .null,
+                "target": target.map { Value(boxing: $0, as: "FilePath") } ?? .nothing,
             ]
         )
     }
@@ -194,9 +194,9 @@ extension ProcessEntry {
             struct: "ProcessEntry",
             fields: [
                 "pid": Value(pid), "ppid": Value(ppid), "name": Value(name), "user": Value(user),
-                "memory": memory.map { $0.value } ?? .null,
-                "cpuTime": cpuTime.map { Value($0) } ?? .null,
-                "threads": threads.map { Value($0) } ?? .null,
+                "memory": memory.map { $0.value } ?? .nothing,
+                "cpuTime": cpuTime.map { Value($0) } ?? .nothing,
+                "threads": threads.map { Value($0) } ?? .nothing,
             ]
         )
     }

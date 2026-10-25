@@ -5,7 +5,7 @@ import Swiit
 struct CommandParameter {
     var label: String?
     var name: String
-    var type: ValueType
+    var type: ScriptType
     var arity: Symbol.Parameter.Arity
     var documentation: String?
     /// Receives what is piped in, per item or whole.
@@ -33,7 +33,7 @@ struct CommandParameter {
     init(
         label: String? = nil,
         name: String,
-        type: ValueType,
+        type: ScriptType,
         arity: Symbol.Parameter.Arity = .required,
         isInput: Bool = false
     ) {

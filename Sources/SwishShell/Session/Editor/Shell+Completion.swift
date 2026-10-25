@@ -81,7 +81,7 @@ extension Shell {
                     ?? stageCallee(name, of: .list(.any), receiver: .collected)
                 guard let callee,
                     stageNames.flow.contains(name)
-                        || interpreter.symbols(named: name, of: .list(.any))
+                        || interpreter.symbols(named: name, in: .list(.any))
                             .contains(where: { $0.function != nil })
                 else { continue }
                 described[name] =

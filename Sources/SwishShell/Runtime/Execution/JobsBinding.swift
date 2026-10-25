@@ -33,7 +33,7 @@ extension Shell {
                 if let task = job.task, !job.givesOutput {
                     _ = try awaitJob(job)
                     if case .success(let value)? = task.result { return value }
-                    return .null
+                    return .nothing
                 }
                 let output = try awaitJob(job)
                 if throwing && !output.succeeded {

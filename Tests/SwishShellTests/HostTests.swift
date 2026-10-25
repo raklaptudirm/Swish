@@ -143,8 +143,8 @@ private func errorsOfScript(
     for (source, statements) in cases {
         // Each statement is found, and so is told as it finishes.
         nonisolated(unsafe) var finished = 0
-        shell.interpreter.host.statementFinished = { _, _ in finished += 1 }
-        defer { shell.interpreter.host.statementFinished = nil }
+        shell.interpreter.host.didFinishStatement = { _, _ in finished += 1 }
+        defer { shell.interpreter.host.didFinishStatement = nil }
         switch shell.prepare(source) {
         case .success(let reading):
             _ = try? shell.interpreter.check(reading.swift)

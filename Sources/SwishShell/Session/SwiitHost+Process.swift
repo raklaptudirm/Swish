@@ -30,7 +30,7 @@ extension OutputSink.Traits {
         self.init(
             isTerminal: isatty(fd) != 0,
             width: terminalWidth(fd),
-            styled: DisplayStyle.enabled(for: fd)
+            isStyled: DisplayStyle.enabled(for: fd)
         )
     }
 }

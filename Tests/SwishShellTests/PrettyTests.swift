@@ -9,13 +9,13 @@ private let wide = PrettyPrinter(width: .max)
 private func fileType(_ name: String) -> Value {
     let interpreter = Interpreter()
     _ = try? interpreter.evaluate("enum FileType { case file, directory }")
-    return interpreter.value(ofCase: name, in: "FileType")!
+    return interpreter.value(forCase: name, in: "FileType")!
 }
 
 @Test func onOneLineItIsTheDebugDescription() {
     let status = Output(text: "hi", code: 0)
     let values: [Value] = [
-        .null, Value(3), Value("tab\there"), Value([Value(1), Value("x"), .null]),
+        .nothing, Value(3), Value("tab\there"), Value([Value(1), Value("x"), .nothing]),
         Value(struct: nil, fields: ["k": Value("v")]),
         Value(struct: nil, fields: [(name: String, value: Value)]()),
         .output(status), status.status.value, fileType("directory"),

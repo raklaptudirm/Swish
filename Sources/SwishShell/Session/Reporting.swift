@@ -6,7 +6,7 @@ extension Shell {
     /// redirect sent it.
     func report(_ message: String, to destination: OutputSink? = nil) {
         let output = destination ?? interpreter.host.error
-        let styled = output.traits().styled
+        let styled = output.traits().isStyled
         if message.hasPrefix("error: ") {
             output.write(
                 "swish: error:".styled(DisplayStyle.error, styled) + message.dropFirst(6) + "\n"
@@ -30,7 +30,7 @@ extension Shell {
     /// a per-item error reported makes it a failure, and anything else, as a
     /// `let`, succeeds. An `if` or a loop is what ran in it last.
     func recordStatuses() {
-        interpreter.host.statementFinished = { [unowned self] value, caught in
+        interpreter.host.didFinishStatement = { [unowned self] value, caught in
             var status = value.map(status(of:)) ?? 0
             // A `try?` that caught an error failed; other nils, like a function that returns
             // nothing, didn't.

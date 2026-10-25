@@ -52,7 +52,7 @@ extension Shell {
     ) throws -> Int32 {
         if helpRequested(args, for: callee) {
             interpreter.host.output.write(
-                helpText(for: callee, styled: interpreter.host.output.traits().styled)
+                helpText(for: callee, styled: interpreter.host.output.traits().isStyled)
             )
             return 0
         }
@@ -104,11 +104,11 @@ extension Shell {
         let parameters = callee.parameters[binding.overload]
             .filter { !(excludingInput && $0.isInput) }
 
-        func take(_ word: Int, text: String?, as type: ValueType, for what: String) throws -> Value
+        func take(_ word: Int, text: String?, as type: ScriptType, for what: String) throws -> Value
         {
             if let text { return try converted(text, to: type, for: what, of: name) }
             guard case .value(let value) = args[word],
-                let conforming = interpreter.convert(value, to: type)
+                let conforming = interpreter.converted(value, to: type)
             else {
                 throw RuntimeError(
                     "\(name): \(what) must be \(type), not \(args[word].description)"
@@ -148,7 +148,7 @@ extension Shell {
                 } else if let (_, make) = Shell.collection(parameter.type) {
                     bound[parameter.name] = [make([])]
                 } else {
-                    bound[parameter.name] = [Value.null]
+                    bound[parameter.name] = [Value.nothing]
                 }
             case nil:
                 break
@@ -165,7 +165,7 @@ extension Shell {
 
     /// What a parameter given several words is made of, and how: a
     /// collection an array literal can be (`[Int]`, `Set<String>`).
-    static func collection(_ type: ValueType) -> (element: ValueType, make: ([Value]) -> Value)? {
+    static func collection(_ type: ScriptType) -> (element: ScriptType, make: ([Value]) -> Value)? {
         switch type {
         case .named("Array", let arguments) where arguments.count == 1:
             return (arguments[0], { Value($0) })
@@ -181,7 +181,7 @@ extension Shell {
     /// `text` as a value of `type`, or the error that says why it can't be.
     func converted(
         _ text: String,
-        to type: ValueType,
+        to type: ScriptType,
         for what: String,
         of function: String
     ) throws -> Value {
@@ -195,7 +195,7 @@ extension Shell {
             }
             return Value(text)
         }
-        if let value = interpreter.value(fromWord: text, as: type) { return value }
+        if let value = interpreter.parse(word: text, as: type) { return value }
         // A command's output, which is text, is what a word is for it.
         if type == .named("Output") { return .output(Output(text: text, code: 0)) }
         guard takesWords(type) else {
@@ -208,7 +208,7 @@ extension Shell {
 
     /// Whether a word can be a value of `type` at all: a Swift type text can be, an enum, or one of
     /// Swish's own that's read from text.
-    func takesWords(_ type: ValueType) -> Bool {
+    func takesWords(_ type: ScriptType) -> Bool {
         type == .named("Output") || interpreter.acceptsWords(as: type)
     }
 }

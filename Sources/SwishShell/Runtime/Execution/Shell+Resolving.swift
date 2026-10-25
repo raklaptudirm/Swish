@@ -42,7 +42,7 @@ extension Shell {
             return try upstream.next()
         }
         let name = deferred.name
-        let element = first.map(interpreter.valueType(of:)) ?? .any
+        let element = first.map(interpreter.scriptType(of:)) ?? .any
 
         func function(_ callee: Callee) -> Stage {
             .function(
@@ -57,8 +57,12 @@ extension Shell {
         // The one value a pipeline started from: its own members.
         if let single, single.items == nil {
             candidates.append {
-                self.stageCallee(name, of: self.interpreter.valueType(of: single), receiver: .value)
-                    .map(function)
+                self.stageCallee(
+                    name,
+                    of: self.interpreter.scriptType(of: single),
+                    receiver: .value
+                )
+                .map(function)
             }
         }
         candidates.append {
@@ -150,7 +154,7 @@ extension Shell {
             let parameter = parameters[index]
             guard
                 parameter.type.isUnknown
-                    || interpreter.convert(argument.value, to: parameter.type) != nil
+                    || interpreter.converted(argument.value, to: parameter.type) != nil
             else {
                 return false
             }

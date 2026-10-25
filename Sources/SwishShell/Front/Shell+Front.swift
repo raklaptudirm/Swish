@@ -36,7 +36,7 @@ extension Shell {
         }
         front.recovering = recovering
         front.swiftHighlight = { [unowned self] source in
-            self.interpreter.highlight(source)
+            self.interpreter.highlighting(of: source)
                 .map { span in
                     let kind: HighlightKind =
                         switch span.kind {

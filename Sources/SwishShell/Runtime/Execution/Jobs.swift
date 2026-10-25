@@ -34,7 +34,7 @@ final class Job: HostObject, Presentable, @unchecked Sendable {
     /// For `async $(…)`, and a task: its output, read as it comes.
     var capture: OutputCollector?
     /// Swish code running as a task of its own, rather than processes.
-    var task: TaskHandle?
+    var task: ScriptTask?
     /// `async $(…)`: `await` gives its Output, not what its task gave.
     var givesOutput = false
     /// Its output has been written where the one who awaited it writes (or is being).
@@ -117,13 +117,13 @@ final class Job: HostObject, Presentable, @unchecked Sendable {
             "state", "JobState",
             { job in
                 job.shell.interpreter.value(
-                    ofCase: job.cancelled && job.state == .done ? "cancelled" : job.state.rawValue,
+                    forCase: job.cancelled && job.state == .done ? "cancelled" : job.state.rawValue,
                     in: "JobState"
-                ) ?? .null
+                ) ?? .nothing
             }
         ),
         ("pids", "[Int]", { Value($0.running.map { Value(Int($0)) }) }),
-        ("output", "Output?", { $0.output.map { Value.output($0) } ?? .null }),
+        ("output", "Output?", { $0.output.map { Value.output($0) } ?? .nothing }),
         // A method, as it's not data: a table or `to json` of jobs can't read it.
         ("lines", "() -> Flow<String>", { job in method("lines") { [unowned job] in job.lines } }),
         (
@@ -156,7 +156,7 @@ final class Job: HostObject, Presentable, @unchecked Sendable {
     private static func method(_ name: String, _ body: @escaping @Sendable () -> Void) -> Value {
         method(name) { () -> Value in
             body()
-            return .null
+            return .nothing
         }
     }
 

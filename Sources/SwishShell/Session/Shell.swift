@@ -87,7 +87,7 @@ public final class Shell: @unchecked Sendable {
     /// Tasks still running end with the shell: they're cancelled, and waited for, as the scope that
     /// starts a task closes it (https://github.com/raklaptudirm/Swiit/blob/main/Docs/async.md).
     deinit {
-        finishTasks()
+        cancelAndJoinTasks()
     }
 
     public init() {
@@ -127,7 +127,7 @@ public final class Shell: @unchecked Sendable {
         }
         // A task in the background reads the input only once it's awaited
         // from the foreground; reading sooner would take the prompt's.
-        interpreter.host.inputTurn = { [unowned self] read in
+        interpreter.host.withInputTurn = { [unowned self] read in
             let state = task
             if !state.inForeground {
                 let cancellation = interpreter.cancellation
@@ -174,7 +174,7 @@ extension Shell {
         // Where errors go decides whether the source is shown in color, as the line editor shows
         // it.
         var style: Diagnostic.Style?
-        if (diagnostic.output ?? interpreter.host.error).traits().styled {
+        if (diagnostic.output ?? interpreter.host.error).traits().isStyled {
             nonisolated(unsafe) let shell = self  // safe: called holding the interpreter lock, as the report is
             style = Diagnostic.Style(
                 source: { shell.highlightStyles($0) },
@@ -199,8 +199,8 @@ extension Shell {
 
     /// Closes the top level as a scope: the tasks started there are cancelled
     /// and waited for, as at the end of a script or `swish -c`.
-    public func finishTasks() {
-        interpreter.finishTasks()
+    public func cancelAndJoinTasks() {
+        interpreter.cancelAndJoinTasks()
     }
 
     /// A program read: the source as Swift, and what it declares at its top level.
@@ -281,9 +281,9 @@ extension Shell {
         do {
             try interpreter.execute(
                 reading.swift,
-                observing: observer,
+                onValue: observer,
                 onError: onError,
-                then: finish
+                completion: finish
             )
         } catch {
             if !handled || !error.isRuntime { _ = handleRunFailure(error) }

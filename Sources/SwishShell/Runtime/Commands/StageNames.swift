@@ -37,7 +37,7 @@ private final class StageNameCache: Sendable {
 
 extension Shell {
     func computeStageNames() -> StageNames {
-        let count = interpreter.types().count
+        let count = interpreter.types.count
         return StageNameCache.shared.names(types: count) { findStageNames() }
     }
 
@@ -52,15 +52,15 @@ extension Shell {
                 names.all.insert(symbol.name)
             }
         }
-        for type in interpreter.types() where type.isBuiltin {
-            interpreter.symbols(of: .named(type.name)).forEach(add)
+        for type in interpreter.types where type.isBuiltin {
+            interpreter.symbols(in: .named(type.name)).forEach(add)
         }
         // What every sequence has.
-        interpreter.symbols(of: .list(.any)).forEach(add)
+        interpreter.symbols(in: .list(.any)).forEach(add)
         names.sequence = Set(
-            interpreter.symbols(of: .named("Sequence")).filter { $0.function != nil }.map(\.name)
+            interpreter.symbols(in: .named("Sequence")).filter { $0.function != nil }.map(\.name)
         )
-        for symbol in interpreter.symbols(of: .named("Flow", [.any])) {
+        for symbol in interpreter.symbols(in: .named("Flow", [.any])) {
             if case .named("Flow", _)? = symbol.function?.returns { names.flow.insert(symbol.name) }
         }
         return names
@@ -72,10 +72,10 @@ extension Shell {
         if stageNames.all.contains(name) || Job.members.contains(where: { $0.name == name }) {
             return true
         }
-        return interpreter.types()
+        return interpreter.types
             .contains { type in
                 !type.isBuiltin
-                    && interpreter.symbols(named: name, of: .named(type.name))
+                    && interpreter.symbols(named: name, in: .named(type.name))
                         .contains { $0.function != nil }
             }
     }
@@ -90,11 +90,11 @@ extension Shell {
     /// `receiver` says.
     func stageCallee(
         _ name: String,
-        of type: ValueType,
+        of type: ScriptType,
         receiver: StageReceiver,
         includingMutating: Bool = false
     ) -> Callee? {
-        let members = interpreter.symbols(named: name, of: type)
+        let members = interpreter.symbols(named: name, in: type)
             .filter { symbol in
                 if let function = symbol.function {
                     return includingMutating || !function.isMutating
@@ -117,7 +117,7 @@ extension Shell {
     /// Every Swift type's stage members named `name`, as one callee: what's known of a stage while
     /// typing, before the type of what's piped into it is.
     func stageFunctions(named name: String) -> Callee? {
-        let candidates = interpreter.types().filter(\.isBuiltin).sorted { $0.name < $1.name }
+        let candidates = interpreter.types.filter(\.isBuiltin).sorted { $0.name < $1.name }
             .flatMap {
                 stageCallee(name, of: .named($0.name), receiver: .collected)?.overloads ?? []
             }

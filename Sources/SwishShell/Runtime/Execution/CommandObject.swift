@@ -45,7 +45,8 @@ extension Shell {
         for (name, method) in methods {
             nonisolated(unsafe) let method = method
             // A command alone, or a pipeline's commands and what it is fed.
-            bodies["Command." + name] = { arguments in try method([arguments["self"] ?? .null], nil)
+            bodies["Command." + name] = { arguments in
+                try method([arguments["self"] ?? .nothing], nil)
             }
             bodies["Pipeline." + name] = { arguments in
                 guard let pipeline = arguments["self"],
@@ -165,8 +166,8 @@ extension Shell {
         return Value(
             struct: "Status",
             fields: [
-                "code": code.map { Value($0) } ?? Value.null,
-                "signal": signal.map { Value($0) } ?? Value.null,
+                "code": code.map { Value($0) } ?? Value.nothing,
+                "signal": signal.map { Value($0) } ?? Value.nothing,
                 "succeeded": Value(status == 0),
             ]
         )
@@ -244,7 +245,7 @@ extension Shell {
             }
             return ResolvedRedirect(fd: Int32(fd), action: .duplicate(Int32(other)))
         }
-        let paths = try arguments(value.field("path") ?? .null)
+        let paths = try arguments(value.field("path") ?? .nothing)
         guard paths.count == 1, case .text(let path) = paths[0] else {
             throw RuntimeError("ambiguous redirect: \(paths.count) files match")
         }

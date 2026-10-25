@@ -106,7 +106,7 @@ final class DisplayFormatter {
                 columnCap,
                 max(
                     header ? key.count : 0,
-                    sample.map { DisplayFormatter.cell($0[key] ?? .null).count }.max() ?? 0
+                    sample.map { DisplayFormatter.cell($0[key] ?? .nothing).count }.max() ?? 0
                 )
             )
         }
@@ -127,7 +127,7 @@ final class DisplayFormatter {
             droppedColumns = true
         }
         return keys.indices.map { index in
-            let values = sample.compactMap { $0[keys[index]] }.filter { $0 != .null }
+            let values = sample.compactMap { $0[keys[index]] }.filter { $0 != .nothing }
             let numeric =
                 !values.isEmpty
                 && values.allSatisfy {
@@ -144,7 +144,7 @@ final class DisplayFormatter {
         trimmingTrailingSpaces(
             columns!
                 .map { column in
-                    let value = record[column.key] ?? .null
+                    let value = record[column.key] ?? .nothing
                     return pad(
                         DisplayFormatter.cell(value),
                         column,

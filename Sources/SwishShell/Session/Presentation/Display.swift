@@ -16,7 +16,7 @@ extension DisplayFormatter {
     ) {
         self.init(
             maxWidth: traits.width ?? .max,
-            styled: traits.styled,
+            styled: traits.isStyled,
             columnCap: traits.isTerminal ? 40 : .max,
             registry: registry,
             write: write
@@ -49,7 +49,7 @@ extension Shell {
     /// The `columns` a struct of the program's declares by being `Tabular`.
     private func declaredColumns(of typeName: String) -> [DisplayColumn]? {
         guard let type = interpreter[typeName],
-            let list = try? interpreter.value(of: "columns", in: type),
+            let list = try? interpreter.value(forMember: "columns", of: type),
             let items = list.cast(to: [Value].self)
         else { return nil }
         let columns = items.compactMap { try? $0.unboxed(DisplayColumn.self) }
@@ -73,7 +73,7 @@ extension Shell {
         case .structure where !debug, .tuple where !debug:
             for line in DisplayFormatter.keyValueLines(
                 fields!,
-                styled: traits.styled,
+                styled: traits.isStyled,
                 registry: displayRegistry
             ) {
                 output.write(line + "\n")
@@ -88,7 +88,7 @@ extension Shell {
             for item in value.cast(to: [Value].self) ?? [] { formatter.add(item) }
             formatter.finish()
         case _ where debug:
-            let printer = PrettyPrinter(width: traits.width ?? 80, styled: traits.styled)
+            let printer = PrettyPrinter(width: traits.width ?? 80, styled: traits.isStyled)
             output.write(printer.format(value) + "\n")
         default:
             output.write(value.description + "\n")

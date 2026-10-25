@@ -27,8 +27,8 @@ extension Diagnostic {
                     "status": Value(
                         struct: "Status",
                         fields: [
-                            "code": output.code.map { Value($0) } ?? Value.null,
-                            "signal": output.signal.map { Value($0) } ?? Value.null,
+                            "code": output.code.map { Value($0) } ?? Value.nothing,
+                            "signal": output.signal.map { Value($0) } ?? Value.nothing,
                             "succeeded": Value(false),
                         ]
                     ),

@@ -147,7 +147,7 @@ extension Shell {
         var bound: [String: CommandLineBinding.Assigned] = [:]
         var penalty = 0
         /// A word taken as a value of `type`: whether it can be, and what it costs.
-        func take(_ word: Int, text: String?, as type: ValueType, for what: String) throws -> Piece
+        func take(_ word: Int, text: String?, as type: ScriptType, for what: String) throws -> Piece
         {
             if let text {
                 if type == .string || type == .any { penalty += 1 }
