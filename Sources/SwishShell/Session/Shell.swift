@@ -131,9 +131,10 @@ public final class Shell: @unchecked Sendable {
             let state = task
             if !state.inForeground {
                 let cancellation = interpreter.cancellation
+                let turn = state.turn
                 guard
                     Interpreter.whileWaiting(
-                        wake: { state.poke() },
+                        wake: { turn.poke() },
                         { state.waitForForeground(unless: cancellation) }
                     )
                 else {
@@ -351,34 +352,41 @@ final class ShellTask {
     /// terminal and which reads the input: the prompt's, or a task while it's
     /// awaited from there. Set from the task awaiting it, on another thread.
     var inForeground: Bool {
-        get {
-            turn.lock()
-            defer { turn.unlock() }
-            return foreground
-        }
-        set {
-            turn.lock()
-            foreground = newValue
-            turn.broadcast()
-            turn.unlock()
-        }
+        get { turn.isForeground }
+        set { turn.isForeground = newValue }
     }
-    private var foreground = true
-    private let turn = NSCondition()
+    let turn = Turn()
 
     /// Blocks until it's in the foreground, or `cancellation` is asked
     /// (false). (Through `suspend`, so the lock is let go.)
     func waitForForeground(unless cancellation: Cancellation) -> Bool {
-        turn.lock()
-        defer { turn.unlock() }
-        while !foreground && !cancellation.isSet { turn.wait() }
-        return foreground
+        turn.waitForForeground(unless: cancellation)
+    }
+}
+
+/// Whether a task has its turn at the terminal and the input, which another thread sets and a
+/// waiting one is woken by. A `Mutex` cannot wait, so the flag is kept under the condition that can.
+final class Turn: @unchecked Sendable {  // safe: `foreground` is read and written holding `condition`
+    private var foreground = true
+    private let condition = NSCondition()
+
+    var isForeground: Bool {
+        get { condition.withLock { foreground } }
+        set {
+            condition.withLock {
+                foreground = newValue
+                condition.broadcast()
+            }
+        }
+    }
+
+    func waitForForeground(unless cancellation: Cancellation) -> Bool {
+        condition.withLock {
+            while !foreground && !cancellation.isSet { condition.wait() }
+            return foreground
+        }
     }
 
     /// Wakes a wait for the foreground, to look again.
-    func poke() {
-        turn.lock()
-        turn.broadcast()
-        turn.unlock()
-    }
+    func poke() { condition.withLock { condition.broadcast() } }
 }
