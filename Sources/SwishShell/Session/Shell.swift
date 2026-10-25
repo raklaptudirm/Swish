@@ -269,8 +269,8 @@ extension Shell {
         var handled = false
         // Only the prompt shows values; running code prints what it prints. A script goes on with
         // the next statement after an error in one.
-        let observer: ((Interpreter.Observation) throws -> Void)? =
-            atPrompt ? { [unowned self] in present($0) } : nil
+        let observer: ((_ value: Value, _ callee: Symbol?) throws -> Void)? =
+            atPrompt ? { [unowned self] value, callee in present(value, from: callee) } : nil
         let onError: ((Diagnostic) -> Bool)? =
             atPrompt
             ? nil
@@ -279,7 +279,7 @@ extension Shell {
                 return handleRunFailure(diagnostic)
             }
         do {
-            try interpreter.execute(
+            try interpreter.evaluate(
                 reading.swift,
                 onValue: observer,
                 onError: onError,

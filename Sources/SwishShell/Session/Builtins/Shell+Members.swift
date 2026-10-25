@@ -41,7 +41,7 @@ extension Shell {
             }
             // Then what its type has, as `help Type` shows it.
             if let name = interpreter.describedTypeName(of: item),
-                let type = interpreter.typeDescription(named: name)
+                let type = interpreter.typeInfo(named: name)
             {
                 for member in type.members where member.kind != .initializer {
                     add(type.name, member.name, member.kind.rawValue)

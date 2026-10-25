@@ -52,6 +52,15 @@ private func shellWithRecorder() -> (Shell, Recorder) {
     #expect(recorder.written[1].contains("1 | 1 + 1; 1 / 0"))
 }
 
+@Test func thePromptDoesNotShowWhatTheFunctionCalledLetsGo() {
+    let (shell, recorder) = shellWithRecorder()
+    shell.enter(
+        "@discardableResult func bump() -> Int { 3 }; func peek() -> Int { 4 }; var xs = [7, 8]; bump(); peek(); xs.removeLast()"
+    )
+    // Only what the functions left unmarked is shown.
+    #expect(recorder.written == ["out: 4\n"])
+}
+
 @Test func theEnvironmentIsTheHosts() {
     let (shell, recorder) = shellWithRecorder()
     recorder.variables = ["GREETING": "hi"]

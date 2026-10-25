@@ -15,7 +15,7 @@ func runStyle(
     ofType type: String,
     shell: Shell
 ) -> DisplayStyle?? {
-    guard let members = shell.interpreter.typeDescription(named: type)?.members,
+    guard let members = shell.interpreter.typeInfo(named: type)?.members,
         let text = members.first(where: { $0.signature.plain == signature })?.signature
     else { return nil }
     return text.runs.first { String(text[$0.range].characters) == word }

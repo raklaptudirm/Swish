@@ -438,7 +438,7 @@ extension Sequence {
 // with, and anything else is itself, awaited as Swift would.
 func latestJob() -> Job<Output>
 func waitForJob(_ job: Job, _ throwing: Bool) -> Any
-func waited<T>(_ job: Job<T>) -> T { waitForJob(job, false) }
-func waited<T>(_ value: T) -> T { value }
-func waitedFailing<T>(_ job: Job<T>) throws -> T { waitForJob(job, true) }
-func waitedFailing<T>(_ value: T) throws -> T { value }
+@alreadyShown func waited<T>(_ job: Job<T>) -> T { waitForJob(job, false) }
+@alreadyShown func waited<T>(_ value: T) -> T { value }
+@alreadyShown func waitedFailing<T>(_ job: Job<T>) throws -> T { waitForJob(job, true) }
+@alreadyShown func waitedFailing<T>(_ value: T) throws -> T { value }
