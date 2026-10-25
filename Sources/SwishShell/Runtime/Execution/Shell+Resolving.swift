@@ -104,10 +104,15 @@ extension Shell {
                     // `[K.a] | sorted` needs its Element to be Comparable.
                     if first != nil, !element.isUnknown,
                         let missing =
-                            (callee.overloads[binding.overload].function?.generics["Element"] ?? [])
-                            .first(where: {
-                                !$0.hasPrefix("=") && !self.interpreter.conforms(element, to: $0)
+                            (callee.overloads[binding.overload].function?.generics
+                            .first(where: { $0.name == "Element" })?
+                            .constraints ?? [])
+                            .compactMap({ constraint -> String? in
+                                guard case .conforms(let proto) = constraint else { return nil }
+                                return self.interpreter.conforms(element, to: proto.description)
+                                    ? nil : proto.description
                             })
+                            .first
                     {
                         throw ConstraintFailure(
                             message: "\(name) needs Element to be \(missing), and \(element) isn't"
