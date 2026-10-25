@@ -1,5 +1,6 @@
 import Foundation
 import Swiit
+import Synchronization
 
 extension Shell {
     // MARK: Capturing output
@@ -25,8 +26,7 @@ extension Shell {
 /// until the output ends or it is stopped.
 final class Relay: @unchecked Sendable {
     private let finished = DispatchSemaphore(value: 0)
-    private let lock = NSLock()
-    private var stopped = false
+    private let stopped = Mutex(false)
 
     init(_ collector: OutputCollector, to fd: Int32) {
         Thread.detachNewThread { [self] in
@@ -52,7 +52,7 @@ final class Relay: @unchecked Sendable {
                         }
                     }
                     offset += chunk.count
-                } else if ended || lock.withLock({ stopped }) {
+                } else if ended || stopped.withLock({ $0 }) {
                     break
                 }
             }
@@ -61,7 +61,7 @@ final class Relay: @unchecked Sendable {
     }
 
     /// Ends the copying once it has caught up with what is collected.
-    func stop() { lock.withLock { stopped = true } }
+    func stop() { stopped.withLock { $0 = true } }
 
     /// Waits for the copying to end.
     func wait() { finished.wait() }

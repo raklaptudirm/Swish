@@ -1,5 +1,6 @@
 import Foundation
 import Swiit
+import Synchronization
 
 // Which names can be a stage after a `|`: a member of what flows in. Known from the types, without
 // a value in hand, for highlighting and completion, and for telling a method's name from a
@@ -20,18 +21,17 @@ struct StageNames {
 
 /// The names are the same for every shell in the process, once its types are registered, and costly
 /// to find.
-private final class StageNameCache: @unchecked Sendable {
+private final class StageNameCache: Sendable {
     static let shared = StageNameCache()
-    private let lock = NSLock()
-    private var cached: (types: Int, names: StageNames)?
+    private let cached = Mutex<(types: Int, names: StageNames)?>(nil)
 
     func names(types: Int, compute: () -> StageNames) -> StageNames {
-        lock.lock()
-        defer { lock.unlock() }
-        if let cached, cached.types == types { return cached.names }
-        let names = compute()
-        cached = (types, names)
-        return names
+        cached.withLock { cached in
+            if let cached, cached.types == types { return cached.names }
+            let names = compute()
+            cached = (types, names)
+            return names
+        }
     }
 }
 

@@ -4,7 +4,7 @@ import PackageDescription
 // The shell. It is a client of the interpreter (github.com/raklaptudirm/Swiit, checked out beside this one).
 let package = Package(
     name: "Swish",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS(.v15)],
     products: [
         // The command keeps its lowercase name, as Unix programs do.
         .executable(name: "swish", targets: ["Swish"]),
