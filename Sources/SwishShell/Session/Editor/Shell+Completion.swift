@@ -52,7 +52,9 @@ extension Shell {
 
     private func variableCandidates(prefix: String) -> [LineEditor.Candidate] {
         var names = Set(ProcessInfo.processInfo.environment.keys)
-        for (name, role) in interpreter.names() where role != .function { names.insert(name) }
+        for symbol in interpreter.symbols() where symbol.function == nil {
+            names.insert(symbol.name)
+        }
         return names.filter { $0.hasPrefix(prefix) }.sorted()
             .map {
                 LineEditor.Candidate(replacement: "$" + $0, suffix: "", display: "$" + $0)
@@ -62,7 +64,7 @@ extension Shell {
     private func commandCandidates(prefix: String, externalOnly: Bool) -> [LineEditor.Candidate] {
         var described: [String: String] = [:]
         if !externalOnly {
-            for (name, _) in interpreter.names() { described[name] = "variable" }
+            for symbol in interpreter.symbols() { described[symbol.name] = "variable" }
             for (name, symbols) in Dictionary(
                 grouping: interpreter.symbols().filter { $0.function != nil },
                 by: \.name

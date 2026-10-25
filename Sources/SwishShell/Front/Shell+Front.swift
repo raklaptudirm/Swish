@@ -2,8 +2,8 @@ import Foundation
 import Swiit
 
 extension NameRole {
-    init(_ role: Symbol.Role) {
-        switch role {
+    init(_ declaration: Symbol.Declaration) {
+        switch declaration {
         case .variable: self = .variable
         case .function: self = .function
         case .type: self = .type
@@ -14,7 +14,11 @@ extension NameRole {
 extension Shell {
     /// The shell's front end for this shell's names.
     func makeFront(recovering: Bool = false) -> Front {
-        let front = Front(bound: Names(roles: interpreter.names().mapValues { NameRole($0) }))
+        let roles = Dictionary(
+            interpreter.symbols().map { ($0.name, NameRole($0.declaration)) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        let front = Front(bound: Names(roles: roles))
         front.closureArity = { [unowned self] (name: String) -> Int? in
             for overload in commandFunctions(named: name)?.overloads ?? [] {
                 for parameter in overload.function?.parameters ?? [] {
