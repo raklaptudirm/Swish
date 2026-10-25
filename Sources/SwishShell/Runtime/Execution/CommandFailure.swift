@@ -11,8 +11,8 @@ typealias RuntimeError = Diagnostic
 
 extension Diagnostic {
     /// A run-time failure with the `status` it ends the command line with.
-    init(_ message: String, status: Int32 = 1, isReported: Bool = false) {
-        self = .runtime(message, cause: ShellFailure(status: status), isReported: isReported)
+    init(_ message: String, status: Int32 = 1) {
+        self = .runtime(message, cause: ShellFailure(status: status))
     }
 
     /// A command that failed under `try`: what `catch` binds is a `CommandFailure`, with how it
@@ -40,14 +40,6 @@ extension Diagnostic {
         )
     }
 
-    /// What ran, when it failed: its kind's payload.
-    private var failure: Failure? {
-        switch kind {
-        case .runtime(let failure), .fatal(let failure): failure
-        default: nil
-        }
-    }
-
     /// The host's own error behind it (`ShellFailure`, `JobSuspended`).
     var cause: (any Error)? {
         guard case .hostError(let error)? = failure?.origin else { return nil }
@@ -57,13 +49,18 @@ extension Diagnostic {
     /// The status the command line ends with.
     var status: Int32 { (cause as? ShellFailure)?.status ?? 1 }
 
-    /// The shell told the person already.
-    var isReported: Bool { failure?.isReported ?? false }
+    /// Where it is told, when a redirect sent it somewhere other than the shell's own errors.
+    var output: OutputSink? {
+        guard case .sink(let output)? = failure?.destination else { return nil }
+        return output
+    }
 
-    /// The same failure, told already.
-    var reported: Diagnostic {
-        guard case .runtime(var failure) = kind else { return self }
-        failure.isReported = true
+    /// The same failure, to be told where `other` is.
+    func told(where other: Diagnostic) -> Diagnostic {
+        guard let destination = other.failure?.destination, case .runtime(var failure) = kind else {
+            return self
+        }
+        failure.destination = destination
         var copy = self
         copy.kind = .runtime(failure)
         return copy

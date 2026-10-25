@@ -140,7 +140,12 @@ private func scratch() throws -> String {
     let shell = Shell()
     #expect(try output(funcs + "boom e> \(d)/err", in: shell) == "")
     #expect(shell.lastStatus == 1)
-    #expect(try output("cat \(d)/err") == "swish: error: division by zero\n")
+    #expect(try output("cat \(d)/err").hasPrefix("swish: error: division by zero\n --> "))
+    // Told where it was raised, so an error a `catch` handles is told to no one.
+    #expect(
+        try output(funcs + "do { boom e> \(d)/none } catch { echo caught }; cat \(d)/none")
+            == "caught\n"
+    )
 }
 
 @Test func onlyTheEndsOfASwishRunRedirect() {

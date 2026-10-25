@@ -84,13 +84,33 @@ extension Shell {
         let saved = (stdoutFD, stderrFD)
         (stdoutFD, stderrFD) = (table[1], table[2])
         defer { (stdoutFD, stderrFD) = saved }
-        do {
-            return try body(table[0] == 0 ? -1 : table[0], table[1])
-        } catch let error as RuntimeError where error.isRuntime && table[2] != saved.1 {
-            // Reported here, while `2>` is in effect, so `f 2>/dev/null`
-            // silences f's errors too.
-            report("error: \(error)")
-            throw error.reported
+        let (bodyInput, bodyOutput) = (table[0] == 0 ? -1 : table[0], table[1])
+        guard table[2] != saved.1 else { return try body(bodyInput, bodyOutput) }
+        // What `body` raises is told where `2>` points, even after it is undone, so
+        // `f 2>/dev/null` silences f's errors too.
+        return try interpreter.withErrorOutput(errors(at: table[2])) {
+            try body(bodyInput, bodyOutput)
         }
+    }
+}
+
+/// A descriptor of its own, closed when the last error that was sent to it is gone.
+private final class ErrorDescriptor: Sendable {
+    let fd: Int32
+
+    init(copying fd: Int32) { self.fd = dup(fd) }
+
+    deinit { close(fd) }
+}
+
+extension Shell {
+    /// Where errors go when `2>` points at `fd`: a copy of it, which outlives the redirect for an
+    /// error that is told after it is undone.
+    fileprivate func errors(at fd: Int32) -> OutputSink {
+        let copy = ErrorDescriptor(copying: fd)
+        return OutputSink(
+            write: { writeAll(copy.fd, $0) },
+            traits: { OutputSink.Traits(fd: copy.fd) }
+        )
     }
 }
