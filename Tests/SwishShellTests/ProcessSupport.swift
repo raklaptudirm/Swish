@@ -32,7 +32,7 @@ func checkMessage(_ source: String, in shell: Shell) -> String? {
     switch shell.prepare(source) {
     case .success: return nil
     case .failure(let diagnostic):
-        return diagnostic.kind == .syntax ? "syntax error" : diagnostic.message
+        return diagnostic.isSyntax ? "syntax error" : diagnostic.message
     }
 }
 

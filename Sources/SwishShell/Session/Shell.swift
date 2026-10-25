@@ -159,9 +159,8 @@ extension Shell {
     /// Reports what went wrong the way a compiler does: the message, and the line it is in with the
     /// place marked.
     func reportDiagnostic(_ diagnostic: Diagnostic) {
-        let kind = diagnostic.kind
         guard let (text, path) = diagnosticSource, diagnostic.range != nil else {
-            report((kind == .syntax ? "syntax error: " : "error: ") + diagnostic.message)
+            report((diagnostic.isSyntax ? "syntax error: " : "error: ") + diagnostic.message)
             return
         }
         // Where errors go decides whether the source is shown in color, as the line editor shows
@@ -211,19 +210,18 @@ extension Shell {
         } catch let failure as Failure {
             return .failure(
                 Diagnostic(
-                    kind: .syntax,
-                    message: failure.message,
-                    isIncomplete: failure.incomplete
+                    kind: .syntax(isIncomplete: failure.incomplete),
+                    message: failure.message
                 )
             )
         } catch {
-            return .failure(Diagnostic(kind: .syntax, message: "\(error)"))
+            return .failure(Diagnostic(kind: .syntax(isIncomplete: false), message: "\(error)"))
         }
         do {
             let declared = try interpreter.check(swift)
             if let message = firstCommandLineError(commandUses, declared: declared) {
                 return .failure(
-                    Diagnostic(kind: .type, message: message, status: 2, isReported: false)
+                    Diagnostic(kind: .type, message: message)
                 )
             }
             return .success(Reading(swift: swift, declared: declared))
@@ -237,13 +235,13 @@ extension Shell {
     func reportReadingFailure(_ diagnostic: Diagnostic, file: String? = nil) {
         if diagnostic.range != nil, diagnosticSource != nil {
             reportDiagnostic(diagnostic)
-        } else if diagnostic.kind == .syntax {
+        } else if diagnostic.isSyntax {
             report((file.map { "\($0): " } ?? "") + "syntax error: \(diagnostic.message)")
         } else {
+            let line = diagnostic.range?.startLine
             let place =
                 file.map {
-                    "\($0):\(diagnostic.line.map(String.init) ?? "")"
-                        + (diagnostic.line == nil ? "" : ":") + " "
+                    "\($0):\(line.map(String.init) ?? "")" + (line == nil ? "" : ":") + " "
                 } ?? ""
             report("\(place)error: \(diagnostic.message)")
         }
@@ -280,7 +278,7 @@ extension Shell {
                 then: finish
             )
         } catch {
-            if !handled || error.kind != .runtime { _ = handleRunFailure(error) }
+            if !handled || !error.isRuntime { _ = handleRunFailure(error) }
         }
     }
 
@@ -290,7 +288,7 @@ extension Shell {
             lastStatus = 128 + SIGTSTP  // Already announced; the job is in `jobs`.
             return false
         }
-        if diagnostic.kind == .cancelled, let signal = stoppedBySignal {
+        if diagnostic.isCancelled, let signal = stoppedBySignal {
             stoppedBySignal = nil
             if interactive && interpreter.file == nil {
                 writeAll(STDERR_FILENO, "\n")
@@ -315,7 +313,7 @@ extension Shell {
             scriptStopped = !interactive || interpreter.file != nil
             return false
         }
-        if diagnostic.kind == .runtime {
+        if diagnostic.isRuntime {
             reportDiagnostic(diagnostic)
             lastStatus = diagnostic.status
             return true

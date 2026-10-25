@@ -46,7 +46,7 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 
     let wrong = Shell()
     _ = try output("func prompt(_ n: Int) -> Int { n }", in: wrong)
-    #expect(throws: ScriptError.self) { try wrong.customPrompt() }
+    #expect(throws: Diagnostic.self) { try wrong.customPrompt() }
 }
 
 @Test func styledTextIsPlainOffATerminal() throws {

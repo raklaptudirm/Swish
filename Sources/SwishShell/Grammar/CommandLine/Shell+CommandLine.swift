@@ -73,11 +73,7 @@ extension Shell {
         _ arguments: [(label: String?, value: Value)],
         on receiver: Value? = nil
     ) throws -> Value {
-        do {
-            return try interpreter.call(callee.name, on: receiver, arguments: arguments)
-        } catch {
-            throw ScriptError(error.message, status: error.status, isReported: error.isReported)
-        }
+        try interpreter.call(callee.name, on: receiver, arguments: arguments)
     }
 
     /// Derives a command-line interface from the signature (see

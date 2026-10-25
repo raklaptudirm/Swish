@@ -86,7 +86,7 @@ extension Shell {
         stoppedBySignal = nil
         do {
             lastStatus = try callCommand(callee, arguments.map(CommandArgument.text), display: true)
-        } catch let error as ScriptError {
+        } catch let error as Diagnostic {
             if !error.isReported { report("error: \(error)") }
             lastStatus = error.status
         } catch {

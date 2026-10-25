@@ -100,11 +100,7 @@ extension Shell {
 
     /// Runs a closure the language gave, as a block.
     func callBlock(_ closure: Value) throws -> Value {
-        do {
-            return try interpreter.call(closure, with: [])
-        } catch let error as Diagnostic {
-            throw ScriptError(error.message, status: error.status, isReported: error.isReported)
-        }
+        try interpreter.call(closure, with: [])
     }
 
     func run(_ commands: [Value], from input: Value?, display: Bool) throws -> Int32 {

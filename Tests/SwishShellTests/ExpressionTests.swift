@@ -13,7 +13,7 @@ private func checkError(_ source: String) -> String? {
     switch shell.prepare(source) {
     case .success: return nil
     case .failure(let diagnostic):
-        return diagnostic.kind == .syntax
+        return diagnostic.isSyntax
             ? "syntax error: \(diagnostic.message)" : "error: \(diagnostic.message)"
     }
 }

@@ -86,13 +86,11 @@ extension Shell {
         defer { (stdoutFD, stderrFD) = saved }
         do {
             return try body(table[0] == 0 ? -1 : table[0], table[1])
-        } catch let error as RuntimeError where table[2] != saved.1 {
+        } catch let error as RuntimeError where error.isRuntime && table[2] != saved.1 {
             // Reported here, while `2>` is in effect, so `f 2>/dev/null`
             // silences f's errors too.
             report("error: \(error)")
-            var reported = error
-            reported.isReported = true
-            throw reported
+            throw error.reported
         }
     }
 }

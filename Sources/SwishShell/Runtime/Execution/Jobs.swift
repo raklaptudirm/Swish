@@ -313,14 +313,14 @@ extension Shell {
             jobs.removeAll { $0 === job }
             if case .failure(let error) = result, !job.givesOutput {
                 // How it ended is the awaiting task's error, not a reason for it to stop too.
-                if error.kind == .runtime {
-                    throw ScriptError(
+                if error.isRuntime {
+                    throw RuntimeError(
                         error.message,
                         status: error.status,
                         isReported: error.isReported
                     )
                 }
-                if error.kind == .cancelled { throw RuntimeError("\(job.source) was cancelled") }
+                if error.isCancelled { throw RuntimeError("\(job.source) was cancelled") }
                 throw RuntimeError("\(job.source) stopped: \(error)")
             }
             return job.output!
@@ -336,7 +336,9 @@ extension Shell {
             if ownsTerminal && job.pgid > 0 { tcsetpgrp(terminal, job.pgid) }
             job.send(SIGCONT)
             _ = waitForeground(job)
-            if job.state == .stopped { throw JobSuspended() }
+            if job.state == .stopped {
+                throw Diagnostic.fatal("job suspended", cause: JobSuspended())
+            }
             job.finish()
         }
         jobs.removeAll { $0 === job }
