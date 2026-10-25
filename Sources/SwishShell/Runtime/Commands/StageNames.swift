@@ -44,12 +44,14 @@ extension Shell {
     private func findStageNames() -> StageNames {
         var names = StageNames()
         func add(_ symbol: Symbol) {
-            if let function = symbol.function {
-                guard !function.isMutating else { return }
+            // What a value of the type has, not what the type itself does.
+            switch symbol.kind {
+            case .method(let method) where !method.isMutating && !method.isStatic:
                 names.all.insert(symbol.name)
                 names.methods.insert(symbol.name)
-            } else if case .variable = symbol.declaration {
+            case .property(let property) where !property.isStatic:
                 names.all.insert(symbol.name)
+            default: break
             }
         }
         for type in interpreter.types where type.isBuiltin {
@@ -76,7 +78,7 @@ extension Shell {
             .contains { type in
                 !type.isBuiltin
                     && interpreter.symbols(named: name, in: .named(type.name))
-                        .contains { $0.function != nil }
+                        .contains { $0.function != nil && !$0.belongsToType }
             }
     }
 
@@ -96,11 +98,12 @@ extension Shell {
     ) -> Callee? {
         let members = interpreter.symbols(named: name, in: type)
             .filter { symbol in
-                if let function = symbol.function {
-                    return includingMutating || !function.isMutating
+                switch symbol.kind {
+                case .method(let method):
+                    !method.isStatic && (includingMutating || !method.isMutating)
+                case .property(let property): !property.isStatic
+                default: false
                 }
-                if case .variable = symbol.declaration { return true }
-                return false
             }
         guard !members.isEmpty else { return nil }
         return Callee(name: name, overloads: members, receiver: receiver)

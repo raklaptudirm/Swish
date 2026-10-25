@@ -177,12 +177,10 @@ extension Shell {
 
     /// A type as `--help` shows it: an enum as its choices.
     private func placeholder(_ type: ScriptType) -> String {
-        if case .named(let name, _) = type,
-            let description = interpreter.typeInfo(named: name),
-            description.kind == "enum"
+        if case .named(let name, _) = type, let found = typeMembers(named: name),
+            found.kind == "enum"
         {
-            return description.members.filter { $0.kind == .case && !$0.hasPayload }.map(\.name)
-                .joined(separator: "|")
+            return plainCases(of: found.members).joined(separator: "|")
         }
         return type.description
     }
@@ -282,9 +280,9 @@ extension Shell {
                 HelpStyle.heading("Usage:"),
                 AttributedString(joining: [.init("  ")] + HelpStyle.usage(builtin.usage)),
             ]
-        } else if let type = interpreter.typeInfo(named: name) {
+        } else if let found = typeMembers(named: name) {
             // `help String`: what the type has.
-            return helpLines(for: type)
+            return helpLines(named: name, kind: found.kind, members: found.members)
         } else if let path = findExecutable(name) {
             return [
                 AttributedString(
@@ -308,24 +306,30 @@ extension Shell {
     /// What `help Type` shows: its members, grouped by kind, each with its
     /// signature (highlighted as Swift) and, on the line below, what its
     /// documentation says.
-    func helpLines(for type: TypeInfo) -> [AttributedString] {
+    func helpLines(named name: String, kind: String, members: [Symbol]) -> [AttributedString] {
         var lines = [
             AttributedString(joining: [
-                .init(type.kind, DisplayStyle.keyword), .init(" "),
-                .init(type.name, DisplayStyle.type),
+                .init(kind, DisplayStyle.keyword), .init(" "), .init(name, DisplayStyle.type),
             ])
         ]
-        let groups = Dictionary(grouping: type.members, by: \.kind)
-        for kind in TypeInfo.Kind.allCases {
-            guard let members = groups[kind], !members.isEmpty else { continue }
+        let groups = Dictionary(
+            grouping: members.compactMap { symbol in
+                symbol.memberKind.map { ($0, symbol) }
+            },
+            by: \.0
+        )
+        for kind in MemberKind.allCases {
+            guard let members = groups[kind]?.map(\.1), !members.isEmpty else { continue }
             lines += [AttributedString(""), HelpStyle.heading("\(kind.heading):")]
             for (index, member) in members.sorted(by: { $0.name < $1.name }).enumerated() {
                 // A blank line between them, so a signature and its description read as one.
                 if index > 0 { lines.append(AttributedString("")) }
-                lines.append(AttributedString(joining: [AttributedString("  "), member.signature]))
-                if !member.summary.isEmpty {
+                lines.append(
+                    AttributedString(joining: [AttributedString("  "), declaration(of: member)])
+                )
+                if let summary = member.summary, !summary.isEmpty {
                     lines.append(
-                        AttributedString("    ") + AttributedString(documentation: member.summary)
+                        AttributedString("    ") + AttributedString(documentation: summary)
                     )
                 }
             }

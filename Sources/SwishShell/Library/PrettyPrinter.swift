@@ -40,7 +40,7 @@ struct PrettyPrinter: Sendable {
         case .structure, .tuple:
             return value.fields.map { node(for: $0) } ?? .segments([(value.debugDescription, nil)])
         case .dictionary:
-            let dictionary = value.entries ?? ValueDictionary()
+            let dictionary = value.entries ?? Value.Dictionary()
             return dictionary.count == 0
                 ? .segments([("[:]", nil)])
                 : .group(

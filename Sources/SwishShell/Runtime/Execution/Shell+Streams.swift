@@ -267,7 +267,7 @@ extension Shell {
     ) throws -> ValueStream {
         let call = try bind(commandLine: args, to: callee, excludingInput: true)
         let overload = callee.overloads[call.overload]
-        if let function = overload.function, function.isMutating {
+        if case .method(let method) = overload.kind, method.isMutating {
             throw RuntimeError(
                 "\(callee.name) is mutating, and a piped value can't change: call it on a variable"
             )

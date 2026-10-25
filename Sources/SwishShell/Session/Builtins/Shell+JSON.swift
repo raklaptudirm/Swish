@@ -48,7 +48,7 @@ extension Shell {
                 switch $0.kind {
                 case .structure, .tuple, .dictionary:
                     $0.entries.map { entries in
-                        Value(ValueDictionary(entries.map { ($0.key, JSON.wrap($0.value)) }))
+                        Value(Value.Dictionary(entries.map { ($0.key, JSON.wrap($0.value)) }))
                     } ?? .nothing
                 default: .nothing
                 }

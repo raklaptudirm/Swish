@@ -187,10 +187,15 @@ extension Shell {
     ) throws -> Value {
         // Checking a program before it runs: an enum it declares has no cases yet, so the word is
         // read against what was declared.
-        if case .named(let name, _) = type.optionalWrapped ?? type, let declared = staticEnums[name]
+        if case .named(let name, _) = type.optionalWrapped ?? type,
+            let declared = staticMembers[name],
+            declared.contains(where: { $0.memberKind == .case })
         {
             let bare = text.hasPrefix(".") ? String(text.dropFirst()) : text
-            guard declared.cases.contains(bare) || declared.hasRawValues else {
+            let hasRawValues = declared.contains { symbol in
+                if case .enumCase(_, let raw) = symbol.kind { raw != nil } else { false }
+            }
+            guard plainCases(of: declared).contains(bare) || hasRawValues else {
                 throw RuntimeError("\(function): \(what) must be \(type), got '\(text)'")
             }
             return Value(text)

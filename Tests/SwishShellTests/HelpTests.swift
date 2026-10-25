@@ -64,7 +64,7 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 @Test func helpShowsWhatATypeHas() throws {
     // A Swift type's members, with Swift's own documentation.
     let filePath = try output("help FilePath")
-    #expect(filePath.hasPrefix("Swift type FilePath\n"))
+    #expect(filePath.hasPrefix("struct FilePath\n"))
     #expect(filePath.contains("  extension: String? { get set }"))
     #expect(
         filePath.contains("lastComponent: FilePath.Component?")
@@ -80,7 +80,7 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
     )
     #expect(
         try output("help P", in: shell)
-            == "struct P\n\nInitializers:\n  init(x: Int)\n\nProperties:\n  var x: Int\n\nMethods:\n  twice() -> Int\n"
+            == "struct P\n\nInitializers:\n  init(x: Int)\n\nProperties:\n  x: Int { get set }\n\nMethods:\n  twice() -> Int\n"
     )
     #expect(try output("help K", in: shell) == "enum K\n\nCases:\n  case a\n\n  case b(n: Int)\n")
 }
@@ -107,9 +107,8 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
     #expect(style("init", in: initializer, of: "Int") == .keyword)
     #expect(style("description", in: initializer, of: "Int") == .variable)
     #expect(style("String", in: initializer, of: "Int") == .type)
-    // A property: its keyword, its name, its type.
-    let property = "let cpuTime: Double?"
-    #expect(style("let", in: property, of: "ProcessEntry") == .keyword)
+    // A property: its name and its type, and `get` and `set` where it has both.
+    let property = "cpuTime: Double?"
     #expect(style("cpuTime", in: property, of: "ProcessEntry") == .command)
     #expect(style("Double", in: property, of: "ProcessEntry") == .type)
     // A method: its name, labels, and the types of what it takes and gives.

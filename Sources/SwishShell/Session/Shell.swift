@@ -76,7 +76,7 @@ public final class Shell: @unchecked Sendable {
     /// `function.parameter`.
     var scriptMarks: [String: CommandMarks.Marks] = [:]
 
-    var staticEnums: [String: Interpreter.Declarations.Enumeration] = [:]
+    var staticMembers: [String: [Symbol]] = [:]
 
     /// What's been entered at the prompt: this shell's history, or the
     /// history file's outside the interactive shell.
@@ -359,7 +359,7 @@ final class ShellTask {
 
     /// Blocks until it's in the foreground, or `cancellation` is asked
     /// (false). (Through `suspend`, so the lock is let go.)
-    func waitForForeground(unless cancellation: Cancellation) -> Bool {
+    func waitForForeground(unless cancellation: Interpreter.Cancellation) -> Bool {
         turn.waitForForeground(unless: cancellation)
     }
 }
@@ -380,7 +380,7 @@ final class Turn: @unchecked Sendable {  // safe: `foreground` is read and writt
         }
     }
 
-    func waitForForeground(unless cancellation: Cancellation) -> Bool {
+    func waitForForeground(unless cancellation: Interpreter.Cancellation) -> Bool {
         condition.withLock {
             while !foreground && !cancellation.isSet { condition.wait() }
             return foreground

@@ -27,7 +27,7 @@ private func fileType(_ name: String) -> Value {
 
 @Test func whatDoesNotFitBreaksOverLines() {
     let value = Value(
-        ValueDictionary([
+        Value.Dictionary([
             (Value("name"), Value("swish")),
             (Value("tags"), Value([Value("shell"), Value("swift")])),
         ])

@@ -40,12 +40,9 @@ extension Shell {
             default: break
             }
             // Then what its type has, as `help Type` shows it.
-            if let name = interpreter.describedTypeName(of: item),
-                let type = interpreter.typeInfo(named: name)
-            {
-                for member in type.members where member.kind != .initializer {
-                    add(type.name, member.name, member.kind.rawValue)
-                }
+            for member in interpreter.symbols(in: interpreter.scriptType(of: item)) {
+                guard let kind = member.memberKind, kind != .initializer else { continue }
+                add(item.typeName, member.name, kind.rawValue)
             }
             // A type with nothing to list is still named.
             if rows.count == before && !seen.contains("\(item.typeName).") {

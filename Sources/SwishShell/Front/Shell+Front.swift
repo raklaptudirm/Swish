@@ -2,11 +2,11 @@ import Foundation
 import Swiit
 
 extension NameRole {
-    init(_ declaration: Symbol.Declaration) {
-        switch declaration {
-        case .variable: self = .variable
-        case .function: self = .function
-        case .type: self = .type
+    init(_ kind: Symbol.Kind) {
+        switch kind {
+        case .variable, .property, .enumCase: self = .variable
+        case .function, .method, .initializer: self = .function
+        case .structure, .enumeration, .class, .actor, .protocol: self = .type
         }
     }
 }
@@ -15,14 +15,14 @@ extension Shell {
     /// The shell's front end for this shell's names.
     func makeFront(recovering: Bool = false) -> Front {
         let roles = Dictionary(
-            interpreter.symbols().map { ($0.name, NameRole($0.declaration)) },
+            interpreter.symbols().map { ($0.name, NameRole($0.kind)) },
             uniquingKeysWith: { first, _ in first }
         )
         let front = Front(bound: Names(roles: roles))
         front.closureArity = { [unowned self] (name: String) -> Int? in
             for overload in commandFunctions(named: name)?.overloads ?? [] {
                 for parameter in overload.function?.parameters ?? [] {
-                    if case .function(let parameters, _) = parameter.type {
+                    if case .function(let parameters, _, _, _) = parameter.type {
                         return parameters.count
                     }
                 }
@@ -85,8 +85,8 @@ extension Shell {
     ) -> String? {
         // The enums the program declares have no cases to read yet: a word for one is read against
         // what was declared.
-        staticEnums = declarations.enumerations
-        defer { staticEnums = [:] }
+        staticMembers = declarations.members
+        defer { staticMembers = [:] }
         let declared = declarations.symbols
         for use in uses {
             let functions = declared.filter { $0.name == use.name && $0.function != nil }

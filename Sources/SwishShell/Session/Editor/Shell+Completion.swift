@@ -82,7 +82,7 @@ extension Shell {
                 guard let callee,
                     stageNames.flow.contains(name)
                         || interpreter.symbols(named: name, in: .list(.any))
-                            .contains(where: { $0.function != nil })
+                            .contains(where: { $0.function != nil && !$0.belongsToType })
                 else { continue }
                 described[name] =
                     callee.overloads.compactMap(\.summary).first
