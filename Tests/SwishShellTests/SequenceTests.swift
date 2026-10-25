@@ -28,12 +28,12 @@ private let data = #"let xs = [(n: 2, s: "b"), (n: 1, s: "a"), (n: 3, s: "c")]; 
 }
 
 @Test func flowStagesReadOnlyWhatIsAskedFor() throws {
-    // Each stage of Flow's reads as the next asks, so an endless stream ends.
+    // Each stage of ThrowingStream's reads as the next asks, so an endless stream ends.
     #expect(try output(#"yes | filter { $0 == "y" } | map { $0 + "!" } | prefix 2"#) == "y!\ny!\n")
     #expect(try output(#"yes | compactMap { $0 == "y" ? "got" : nil } | prefix 1"#) == "got\n")
     // A closure's error reaches the one who reads, as it does for a list.
     #expect(try output("[1, 2] | map { 10 / ($0 - 1) }; echo not reached").isEmpty)
-    // Where Flow has no such member, the items are collected for Swift's.
+    // Where ThrowingStream has no such member, the items are collected for Swift's.
     #expect(try output("[1, 2, 3, 1] | prefix(while: { $0 < 3 })") == "1\n2\n")
 }
 

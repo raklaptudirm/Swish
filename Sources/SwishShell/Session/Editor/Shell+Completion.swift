@@ -36,8 +36,8 @@ extension Shell {
         } else if word.hasPrefix("-") && context.quote == nil,
             let functions = stageCallee(
                 context.words[0],
-                of: .named("Flow", [.any]),
-                receiver: .flow
+                of: .named("ThrowingStream", [.any]),
+                receiver: .stream
             )
                 ?? stageCallee(context.words[0], of: .list(.any), receiver: .collected)
                 ?? commandFunctions(named: context.words[0])
@@ -77,10 +77,10 @@ extension Shell {
             }
             for name in stageNames.methods {
                 let callee =
-                    stageCallee(name, of: .named("Flow", [.any]), receiver: .flow)
+                    stageCallee(name, of: .named("ThrowingStream", [.any]), receiver: .stream)
                     ?? stageCallee(name, of: .list(.any), receiver: .collected)
                 guard let callee,
-                    stageNames.flow.contains(name)
+                    stageNames.streams.contains(name)
                         || interpreter.symbols(named: name, in: .list(.any))
                             .contains(where: { $0.function != nil && !$0.belongsToType })
                 else { continue }

@@ -49,7 +49,7 @@ extension Shell {
         let known: Bool
         if !external
             && (commandFunctions(named: name) != nil || stageNames.sequence.contains(name)
-                || stageNames.flow.contains(name)
+                || stageNames.streams.contains(name)
                 || Shell.shellBuiltins[name] != nil)
         {
             known = true

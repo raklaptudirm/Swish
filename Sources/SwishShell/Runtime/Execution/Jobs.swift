@@ -77,16 +77,19 @@ final class Job: HostObject, Presentable, @unchecked Sendable {
         }
     }
 
-    /// `job.lines()`: its output a line at a time, as the lines arrive: a `Flow` to read
+    /// `job.lines()`: its output a line at a time, as the lines arrive: a `ThrowingStream` to read
     /// while the job runs (`async $(tail -f log)`), which waits for the next
     /// line, or ends when the output does. Reading goes on from the last line
     /// read, and once the job is done, from what its output has left.
     var lines: Value {
         guard let collector = capture else {
-            return Value(boxing: Flow<Value>((output?.lines ?? []).map { Value($0) }), as: "Flow")
+            return Value(
+                boxing: ThrowingStream<Value>((output?.lines ?? []).map { Value($0) }),
+                as: "ThrowingStream"
+            )
         }
         return Value(
-            boxing: Flow<Value> { [unowned self] in
+            boxing: ThrowingStream<Value> { [unowned self] in
                 while true {
                     switch Interpreter.whileWaiting({ collector.nextLine(timeout: 0.05) }) {
                     case .line(let line): return Value(line)
@@ -96,7 +99,7 @@ final class Job: HostObject, Presentable, @unchecked Sendable {
                     }
                 }
             },
-            as: "Flow"
+            as: "ThrowingStream"
         )
     }
 
@@ -125,7 +128,10 @@ final class Job: HostObject, Presentable, @unchecked Sendable {
         ("pids", "[Int]", { Value($0.running.map { Value(Int($0)) }) }),
         ("output", "Output?", { $0.output.map { Value.output($0) } ?? .nothing }),
         // A method, as it's not data: a table or `to json` of jobs can't read it.
-        ("lines", "() -> Flow<String>", { job in method("lines") { [unowned job] in job.lines } }),
+        (
+            "lines", "() -> ThrowingStream<String>",
+            { job in method("lines") { [unowned job] in job.lines } }
+        ),
         (
             "resume", "() -> Void",
             { job in method("resume") { [unowned job] in job.shell.resume(job) } }

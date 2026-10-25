@@ -14,7 +14,7 @@ struct StageNames {
     /// property's name could be a program's).
     var methods: Set<String> = []
     /// The methods of the items as they come, which return the items as they come.
-    var flow: Set<String> = []
+    var streams: Set<String> = []
     /// What every sequence has.
     var sequence: Set<String> = []
 }
@@ -62,8 +62,10 @@ extension Shell {
         names.sequence = Set(
             interpreter.symbols(in: .named("Sequence")).filter { $0.function != nil }.map(\.name)
         )
-        for symbol in interpreter.symbols(in: .named("Flow", [.any])) {
-            if case .named("Flow", _)? = symbol.function?.returns { names.flow.insert(symbol.name) }
+        for symbol in interpreter.symbols(in: .named("ThrowingStream", [.any])) {
+            if case .named("ThrowingStream", _)? = symbol.function?.returns {
+                names.streams.insert(symbol.name)
+            }
         }
         return names
     }
@@ -109,10 +111,10 @@ extension Shell {
         return Callee(name: name, overloads: members, receiver: receiver)
     }
 
-    /// What `name` is after a `|`: a method of the items as they come (a `Flow`'s), or what every
+    /// What `name` is after a `|`: a method of the items as they come (a `ThrowingStream`'s), or what every
     /// sequence has, or one of any type's. In the order the stage looks.
     func stageMethods(named name: String) -> Callee? {
-        stageCallee(name, of: .named("Flow", [.any]), receiver: .flow)
+        stageCallee(name, of: .named("ThrowingStream", [.any]), receiver: .stream)
             ?? stageCallee(name, of: .list(.any), receiver: .collected)
             ?? stageFunctions(named: name)
     }

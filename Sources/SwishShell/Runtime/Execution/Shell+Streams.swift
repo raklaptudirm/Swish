@@ -17,7 +17,7 @@ final class ValueStream {
     /// output, a flow); nothing as no items, anything else as a single item.
     static func elements(of value: Value) -> ValueStream {
         if value.kind == .nothing { return .empty }
-        if let flow = value.flow { return ValueStream { try flow.read() } }
+        if let flow = value.throwingStream { return ValueStream { try flow.read() } }
         if let items = value.items {
             var iterator = items.makeIterator()
             return ValueStream { iterator.next() }
@@ -309,12 +309,15 @@ extension Shell {
                 }
                 return try output!.next()
             }
-        case .flow:
-            // Lazily: the stage reads upstream only as its own reader is asked, and the Flow it
+        case .stream:
+            // Lazily: the stage reads upstream only as its own reader is asked, and the ThrowingStream it
             // gives is read as the next stage asks.
-            let flow = Value(boxing: Flow<Value> { try upstream.next() }, as: "Flow")
+            let flow = Value(
+                boxing: ThrowingStream<Value> { try upstream.next() },
+                as: "ThrowingStream"
+            )
             let result = try apply(to: flow)
-            if let produced = result.flow { return ValueStream { try produced.read() } }
+            if let produced = result.throwingStream { return ValueStream { try produced.read() } }
             return self.elements(of: result)
         }
     }

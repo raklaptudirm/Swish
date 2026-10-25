@@ -10,7 +10,7 @@ import Swiit
 /// What a stage is called on: the items collected, the items as they come, each item, or the one
 /// value.
 enum StageReceiver: Equatable, Sendable {
-    case collected, flow, each, value
+    case collected, stream, each, value
 }
 
 struct DeferredStage {
@@ -66,7 +66,8 @@ extension Shell {
             }
         }
         candidates.append {
-            self.stageCallee(name, of: .named("Flow", [element]), receiver: .flow).map(function)
+            self.stageCallee(name, of: .named("ThrowingStream", [element]), receiver: .stream)
+                .map(function)
         }
         // The items collected: what every sequence has, and the list's own.
         candidates.append {

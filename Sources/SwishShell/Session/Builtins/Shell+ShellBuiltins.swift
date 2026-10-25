@@ -309,7 +309,11 @@ extension Shell {
     private func which(_ args: [String]) -> Int32 {
         var status: Int32 = 0
         for name in args {
-            if let methods = stageCallee(name, of: .named("Flow", [.any]), receiver: .flow)
+            if let methods = stageCallee(
+                name,
+                of: .named("ThrowingStream", [.any]),
+                receiver: .stream
+            )
                 ?? (stageNames.sequence.contains(name)
                     ? stageCallee(name, of: .list(.any), receiver: .collected) : nil)
             {
