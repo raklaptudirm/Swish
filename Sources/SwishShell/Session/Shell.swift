@@ -1,4 +1,5 @@
 import Foundation
+import SwiftSyntax
 import Swiit
 
 /// The shell: a process with a terminal, jobs and a line editor, over an
@@ -246,7 +247,7 @@ extension Shell {
         } else if diagnostic.isSyntax {
             report((file.map { "\($0): " } ?? "") + "syntax error: \(diagnostic.message)")
         } else {
-            let line = diagnostic.range?.startLine
+            let line = diagnostic.range?.start.line
             let place =
                 file.map {
                     "\($0):\(line.map(String.init) ?? "")" + (line == nil ? "" : ":") + " "
