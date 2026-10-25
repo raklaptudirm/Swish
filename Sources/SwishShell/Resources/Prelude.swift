@@ -303,25 +303,45 @@ func environmentValue(_ name: String) -> String?
 /// What `env.NAME = value` does: sets the variable, or removes it for nil.
 func setEnvironmentValue(_ name: String, _ value: String?) throws
 
-/// Parsed JSON: read by field (json.name, json["name"]) or element
-/// (json[0]), each giving JSON?, and as a type with .string, .int,
-/// .double, .bool, .array, .object and .isNull.
-struct JSON {}
+/// A value that stands for another where it flows through a pipeline and where it is shown: those
+/// see what it wraps.
+protocol Wrapping {
+    var wrapped: Any { get }
+}
 
-/// What `json.name`, `json["name"]` and `json[0]` read: the field or
-/// element, or nil if there is none or the value isn't a record, a
-/// dictionary or a list.
-func jsonField(_ value: JSON?, _ key: Any) -> JSON?
-/// What `json.string`, `.int`, `.double`, `.bool`, `.array` and `.object`
-/// read: the value as that type, or nil if it is of another kind.
-func jsonString(_ value: JSON?) -> String?
-func jsonInt(_ value: JSON?) -> Int?
-func jsonDouble(_ value: JSON?) -> Double?
-func jsonBool(_ value: JSON?) -> Bool?
-func jsonArray(_ value: JSON?) -> [JSON]?
-func jsonObject(_ value: JSON?) -> [String: JSON]?
-/// What `json.isNull` reads: whether it is nil.
-func jsonIsNull(_ value: JSON?) -> Bool
+/// Parsed JSON, which is read by field (`json.name`, `json["name"]`) and by position (`json[0]`),
+/// each giving a `JSON?`, nil where there is none; and as `.string`, `.int`, `.double`, `.bool`,
+/// `.array`, `.object` and `.isNull`. In a pipeline it flows as what it parsed to.
+@dynamicMemberLookup
+struct JSON: Wrapping {
+    let raw: Any
+
+    var wrapped: Any { raw }
+
+    subscript(dynamicMember name: String) -> JSON? { jsonField(raw, name) }
+    subscript(name: String) -> JSON? { jsonField(raw, name) }
+    subscript(position: Int) -> JSON? { jsonField(raw, position) }
+
+    var string: String? { jsonString(raw) }
+    var int: Int? { jsonInt(raw) }
+    var double: Double? { jsonDouble(raw) }
+    var bool: Bool? { jsonBool(raw) }
+    var array: [JSON]? { jsonArray(raw) }
+    var object: [String: JSON]? { jsonObject(raw) }
+    var isNull: Bool { jsonIsNull(raw) }
+}
+
+/// What a `JSON` reads of what it holds: the field or element, or nil if there is none or the
+/// value isn't a record, a dictionary or a list; or the value as that type, or nil if it is of
+/// another kind.
+func jsonField(_ raw: Any, _ key: Any) -> JSON?
+func jsonString(_ raw: Any) -> String?
+func jsonInt(_ raw: Any) -> Int?
+func jsonDouble(_ raw: Any) -> Double?
+func jsonBool(_ raw: Any) -> Bool?
+func jsonArray(_ raw: Any) -> [JSON]?
+func jsonObject(_ raw: Any) -> [String: JSON]?
+func jsonIsNull(_ raw: Any) -> Bool
 
 /// Lists every function you can call.
 func help() -> [Help]

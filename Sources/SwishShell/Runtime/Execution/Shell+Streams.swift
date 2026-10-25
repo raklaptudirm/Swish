@@ -107,7 +107,7 @@ extension Shell {
             single = nil
             switch stage {
             case .value(let value):
-                stream = .elements(of: value)
+                stream = self.elements(of: value)
                 single = value
             case .function(let callee, let args, _, _):
                 stream = try functionStream(
@@ -135,7 +135,7 @@ extension Shell {
 
     /// A value's items, shown as the end of a pipeline shows them.
     func displayItems(_ value: Value) throws {
-        try display(.elements(of: value), to: stdoutFD, toExternal: false)
+        try display(self.elements(of: value), to: stdoutFD, toExternal: false)
     }
 
     /// Writes items as text: for a person, formatted, or for a program, as rows.
@@ -193,9 +193,9 @@ extension Shell {
             if let input = callee.parameters[call.overload].first(where: \.isInput),
                 !input.type.isList
             {
-                return .elements(of: Value([result]))
+                return self.elements(of: Value([result]))
             }
-            return .elements(of: result)
+            return self.elements(of: result)
         }
 
         let call = try bind(commandLine: args, to: callee, excludingInput: true)
@@ -219,7 +219,7 @@ extension Shell {
                     if !upstreamIsExternal {
                         while try upstream.next() != nil {}
                     }
-                    output = .elements(of: try self.invoke(callee, call.arguments()))
+                    output = self.elements(of: try self.invoke(callee, call.arguments()))
                 }
                 return try output!.next()
             }
@@ -233,7 +233,7 @@ extension Shell {
                     while let item = try upstream.next() {
                         items.append(try self.inputValue(item, as: elementType, of: callee.name))
                     }
-                    output = .elements(
+                    output = self.elements(
                         of: try self.invoke(
                             callee,
                             call.arguments(input: (input.name, Value(items)))
@@ -248,7 +248,7 @@ extension Shell {
             while let item = try upstream.next() {
                 let value = try self.inputValue(item, as: input.type, of: callee.name)
                 let result = try self.invoke(callee, call.arguments(input: (input.name, value)))
-                if result.kind != .nothing { return result }
+                if result.kind != .nothing { return self.unwrapped(result) }
             }
             return nil
         }
@@ -294,7 +294,7 @@ extension Shell {
                 if output == nil {
                     var items: [Value] = []
                     while let item = try upstream.next() { items.append(item) }
-                    output = .elements(of: try apply(to: Value(items)))
+                    output = self.elements(of: try apply(to: Value(items)))
                 }
                 return try output!.next()
             }
@@ -305,7 +305,7 @@ extension Shell {
                     // The one value is the receiver, not a sequence's items.
                     let value = try single ?? upstream.next() ?? Value.null
                     while try upstream.next() != nil {}
-                    output = .elements(of: try apply(to: value))
+                    output = self.elements(of: try apply(to: value))
                 }
                 return try output!.next()
             }
@@ -315,7 +315,7 @@ extension Shell {
             let flow = Value(boxing: Flow<Value> { try upstream.next() }, as: "Flow")
             let result = try apply(to: flow)
             if let produced = result.flow { return ValueStream { try produced.read() } }
-            return .elements(of: result)
+            return self.elements(of: result)
         }
     }
 
@@ -329,5 +329,25 @@ extension Shell {
             return value
         }
         throw RuntimeError("\(name): input must be \(type), not \(item.typeName) '\(item)'")
+    }
+}
+
+extension Shell {
+    /// What a value that stands for another (a `Wrapping` one, like parsed JSON) is where it flows
+    /// and where it is shown.
+    func unwrapped(_ value: Value) -> Value {
+        var value = value
+        while value.kind == .structure,
+            interpreter.conforms(.named(value.typeName), to: "Wrapping"),
+            let inner = try? interpreter.value(of: "wrapped", in: value)
+        {
+            value = inner
+        }
+        return value
+    }
+
+    /// Its elements, as `ValueStream.elements(of:)` gives them, for what it wraps.
+    func elements(of value: Value) -> ValueStream {
+        .elements(of: unwrapped(value))
     }
 }

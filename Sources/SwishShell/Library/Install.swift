@@ -31,7 +31,7 @@ extension Shell {
         add("from") { arguments in
             guard let text = arguments["text"]?.cast(to: [String].self) else { return .null }
             switch try InputFormat(arguments["format"] ?? .null) {
-            case .json: return try JSON(try JSON.parse(text.joined(separator: "\n"))).value
+            case .json: return JSON.wrap(try JSON.parse(text.joined(separator: "\n")))
             }
         }
         add("to") { [unowned self] arguments in

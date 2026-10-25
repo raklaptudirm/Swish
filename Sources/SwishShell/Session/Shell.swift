@@ -102,7 +102,6 @@ public final class Shell: @unchecked Sendable {
         do { try interpreter.evaluate("let env = Environment()") } catch {
             preconditionFailure("the shell's env: \(error)")
         }
-        installJSON()
         installJobs()
         recordStatuses()
         // Swift's `Task { }` writes where the code that started it writes, as

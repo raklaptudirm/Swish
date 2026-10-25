@@ -5,10 +5,15 @@ import Swiit
 /// and element. Object keys are kept in order, which Foundation's parser
 /// doesn't do and which tables need: key order is column order.
 struct JSON {
-    public let value: Value
+    /// The prelude's `JSON` holding `value`.
+    static func wrap(_ value: Value) -> Value {
+        Value(struct: "JSON", fields: [(name: "raw", value: value)])
+    }
 
-    public init(_ value: Value) {
-        self.value = value
+    /// As `wrap`, and nil for nothing, as a field that is not there.
+    static func wrapping(_ value: Value?) -> Value {
+        guard let value, value.kind != .nothing else { return .null }
+        return wrap(value)
     }
 
     public static func parse(_ text: String) throws -> Value {

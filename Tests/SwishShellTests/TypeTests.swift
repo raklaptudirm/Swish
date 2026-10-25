@@ -359,8 +359,9 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
         )
             == "8080\n1\n\"b\"\n2\ntrue\n"
     )
-    // A missing field and a JSON null are both nil, so isNull is true for either.
-    #expect(try output(json + "j.server?.port?.string == nil; j.nothing?.isNull") == "true\ntrue\n")
+    // A missing field is nil, and so is what is of another kind; `isNull` is for the value itself.
+    #expect(try output(json + "j.server?.port?.string == nil; j.nothing == nil") == "true\ntrue\n")
+    #expect(try output(json + "j.server?.isNull; j.server?.port?.isNull") == "false\nfalse\n")
     #expect(typeError(json + "j.server + 1") != nil)  // a JSON? isn't a number
     // The `!` is part of the chain, as in Swift: the chain is still optional, and `(…)!` unwraps
     // all of it.
