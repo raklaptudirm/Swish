@@ -115,7 +115,8 @@ private func status(_ source: String) -> Int32 {
 }
 
 @Test func whatAsyncAndAwaitRefuse() {
-    #expect(status("await 5") == 2)
+    // As in Swift, an `await` with nothing async in it is no more than a warning.
+    #expect(status("await 5") == 0)
     #expect(status("await") == 1)  // nothing to await
 }
 

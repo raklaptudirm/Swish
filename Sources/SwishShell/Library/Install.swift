@@ -23,7 +23,7 @@ extension Shell {
 
     /// The Swift bodies of the declarations, by name.
     private var preludeBodies: [String: @Sendable ([String: Value]) throws -> Value] {
-        var bodies = commandMethods
+        var bodies = commandMethods.merging(jobBodies) { _, new in new }
         func add(_ name: String, _ body: @escaping @Sendable ([String: Value]) throws -> Value) {
             bodies[name] = body
         }

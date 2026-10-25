@@ -200,9 +200,9 @@ struct Command {
     /// Runs it as `$(…)` does, gathering its output whatever its status.
     func output() -> Output
     /// Starts it in the background, as `async cmd` does: a `Job`.
-    func start() -> Job
+    func start() -> Job<Output>
     /// Starts it in the background keeping its output, as `async $(cmd)` does.
-    func startCapturing() -> Job
+    func startCapturing() -> Job<Output>
 }
 
 /// Commands joined by `|`, fed a value or nothing.
@@ -227,8 +227,8 @@ struct Pipeline {
     func runQuietly() -> Status
     func check() throws -> Status
     func output() -> Output
-    func start() -> Job
-    func startCapturing() -> Job
+    func start() -> Job<Output>
+    func startCapturing() -> Job<Output>
 }
 
 /// A redirect of a `Command`'s: `mode` is "read", "write", "append", or
@@ -389,3 +389,13 @@ extension Sequence {
             .map { items[$0.offset] }
     }
 }
+
+// `await job` is the shell's: the front end writes it as `await waited(job)` (`waitedFailing` under a `try`, and
+// `latestJob()` for a bare `await`): waiting for a job is a blocking call, anywhere, typed by what the job was started
+// with, and anything else is itself, awaited as Swift would.
+func latestJob() -> Job<Output>
+func waitForJob(_ job: Job, _ throwing: Bool) -> Any
+func waited<T>(_ job: Job<T>) -> T { waitForJob(job, false) }
+func waited<T>(_ value: T) -> T { value }
+func waitedFailing<T>(_ job: Job<T>) throws -> T { waitForJob(job, true) }
+func waitedFailing<T>(_ value: T) throws -> T { value }

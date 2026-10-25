@@ -113,7 +113,7 @@ final class Front {
                 }
             }
             let swift = swiftHighlight(String(blank))
-            return Cured(text: String(chars), spans: spans + swift)
+            return Cured(text: Front.desugaringAwaits(String(chars)), spans: spans + swift)
         }
         for _ in 0...(chars.count + 1000) {
             let blanked = Text(Lex.blankingSubstitutions(chars))
