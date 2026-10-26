@@ -275,9 +275,9 @@ extension Shell {
     ) -> Value {
         // Each one's first sentence, for the table.
         let summary = descriptions.map(\.firstSentence).joined(separator: " ")
-        return Value(
-            struct: NamedTypes.help,
-            fields: [
+        return make(
+            preludeTypes.help,
+            [
                 "name": Value(name), "source": Value(source), "summary": Value(summary),
                 "usage": Value(usage), "description": Value(descriptions.joined(separator: "\n\n")),
             ]

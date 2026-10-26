@@ -43,10 +43,10 @@ extension Shell {
             bodies[name] = body
         }
 
-        add("from") { arguments in
+        add("from") { [unowned self] arguments in
             guard let text = arguments["text"]?.cast(to: [String].self) else { return .nothing }
             switch try InputFormat(arguments["format"] ?? .nothing) {
-            case .json: return JSON.wrap(try JSON.parse(text.joined(separator: "\n")))
+            case .json: return jsonWrap(try JSON.parse(text.joined(separator: "\n")))
             }
         }
         add("to") { [unowned self] arguments in
@@ -95,9 +95,9 @@ extension Shell {
                 .map { try $0.unboxed(FilePath.self) }
             let partial = ls(paths, all: arguments["all"]?.cast(to: Bool.self) ?? false)
             for error in partial.errors { reportItemError("ls: \(error)") }
-            return Value(partial.value.map { $0.value(in: interpreter) })
+            return Value(partial.value.map { $0.value(in: self) })
         }
-        add("ps") { [unowned self] _ in Value(ps().map { $0.value(in: interpreter) }) }
+        add("ps") { [unowned self] _ in Value(ps().map { $0.value(in: self) }) }
         add("history") { [unowned self] _ in Value(historyEntries.map { Value($0) }) }
         add("readLine") { arguments in
             readLine(strippingNewline: arguments["strippingNewline"]?.cast(to: Bool.self) ?? true)
@@ -179,12 +179,12 @@ extension Shell {
 
 extension FileEntry {
     /// The struct `ls` gives for it.
-    func value(in interpreter: Interpreter) -> Value {
-        Value(
-            struct: NamedTypes.fileEntry,
-            fields: [
+    func value(in shell: Shell) -> Value {
+        shell.make(
+            shell.preludeTypes.fileEntry,
+            [
                 "name": Value(name),
-                "type": interpreter.value(forCase: "\(type)", in: FileType.id) ?? .nothing,
+                "type": shell.interpreter.value(forCase: "\(type)", in: FileType.id) ?? .nothing,
                 "size": size.value, "modified": Value(boxing: modified),
                 "permissions": Value(permissions),
                 "owner": Value(owner), "created": Value(boxing: created),
@@ -198,10 +198,10 @@ extension FileEntry {
 
 extension ProcessEntry {
     /// The struct `ps` gives for it.
-    func value(in interpreter: Interpreter) -> Value {
-        Value(
-            struct: NamedTypes.processEntry,
-            fields: [
+    func value(in shell: Shell) -> Value {
+        shell.make(
+            shell.preludeTypes.processEntry,
+            [
                 "pid": Value(pid), "ppid": Value(ppid), "name": Value(name), "user": Value(user),
                 "memory": memory.map { $0.value } ?? .nothing,
                 "cpuTime": cpuTime.map { Value($0) } ?? .nothing,

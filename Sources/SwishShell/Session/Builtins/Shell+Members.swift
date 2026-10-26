@@ -14,9 +14,9 @@ extension Shell {
         func add(_ type: String, _ name: String, _ kind: String) {
             guard seen.insert("\(type).\(name)").inserted else { return }
             rows.append(
-                Value(
-                    struct: NamedTypes.member,
-                    fields: ["type": Value(type), "name": Value(name), "kind": Value(kind)]
+                make(
+                    preludeTypes.member,
+                    ["type": Value(type), "name": Value(name), "kind": Value(kind)]
                 )
             )
         }

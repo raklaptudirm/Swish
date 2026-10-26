@@ -48,30 +48,41 @@ extension Output: CustomStringConvertible, CustomDebugStringConvertible, Present
     }
 }
 
+/// How a command exited, as `output.status` and a debug form give it: a struct of the Swift type
+/// `Status`, by name, which stands for the prelude's `Status`. Host types are process-wide, so a
+/// member of `Output` cannot make one of the prelude's, which an interpreter declares.
+private struct Status: Encodable {  // named for what it stands for: the encoder names a struct by its Swift type
+    let code: Int?
+    let signal: Int?
+    let succeeded: Bool
+
+    enum CodingKeys: String, CodingKey { case code, signal, succeeded }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(code, forKey: .code)
+        try container.encode(signal, forKey: .signal)
+        try container.encode(succeeded, forKey: .succeeded)
+    }
+}
+
+/// A command's output laid out as the struct it is: its text and its status.
+private struct OutputFields: Encodable {
+    let text: String
+    let status: Status
+}
+
 extension Output {
-    /// How it exited, laid out as the struct `output.status` is, for showing: a struct of the
-    /// Swift type `Status`, by name, so it is shown as one. (`output.status` itself is the
-    /// prelude's `Status`.)
+    private var exit: Status { Status(code: code, signal: signal, succeeded: succeeded) }
+
+    /// How it exited, as the struct `output.status` is. Every field is there, and `nil` is a field.
     var statusFields: Value {
-        Value(
-            struct: NamedTypes.status,
-            fields: [
-                "code": code.map { Value($0) } ?? Value.nothing,
-                "signal": signal.map { Value($0) } ?? Value.nothing,
-                "succeeded": Value(succeeded),
-            ]
-        )
+        (try? Value(encoding: exit)) ?? .nothing
     }
 
     /// How a debug form lays it out: its text and status as the fields of a struct.
     var displayValue: Value {
-        Value(
-            struct: Output.id,
-            fields: [
-                "text": Value(text),
-                "status": statusFields,
-            ]
-        )
+        (try? Value(encoding: OutputFields(text: text, status: exit), as: Output.id)) ?? .nothing
     }
 }
 

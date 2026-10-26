@@ -9,21 +9,21 @@ extension Shell {
             { arguments in read(arguments["raw"] ?? .nothing) }
         }
         return [
-            "jsonField": { arguments in
+            "jsonField": { [unowned self] arguments in
                 let value = arguments["raw"] ?? .nothing, key = arguments["key"] ?? .nothing
                 switch value.kind {
                 case .structure, .tuple, .object:
                     guard let name = key.cast(to: String.self) else { return .nothing }
-                    return JSON.wrapping(value.field(name))
+                    return jsonWrapping(value.field(name))
                 case .dictionary:
-                    return JSON.wrapping(value.entries?.first { $0.key == key }?.value)
+                    return jsonWrapping(value.entries?.first { $0.key == key }?.value)
                 case .list:
                     guard let index = key.cast(to: Int.self),
                         let items = value.cast(to: [Value].self)
                     else {
                         return .nothing
                     }
-                    return JSON.wrapping(items.indices.contains(index) ? items[index] : nil)
+                    return jsonWrapping(items.indices.contains(index) ? items[index] : nil)
                 default: return .nothing
                 }
             },
@@ -41,17 +41,17 @@ extension Shell {
                 return .nothing
             },
             "jsonBool": view { $0.kind == .bool ? $0 : .nothing },
-            "jsonArray": view {
-                $0.kind == .list
-                    ? Value(($0.cast(to: [Value].self) ?? []).map(JSON.wrap)) : .nothing
+            "jsonArray": view { [unowned self] raw in
+                raw.kind == .list
+                    ? Value((raw.cast(to: [Value].self) ?? []).map(jsonWrap)) : .nothing
             },
-            "jsonObject": view {
-                switch $0.kind {
+            "jsonObject": view { [unowned self] raw in
+                switch raw.kind {
                 case .structure, .tuple, .dictionary, .object:
-                    $0.entries.map { entries in
+                    raw.entries.map { entries in
                         Value(
                             Dictionary(
-                                entries.map { ($0.key, JSON.wrap($0.value)) },
+                                entries.map { ($0.key, jsonWrap($0.value)) },
                                 uniquingKeysWith: { $1 }
                             )
                         )

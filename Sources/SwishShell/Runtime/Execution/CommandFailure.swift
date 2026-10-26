@@ -21,17 +21,17 @@ extension Diagnostic {
         _ message: String,
         status: Int32,
         output: Output,
-        types: PreludeTypes
+        shell: Shell
     ) -> Diagnostic {
         .runtime(
             message,
-            thrown: Value(
-                struct: types.commandFailure,
-                fields: [
+            thrown: shell.make(
+                shell.preludeTypes.commandFailure,
+                [
                     "message": Value(message),
-                    "status": Value(
-                        struct: types.status,
-                        fields: [
+                    "status": shell.make(
+                        shell.preludeTypes.status,
+                        [
                             "code": output.code.map { Value($0) } ?? Value.nothing,
                             "signal": output.signal.map { Value($0) } ?? Value.nothing,
                             "succeeded": Value(false),

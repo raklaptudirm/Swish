@@ -41,7 +41,7 @@ extension Shell {
                         "\(job.source) failed with status \(job.status)",
                         status: job.status,
                         output: output,
-                        types: preludeTypes
+                        shell: self
                     )
                 }
                 return .output(output)

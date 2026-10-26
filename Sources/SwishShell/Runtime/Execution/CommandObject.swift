@@ -94,7 +94,7 @@ extension Shell {
                 "$(…) failed with status \(status)",
                 status: status,
                 output: output,
-                types: preludeTypes
+                shell: self
             )
         }
         return .output(output)
@@ -122,7 +122,7 @@ extension Shell {
                 "\(source(commands, from: input)) failed with status \(status)",
                 status: status,
                 output: Output(text: "", code: code, signal: signal),
-                types: preludeTypes
+                shell: self
             )
         }
         return statusValue(status)
@@ -165,9 +165,9 @@ extension Shell {
     /// A command statement's value: how it ended.
     func statusValue(_ status: Int32) -> Value {
         let (code, signal) = exitCode(status)
-        return Value(
-            struct: preludeTypes.status,
-            fields: [
+        return make(
+            preludeTypes.status,
+            [
                 "code": code.map { Value($0) } ?? Value.nothing,
                 "signal": signal.map { Value($0) } ?? Value.nothing,
                 "succeeded": Value(status == 0),
