@@ -28,7 +28,12 @@ struct JSON {
     }
 
     /// A value as JSON text, indented two spaces to a level.
-    public static func text(_ value: Value, indent: String = "") throws -> String {
+    /// `rawValue` says what raw value an enum's declaration gives a case, as the interpreter does.
+    public static func text(
+        _ value: Value,
+        indent: String = "",
+        rawValue: (Value) -> Value? = { _ in nil }
+    ) throws -> String {
         let inner = indent + "  "
         switch value.kind {
         case .nothing: return "null"
@@ -42,15 +47,17 @@ struct JSON {
         case .enumeration:
             // A raw value, or the case's name; with associated values, a
             // struct of them under the case's name.
-            guard let found = value.enumCase else { return "null" }
-            if let raw = found.rawValue { return try text(raw, indent: indent) }
+            guard let name = value.enumCaseName else { return "null" }
+            if let raw = rawValue(value) {
+                return try text(raw, indent: indent, rawValue: rawValue)
+            }
             let payload = value.enumPayload
-            guard !payload.isEmpty else { return quoted(found.name) }
+            guard !payload.isEmpty else { return quoted(name) }
             return try text(
                 Value(
                     tuple: [
                         (
-                            name: found.name,
+                            name: name,
                             value: Value(tuple: payload.map { (name: $0.key, value: $0.value) })
                         )
                     ]
@@ -61,12 +68,14 @@ struct JSON {
             let items = value.cast(to: [Value].self) ?? []
             guard !items.isEmpty else { return "[]" }
             return "[\n"
-                + (try items.map { inner + (try text($0, indent: inner)) }).joined(separator: ",\n")
+                + (try items.map { inner + (try text($0, indent: inner, rawValue: rawValue)) })
+                .joined(separator: ",\n")
                 + "\n\(indent)]"
         case .structure, .tuple:
             guard let record = value.fields, record.count > 0 else { return "{}" }
             let fields = try record.map {
-                inner + quoted($0.key) + ": " + (try text($0.value, indent: inner))
+                inner + quoted($0.key) + ": "
+                    + (try text($0.value, indent: inner, rawValue: rawValue))
             }
             return "{\n" + fields.joined(separator: ",\n") + "\n\(indent)}"
         case .dictionary:
@@ -77,7 +86,8 @@ struct JSON {
                         "to json: an object's keys are Strings, and \(key.debugDescription) isn't one"
                     )
                 }
-                return inner + quoted(name) + ": " + (try text(value, indent: inner))
+                return inner + quoted(name) + ": "
+                    + (try text(value, indent: inner, rawValue: rawValue))
             }
             return "{\n" + fields.joined(separator: ",\n") + "\n\(indent)}"
         case .function:
@@ -86,7 +96,8 @@ struct JSON {
             if let fields = value.fields {
                 return try text(
                     Value(tuple: fields.entries.map { ($0.key, $0.value) }),
-                    indent: indent
+                    indent: indent,
+                    rawValue: rawValue
                 )
             }
             // Rich text and a command's output are their text; else a Swift value is as Swift

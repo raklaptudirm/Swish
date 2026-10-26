@@ -175,8 +175,8 @@ final class DisplayFormatter {
         else { return nil }
         if let fixed = column.style { return fixed }
         guard let source = column.styledBy,
-            let found = record[source]?.enumCase,
-            let style = registry.enumStyles[found.id.name]?(found.name)
+            let found = record[source], let name = found.enumCaseName,
+            let style = registry.enumStyles[found.typeID?.name ?? ""]?(name)
         else { return nil }
         return style
     }

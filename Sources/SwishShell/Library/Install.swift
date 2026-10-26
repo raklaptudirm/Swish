@@ -52,7 +52,14 @@ extension Shell {
         add("to") { [unowned self] arguments in
             let items = arguments["items"]?.cast(to: [Value].self) ?? []
             switch try OutputFormat(arguments["format"] ?? .nothing) {
-            case .json: return Value(try JSON.text(items.count == 1 ? items[0] : Value(items)))
+            case .json:
+                let interpreter = interpreter
+                return Value(
+                    try JSON.text(
+                        items.count == 1 ? items[0] : Value(items),
+                        rawValue: { interpreter.rawValue(of: $0) }
+                    )
+                )
             case .text: return Value(laidOut(items, useViews: true).joined(separator: "\n"))
             }
         }
@@ -219,7 +226,7 @@ extension ProcessEntry {
 
 extension InputFormat {
     init(_ value: Value) throws {
-        guard let found = Self.allCases.first(where: { "\($0)" == value.enumCase?.name }) else {
+        guard let found = Self.allCases.first(where: { "\($0)" == value.enumCaseName }) else {
             throw LibraryError("expected an InputFormat")
         }
         self = found
@@ -228,7 +235,7 @@ extension InputFormat {
 
 extension OutputFormat {
     init(_ value: Value) throws {
-        guard let found = Self.allCases.first(where: { "\($0)" == value.enumCase?.name }) else {
+        guard let found = Self.allCases.first(where: { "\($0)" == value.enumCaseName }) else {
             throw LibraryError("expected an OutputFormat")
         }
         self = found
@@ -237,7 +244,7 @@ extension OutputFormat {
 
 extension TextStyle {
     init(_ value: Value) throws {
-        guard let found = Self.allCases.first(where: { "\($0)" == value.enumCase?.name }) else {
+        guard let found = Self.allCases.first(where: { "\($0)" == value.enumCaseName }) else {
             throw LibraryError("expected a TextStyle")
         }
         self = found

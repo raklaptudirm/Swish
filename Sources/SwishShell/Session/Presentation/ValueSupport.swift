@@ -119,6 +119,15 @@ extension Value {
         return (try? unboxed((any HostObject).self))?.typeName ?? "Object"
     }
 
+    /// The name of the case of an enum this is, if it is one. Swift's own mirror of an enum has one
+    /// child, labeled with the case's name, for a case that carries something; one that carries
+    /// nothing is its name when described.
+    var enumCaseName: String? {
+        let mirror = self.mirror
+        guard mirror.displayStyle == .enum else { return nil }
+        return mirror.children.first?.label ?? description
+    }
+
     var kind: ValueKind {
         guard let id = typeID else {
             if mirror.displayStyle == .tuple { return .tuple }
