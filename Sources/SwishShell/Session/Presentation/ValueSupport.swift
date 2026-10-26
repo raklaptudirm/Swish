@@ -68,3 +68,29 @@ extension Value {
         return a.debugDescription < b.debugDescription
     }
 }
+
+/// What a value is, for the places that lay values out: the shell's own taxonomy, made from what
+/// the interpreter says of a value (its type, and the views of a tuple, a struct and an enum).
+enum ValueKind {
+    case nothing, bool, int, double, string, list, dictionary
+    case tuple, structure, enumeration, function, object
+}
+
+extension Value {
+    var kind: ValueKind {
+        guard let id = typeID else {
+            if tuple != nil { return .tuple }
+            return function != nil ? .function : .object
+        }
+        if id == .int { return .int }
+        if id == .string { return .string }
+        if id == .bool { return .bool }
+        if id == .double { return .double }
+        if id == .array { return .list }
+        if id == .dictionary { return .dictionary }
+        if id == .optional && self == .nothing { return .nothing }
+        if structure != nil { return .structure }
+        if enumCase != nil { return .enumeration }
+        return .object
+    }
+}
