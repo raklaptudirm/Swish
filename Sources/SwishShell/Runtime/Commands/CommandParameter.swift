@@ -12,6 +12,8 @@ struct CommandParameter {
     var isInput = false
     /// `-a` for `--all`.
     var shortFlag: Character?
+    /// Takes the field names that follow, as a closure that makes a tuple of them from an item.
+    var picksFields = false
 
     init(
         _ parameter: Symbol.Parameter,
@@ -28,6 +30,7 @@ struct CommandParameter {
             ?? CommandMarks.table["\(function).\(parameter.name)"]
         isInput = marks?.isInput ?? false
         shortFlag = marks?.shortFlag
+        picksFields = marks?.picksFields ?? false
     }
 
     init(
@@ -45,6 +48,9 @@ struct CommandParameter {
     }
 
     var isVariadic: Bool { arity == .variadic }
+
+    /// Takes every positional word left, not one.
+    var takesRest: Bool { isVariadic || picksFields }
 
     var hasDefault: Bool {
         if case .defaulted = arity { return true }
@@ -79,6 +85,7 @@ enum CommandMarks {
     struct Marks: Sendable {
         var isInput = false
         var shortFlag: Character?
+        var picksFields = false
     }
 
     static let table: [String: Marks] = [
@@ -89,6 +96,8 @@ enum CommandMarks {
         "list.items": Marks(isInput: true),
         "members.items": Marks(isInput: true),
         "ls.all": Marks(shortFlag: "a"),
+        // `select name size`: the words are field names, which make `{ (name: $0.name, size: $0.size) }`.
+        "select.fields": Marks(picksFields: true),
         // Swiit's `sorted(by:)`.
         "sorted.key": Marks(shortFlag: "b"),
     ]

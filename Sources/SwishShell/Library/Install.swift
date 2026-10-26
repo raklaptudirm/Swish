@@ -117,19 +117,6 @@ extension Shell {
         }
         add("help") { [unowned self] arguments in try helpBody(arguments) }
         add("members") { [unowned self] arguments in try membersBody(arguments) }
-        add("Sequence.select") { arguments in
-            var selected: [Value] = []
-            let fields = arguments["fields"]?.cast(to: [String].self) ?? []
-            for item in arguments["self"]?.cast(to: [Value].self) ?? [] {
-                guard let record = item.fields else {
-                    throw RuntimeError("select: \(item.description) has no fields")
-                }
-                selected.append(
-                    Value(tuple: fields.map { ($0, record[$0] ?? Value.nothing) })
-                )
-            }
-            return Value(selected)
-        }
         add("capture") { [unowned self] arguments in try captureBody(arguments) }
         add("captureThrowing") { [unowned self] arguments in try captureThrowingBody(arguments) }
         add("startTask") { [unowned self] arguments in

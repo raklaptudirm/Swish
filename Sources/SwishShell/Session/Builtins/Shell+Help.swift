@@ -25,7 +25,7 @@ extension Shell {
     /// Whether an unlabeled parameter is given every remaining word: a
     /// variadic one, or one that's a collection (`_ paths: [FilePath]`).
     func takesRemainingWords(_ parameter: CommandParameter) -> Bool {
-        parameter.isVariadic
+        parameter.takesRest
             || (parameter.label == nil && !parameter.isInput
                 && Shell.collection(parameter.type) != nil)
     }
@@ -96,7 +96,17 @@ extension Shell {
                         + (takesRemainingWords(parameter) ? [.init("...")] : [])
                     if seen.insert(AttributedString(joining: key).plain).inserted {
                         arguments.append(
-                            (key, joined(details + [typeDetail(parameter.type.description)]))
+                            (
+                                key,
+                                joined(
+                                    details + [
+                                        typeDetail(
+                                            parameter.picksFields
+                                                ? "field names" : parameter.type.description
+                                        )
+                                    ]
+                                )
+                            )
                         )
                     }
                 }
@@ -155,7 +165,11 @@ extension Shell {
         }
         for parameter in parameters where parameter.label == nil {
             let argument = AttributedString("<\(parameter.name)>", .variable)
-            if takesRemainingWords(parameter) || (parameter.isInput && parameter.type.isList) {
+            if parameter.picksFields {
+                parts += [.init(" "), argument, .init("...")]  // at least one
+            } else if takesRemainingWords(parameter)
+                || (parameter.isInput && parameter.type.isList)
+            {
                 parts += [.init(" "), .init("["), argument, .init("...]")]
             } else if parameter.hasDefault || parameter.isInput {
                 parts += [.init(" "), .init("["), argument, .init("]")]

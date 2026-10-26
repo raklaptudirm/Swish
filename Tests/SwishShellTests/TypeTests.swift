@@ -377,3 +377,17 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
             == "2\ntrue\n"
     )
 }
+
+@Test func selectIsAClosureOfTheFieldsNamed() throws {
+    // `select b a` is `map { (b: $0.b, a: $0.a) }`: the words are field names, in the order given.
+    let rows = "[(a: 1, b: 2), (a: 3, b: 4)] | "
+    #expect(
+        try output(rows + "select b a") == output(rows + "map { (b: $0.b, a: $0.a) }")
+    )
+    #expect(try output(rows + "select b a | get a") == "1\n3\n")
+    // It fails as that closure does: a field that isn't there is an error, as is a word that cannot
+    // name a field, or none.
+    #expect(errorText(rows + "select c")?.contains("no field 'c'") == true)
+    #expect(errorText(rows + "select 1x") != nil)
+    #expect(errorText(rows + "select") != nil)
+}

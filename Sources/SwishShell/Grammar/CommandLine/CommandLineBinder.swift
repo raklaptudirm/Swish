@@ -256,7 +256,20 @@ extension Shell {
         var remaining = positionals[...]
         for parameter in parameters where parameter.label == nil {
             let what = "<\(parameter.name)>"
-            if parameter.isVariadic {
+            if parameter.picksFields {
+                bound[parameter.name] = .words(
+                    try remaining.map { word in
+                        guard let text = textOf(word), Shell.isFieldName(text) else {
+                            throw RuntimeError("\(name): \(what) takes field names")
+                        }
+                        return Piece(word: word, text: text)
+                    }
+                )
+                guard !remaining.isEmpty else {
+                    throw RuntimeError("\(name): missing \(parameter.commandLineName)")
+                }
+                remaining = []
+            } else if parameter.isVariadic {
                 bound[parameter.name] = .words(
                     try remaining.map {
                         try take($0, text: textOf($0), as: parameter.type, for: what)

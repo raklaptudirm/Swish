@@ -119,6 +119,8 @@ extension Shell {
         var bound: [String: [Value]] = [:]
         for parameter in parameters {
             switch binding.assigned[parameter.name] {
+            case .words(let pieces)? where parameter.picksFields:
+                bound[parameter.name] = [try fieldPicker(pieces.compactMap(\.text))]
             case .words(let pieces)?:
                 let what = parameter.commandLineName
                 if parameter.isVariadic {
@@ -161,6 +163,18 @@ extension Shell {
             bound: bound,
             written: nil
         )
+    }
+
+    /// Whether `text` can name a field in a tuple: an identifier.
+    static func isFieldName(_ text: String) -> Bool {
+        guard let first = text.first, first == "_" || first.isLetter else { return false }
+        return text.allSatisfy { $0 == "_" || $0.isLetter || $0.isNumber }
+    }
+
+    /// The closure `select name size` means: `{ (name: $0.name, size: $0.size) }`.
+    func fieldPicker(_ names: [String]) throws -> Value {
+        let tuple = names.map { "\($0): $0.\($0)" }.joined(separator: ", ")
+        return try interpreter.evaluate("{ (\(tuple)) }")
     }
 
     /// What a parameter given several words is made of, and how: a

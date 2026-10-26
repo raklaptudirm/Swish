@@ -352,8 +352,12 @@ func help() -> [Help]
 func help(_ name: String) -> [AttributedString]
 
 extension Sequence {
-    /// Keeps only the named fields of each record.
-    func select(_ fields: String...) -> [Any]
+    /// Keeps only the named fields of each record: a tuple of them, in the order named.
+    /// - Parameter fields: what to make of each item, as in select name size, which is
+    ///   map { (name: $0.name, size: $0.size) }
+    func select<Fields>(_ fields: (Element) -> Fields) -> [Fields] {
+        map(fields)
+    }
 }
 /// Parses text into values.
 /// - Parameter format: json

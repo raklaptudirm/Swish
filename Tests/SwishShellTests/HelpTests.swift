@@ -71,7 +71,7 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
             && filePath.contains("Returns the final component of the path.")
     )
     // A sequence has the shell's additions too.
-    #expect(try output("help Array").contains("  select(_ fields: String...) -> [Any]"))
+    #expect(try output("help Array").contains("  select(_ fields: (Element) -> Any) -> [Any]"))
     // Yours, from their declarations.
     let shell = Shell()
     _ = try output(
