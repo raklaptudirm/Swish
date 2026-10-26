@@ -21,7 +21,7 @@ extension Shell {
         }
         for id in PreludeTypes.all {
             precondition(
-                interpreter.typeID(named: id.description) == id,
+                interpreter.typeID(named: id.description) != nil,
                 "the shell's prelude declares no \(id)"
             )
         }

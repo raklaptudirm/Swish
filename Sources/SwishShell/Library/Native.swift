@@ -54,7 +54,7 @@ extension DisplayColumn {
 }
 
 extension Status: ScriptConvertible {
-    static let id = Symbol.ID(declaring: "Status")
+    static let id = Symbol.ID(hostType: "Status")
     static var scriptType: ScriptType { .named(id) }
     init(_ value: Value) throws {
         guard value.is(Status.id),

@@ -112,7 +112,7 @@ extension Shell {
                                 guard case .conforms(.named(let proto, _)) = constraint else {
                                     return nil
                                 }
-                                return self.interpreter.conforms(element, to: proto)
+                                return element.conforms(to: proto, in: self.interpreter)
                                     ? nil : proto.description
                             })
                             .first

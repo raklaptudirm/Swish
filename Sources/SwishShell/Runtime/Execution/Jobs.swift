@@ -105,7 +105,7 @@ final class Job: HostObject, Presentable, @unchecked Sendable {
 
     // MARK: HostObject
 
-    static let id = Symbol.ID(declaring: "Job")
+    static let id = Symbol.ID(hostType: "Job")
     var typeName: String { Job.id.description }
 
     /// What a table of jobs starts with: the state shown as it's going.

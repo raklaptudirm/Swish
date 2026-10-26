@@ -341,7 +341,7 @@ extension Shell {
     func unwrapped(_ value: Value) -> Value {
         var value = value
         while value.kind == .structure,
-            interpreter.conforms(interpreter.scriptType(of: value), to: PreludeTypes.wrapping),
+            interpreter.scriptType(of: value).conforms(to: PreludeTypes.wrapping, in: interpreter),
             let inner = try? interpreter.value(forMember: "wrapped", of: value)
         {
             value = inner

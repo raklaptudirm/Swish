@@ -123,7 +123,7 @@ extension FileSize: Presentable {
 }
 
 extension FileSize: ScriptConvertible {
-    static let id = Symbol.ID(declaring: "FileSize")
+    static let id = Symbol.ID(hostType: "FileSize")
     static var scriptType: ScriptType { .named(id) }
     init(_ swiitValue: Value) throws {
         if let size = try? swiitValue.unboxed(FileSize.self) {
