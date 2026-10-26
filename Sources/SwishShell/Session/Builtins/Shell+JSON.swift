@@ -12,7 +12,7 @@ extension Shell {
             "jsonField": { arguments in
                 let value = arguments["raw"] ?? .nothing, key = arguments["key"] ?? .nothing
                 switch value.kind {
-                case .structure, .tuple:
+                case .structure, .tuple, .object:
                     guard let name = key.cast(to: String.self) else { return .nothing }
                     return JSON.wrapping(value.field(name))
                 case .dictionary:
@@ -47,7 +47,7 @@ extension Shell {
             },
             "jsonObject": view {
                 switch $0.kind {
-                case .structure, .tuple, .dictionary:
+                case .structure, .tuple, .dictionary, .object:
                     $0.entries.map { entries in
                         Value(
                             Dictionary(

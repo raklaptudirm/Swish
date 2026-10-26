@@ -12,12 +12,12 @@ private func fileType(_ name: String) -> Value {
     return interpreter.value(forCase: name, in: FileType.id)!
 }
 
-@Test func onOneLineItIsTheDebugDescription() {
+@Test func onOneLineItIsTheDebugDescription() throws {
     let status = Output(text: "hi", code: 0)
     let values: [Value] = [
         .nothing, Value(3), Value("tab\there"), Value([Value(1), Value("x"), .nothing]),
-        Value(tuple: ["k": Value("v")]),
-        Value(tuple: [(name: String, value: Value)]()),
+        try Interpreter().evaluate(#"(k: "v")"#),
+        try Interpreter().evaluate("()"),
         .output(status), status.statusFields, fileType("directory"),
     ]
     for value in values {

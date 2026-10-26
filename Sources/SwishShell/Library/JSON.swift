@@ -1,6 +1,36 @@
 import Foundation
 import Swiit
 
+/// A parsed JSON object: its fields in the order the text gave them, which a table lays out as
+/// columns. A host object that is data, since the language cannot write a tuple whose names the
+/// text decides: it is shown, selected, filtered on and encoded as any record is, and a field is
+/// read by name. Two are equal when they hold the same fields in the same order.
+final class JSONObject: HostObject {
+    let keys: [String]
+    let fields: [String: Value]
+
+    init(_ pairs: [(name: String, value: Value)]) {
+        keys = pairs.map(\.name)
+        fields = Dictionary(pairs.map { ($0.name, $0.value) }, uniquingKeysWith: { $1 })
+    }
+
+    var typeName: String { "JSONObject" }
+    var valueIdentity: AnyHashable? { Contents(keys: keys, fields: fields) }
+
+    private struct Contents: Hashable {
+        let keys: [String]
+        let fields: [String: Value]
+    }
+    var memberNames: [String] { keys }
+    func member(_ name: String) -> Value? { fields[name] }
+    var description: String { "JSONObject" }
+    var debugDescription: String {
+        "JSONObject("
+            + keys.map { "\($0): \(fields[$0]!.debugDescription)" }.joined(separator: ", ")
+            + ")"
+    }
+}
+
 /// Parsed JSON: whatever it parsed as, a `Value`, which Swish reads by field
 /// and element. Object keys are kept in order, which Foundation's parser
 /// doesn't do and which tables need: key order is column order.
@@ -53,17 +83,12 @@ struct JSON {
             }
             let payload = value.enumPayload
             guard !payload.isEmpty else { return quoted(name) }
-            return try text(
-                Value(
-                    tuple: [
-                        (
-                            name: name,
-                            value: Value(tuple: payload.map { (name: $0.key, value: $0.value) })
-                        )
-                    ]
-                ),
-                indent: indent
+            let carried = try objectText(
+                payload.map { (name: $0.key, value: $0.value) },
+                indent: inner,
+                rawValue: rawValue
             )
+            return "{\n" + inner + quoted(name) + ": " + carried + "\n\(indent)}"
         case .list:
             let items = value.cast(to: [Value].self) ?? []
             guard !items.isEmpty else { return "[]" }
@@ -72,12 +97,11 @@ struct JSON {
                 .joined(separator: ",\n")
                 + "\n\(indent)]"
         case .structure, .tuple:
-            guard let record = value.fields, record.count > 0 else { return "{}" }
-            let fields = try record.map {
-                inner + quoted($0.key) + ": "
-                    + (try text($0.value, indent: inner, rawValue: rawValue))
-            }
-            return "{\n" + fields.joined(separator: ",\n") + "\n\(indent)}"
+            return try objectText(
+                (value.fields?.entries ?? []).map { (name: $0.key, value: $0.value) },
+                indent: indent,
+                rawValue: rawValue
+            )
         case .dictionary:
             guard let dictionary = value.entries, dictionary.count > 0 else { return "{}" }
             let fields = try dictionary.sortedForDisplay.map { key, value in
@@ -94,8 +118,8 @@ struct JSON {
             throw LibraryError("to json: a function has no JSON form")
         case .object:
             if let fields = value.fields {
-                return try text(
-                    Value(tuple: fields.entries.map { ($0.key, $0.value) }),
+                return try objectText(
+                    fields.entries.map { (name: $0.key, value: $0.value) },
                     indent: indent,
                     rawValue: rawValue
                 )
@@ -121,6 +145,20 @@ struct JSON {
             }
             throw LibraryError("to json: a \(value.typeName) has no JSON form")
         }
+    }
+
+    /// An object of these fields, in order.
+    private static func objectText(
+        _ fields: [(name: String, value: Value)],
+        indent: String,
+        rawValue: (Value) -> Value?
+    ) throws -> String {
+        guard !fields.isEmpty else { return "{}" }
+        let inner = indent + "  "
+        let lines = try fields.map {
+            inner + quoted($0.name) + ": " + (try text($0.value, indent: inner, rawValue: rawValue))
+        }
+        return "{\n" + lines.joined(separator: ",\n") + "\n\(indent)}"
     }
 
     private struct AnyEncodable: Encodable {
@@ -186,7 +224,7 @@ private struct JSONParser {
         skipWhitespace()
         if index < bytes.count && bytes[index] == UInt8(ascii: "}") {
             index += 1
-            return Value(tuple: fields)
+            return Value(JSONObject(fields))
         }
         while true {
             skipWhitespace()
@@ -207,7 +245,7 @@ private struct JSONParser {
             guard index < bytes.count else { throw error("unterminated object") }
             if bytes[index] == UInt8(ascii: "}") {
                 index += 1
-                return Value(tuple: fields)
+                return Value(JSONObject(fields))
             }
             try expect(",")
         }

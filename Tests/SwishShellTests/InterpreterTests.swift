@@ -543,33 +543,29 @@ private func fixture() throws -> String {
     #expect(status("func f() {}; [f] | cat") == 1)  // functions have no text form
 }
 
-@Test func formatterFitsTheWidth() {
+@Test func formatterFitsTheWidth() throws {
     var lines: [String] = []
     let formatter = DisplayFormatter(maxWidth: 20) {
         lines.append($0); return true
     }
-    formatter.add(
-        Value(
-            tuple: ["name": Value("a-rather-long-file-name"), "size": FileSize(bytes: 1).value]
-        )
-    )
+    let interpreter = Interpreter()
+    interpreter["size"] = FileSize(bytes: 1).value
+    formatter.add(try interpreter.evaluate(#"(name: "a-rather-long-file-name", size: size)"#))
     formatter.finish()
     // The name column shrinks from 23 to 14 so the table fits in 20.
     #expect(lines == ["name            size\n", "a-rather-long…   1 B\n"])
 }
 
-@Test func formatterDropsColumnsThatCantFit() {
+@Test func formatterDropsColumnsThatCantFit() throws {
     var lines: [String] = []
     let formatter = DisplayFormatter(maxWidth: 20) {
         lines.append($0); return true
     }
     formatter.add(
-        Value(
-            tuple: [
-                "alpha": Value("aaaaaaaa"), "bravo": Value("bbbbbbbb"),
-                "charlie": Value("cccccccc"),
-            ]
-        )
+        try Interpreter()
+            .evaluate(
+                #"(alpha: "aaaaaaaa", bravo: "bbbbbbbb", charlie: "cccccccc")"#
+            )
     )
     formatter.finish()
     // Even at 6 wide, three columns need 22; the last is left off.
@@ -871,5 +867,19 @@ private func fixture() throws -> String {
             #"do { try $(sh -c 'echo no >&2; exit 2') } catch { if let f = error as? CommandFailure { print(f.status.code); print(f.localizedDescription) } }"#
         )
             == "Optional(2)\n$(…) failed with status 2\n"
+    )
+}
+
+@Test func jsonObjectsKeepTheirOrderAndCompareByWhatTheyHold() throws {
+    let rows =
+        #"echo '[{"name": "a", "age": 3, "city": "x"}, {"name": "b", "age": 5, "city": "y"}]' | from json | "#
+    // Columns are the keys, in the order the text gave them.
+    #expect(try output(rows + "to text") == "name  age  city\na       3  x\nb       5  y\n")
+    #expect(try output(rows + "select city name | get city") == "x\ny\n")
+    #expect(try output(rows + "filter { $0.age > 3 } | get name") == "b\n")
+    // Equal objects are equal: a document's repeats are one.
+    #expect(
+        try output(#"echo '[{"a": 1}, {"a": 1}, {"a": 2}]' | from json | uniqued | get a"#)
+            == "1\n2\n"
     )
 }
