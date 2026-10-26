@@ -55,8 +55,7 @@ struct JSON {
                 }
             return try text(
                 Value(
-                    struct: nil,
-                    fields: [(name: found.name, value: Value(struct: nil, fields: fields))]
+                    tuple: [(name: found.name, value: Value(tuple: fields))]
                 ),
                 indent: indent
             )
@@ -88,7 +87,7 @@ struct JSON {
         case .object:
             if let fields = value.fields {
                 return try text(
-                    Value(struct: nil, fields: fields.entries.map { ($0.key, $0.value) }),
+                    Value(tuple: fields.entries.map { ($0.key, $0.value) }),
                     indent: indent
                 )
             }
@@ -178,7 +177,7 @@ private struct JSONParser {
         skipWhitespace()
         if index < bytes.count && bytes[index] == UInt8(ascii: "}") {
             index += 1
-            return Value(struct: nil, fields: fields)
+            return Value(tuple: fields)
         }
         while true {
             skipWhitespace()
@@ -199,7 +198,7 @@ private struct JSONParser {
             guard index < bytes.count else { throw error("unterminated object") }
             if bytes[index] == UInt8(ascii: "}") {
                 index += 1
-                return Value(struct: nil, fields: fields)
+                return Value(tuple: fields)
             }
             try expect(",")
         }

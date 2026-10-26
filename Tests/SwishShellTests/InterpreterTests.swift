@@ -550,8 +550,7 @@ private func fixture() throws -> String {
     }
     formatter.add(
         Value(
-            struct: nil,
-            fields: ["name": Value("a-rather-long-file-name"), "size": FileSize(bytes: 1).value]
+            tuple: ["name": Value("a-rather-long-file-name"), "size": FileSize(bytes: 1).value]
         )
     )
     formatter.finish()
@@ -566,8 +565,7 @@ private func fixture() throws -> String {
     }
     formatter.add(
         Value(
-            struct: nil,
-            fields: [
+            tuple: [
                 "alpha": Value("aaaaaaaa"), "bravo": Value("bbbbbbbb"),
                 "charlie": Value("cccccccc"),
             ]

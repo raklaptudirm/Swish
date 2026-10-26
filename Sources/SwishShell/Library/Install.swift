@@ -103,7 +103,7 @@ extension Shell {
                     throw RuntimeError("select: \(item.description) has no fields")
                 }
                 selected.append(
-                    Value(struct: nil, fields: fields.map { ($0, record[$0] ?? Value.nothing) })
+                    Value(tuple: fields.map { ($0, record[$0] ?? Value.nothing) })
                 )
             }
             return Value(selected)

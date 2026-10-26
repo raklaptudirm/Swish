@@ -16,8 +16,8 @@ private func fileType(_ name: String) -> Value {
     let status = Output(text: "hi", code: 0)
     let values: [Value] = [
         .nothing, Value(3), Value("tab\there"), Value([Value(1), Value("x"), .nothing]),
-        Value(struct: nil, fields: ["k": Value("v")]),
-        Value(struct: nil, fields: [(name: String, value: Value)]()),
+        Value(tuple: ["k": Value("v")]),
+        Value(tuple: [(name: String, value: Value)]()),
         .output(status), status.status.value, fileType("directory"),
     ]
     for value in values {
