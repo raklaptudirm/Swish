@@ -52,7 +52,7 @@ extension Shell {
             Callee(name: "prompt", overloads: [], receiver: nil),
             withStatus != nil ? [("status", Value(Int(status)))] : []
         )
-        guard let text = value.cast(to: String.self) else {
+        guard let text = value.casting(to: String.self) else {
             throw RuntimeError("it gave \(value.typeName), not a String")
         }
         return text

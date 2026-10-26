@@ -50,7 +50,7 @@ extension Shell {
             }
             bodies["Pipeline." + name] = { arguments in
                 guard let pipeline = arguments["self"],
-                    let commands = pipeline.field("commands")?.cast(to: [Value].self)
+                    let commands = pipeline.field("commands")?.casting(to: [Value].self)
                 else {
                     throw RuntimeError("not a Pipeline")
                 }
@@ -89,7 +89,7 @@ extension Shell {
         lastStatus = before
         let output = output(text, status: status)
         // Without `try`, failing is just what `.status` says.
-        if arguments["throwing"]?.cast(to: Bool.self) == true && status != 0 {
+        if arguments["throwing"]?.casting(to: Bool.self) == true && status != 0 {
             throw RuntimeError.commandFailure(
                 "$(…) failed with status \(status)",
                 status: status,
@@ -146,13 +146,15 @@ extension Shell {
     /// The exit status a value gives: a Bool's truth, a `Status` or an
     /// `Output` how its command ended; anything else succeeded.
     func status(of value: Value) -> Int32 {
-        if let truth = value.cast(to: Bool.self) { return truth ? 0 : 1 }
+        if let truth = value.casting(to: Bool.self) { return truth ? 0 : 1 }
         if value.isInstance(of: preludeTypes.status),
-            let succeeded = value.field("succeeded")?.cast(to: Bool.self)
+            let succeeded = value.field("succeeded")?.casting(to: Bool.self)
         {
             if succeeded { return 0 }
-            if let code = value.field("code")?.cast(to: Int.self) { return Int32(code) }
-            if let signal = value.field("signal")?.cast(to: Int.self) { return 128 + Int32(signal) }
+            if let code = value.field("code")?.casting(to: Int.self) { return Int32(code) }
+            if let signal = value.field("signal")?.casting(to: Int.self) {
+                return 128 + Int32(signal)
+            }
             return 1
         }
         // `await build && echo ok`: an Output's status is its command's.
@@ -182,10 +184,10 @@ extension Shell {
     /// The commands as a person would type them, for messages and `jobs`.
     func source(_ commands: [Value], from input: Value?) -> String {
         let typed = commands.map { command -> String in
-            guard let words = command.field("words")?.cast(to: [Value].self) else {
+            guard let words = command.field("words")?.casting(to: [Value].self) else {
                 return command.description
             }
-            return (command.field("isExternal")?.cast(to: Bool.self) == true ? "^" : "")
+            return (command.field("isExternal")?.casting(to: Bool.self) == true ? "^" : "")
                 + words.map { shellWord($0) }.joined(separator: " ")
         }
         return ((input.map { [$0.debugDescription] } ?? []) + typed).joined(separator: " | ")
@@ -194,11 +196,11 @@ extension Shell {
     /// A word as a shell would show it: quoted when it has spaces or quotes.
     private func shellWord(_ value: Value) -> String {
         if value.isInstance(of: preludeTypes.glob),
-            let pattern = value.field("pattern")?.cast(to: String.self)
+            let pattern = value.field("pattern")?.casting(to: String.self)
         {
             return Glob.unescape(pattern)
         }
-        guard let text = value.cast(to: String.self) else { return value.description }
+        guard let text = value.casting(to: String.self) else { return value.description }
         guard !text.isEmpty, !text.contains(where: { " \t\n'\"\\$|&;<>(){}".contains($0) }) else {
             return "'" + text.replacingOccurrences(of: "'", with: "'\\''") + "'"
         }
@@ -207,13 +209,14 @@ extension Shell {
 
     /// A `Command` as it runs: its words expanded, its redirects resolved.
     func spec(_ command: Value) throws -> CommandSpec {
-        guard command.kind == .structure, let words = command.field("words")?.cast(to: [Value].self)
+        guard command.kind == .structure,
+            let words = command.field("words")?.casting(to: [Value].self)
         else {
             throw RuntimeError("\(command.typeName) isn't a Command")
         }
         var spec = CommandSpec(arguments: try words.flatMap(arguments))
-        spec.external = command.field("isExternal")?.cast(to: Bool.self) == true
-        if let redirections = command.field("redirections")?.cast(to: [Value].self) {
+        spec.external = command.field("isExternal")?.casting(to: Bool.self) == true
+        if let redirections = command.field("redirections")?.casting(to: [Value].self) {
             spec.redirects = try redirections.map(redirect)
         }
         if let variables = command.field("variables")?.entries {
@@ -235,14 +238,14 @@ extension Shell {
     }
 
     private func redirect(_ value: Value) throws -> ResolvedRedirect {
-        guard let fd = value.field("fd")?.cast(to: Int.self),
-            let mode = value.field("mode")?.cast(to: String.self)
+        guard let fd = value.field("fd")?.casting(to: Int.self),
+            let mode = value.field("mode")?.casting(to: String.self)
         else {
             throw RuntimeError("\(value.typeName) isn't a Redirection")
         }
         let modes: [String: RedirectMode] = ["read": .read, "write": .write, "append": .append]
         guard let open = modes[mode] else {
-            guard mode == "send", let other = value.field("other")?.cast(to: Int.self) else {
+            guard mode == "send", let other = value.field("other")?.casting(to: Int.self) else {
                 throw RuntimeError("no redirection '\(mode)'")
             }
             return ResolvedRedirect(fd: Int32(fd), action: .duplicate(Int32(other)))
@@ -263,10 +266,10 @@ extension Shell {
         case .function:
             return [.value(word)]
         case .structure where word.isInstance(of: preludeTypes.glob):
-            guard let pattern = word.field("pattern")?.cast(to: String.self) else { return [] }
+            guard let pattern = word.field("pattern")?.casting(to: String.self) else { return [] }
             return try expand(pattern).map(CommandArgument.text)
         case .structure where word.isInstance(of: preludeTypes.spread):
-            guard let items = word.field("value")?.cast(to: [Value].self) else {
+            guard let items = word.field("value")?.casting(to: [Value].self) else {
                 return [.text(word.field("value")?.description ?? "")]
             }
             return items.map { .text($0.description) }

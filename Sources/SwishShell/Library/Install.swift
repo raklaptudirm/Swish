@@ -23,7 +23,7 @@ extension Shell {
                 summary: "How the command exited.",
                 .property(
                     .named(Symbol.ID(hostType: "Status")),
-                    .readOnly { try $0.unboxed(Output.self).statusFields }
+                    .readOnly { try $0.unboxing(Output.self).statusFields }
                 )
             )
         )
@@ -44,13 +44,13 @@ extension Shell {
         }
 
         add("from") { [unowned self] arguments in
-            guard let text = arguments["text"]?.cast(to: [String].self) else { return .nothing }
+            guard let text = arguments["text"]?.casting(to: [String].self) else { return .nothing }
             switch try InputFormat(arguments["format"] ?? .nothing) {
             case .json: return jsonWrap(try JSON.parse(text.joined(separator: "\n")))
             }
         }
         add("to") { [unowned self] arguments in
-            let items = arguments["items"]?.cast(to: [Value].self) ?? []
+            let items = arguments["items"]?.casting(to: [Value].self) ?? []
             switch try OutputFormat(arguments["format"] ?? .nothing) {
             case .json:
                 let interpreter = interpreter
@@ -65,13 +65,13 @@ extension Shell {
         }
         add("table") { [unowned self] arguments in
             Value(
-                laidOut(arguments["items"]?.cast(to: [Value].self) ?? [], useViews: false)
+                laidOut(arguments["items"]?.casting(to: [Value].self) ?? [], useViews: false)
                     .map { Value($0) }
             )
         }
         add("list") { [unowned self] arguments in
             var lines: [String] = []
-            for item in arguments["items"]?.cast(to: [Value].self) ?? [] {
+            for item in arguments["items"]?.casting(to: [Value].self) ?? [] {
                 if !lines.isEmpty { lines.append("") }
                 if let record = item.fields {
                     lines += DisplayFormatter.keyValueLines(record, registry: displayRegistry)
@@ -91,22 +91,24 @@ extension Shell {
             return try with(env: variables) { try callBlock(body) }
         }
         add("ls") { [unowned self] arguments in
-            let paths = try (arguments["paths"]?.cast(to: [Value].self) ?? [])
-                .map { try $0.unboxed(FilePath.self) }
-            let partial = ls(paths, all: arguments["all"]?.cast(to: Bool.self) ?? false)
+            let paths = try (arguments["paths"]?.casting(to: [Value].self) ?? [])
+                .map { try $0.unboxing(FilePath.self) }
+            let partial = ls(paths, all: arguments["all"]?.casting(to: Bool.self) ?? false)
             for error in partial.errors { reportItemError("ls: \(error)") }
             return Value(partial.value.map { $0.value(in: self) })
         }
         add("ps") { [unowned self] _ in Value(ps().map { $0.value(in: self) }) }
         add("history") { [unowned self] _ in Value(historyEntries.map { Value($0) }) }
         add("readLine") { arguments in
-            readLine(strippingNewline: arguments["strippingNewline"]?.cast(to: Bool.self) ?? true)
-                .map { Value($0) }
+            readLine(
+                strippingNewline: arguments["strippingNewline"]?.casting(to: Bool.self) ?? true
+            )
+            .map { Value($0) }
                 ?? .nothing
         }
         add("shellStyled") { [unowned self] arguments in
             let text = arguments["text"]?.description ?? ""
-            let styles = try (arguments["styles"]?.cast(to: [Value].self) ?? [])
+            let styles = try (arguments["styles"]?.casting(to: [Value].self) ?? [])
                 .map { try TextStyle($0) }
             guard !styles.isEmpty, !text.isEmpty, interpreter.host.output.traits().isStyled else {
                 return Value(text)
@@ -120,7 +122,7 @@ extension Shell {
         add("capture") { [unowned self] arguments in try captureBody(arguments) }
         add("captureThrowing") { [unowned self] arguments in try captureThrowingBody(arguments) }
         add("startTask") { [unowned self] arguments in
-            guard let source = arguments["source"]?.cast(to: String.self),
+            guard let source = arguments["source"]?.casting(to: String.self),
                 let body = arguments["body"]
             else {
                 return .nothing

@@ -35,7 +35,7 @@ struct PrettyPrinter: Sendable {
         case .function: return .segments([(value.description, nil)])
         case .string: return .string(value.description)
         case .list:
-            let items = value.cast(to: [Value].self) ?? []
+            let items = value.casting(to: [Value].self) ?? []
             return .group(open: [("[", nil)], items: items.map { ([], node(for: $0)) }, close: "]")
         case .structure, .tuple:
             return value.fields.map { node(for: $0) } ?? .segments([(value.debugDescription, nil)])
@@ -58,7 +58,7 @@ struct PrettyPrinter: Sendable {
             // says it looks, in a style.
             if let output = value.commandOutput { return node(for: output.displayValue) }
             if let role = value.displayShape.role { return .segments([(value.description, role)]) }
-            guard let object = try? value.unboxed((any HostObject).self) else {
+            guard let object = try? value.unboxing((any HostObject).self) else {
                 return .segments([(value.debugDescription, nil)])
             }
             if let segments = (object as? any Presentable)?.styledSegments {

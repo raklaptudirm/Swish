@@ -17,11 +17,7 @@ final class ValueStream {
     /// output, a flow); nothing as no items, anything else as a single item.
     static func elements(of value: Value) -> ValueStream {
         if value.kind == .nothing { return .empty }
-        if let flow = value.throwingStream { return ValueStream { try flow.read() } }
-        if let items = value.items {
-            var iterator = items.makeIterator()
-            return ValueStream { iterator.next() }
-        }
+        if let items = ThrowingStream<Value>(value) { return ValueStream { try items.read() } }
         var pending: Value? = value
         return ValueStream {
             defer { pending = nil }
@@ -316,7 +312,9 @@ extension Shell {
                 boxing: ThrowingStream<Value> { try upstream.next() }
             )
             let result = try apply(to: flow)
-            if let produced = result.throwingStream { return ValueStream { try produced.read() } }
+            if let produced = ThrowingStream<Value>(result) {
+                return ValueStream { try produced.read() }
+            }
             return self.elements(of: result)
         }
     }

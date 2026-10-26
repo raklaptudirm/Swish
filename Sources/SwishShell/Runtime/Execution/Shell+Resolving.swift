@@ -55,7 +55,7 @@ extension Shell {
 
         var candidates: [() -> Stage?] = []
         // The one value a pipeline started from: its own members.
-        if let single, single.items == nil {
+        if let single, ThrowingStream<Value>(single) == nil {
             candidates.append {
                 self.stageCallee(
                     name,

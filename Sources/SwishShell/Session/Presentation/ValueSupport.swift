@@ -39,7 +39,7 @@ extension Value {
 
     /// How it looks beyond its text, said by the Swift type it is held as.
     var displayShape: DisplayShape {
-        ((try? unboxed((any Presentable).self))?.shape) ?? DisplayShape()
+        ((try? unboxing((any Presentable).self))?.shape) ?? DisplayShape()
     }
 
     /// Text with styles, held as the Swift value it is.
@@ -60,11 +60,11 @@ extension Array where Element == (key: Value, value: Value) {
 extension Value {
     fileprivate static func displaysBefore(_ a: Value, _ b: Value) -> Bool {
         func number(_ value: Value) -> Double? {
-            value.cast(to: Int.self).map(Double.init) ?? value.cast(to: Double.self)
+            value.casting(to: Int.self).map(Double.init) ?? value.casting(to: Double.self)
         }
         if let x = number(a), let y = number(b) { return x < y }
-        if let x = a.cast(to: String.self), let y = b.cast(to: String.self) { return x < y }
-        if let x = a.cast(to: Bool.self), let y = b.cast(to: Bool.self) { return !x && y }
+        if let x = a.casting(to: String.self), let y = b.casting(to: String.self) { return x < y }
+        if let x = a.casting(to: Bool.self), let y = b.casting(to: Bool.self) { return !x && y }
         return a.debugDescription < b.debugDescription
     }
 }
@@ -116,7 +116,7 @@ extension Value {
         if let id = typeID { return id.name }
         if mirror.displayStyle == .tuple { return "Tuple" }
         if isInstance(of: .function) { return "Function" }
-        return (try? unboxed((any HostObject).self))?.typeName ?? "Object"
+        return (try? unboxing((any HostObject).self))?.typeName ?? "Object"
     }
 
     /// The name of the case of an enum this is, if it is one. Swift's own mirror of an enum has one

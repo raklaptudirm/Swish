@@ -48,7 +48,9 @@ final class DisplayFormatter {
     @discardableResult
     func add(_ item: Value) -> Bool {
         if item.kind == .nothing { return true }
-        if item.kind == .list { return (item.cast(to: [Value].self) ?? []).allSatisfy { add($0) } }
+        if item.kind == .list {
+            return (item.casting(to: [Value].self) ?? []).allSatisfy { add($0) }
+        }
         if let record = item.fields {
             if columns != nil { return emit(row(record)) }
             pending.append(record)
@@ -60,7 +62,7 @@ final class DisplayFormatter {
         }
         guard flush() else { return false }
         // A Swift value with colors to show (help), on a terminal.
-        if styled, let colored = (try? item.unboxed((any Presentable).self))?.styledText {
+        if styled, let colored = (try? item.unboxing((any Presentable).self))?.styledText {
             return emit(colored)
         }
         return emit(item.description)
@@ -220,14 +222,14 @@ final class DisplayFormatter {
         case .string:
             return value.description.replacingOccurrences(of: "\n", with: "↵")
         case .list:
-            let count = value.cast(to: [Value].self)?.count ?? 0
+            let count = value.casting(to: [Value].self)?.count ?? 0
             return "[\(count) item\(count == 1 ? "" : "s")]"
         case .structure, .tuple:
             let count = value.fields?.count ?? 0
             return "{\(count) field\(count == 1 ? "" : "s")}"
         default:
             // What a Swift value's type says a table shows: a date to the minute.
-            if let displayed = try? value.unboxed((any Presentable).self) { return displayed.cell }
+            if let displayed = try? value.unboxing((any Presentable).self) { return displayed.cell }
             return value.description
         }
     }

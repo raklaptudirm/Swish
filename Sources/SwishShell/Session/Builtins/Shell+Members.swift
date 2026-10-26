@@ -6,7 +6,7 @@ extension Shell {
 
     /// The body of `members`: each type's fields and members, of the input.
     func membersBody(_ arguments: [String: Value]) throws -> Value {
-        guard let items = arguments["items"]?.cast(to: [Value].self) else {
+        guard let items = arguments["items"]?.casting(to: [Value].self) else {
             return Value([] as [Value])
         }
         var rows: [Value] = []
@@ -30,7 +30,7 @@ extension Shell {
                 }
             case .object:
                 // An object a host made, not a Swift value held as it is.
-                if let object = (try? item.unboxed(Any.self)) as? any HostObject {
+                if let object = (try? item.unboxing(Any.self)) as? any HostObject {
                     for name in object.memberNames {
                         add(object.typeName, name, object.member(name).map { $0.typeName } ?? "")
                     }

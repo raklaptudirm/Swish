@@ -91,7 +91,7 @@ extension Value {
     static func output(_ output: Output) -> Value { Value(boxing: output) }
 
     /// The command output it holds, if it's one.
-    var commandOutput: Output? { try? unboxed(Output.self) }
+    var commandOutput: Output? { try? unboxing(Output.self) }
 }
 
 extension Output: ScriptConvertible {

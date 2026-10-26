@@ -56,10 +56,10 @@ struct JSON {
         let inner = indent + "  "
         switch value.kind {
         case .nothing: return "null"
-        case .bool: return String(value.cast(to: Bool.self)!)
-        case .int: return String(value.cast(to: Int.self)!)
+        case .bool: return String(value.casting(to: Bool.self)!)
+        case .int: return String(value.casting(to: Int.self)!)
         case .double:
-            let double = value.cast(to: Double.self)!
+            let double = value.casting(to: Double.self)!
             guard double.isFinite else { throw LibraryError("to json: \(double) isn't valid JSON") }
             return String(double)
         case .string: return quoted(value.description)
@@ -79,7 +79,7 @@ struct JSON {
             )
             return "{\n" + inner + quoted(name) + ": " + carried + "\n\(indent)}"
         case .list:
-            let items = value.cast(to: [Value].self) ?? []
+            let items = value.casting(to: [Value].self) ?? []
             guard !items.isEmpty else { return "[]" }
             return "[\n"
                 + (try items.map { inner + (try text($0, indent: inner, rawValue: rawValue)) })
@@ -94,7 +94,7 @@ struct JSON {
         case .dictionary:
             guard let dictionary = value.entries, dictionary.count > 0 else { return "{}" }
             let fields = try dictionary.sortedForDisplay.map { key, value in
-                guard let name = key.cast(to: String.self) else {
+                guard let name = key.casting(to: String.self) else {
                     throw LibraryError(
                         "to json: an object's keys are Strings, and \(key.debugDescription) isn't one"
                     )
@@ -115,7 +115,7 @@ struct JSON {
             }
             // Rich text and a command's output are their text; else a Swift value is as Swift
             // encodes it (a file size is its bytes).
-            if let held = try? value.unboxed(Any.self) {
+            if let held = try? value.unboxing(Any.self) {
                 if let text = (held as? AttributedString)?.plain { return quoted(text) }
                 if let output = held as? Output { return quoted(output.text) }
                 // What a text literal can be, like a FilePath.

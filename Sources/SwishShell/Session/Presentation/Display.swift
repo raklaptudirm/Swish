@@ -50,9 +50,9 @@ extension Shell {
     private func declaredColumns(of typeName: String) -> [DisplayColumn]? {
         guard let type = interpreter[typeName],
             let list = try? interpreter.value(forMember: "columns", of: type),
-            let items = list.cast(to: [Value].self)
+            let items = list.casting(to: [Value].self)
         else { return nil }
-        let columns = items.compactMap { try? $0.unboxed(DisplayColumn.self) }
+        let columns = items.compactMap { try? $0.unboxing(DisplayColumn.self) }
         return columns.isEmpty ? nil : columns
     }
 
@@ -81,11 +81,12 @@ extension Shell {
         // A command's list reads as a pipeline's output would: records as a
         // table, anything else an item per line. A bare list is a value.
         case .list
-        where !debug || (value.cast(to: [Value].self) ?? []).contains(where: { $0.fields != nil }):
+        where !debug
+            || (value.casting(to: [Value].self) ?? []).contains(where: { $0.fields != nil }):
             let formatter = DisplayFormatter(traits: traits, registry: displayRegistry) {
                 output.write($0)
             }
-            for item in value.cast(to: [Value].self) ?? [] { formatter.add(item) }
+            for item in value.casting(to: [Value].self) ?? [] { formatter.add(item) }
             formatter.finish()
         case _ where debug:
             let printer = PrettyPrinter(width: traits.width ?? 80, styled: traits.isStyled)

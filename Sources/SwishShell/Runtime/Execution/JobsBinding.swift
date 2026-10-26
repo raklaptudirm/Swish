@@ -23,12 +23,12 @@ extension Shell {
                 return Value(latest)
             },
             "waitForJob": { [unowned self] arguments in
-                guard let job = arguments["job"]?.cast(to: Job.self) else {
+                guard let job = try? arguments["job"]?.unboxing(Job.self) else {
                     throw RuntimeError(
                         "await needs a Job, not \(arguments["job"]?.typeName ?? "nothing")"
                     )
                 }
-                let throwing = arguments["throwing"]?.cast(to: Bool.self) ?? false
+                let throwing = arguments["throwing"]?.casting(to: Bool.self) ?? false
                 // A task's value, unless it was `async $(…)`.
                 if let task = job.task, !job.givesOutput {
                     _ = try awaitJob(job)

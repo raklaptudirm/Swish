@@ -62,7 +62,7 @@ extension Shell {
         if shouldDisplay && result != Value([] as [Value]) {
             show(result)
         }
-        if let truth = result.cast(to: Bool.self) { return truth ? 0 : 1 }
+        if let truth = result.casting(to: Bool.self) { return truth ? 0 : 1 }
         return 0
     }
 

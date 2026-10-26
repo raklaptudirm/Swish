@@ -214,7 +214,9 @@ extension Shell {
 extension Shell {
     /// The body of `help`: the index, or one entry in full.
     func helpBody(_ arguments: [String: Value]) throws -> Value {
-        guard let name = arguments["name"]?.cast(to: String.self) else { return Value(helpIndex()) }
+        guard let name = arguments["name"]?.casting(to: String.self) else {
+            return Value(helpIndex())
+        }
         return Value(try helpOutput(for: name).map { Value.attributed($0) })
     }
 
