@@ -54,7 +54,7 @@ extension Output {
     /// prelude's `Status`.)
     var statusFields: Value {
         Value(
-            struct: "Status",
+            struct: NamedTypes.status,
             fields: [
                 "code": code.map { Value($0) } ?? Value.nothing,
                 "signal": signal.map { Value($0) } ?? Value.nothing,
@@ -66,7 +66,7 @@ extension Output {
     /// How a debug form lays it out: its text and status as the fields of a struct.
     var displayValue: Value {
         Value(
-            struct: "Output",
+            struct: Output.id,
             fields: [
                 "text": Value(text),
                 "status": statusFields,
@@ -77,7 +77,7 @@ extension Output {
 
 extension Value {
     /// What `$(…)` gives: a command's output, held as the Swift value it is.
-    static func output(_ output: Output) -> Value { Value(boxing: output, as: "Output") }
+    static func output(_ output: Output) -> Value { Value(boxing: output) }
 
     /// The command output it holds, if it's one.
     var commandOutput: Output? { try? unboxed(Output.self) }

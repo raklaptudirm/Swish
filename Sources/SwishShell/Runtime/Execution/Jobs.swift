@@ -84,8 +84,7 @@ final class Job: HostObject, Presentable, @unchecked Sendable {
     var lines: Value {
         guard let collector = capture else {
             return Value(
-                boxing: ThrowingStream<Value>((output?.lines ?? []).map { Value($0) }),
-                as: "ThrowingStream"
+                boxing: ThrowingStream<Value>((output?.lines ?? []).map { Value($0) })
             )
         }
         return Value(
@@ -98,8 +97,7 @@ final class Job: HostObject, Presentable, @unchecked Sendable {
                     case .pending: try shell.interpreter.checkForStop()
                     }
                 }
-            },
-            as: "ThrowingStream"
+            }
         )
     }
 

@@ -7,7 +7,7 @@ import Swiit
 struct JSON {
     /// The prelude's `JSON` holding `value`.
     static func wrap(_ value: Value) -> Value {
-        Value(struct: "JSON", fields: [(name: "raw", value: value)])
+        Value(struct: NamedTypes.json, fields: [(name: "raw", value: value)])
     }
 
     /// As `wrap`, and nil for nothing, as a field that is not there.

@@ -21,3 +21,14 @@ struct PreludeTypes {
         wrapping = declared("Wrapping")
     }
 }
+
+/// The types the shell builds values of by name: a value of the Swift type of that name, which
+/// stands for the prelude's declaration of it (`Status`, `FileEntry`).
+enum NamedTypes {
+    static let status = Symbol.ID(hostType: "Status")
+    static let fileEntry = Symbol.ID(hostType: "FileEntry")
+    static let processEntry = Symbol.ID(hostType: "ProcessEntry")
+    static let json = Symbol.ID(hostType: "JSON")
+    static let help = Symbol.ID(hostType: "Help")
+    static let member = Symbol.ID(hostType: "Member")
+}

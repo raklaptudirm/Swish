@@ -15,7 +15,7 @@ extension Shell {
             guard seen.insert("\(type).\(name)").inserted else { return }
             rows.append(
                 Value(
-                    struct: "Member",
+                    struct: NamedTypes.member,
                     fields: ["type": Value(type), "name": Value(name), "kind": Value(kind)]
                 )
             )

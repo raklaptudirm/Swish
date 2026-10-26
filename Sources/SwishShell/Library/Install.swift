@@ -81,7 +81,7 @@ extension Shell {
             }
             return Value(lines.map { Value($0) })
         }
-        add("pwd") { _ in Value(boxing: pwd(), as: "FilePath") }
+        add("pwd") { _ in Value(boxing: pwd()) }
         add("with") { [unowned self] arguments in
             var variables: [String: String] = [:]
             for (key, value) in arguments["variables"]?.entries ?? [] {
@@ -194,16 +194,16 @@ extension FileEntry {
     /// The struct `ls` gives for it.
     func value(in interpreter: Interpreter) -> Value {
         Value(
-            struct: "FileEntry",
+            struct: NamedTypes.fileEntry,
             fields: [
                 "name": Value(name),
                 "type": interpreter.value(forCase: "\(type)", in: FileType.id) ?? .nothing,
-                "size": size.value, "modified": Value(boxing: modified, as: "Date"),
+                "size": size.value, "modified": Value(boxing: modified),
                 "permissions": Value(permissions),
-                "owner": Value(owner), "created": Value(boxing: created, as: "Date"),
-                "accessed": Value(boxing: accessed, as: "Date"),
-                "path": Value(boxing: path, as: "FilePath"),
-                "target": target.map { Value(boxing: $0, as: "FilePath") } ?? .nothing,
+                "owner": Value(owner), "created": Value(boxing: created),
+                "accessed": Value(boxing: accessed),
+                "path": Value(boxing: path),
+                "target": target.map { Value(boxing: $0) } ?? .nothing,
             ]
         )
     }
@@ -213,7 +213,7 @@ extension ProcessEntry {
     /// The struct `ps` gives for it.
     func value(in interpreter: Interpreter) -> Value {
         Value(
-            struct: "ProcessEntry",
+            struct: NamedTypes.processEntry,
             fields: [
                 "pid": Value(pid), "ppid": Value(ppid), "name": Value(name), "user": Value(user),
                 "memory": memory.map { $0.value } ?? .nothing,

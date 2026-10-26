@@ -134,5 +134,5 @@ extension FileSize: ScriptConvertible {
             throw LibraryError("expected a FileSize, not \(swiitValue)")
         }
     }
-    var value: Value { Value(boxing: self, as: "FileSize") }
+    var value: Value { Value(boxing: self) }
 }
