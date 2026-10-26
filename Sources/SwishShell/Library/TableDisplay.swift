@@ -9,7 +9,7 @@ import Swiit
 /// (or of itself), if that is a `DisplayStyled` enum, as a file's name is
 /// styled by its type: `DisplayColumn("name", styledBy: "type")`; or one
 /// style for all of it: `DisplayColumn("name", style: .green)`.
-struct DisplayColumn: Sendable, ExpressibleByStringLiteral {
+struct DisplayColumn: ScriptConvertible, Sendable, ExpressibleByStringLiteral {
     public let name: String
     public let styledBy: String?
     public let style: DisplayStyle?

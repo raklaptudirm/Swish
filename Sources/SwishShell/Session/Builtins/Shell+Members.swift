@@ -29,10 +29,12 @@ extension Shell {
                     for (key, value) in fields { add(item.typeName, key, value.typeName) }
                 }
             case .object:
-                // An object a host made, not a Swift value held as it is.
-                if let object = (try? item.unboxing(Any.self)) as? any HostObject {
-                    for name in object.memberNames {
-                        add(object.typeName, name, object.member(name).map { $0.typeName } ?? "")
+                // A value that says its members, methods too: a job's, a parsed object's.
+                if let held = item.casting(toExistential: (any ScriptConvertible).self),
+                    let names = held.memberNames
+                {
+                    for name in names {
+                        add(item.typeName, name, held.member(name).map { $0.typeName } ?? "")
                     }
                 }
             case .function:

@@ -126,7 +126,7 @@ extension FileSize: ScriptConvertible {
     static let id = Symbol.ID(hostType: "FileSize")
     static var scriptType: ScriptType { .named(id) }
     init(_ swiitValue: Value) throws {
-        if let size = try? swiitValue.unboxing(FileSize.self) {
+        if let size = swiitValue.casting(to: FileSize.self) {
             self = size
         } else if let bytes = swiitValue.casting(to: Int.self) {
             self.init(bytes: bytes)
@@ -134,5 +134,4 @@ extension FileSize: ScriptConvertible {
             throw LibraryError("expected a FileSize, not \(swiitValue)")
         }
     }
-    var value: Value { Value(boxing: self) }
 }

@@ -39,12 +39,12 @@ extension Value {
 
     /// How it looks beyond its text, said by the Swift type it is held as.
     var displayShape: DisplayShape {
-        ((try? unboxing((any Presentable).self))?.shape) ?? DisplayShape()
+        (casting(toExistential: (any Presentable).self)?.shape) ?? DisplayShape()
     }
 
     /// Text with styles, held as the Swift value it is.
     static func attributed(_ text: AttributedString) -> Value {
-        Value(boxing: text)
+        Value(text)
     }
 }
 
@@ -116,7 +116,7 @@ extension Value {
         if let id = typeID { return id.name }
         if mirror.displayStyle == .tuple { return "Tuple" }
         if isInstance(of: .function) { return "Function" }
-        return (try? unboxing((any HostObject).self))?.typeName ?? "Object"
+        return "Object"
     }
 
     /// The name of the case of an enum this is, if it is one. Swift's own mirror of an enum has one

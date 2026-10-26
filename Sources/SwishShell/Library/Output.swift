@@ -88,22 +88,14 @@ extension Output {
 
 extension Value {
     /// What `$(…)` gives: a command's output, held as the Swift value it is.
-    static func output(_ output: Output) -> Value { Value(boxing: output) }
+    static func output(_ output: Output) -> Value { Value(output) }
 
     /// The command output it holds, if it's one.
-    var commandOutput: Output? { try? unboxing(Output.self) }
+    var commandOutput: Output? { casting(to: Output.self) }
 }
 
 extension Output: ScriptConvertible {
     static let id = Symbol.ID(hostType: "Output")
-    static var scriptType: ScriptType { .named(id) }
-    init(_ swiitValue: Value) throws {
-        guard let value = swiitValue.commandOutput else {
-            throw LibraryError("expected an Output, not \(swiitValue)")
-        }
-        self = value
-    }
-    var value: Value { .output(self) }
 }
 
 /// What a library function says when a value is not what it takes.

@@ -62,7 +62,7 @@ final class DisplayFormatter {
         }
         guard flush() else { return false }
         // A Swift value with colors to show (help), on a terminal.
-        if styled, let colored = (try? item.unboxing((any Presentable).self))?.styledText {
+        if styled, let colored = item.casting(toExistential: (any Presentable).self)?.styledText {
             return emit(colored)
         }
         return emit(item.description)
@@ -229,7 +229,9 @@ final class DisplayFormatter {
             return "{\(count) field\(count == 1 ? "" : "s")}"
         default:
             // What a Swift value's type says a table shows: a date to the minute.
-            if let displayed = try? value.unboxing((any Presentable).self) { return displayed.cell }
+            if let displayed = value.casting(toExistential: (any Presentable).self) {
+                return displayed.cell
+            }
             return value.description
         }
     }

@@ -2,10 +2,13 @@ import Foundation
 import Swiit
 
 /// A parsed JSON object: its fields in the order the text gave them, which a table lays out as
-/// columns. A host object that is data, since the language cannot write a tuple whose names the
-/// text decides: it is shown, selected, filtered on and encoded as any record is, and a field is
-/// read by name. Two are equal when they hold the same fields in the same order.
-final class JSONObject: HostObject {
+/// columns. The language cannot write a tuple whose names the text decides, so it is a value that
+/// says its members at run time: shown, selected, filtered on and encoded as any record is, and a
+/// field is read by name. Two are equal when they hold the same fields in the same order, as a
+/// struct's are.
+struct JSONObject: ScriptConvertible, Hashable, Sendable, CustomStringConvertible,
+    CustomDebugStringConvertible
+{
     let keys: [String]
     let fields: [String: Value]
 
@@ -14,14 +17,7 @@ final class JSONObject: HostObject {
         fields = Dictionary(pairs.map { ($0.name, $0.value) }, uniquingKeysWith: { $1 })
     }
 
-    var typeName: String { "JSONObject" }
-    var valueIdentity: AnyHashable? { Contents(keys: keys, fields: fields) }
-
-    private struct Contents: Hashable {
-        let keys: [String]
-        let fields: [String: Value]
-    }
-    var memberNames: [String] { keys }
+    var memberNames: [String]? { keys }
     func member(_ name: String) -> Value? { fields[name] }
     var description: String { "JSONObject" }
     var debugDescription: String {
@@ -115,22 +111,20 @@ struct JSON {
             }
             // Rich text and a command's output are their text; else a Swift value is as Swift
             // encodes it (a file size is its bytes).
-            if let held = try? value.unboxing(Any.self) {
-                if let text = (held as? AttributedString)?.plain { return quoted(text) }
-                if let output = held as? Output { return quoted(output.text) }
-                // What a text literal can be, like a FilePath.
-                if held is any ExpressibleByUnicodeScalarLiteral {
-                    return quoted(value.description)
-                }
-                if let encodable = held as? any Encodable {
-                    // A date as ISO 8601 text, not Swift's number of seconds.
-                    let encoder = JSONEncoder()
-                    encoder.dateEncodingStrategy = .iso8601
-                    return String(
-                        decoding: try encoder.encode(AnyEncodable(value: encodable)),
-                        as: UTF8.self
-                    )
-                }
+            if let text = value.casting(to: AttributedString.self) { return quoted(text.plain) }
+            if let output = value.casting(to: Output.self) { return quoted(output.text) }
+            // What a text literal can be, like a FilePath.
+            if value.casting(toExistential: (any ExpressibleByUnicodeScalarLiteral).self) != nil {
+                return quoted(value.description)
+            }
+            if let encodable = value.casting(toExistential: (any Encodable).self) {
+                // A date as ISO 8601 text, not Swift's number of seconds.
+                let encoder = JSONEncoder()
+                encoder.dateEncodingStrategy = .iso8601
+                return String(
+                    decoding: try encoder.encode(AnyEncodable(value: encodable)),
+                    as: UTF8.self
+                )
             }
             throw LibraryError("to json: a \(value.typeName) has no JSON form")
         }

@@ -5,7 +5,9 @@ import Swiit
 /// background (from `async` or ^Z), or Swish code running as a task of its
 /// own (`async f()`). Jobs in the background are values: `await` brings one
 /// to the foreground and waits for it, and `resume()` and `cancel()` act on it.
-final class Job: HostObject, Presentable, @unchecked Sendable {
+final class Job: ScriptConvertible, Presentable, CustomStringConvertible,
+    CustomDebugStringConvertible, @unchecked Sendable
+{
     enum State: String {
         case running, stopped, done
     }
@@ -83,12 +85,10 @@ final class Job: HostObject, Presentable, @unchecked Sendable {
     /// read, and once the job is done, from what its output has left.
     var lines: Value {
         guard let collector = capture else {
-            return Value(
-                boxing: ThrowingStream<Value>((output?.lines ?? []).map { Value($0) })
-            )
+            return Value(ThrowingStream<Value>((output?.lines ?? []).map { Value($0) }))
         }
         return Value(
-            boxing: ThrowingStream<Value> { [unowned self] in
+            ThrowingStream<Value> { [unowned self] in
                 while true {
                     switch Interpreter.whileWaiting({ collector.nextLine(timeout: 0.05) }) {
                     case .line(let line): return Value(line)
@@ -101,10 +101,9 @@ final class Job: HostObject, Presentable, @unchecked Sendable {
         )
     }
 
-    // MARK: HostObject
+    // MARK: What scripts read of it
 
     static let id = Symbol.ID(hostType: "Job")
-    var typeName: String { Job.id.description }
 
     /// What a table of jobs starts with: the state shown as it's going.
     static let columns: [DisplayColumn] = [
@@ -152,7 +151,7 @@ final class Job: HostObject, Presentable, @unchecked Sendable {
         .joined(separator: "; ")
     }
 
-    var memberNames: [String] { Job.members.map(\.name) }
+    var memberNames: [String]? { Job.members.map(\.name) }
 
     func member(_ name: String) -> Value? {
         Job.members.first { $0.name == name }?.value(self)

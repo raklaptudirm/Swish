@@ -52,7 +52,7 @@ extension Shell {
             let list = try? interpreter.value(forMember: "columns", of: type),
             let items = list.casting(to: [Value].self)
         else { return nil }
-        let columns = items.compactMap { try? $0.unboxing(DisplayColumn.self) }
+        let columns = items.compactMap { $0.casting(to: DisplayColumn.self) }
         return columns.isEmpty ? nil : columns
     }
 

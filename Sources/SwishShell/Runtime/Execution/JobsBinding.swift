@@ -23,7 +23,7 @@ extension Shell {
                 return Value(latest)
             },
             "waitForJob": { [unowned self] arguments in
-                guard let job = try? arguments["job"]?.unboxing(Job.self) else {
+                guard let job = arguments["job"]?.casting(to: Job.self) else {
                     throw RuntimeError(
                         "await needs a Job, not \(arguments["job"]?.typeName ?? "nothing")"
                     )

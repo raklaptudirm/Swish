@@ -58,19 +58,17 @@ struct PrettyPrinter: Sendable {
             // says it looks, in a style.
             if let output = value.commandOutput { return node(for: output.displayValue) }
             if let role = value.displayShape.role { return .segments([(value.description, role)]) }
-            guard let object = try? value.unboxing((any HostObject).self) else {
-                return .segments([(value.debugDescription, nil)])
-            }
-            if let segments = (object as? any Presentable)?.styledSegments {
+            if let segments = value.casting(toExistential: (any Presentable).self)?.styledSegments {
                 return .segments(segments)
             }
-            if object.typeName == "enum", object.description.hasPrefix("enum ") {
+            // A type, not data: it shows as `enum Name`.
+            if value.description.hasPrefix("enum ") {
                 return .segments([
                     ("enum", DisplayStyle.keyword), (" ", nil),
-                    (String(object.description.dropFirst(5)), DisplayStyle.type),
+                    (String(value.description.dropFirst(5)), DisplayStyle.type),
                 ])
             }
-            return value.fields.map { node(for: $0) } ?? .segments([(object.debugDescription, nil)])
+            return value.fields.map { node(for: $0) } ?? .segments([(value.debugDescription, nil)])
         }
     }
 

@@ -184,9 +184,9 @@ extension Shell {
         case .named(.array, let arguments) where arguments.count == 1:
             return (arguments[0], { Value($0) })
         case .named(.arraySlice, let arguments) where arguments.count == 1:
-            return (arguments[0], { Value(boxing: ArraySlice($0)) })
+            return (arguments[0], { Value(ArraySlice($0)) })
         case .named(.set, let arguments) where arguments.count == 1:
-            return (arguments[0], { Value(boxing: Set($0)) })
+            return (arguments[0], { Value(Set($0)) })
         default:
             return nil
         }

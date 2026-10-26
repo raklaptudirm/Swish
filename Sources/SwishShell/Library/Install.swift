@@ -23,7 +23,12 @@ extension Shell {
                 summary: "How the command exited.",
                 .property(
                     .named(Symbol.ID(hostType: "Status")),
-                    .readOnly { try $0.unboxing(Output.self).statusFields }
+                    .readOnly { receiver in
+                        guard let output = receiver.casting(to: Output.self) else {
+                            throw LibraryError("expected an Output, not \(receiver)")
+                        }
+                        return output.statusFields
+                    }
                 )
             )
         )
@@ -81,7 +86,7 @@ extension Shell {
             }
             return Value(lines.map { Value($0) })
         }
-        add("pwd") { _ in Value(boxing: pwd()) }
+        add("pwd") { _ in Value(pwd()) }
         add("with") { [unowned self] arguments in
             var variables: [String: String] = [:]
             for (key, value) in arguments["variables"]?.entries ?? [] {
@@ -92,7 +97,7 @@ extension Shell {
         }
         add("ls") { [unowned self] arguments in
             let paths = try (arguments["paths"]?.casting(to: [Value].self) ?? [])
-                .map { try $0.unboxing(FilePath.self) }
+                .map { try FilePath($0) }
             let partial = ls(paths, all: arguments["all"]?.casting(to: Bool.self) ?? false)
             for error in partial.errors { reportItemError("ls: \(error)") }
             return Value(partial.value.map { $0.value(in: self) })
@@ -187,12 +192,12 @@ extension FileEntry {
             [
                 "name": Value(name),
                 "type": shell.interpreter.value(forCase: "\(type)", in: FileType.id) ?? .nothing,
-                "size": size.value, "modified": Value(boxing: modified),
+                "size": size.value, "modified": Value(modified),
                 "permissions": Value(permissions),
-                "owner": Value(owner), "created": Value(boxing: created),
-                "accessed": Value(boxing: accessed),
-                "path": Value(boxing: path),
-                "target": target.map { Value(boxing: $0) } ?? .nothing,
+                "owner": Value(owner), "created": Value(created),
+                "accessed": Value(accessed),
+                "path": Value(path),
+                "target": target.map { Value($0) } ?? .nothing,
             ]
         )
     }
