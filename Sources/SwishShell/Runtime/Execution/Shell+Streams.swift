@@ -2,7 +2,7 @@ import Foundation
 import Swiit
 
 /// Items read one at a time, as the stages of a pipeline pass them on.
-final class ValueStream {
+final class ValueStream: @unchecked Sendable {  // safe: a stream is read by one stage at a time
     private let pull: () throws -> Value?
 
     init(_ pull: @escaping () throws -> Value?) {
@@ -12,18 +12,6 @@ final class ValueStream {
     func next() throws -> Value? { try pull() }
 
     static var empty: ValueStream { ValueStream { nil } }
-
-    /// A list flows as its elements, as does a Swift sequence (a Set, a range of Ints, a command's
-    /// output, a flow); nothing as no items, anything else as a single item.
-    static func elements(of value: Value) -> ValueStream {
-        if value.kind == .nothing { return .empty }
-        if let items = try? ThrowingStream<Value>(value) { return ValueStream { try items.read() } }
-        var pending: Value? = value
-        return ValueStream {
-            defer { pending = nil }
-            return pending
-        }
-    }
 
     /// Lines of an external program's output, read as they arrive.
     /// Reading waits through the interpreter, so other tasks run meanwhile.
@@ -306,14 +294,10 @@ extension Shell {
                 return try output!.next()
             }
         case .stream:
-            // Lazily: the stage reads upstream only as its own reader is asked, and the ThrowingStream it
+            // Lazily: the stage reads upstream only as its own reader is asked, and the stream it
             // gives is read as the next stage asks.
-            let flow = Value(ThrowingStream<Value> { try upstream.next() })
-            let result = try apply(to: flow)
-            if let produced = try? ThrowingStream<Value>(result) {
-                return ValueStream { try produced.read() }
-            }
-            return self.elements(of: result)
+            let flow = stream { try upstream.next() }
+            return self.elements(of: try apply(to: flow))
         }
     }
 
@@ -344,8 +328,17 @@ extension Shell {
         return value
     }
 
-    /// Its elements, as `ValueStream.elements(of:)` gives them, for what it wraps.
-    func elements(of value: Value) -> ValueStream {
-        .elements(of: unwrapped(value))
+    /// A list flows as its elements, as does a Swift sequence (a Set, a range of Ints, a command's
+    /// output, a stream); nothing as no items, anything else as a single item. What a value wraps
+    /// is what flows.
+    func elements(of wrapped: Value) -> ValueStream {
+        let value = unwrapped(wrapped)
+        if value.kind == .nothing { return .empty }
+        if let read = reader(of: value) { return ValueStream(read) }
+        var pending: Value? = value
+        return ValueStream {
+            defer { pending = nil }
+            return pending
+        }
     }
 }

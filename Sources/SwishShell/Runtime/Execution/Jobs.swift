@@ -79,26 +79,24 @@ final class Job: ScriptConvertible, Presentable, CustomStringConvertible,
         }
     }
 
-    /// `job.lines()`: its output a line at a time, as the lines arrive: a `ThrowingStream` to read
+    /// `job.lines()`: its output a line at a time, as the lines arrive: a stream to read
     /// while the job runs (`async $(tail -f log)`), which waits for the next
     /// line, or ends when the output does. Reading goes on from the last line
     /// read, and once the job is done, from what its output has left.
     var lines: Value {
         guard let collector = capture else {
-            return Value(ThrowingStream<Value>((output?.lines ?? []).map { Value($0) }))
+            return shell.stream(of: (output?.lines ?? []).map { Value($0) })
         }
-        return Value(
-            ThrowingStream<Value> { [unowned self] in
-                while true {
-                    switch Interpreter.whileWaiting({ collector.nextLine(timeout: 0.05) }) {
-                    case .line(let line): return Value(line)
-                    case .end: return nil
-                    // Waiting for a line is where Ctrl-C has to be noticed.
-                    case .pending: try shell.interpreter.checkForStop()
-                    }
+        return shell.stream { [unowned self] in
+            while true {
+                switch Interpreter.whileWaiting({ collector.nextLine(timeout: 0.05) }) {
+                case .line(let line): return Value(line)
+                case .end: return nil
+                // Waiting for a line is where Ctrl-C has to be noticed.
+                case .pending: try shell.interpreter.checkForStop()
                 }
             }
-        )
+        }
     }
 
     // MARK: What scripts read of it

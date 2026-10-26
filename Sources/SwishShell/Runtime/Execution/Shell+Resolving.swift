@@ -55,7 +55,7 @@ extension Shell {
 
         var candidates: [() -> Stage?] = []
         // The one value a pipeline started from: its own members.
-        if let single, (try? ThrowingStream<Value>(single)) == nil {
+        if let single, reader(of: single) == nil {
             candidates.append {
                 self.stageCallee(
                     name,
@@ -66,8 +66,12 @@ extension Shell {
             }
         }
         candidates.append {
-            self.stageCallee(name, of: .named(.throwingStream, [element]), receiver: .stream)
-                .map(function)
+            self.stageCallee(
+                name,
+                of: .named(self.preludeTypes.stream, [element]),
+                receiver: .stream
+            )
+            .map(function)
         }
         // The items collected: what every sequence has, and the list's own.
         candidates.append {

@@ -395,7 +395,7 @@ private let streaming = """
     let text = try output("func greet(_ name: String) {}; which greet cd prefix cat")
     #expect(
         text.hasPrefix(
-            "greet: function greet(_ name: String)\ncd: shell builtin\nprefix: sequence method prefix(_ maxLength: Int) -> ThrowingStream<Any>\n/"
+            "greet: function greet(_ name: String)\ncd: shell builtin\nprefix: sequence method prefix(_ maxLength: Int) -> ThrowingStream\n/"
         )
     )
     #expect(text.hasSuffix("/cat\n"))

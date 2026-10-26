@@ -48,6 +48,59 @@ extension Shell {
             bodies[name] = body
         }
 
+        // The stream's operators that run for every item.
+        func streamOperator(
+            _ name: String,
+            _ parameter: String,
+            _ make:
+                @escaping @Sendable (
+                    _ interpreter: Interpreter, _ source: @escaping () throws -> Value?,
+                    _ body: Value,
+                    _ arguments: [String: Value]
+                ) -> () throws -> Value?
+        ) {
+            add("ThrowingStream.\(name)") { [unowned self] arguments in
+                guard let receiver = arguments["self"], let source = reader(of: receiver),
+                    let body = arguments[parameter]
+                else { return .nothing }
+                return stream(make(interpreter, source, body, arguments))
+            }
+        }
+        streamOperator("filter", "isIncluded") { interpreter, source, test, _ in
+            {
+                while let item = try source() {
+                    if try interpreter.call(test, with: [item]).casting(to: Bool.self) == true {
+                        return item
+                    }
+                }
+                return nil
+            }
+        }
+        streamOperator("map", "transform") { interpreter, source, transform, _ in
+            { try source().map { try interpreter.call(transform, with: [$0]) } }
+        }
+        streamOperator("compactMap", "transform") { interpreter, source, transform, _ in
+            {
+                while let item = try source() {
+                    let mapped = try interpreter.call(transform, with: [item])
+                    if mapped.kind != .nothing { return mapped }
+                }
+                return nil
+            }
+        }
+        add("ThrowingStream.prefix") { [unowned self] arguments in
+            guard let receiver = arguments["self"], let source = reader(of: receiver) else {
+                return .nothing
+            }
+            let limit = arguments["maxLength"]?.casting(to: Int.self) ?? 1
+            nonisolated(unsafe) var taken = 0
+            return stream {
+                guard taken < limit else { return nil }
+                taken += 1
+                return try source()
+            }
+        }
+
         add("from") { [unowned self] arguments in
             guard let text = arguments["text"]?.casting(to: [String].self) else { return .nothing }
             switch try InputFormat(arguments["format"] ?? .nothing) {

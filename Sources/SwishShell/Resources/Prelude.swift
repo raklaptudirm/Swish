@@ -61,6 +61,71 @@ protocol Tabular {
     static var columns: [DisplayColumn] { get }
 }
 
+/// Items read one at a time, as the stages of a pipeline and a job's lines give them: the work is
+/// done as each is asked for, so a stream can be endless. `for` reads it, and `for try await` too,
+/// as reading can wait.
+struct ThrowingStream<Element> {
+    /// The next item, in a list of one so that an item that is nil is not the end, or nil when
+    /// there are no more.
+    let read: () throws -> [Element]?
+    /// What the shell reads one made by itself with, which skips calling `read`.
+    var source: Any? = nil
+
+    func makeIterator() -> ThrowingStream<Element> { self }
+    func makeAsyncIterator() -> ThrowingStream<Element> { self }
+    func next() throws -> Element? { try read()?.first }
+
+    /// A stream of `items`.
+    static func of(_ items: [Element]) -> ThrowingStream<Element> {
+        var index = 0
+        return ThrowingStream<Element> {
+            if index >= items.count { return nil }
+            index += 1
+            return [items[index - 1]]
+        }
+    }
+
+    // These four are in Swift (Library/Install.swift), as they run once for every item.
+
+    /// The items for which the predicate returns true.
+    func filter(_ isIncluded: (Element) throws -> Bool) -> ThrowingStream<Element>
+
+    /// Each item transformed, nil results included, as Swift's map.
+    func map<T>(_ transform: (Element) throws -> T) -> ThrowingStream<T>
+
+    /// Each item transformed, nil results dropped.
+    func compactMap<T>(_ transform: (Element) throws -> T?) -> ThrowingStream<T>
+
+    /// The first items; stops reading after them.
+    func prefix(_ maxLength: Int = 1) -> ThrowingStream<Element>
+
+    /// The items in the opposite order.
+    func reversed() throws -> ThrowingStream<Element> {
+        var items: [Element] = []
+        while let item = try read() { items += item }
+        return ThrowingStream<Element>.of(items.reversed())
+    }
+
+    /// The first item, if there is one.
+    var first: Element? { try? read()?.first }
+
+    /// The first item the predicate accepts.
+    func first(where predicate: (Element) throws -> Bool) throws -> Element? {
+        while let item = try read() {
+            if try predicate(item[0]) { return item[0] }
+        }
+        return nil
+    }
+
+    /// Whether the predicate accepts an item.
+    func contains(where predicate: (Element) throws -> Bool) throws -> Bool {
+        while let item = try read() {
+            if try predicate(item[0]) { return true }
+        }
+        return false
+    }
+}
+
 /// A command or task started in the background, which `await` joins and
 /// `jobs` lists. What scripts may use of it is what the shell's jobs have
 /// (Jobs.swift); a `Job<Int>` is one of these too.

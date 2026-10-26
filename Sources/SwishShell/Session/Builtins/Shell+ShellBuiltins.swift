@@ -311,7 +311,7 @@ extension Shell {
         for name in args {
             if let methods = stageCallee(
                 name,
-                of: .named(.throwingStream, [.any]),
+                of: streamType,
                 receiver: .stream
             )
                 ?? (stageNames.sequence.contains(name)

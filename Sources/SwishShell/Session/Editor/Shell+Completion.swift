@@ -36,7 +36,7 @@ extension Shell {
         } else if word.hasPrefix("-") && context.quote == nil,
             let functions = stageCallee(
                 context.words[0],
-                of: .named(.throwingStream, [.any]),
+                of: streamType,
                 receiver: .stream
             )
                 ?? stageCallee(context.words[0], of: .list(.any), receiver: .collected)
@@ -77,7 +77,7 @@ extension Shell {
             }
             for name in stageNames.methods {
                 let callee =
-                    stageCallee(name, of: .named(.throwingStream, [.any]), receiver: .stream)
+                    stageCallee(name, of: streamType, receiver: .stream)
                     ?? stageCallee(name, of: .list(.any), receiver: .collected)
                 guard let callee,
                     stageNames.streams.contains(name)

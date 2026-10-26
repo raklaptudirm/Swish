@@ -62,8 +62,11 @@ extension Shell {
         names.sequence = Set(
             interpreter.symbols(in: .named(.sequence)).filter { $0.function != nil }.map(\.name)
         )
-        for symbol in interpreter.symbols(in: .named(.throwingStream, [.any])) {
-            if case .named(.throwingStream, _)? = symbol.function?.returns {
+        // The stream's operators: what `for` reads it with is not one.
+        let reading: Set = ["makeIterator", "makeAsyncIterator", "next", "read"]
+        for symbol in interpreter.symbols(in: streamType) where !reading.contains(symbol.name) {
+            add(symbol)
+            if case .named(preludeTypes.stream, _)? = symbol.function?.returns {
                 names.streams.insert(symbol.name)
             }
         }
@@ -114,7 +117,7 @@ extension Shell {
     /// What `name` is after a `|`: a method of the items as they come (a `ThrowingStream`'s), or what every
     /// sequence has, or one of any type's. In the order the stage looks.
     func stageMethods(named name: String) -> Callee? {
-        stageCallee(name, of: .named(.throwingStream, [.any]), receiver: .stream)
+        stageCallee(name, of: streamType, receiver: .stream)
             ?? stageCallee(name, of: .list(.any), receiver: .collected)
             ?? stageFunctions(named: name)
     }
