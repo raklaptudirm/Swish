@@ -53,23 +53,6 @@ extension DisplayColumn {
         .property("styledBy", \.styledBy)
 }
 
-extension Status: ScriptConvertible {
-    static let id = Symbol.ID(hostType: "Status")
-    static var scriptType: ScriptType { .named(id) }
-    init(_ value: Value) throws {
-        guard value.is(Status.id),
-            let succeeded = value.field("succeeded")?.cast(to: Bool.self)
-        else {
-            throw LibraryError("expected a Status, not \(value)")
-        }
-        self.init(
-            code: value.field("code")?.cast(to: Int.self),
-            signal: value.field("signal")?.cast(to: Int.self),
-            succeeded: succeeded
-        )
-    }
-}
-
 extension Output {
     static let native = HostType.Builder<Output>("Output")
         .property("text", \.text)
@@ -77,7 +60,6 @@ extension Output {
         .property("code", \.code)
         .property("signal", \.signal)
         .property("succeeded", \.succeeded)
-        .property("status", \.status)
         .property("count", \.count)
         .property("isEmpty", \.isEmpty)
         .property("first", \.first)

@@ -122,7 +122,7 @@ final class Job: HostObject, Presentable, @unchecked Sendable {
             { job in
                 job.shell.interpreter.value(
                     forCase: job.cancelled && job.state == .done ? "cancelled" : job.state.rawValue,
-                    in: PreludeTypes.jobState
+                    in: job.shell.preludeTypes.jobState
                 ) ?? .nothing
             }
         ),

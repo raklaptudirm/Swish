@@ -79,6 +79,10 @@ public final class Shell: @unchecked Sendable {
 
     var staticMembers: [String: [Symbol]] = [:]
 
+    /// What the prelude declared that Swift code builds values of; set once, at the end of
+    /// `installLibrary`, which is why it is not a `let`.
+    var preludeTypes: PreludeTypes!
+
     /// What's been entered at the prompt: this shell's history, or the
     /// history file's outside the interactive shell.
     var historyEntries: [String] {

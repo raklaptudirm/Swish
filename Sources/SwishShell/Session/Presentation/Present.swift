@@ -8,7 +8,7 @@ extension Shell {
         let attributes = callee?.attributes ?? []
         let awaitedToTerminal = attributes.contains(named: "alreadyShown") && value.showsNothing
         // A command's `Status` is recorded as the status, not shown.
-        if value.is(Status.id) { return }
+        if value.isInstance(of: preludeTypes.status) { return }
         guard !attributes.contains(named: "discardableResult"), !awaitedToTerminal else { return }
         show(value, debug: true)
     }

@@ -93,7 +93,8 @@ extension Shell {
             throw RuntimeError.commandFailure(
                 "$(…) failed with status \(status)",
                 status: status,
-                output: output
+                output: output,
+                types: preludeTypes
             )
         }
         return .output(output)
@@ -120,7 +121,8 @@ extension Shell {
             throw RuntimeError.commandFailure(
                 "\(source(commands, from: input)) failed with status \(status)",
                 status: status,
-                output: Output(text: "", code: code, signal: signal)
+                output: Output(text: "", code: code, signal: signal),
+                types: preludeTypes
             )
         }
         return statusValue(status)
@@ -145,7 +147,7 @@ extension Shell {
     /// `Output` how its command ended; anything else succeeded.
     func status(of value: Value) -> Int32 {
         if let truth = value.cast(to: Bool.self) { return truth ? 0 : 1 }
-        if value.is(Status.id),
+        if value.isInstance(of: preludeTypes.status),
             let succeeded = value.field("succeeded")?.cast(to: Bool.self)
         {
             if succeeded { return 0 }
@@ -164,7 +166,7 @@ extension Shell {
     func statusValue(_ status: Int32) -> Value {
         let (code, signal) = exitCode(status)
         return Value(
-            struct: "Status",
+            struct: preludeTypes.status,
             fields: [
                 "code": code.map { Value($0) } ?? Value.nothing,
                 "signal": signal.map { Value($0) } ?? Value.nothing,
@@ -184,14 +186,14 @@ extension Shell {
                 return command.description
             }
             return (command.field("isExternal")?.cast(to: Bool.self) == true ? "^" : "")
-                + words.map(Shell.shellWord).joined(separator: " ")
+                + words.map { shellWord($0) }.joined(separator: " ")
         }
         return ((input.map { [$0.debugDescription] } ?? []) + typed).joined(separator: " | ")
     }
 
     /// A word as a shell would show it: quoted when it has spaces or quotes.
-    private static func shellWord(_ value: Value) -> String {
-        if value.is(PreludeTypes.glob),
+    private func shellWord(_ value: Value) -> String {
+        if value.isInstance(of: preludeTypes.glob),
             let pattern = value.field("pattern")?.cast(to: String.self)
         {
             return Glob.unescape(pattern)
@@ -260,10 +262,10 @@ extension Shell {
             return [.text(word.description)]
         case .function:
             return [.value(word)]
-        case .structure where word.is(PreludeTypes.glob):
+        case .structure where word.isInstance(of: preludeTypes.glob):
             guard let pattern = word.field("pattern")?.cast(to: String.self) else { return [] }
             return try expand(pattern).map(CommandArgument.text)
-        case .structure where word.is(PreludeTypes.spread):
+        case .structure where word.isInstance(of: preludeTypes.spread):
             guard let items = word.field("value")?.cast(to: [Value].self) else {
                 return [.text(word.field("value")?.description ?? "")]
             }

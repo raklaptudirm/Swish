@@ -40,7 +40,8 @@ extension Shell {
                     throw RuntimeError.commandFailure(
                         "\(job.source) failed with status \(job.status)",
                         status: job.status,
-                        output: output
+                        output: output,
+                        types: preludeTypes
                     )
                 }
                 return .output(output)

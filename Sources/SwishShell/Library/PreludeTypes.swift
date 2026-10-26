@@ -1,12 +1,23 @@
 import Swiit
 
-/// The types the prelude declares and Swift code tells values apart by. `installLibrary` checks
-/// that each is declared, so a rename in the prelude stops the shell at startup, not at a use.
-enum PreludeTypes {
-    static let glob = Symbol.ID(hostType: "Glob")
-    static let spread = Symbol.ID(hostType: "Spread")
-    static let jobState = Symbol.ID(hostType: "JobState")
-    static let wrapping = Symbol.ID(hostType: "Wrapping")
+/// The types the prelude declares, which Swift code builds values of and tells values apart by.
+/// Asked of the interpreter once, after the prelude loads: a name the prelude no longer declares
+/// stops the shell at startup, not at a use.
+struct PreludeTypes {
+    let status, commandFailure, glob, spread, jobState, wrapping: Symbol.ID
 
-    static var all: [Symbol.ID] { [Status.id, glob, spread, jobState, wrapping] }
+    init(_ interpreter: Interpreter) {
+        func declared(_ name: String) -> Symbol.ID {
+            guard let id = interpreter.typeID(named: name) else {
+                preconditionFailure("the shell's prelude declares no \(name)")
+            }
+            return id
+        }
+        status = declared("Status")
+        commandFailure = declared("CommandFailure")
+        glob = declared("Glob")
+        spread = declared("Spread")
+        jobState = declared("JobState")
+        wrapping = declared("Wrapping")
+    }
 }

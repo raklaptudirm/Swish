@@ -18,7 +18,7 @@ private func fileType(_ name: String) -> Value {
         .nothing, Value(3), Value("tab\there"), Value([Value(1), Value("x"), .nothing]),
         Value(tuple: ["k": Value("v")]),
         Value(tuple: [(name: String, value: Value)]()),
-        .output(status), status.status.value, fileType("directory"),
+        .output(status), status.statusFields, fileType("directory"),
     ]
     for value in values {
         #expect(wide.format(value) == value.debugDescription)

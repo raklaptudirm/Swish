@@ -27,11 +27,6 @@ struct Output: Sendable, Hashable, RandomAccessCollection {
         code == 0
     }
 
-    /// `output.status`: how the command exited.
-    public var status: Status {
-        Status(code: code, signal: signal, succeeded: succeeded)
-    }
-
     // MARK: Collection of lines
 
     public typealias Element = String
@@ -42,19 +37,6 @@ struct Output: Sendable, Hashable, RandomAccessCollection {
     public subscript(position: Int) -> String { lines[position] }
 }
 
-/// How a command exited: `output.status`.
-struct Status: Sendable, Hashable, Encodable {
-    public let code: Int?
-    public let signal: Int?
-    public let succeeded: Bool
-
-    public init(code: Int?, signal: Int?, succeeded: Bool) {
-        self.code = code
-        self.signal = signal
-        self.succeeded = succeeded
-    }
-}
-
 extension Output: CustomStringConvertible, CustomDebugStringConvertible, Presentable {
     var description: String { text }
     /// Shown as its text and status, and nothing at all if it's empty.
@@ -62,26 +44,32 @@ extension Output: CustomStringConvertible, CustomDebugStringConvertible, Present
     /// One line in a table: its newlines shown as ↵.
     var cell: String { text.replacingOccurrences(of: "\n", with: "↵") }
     var debugDescription: String {
-        "Output(text: \(Value(text).debugDescription), status: \(status.value.debugDescription))"
+        "Output(text: \(Value(text).debugDescription), status: \(statusFields.debugDescription))"
     }
 }
 
 extension Output {
-    /// How a debug form lays it out: its text and status as the fields of a struct.
-    var displayValue: Value {
-        Value(struct: "Output", fields: ["text": Value(text), "status": status.value])
-    }
-}
-
-extension Status {
-    /// The struct `output.status` is, with every field there.
-    var value: Value {
+    /// How it exited, laid out as the struct `output.status` is, for showing: a struct of the
+    /// Swift type `Status`, by name, so it is shown as one. (`output.status` itself is the
+    /// prelude's `Status`.)
+    var statusFields: Value {
         Value(
             struct: "Status",
             fields: [
                 "code": code.map { Value($0) } ?? Value.nothing,
                 "signal": signal.map { Value($0) } ?? Value.nothing,
                 "succeeded": Value(succeeded),
+            ]
+        )
+    }
+
+    /// How a debug form lays it out: its text and status as the fields of a struct.
+    var displayValue: Value {
+        Value(
+            struct: "Output",
+            fields: [
+                "text": Value(text),
+                "status": statusFields,
             ]
         )
     }

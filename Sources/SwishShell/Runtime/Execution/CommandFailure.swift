@@ -17,15 +17,20 @@ extension Diagnostic {
 
     /// A command that failed under `try`: what `catch` binds is a `CommandFailure`, with how it
     /// ended (`status.code`, `status.signal`) and the `text` it wrote.
-    static func commandFailure(_ message: String, status: Int32, output: Output) -> Diagnostic {
+    static func commandFailure(
+        _ message: String,
+        status: Int32,
+        output: Output,
+        types: PreludeTypes
+    ) -> Diagnostic {
         .runtime(
             message,
             thrown: Value(
-                struct: "CommandFailure",
+                struct: types.commandFailure,
                 fields: [
                     "message": Value(message),
                     "status": Value(
-                        struct: "Status",
+                        struct: types.status,
                         fields: [
                             "code": output.code.map { Value($0) } ?? Value.nothing,
                             "signal": output.signal.map { Value($0) } ?? Value.nothing,

@@ -13,18 +13,27 @@ extension Shell {
         interpreter.register(FileSize.native)
         interpreter.register(Date.native)
         interpreter.register(DisplayColumn.native)
-        interpreter.register(Output.native)
+        // `output.status` is a struct of the prelude's `Status`, which the Swift type cannot name
+        // (host types are process-wide, and the prelude's are each interpreter's), so it is one
+        // by name: a value of the Swift type `Status`, which stands for the prelude's.
+        var output = Output.native.type
+        output.members.append(
+            HostType.Member(
+                "status",
+                summary: "How the command exited.",
+                .property(
+                    .named(Symbol.ID(hostType: "Status")),
+                    .readOnly { try $0.unboxed(Output.self).statusFields }
+                )
+            )
+        )
+        interpreter.register(output)
         do {
             try interpreter.declare(prelude: Shell.prelude, bodies: preludeBodies)
         } catch {
             preconditionFailure("the shell's declarations: \(error)")
         }
-        for id in PreludeTypes.all {
-            precondition(
-                interpreter.typeID(named: id.description) != nil,
-                "the shell's prelude declares no \(id)"
-            )
-        }
+        preludeTypes = PreludeTypes(interpreter)
     }
 
     /// The Swift bodies of the declarations, by name.
