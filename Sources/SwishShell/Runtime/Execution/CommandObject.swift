@@ -276,5 +276,7 @@ extension Shell {
 
 extension Value {
     /// The field of a struct value, by name.
-    func field(_ name: String) -> Value? { entries?[Value(name)] }
+    func field(_ name: String) -> Value? {
+        entries?.first { $0.key == Value(name) }?.value
+    }
 }

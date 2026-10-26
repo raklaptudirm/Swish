@@ -47,3 +47,24 @@ extension Value {
         Value(boxing: text, as: "AttributedString")
     }
 }
+
+extension Array where Element == (key: Value, value: Value) {
+    /// The entries sorted by key, so a dictionary is shown the same way every time: numbers by
+    /// value, strings as Swift sorts them, `false` before `true`, and anything else by how it is
+    /// written.
+    var sortedForDisplay: [(key: Value, value: Value)] {
+        sorted { Value.displaysBefore($0.key, $1.key) }
+    }
+}
+
+extension Value {
+    fileprivate static func displaysBefore(_ a: Value, _ b: Value) -> Bool {
+        func number(_ value: Value) -> Double? {
+            value.cast(to: Int.self).map(Double.init) ?? value.cast(to: Double.self)
+        }
+        if let x = number(a), let y = number(b) { return x < y }
+        if let x = a.cast(to: String.self), let y = b.cast(to: String.self) { return x < y }
+        if let x = a.cast(to: Bool.self), let y = b.cast(to: Bool.self) { return !x && y }
+        return a.debugDescription < b.debugDescription
+    }
+}

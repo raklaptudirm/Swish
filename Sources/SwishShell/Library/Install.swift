@@ -62,7 +62,7 @@ extension Shell {
         add("pwd") { _ in Value(boxing: pwd(), as: "FilePath") }
         add("with") { [unowned self] arguments in
             var variables: [String: String] = [:]
-            for (key, value) in arguments["variables"]?.entries ?? Value.Dictionary() {
+            for (key, value) in arguments["variables"]?.entries ?? [] {
                 variables[key.description] = value.description
             }
             guard let body = arguments["body"] else { return .nothing }

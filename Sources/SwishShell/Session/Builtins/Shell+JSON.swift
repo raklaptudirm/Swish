@@ -15,7 +15,8 @@ extension Shell {
                 case .structure, .tuple:
                     guard let name = key.cast(to: String.self) else { return .nothing }
                     return JSON.wrapping(value.field(name))
-                case .dictionary: return JSON.wrapping(value.entries?[key])
+                case .dictionary:
+                    return JSON.wrapping(value.entries?.first { $0.key == key }?.value)
                 case .list:
                     guard let index = key.cast(to: Int.self),
                         let items = value.cast(to: [Value].self)
@@ -48,7 +49,12 @@ extension Shell {
                 switch $0.kind {
                 case .structure, .tuple, .dictionary:
                     $0.entries.map { entries in
-                        Value(Value.Dictionary(entries.map { ($0.key, JSON.wrap($0.value)) }))
+                        Value(
+                            Dictionary(
+                                entries.map { ($0.key, JSON.wrap($0.value)) },
+                                uniquingKeysWith: { $1 }
+                            )
+                        )
                     } ?? .nothing
                 default: .nothing
                 }
