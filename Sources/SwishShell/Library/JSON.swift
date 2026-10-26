@@ -43,19 +43,17 @@ struct JSON {
             // A raw value, or the case's name; with associated values, a
             // struct of them under the case's name.
             guard let found = value.enumCase else { return "null" }
-            if let raw = value.rawValue { return try text(raw, indent: indent) }
-            guard !found.values.isEmpty else { return quoted(found.name) }
-            let fields = found.values.enumerated()
-                .map { index, item in
-                    (
-                        name: (found.labels.indices.contains(index) ? found.labels[index] : nil)
-                            ?? String(index),
-                        value: item
-                    )
-                }
+            if let raw = found.rawValue { return try text(raw, indent: indent) }
+            let payload = found.payload
+            guard !payload.isEmpty else { return quoted(found.name) }
             return try text(
                 Value(
-                    tuple: [(name: found.name, value: Value(tuple: fields))]
+                    tuple: [
+                        (
+                            name: found.name,
+                            value: Value(tuple: payload.map { (name: $0.key, value: $0.value) })
+                        )
+                    ]
                 ),
                 indent: indent
             )

@@ -92,18 +92,13 @@ struct PrettyPrinter: Sendable {
         return (key.debugDescription, DisplayStyle.constant)
     }
 
-    private func node(
-        for value: (type: String, name: String, values: [Value], labels: [String?])
-    ) -> Node {
-        let head: [Segment] = [(value.type, DisplayStyle.type), ("." + value.name, nil)]
-        guard !value.values.isEmpty else { return .segments(head) }
-        let items = value.values.enumerated()
-            .map { index, item in
-                (
-                    index < value.labels.count ? value.labels[index].map(label) ?? [] : [],
-                    node(for: item)
-                )
-            }
+    private func node(for value: Value.EnumCase) -> Node {
+        let head: [Segment] = [(value.typeName, DisplayStyle.type), ("." + value.name, nil)]
+        let payload = value.payload
+        guard !payload.isEmpty else { return .segments(head) }
+        let items = payload.map { field in
+            (Fields.isPosition(field.key) ? [] : label(field.key), node(for: field.value))
+        }
         return .group(open: head + [("(", nil)], items: items, close: ")")
     }
 
