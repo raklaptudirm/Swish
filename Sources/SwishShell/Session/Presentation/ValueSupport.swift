@@ -77,10 +77,52 @@ enum ValueKind {
 }
 
 extension Value {
+    /// What it is made of, read as any Swift value is: its shape (`displayStyle`) and children.
+    var mirror: Mirror { Mirror(reflecting: self) }
+
+    /// A structured value's fields as ordered pairs: a dictionary's (in no particular order), the
+    /// fields of a tuple or a struct by name (a tuple's unlabeled ones by position, "0", "1"), or
+    /// the data of a host's object. Nil for any other value.
+    var entries: [(key: Value, value: Value)]? {
+        let mirror = self.mirror
+        switch mirror.displayStyle {
+        case .dictionary:
+            return mirror.children.compactMap { $0.value as? (key: Value, value: Value) }
+        case .tuple, .struct, .class:
+            return mirror.children.enumerated()
+                .compactMap { index, child in
+                    (child.value as? Value)
+                        .map { (key: Value(child.label ?? String(index)), value: $0) }
+                }
+        default:
+            return nil
+        }
+    }
+
+    /// What a case of an enum carries, as `entries` has a tuple's: each value under its label or
+    /// its position. Swift's mirror of an enum has one child, labeled with the case's name, whose
+    /// value is the one thing carried or a tuple of them.
+    var enumPayload: [(key: String, value: Value)] {
+        guard let carried = mirror.children.first?.value as? Value else { return [] }
+        if carried.mirror.displayStyle == .tuple, let fields = carried.entries {
+            return fields.map { (key: $0.key.description, value: $0.value) }
+        }
+        return [(key: "0", value: carried)]
+    }
+
+    /// The name of its type, as errors and tables say it: the type's name, `Tuple` or `Function`,
+    /// or what a host's object calls itself.
+    var typeName: String {
+        if let id = typeID { return id.name }
+        if mirror.displayStyle == .tuple { return "Tuple" }
+        if isInstance(of: .function) { return "Function" }
+        return (try? unboxed((any HostObject).self))?.typeName ?? "Object"
+    }
+
     var kind: ValueKind {
         guard let id = typeID else {
-            if tuple != nil { return .tuple }
-            return function != nil ? .function : .object
+            if mirror.displayStyle == .tuple { return .tuple }
+            return isInstance(of: .function) ? .function : .object
         }
         if id == .int { return .int }
         if id == .string { return .string }
@@ -89,8 +131,10 @@ extension Value {
         if id == .array { return .list }
         if id == .dictionary { return .dictionary }
         if id == .optional && self == .nothing { return .nothing }
-        if structure != nil { return .structure }
-        if enumCase != nil { return .enumeration }
-        return .object
+        switch mirror.displayStyle {
+        case .struct: return .structure
+        case .enum: return .enumeration
+        default: return .object
+        }
     }
 }

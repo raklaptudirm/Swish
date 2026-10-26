@@ -44,7 +44,7 @@ struct JSON {
             // struct of them under the case's name.
             guard let found = value.enumCase else { return "null" }
             if let raw = found.rawValue { return try text(raw, indent: indent) }
-            let payload = found.payload
+            let payload = value.enumPayload
             guard !payload.isEmpty else { return quoted(found.name) }
             return try text(
                 Value(

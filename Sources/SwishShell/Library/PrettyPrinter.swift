@@ -51,7 +51,7 @@ struct PrettyPrinter: Sendable {
                     close: "]"
                 )
         case .enumeration:
-            return value.enumCase.map { node(for: $0) }
+            return value.enumCase.map { node(for: $0, of: value) }
                 ?? .segments([(value.debugDescription, nil)])
         case .object:
             // A command's output is laid out as the struct it is; any other Swift value as its type
@@ -92,9 +92,9 @@ struct PrettyPrinter: Sendable {
         return (key.debugDescription, DisplayStyle.constant)
     }
 
-    private func node(for value: Value.EnumCase) -> Node {
-        let head: [Segment] = [(value.typeName, DisplayStyle.type), ("." + value.name, nil)]
-        let payload = value.payload
+    private func node(for value: Value.EnumCase, of enumValue: Value) -> Node {
+        let head: [Segment] = [(value.id.name, DisplayStyle.type), ("." + value.name, nil)]
+        let payload = enumValue.enumPayload
         guard !payload.isEmpty else { return .segments(head) }
         let items = payload.map { field in
             (Fields.isPosition(field.key) ? [] : label(field.key), node(for: field.value))
