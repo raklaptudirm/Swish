@@ -105,7 +105,8 @@ final class Job: HostObject, Presentable, @unchecked Sendable {
 
     // MARK: HostObject
 
-    var typeName: String { "Job" }
+    static let id = Symbol.ID(declaring: "Job")
+    var typeName: String { Job.id.description }
 
     /// What a table of jobs starts with: the state shown as it's going.
     static let columns: [DisplayColumn] = [
@@ -121,7 +122,7 @@ final class Job: HostObject, Presentable, @unchecked Sendable {
             { job in
                 job.shell.interpreter.value(
                     forCase: job.cancelled && job.state == .done ? "cancelled" : job.state.rawValue,
-                    in: "JobState"
+                    in: PreludeTypes.jobState
                 ) ?? .nothing
             }
         ),

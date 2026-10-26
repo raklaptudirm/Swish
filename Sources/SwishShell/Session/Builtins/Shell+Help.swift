@@ -177,7 +177,7 @@ extension Shell {
 
     /// A type as `--help` shows it: an enum as its choices.
     private func placeholder(_ type: ScriptType) -> String {
-        if case .named(let name, _) = type, let found = typeMembers(named: name),
+        if case .named(let name, _) = type, let found = typeMembers(named: name.description),
             found.kind == "enum"
         {
             return plainCases(of: found.members).joined(separator: "|")

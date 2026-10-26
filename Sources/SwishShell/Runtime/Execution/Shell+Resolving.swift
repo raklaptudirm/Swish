@@ -66,7 +66,7 @@ extension Shell {
             }
         }
         candidates.append {
-            self.stageCallee(name, of: .named("ThrowingStream", [element]), receiver: .stream)
+            self.stageCallee(name, of: .named(.throwingStream, [element]), receiver: .stream)
                 .map(function)
         }
         // The items collected: what every sequence has, and the list's own.
@@ -109,8 +109,10 @@ extension Shell {
                             .first(where: { $0.name == "Element" })?
                             .constraints ?? [])
                             .compactMap({ constraint -> String? in
-                                guard case .conforms(let proto) = constraint else { return nil }
-                                return self.interpreter.conforms(element, to: proto.description)
+                                guard case .conforms(.named(let proto, _)) = constraint else {
+                                    return nil
+                                }
+                                return self.interpreter.conforms(element, to: proto)
                                     ? nil : proto.description
                             })
                             .first

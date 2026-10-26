@@ -145,7 +145,7 @@ extension Shell {
     /// `Output` how its command ended; anything else succeeded.
     func status(of value: Value) -> Int32 {
         if let truth = value.cast(to: Bool.self) { return truth ? 0 : 1 }
-        if value.kind == .structure, value.typeName == "Status",
+        if value.is(Status.id),
             let succeeded = value.field("succeeded")?.cast(to: Bool.self)
         {
             if succeeded { return 0 }
@@ -191,7 +191,7 @@ extension Shell {
 
     /// A word as a shell would show it: quoted when it has spaces or quotes.
     private static func shellWord(_ value: Value) -> String {
-        if value.kind == .structure, value.typeName == "Glob",
+        if value.is(PreludeTypes.glob),
             let pattern = value.field("pattern")?.cast(to: String.self)
         {
             return Glob.unescape(pattern)
@@ -260,10 +260,10 @@ extension Shell {
             return [.text(word.description)]
         case .function:
             return [.value(word)]
-        case .structure where word.typeName == "Glob":
+        case .structure where word.is(PreludeTypes.glob):
             guard let pattern = word.field("pattern")?.cast(to: String.self) else { return [] }
             return try expand(pattern).map(CommandArgument.text)
-        case .structure where word.typeName == "Spread":
+        case .structure where word.is(PreludeTypes.spread):
             guard let items = word.field("value")?.cast(to: [Value].self) else {
                 return [.text(word.field("value")?.description ?? "")]
             }

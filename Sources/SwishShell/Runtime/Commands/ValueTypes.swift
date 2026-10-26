@@ -8,7 +8,7 @@ extension ScriptType {
 
     /// `T` for `[T]`.
     var listElement: ScriptType? {
-        if case .named("Array", let arguments) = self, arguments.count == 1 {
+        if case .named(.array, let arguments) = self, arguments.count == 1 {
             arguments[0]
         } else {
             nil
@@ -19,7 +19,7 @@ extension ScriptType {
 
     /// `T` for `T?`.
     var optionalWrapped: ScriptType? {
-        if case .named("Optional", let arguments) = self, arguments.count == 1 {
+        if case .named(.optional, let arguments) = self, arguments.count == 1 {
             arguments[0]
         } else {
             nil
@@ -30,7 +30,7 @@ extension ScriptType {
     var acceptsFunction: Bool {
         switch self {
         case .function: true
-        case .named("Function", _), .named("Any", _): true
+        case .named(.function, _), .named(.any, _): true
         default: optionalWrapped?.acceptsFunction ?? false
         }
     }

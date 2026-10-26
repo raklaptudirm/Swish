@@ -15,6 +15,8 @@ import Musl
 enum FileType: String, CaseIterable, Comparable, Codable {
     case file, directory, symlink, other
 
+    static let id = Symbol.ID(declaring: "FileType")
+
     public static func < (lhs: FileType, rhs: FileType) -> Bool {
         allCases.firstIndex(of: lhs)! < allCases.firstIndex(of: rhs)!
     }

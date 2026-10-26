@@ -54,9 +54,10 @@ extension DisplayColumn {
 }
 
 extension Status: ScriptConvertible {
-    static var scriptType: ScriptType { .named("Status") }
+    static let id = Symbol.ID(declaring: "Status")
+    static var scriptType: ScriptType { .named(id) }
     init(_ value: Value) throws {
-        guard value.typeName == "Status",
+        guard value.is(Status.id),
             let succeeded = value.field("succeeded")?.cast(to: Bool.self)
         else {
             throw LibraryError("expected a Status, not \(value)")

@@ -55,15 +55,15 @@ extension Shell {
             }
         }
         for type in interpreter.types where type.isBuiltin {
-            interpreter.symbols(in: .named(type.name)).forEach(add)
+            type.id.map { interpreter.symbols(in: .named($0)).forEach(add) }
         }
         // What every sequence has.
         interpreter.symbols(in: .list(.any)).forEach(add)
         names.sequence = Set(
-            interpreter.symbols(in: .named("Sequence")).filter { $0.function != nil }.map(\.name)
+            interpreter.symbols(in: .named(.sequence)).filter { $0.function != nil }.map(\.name)
         )
-        for symbol in interpreter.symbols(in: .named("ThrowingStream", [.any])) {
-            if case .named("ThrowingStream", _)? = symbol.function?.returns {
+        for symbol in interpreter.symbols(in: .named(.throwingStream, [.any])) {
+            if case .named(.throwingStream, _)? = symbol.function?.returns {
                 names.streams.insert(symbol.name)
             }
         }
@@ -79,7 +79,7 @@ extension Shell {
         return interpreter.types
             .contains { type in
                 !type.isBuiltin
-                    && interpreter.symbols(named: name, in: .named(type.name))
+                    && interpreter.symbols(named: name, in: type.scriptType)
                         .contains { $0.function != nil && !$0.belongsToType }
             }
     }
@@ -114,7 +114,7 @@ extension Shell {
     /// What `name` is after a `|`: a method of the items as they come (a `ThrowingStream`'s), or what every
     /// sequence has, or one of any type's. In the order the stage looks.
     func stageMethods(named name: String) -> Callee? {
-        stageCallee(name, of: .named("ThrowingStream", [.any]), receiver: .stream)
+        stageCallee(name, of: .named(.throwingStream, [.any]), receiver: .stream)
             ?? stageCallee(name, of: .list(.any), receiver: .collected)
             ?? stageFunctions(named: name)
     }
@@ -124,7 +124,7 @@ extension Shell {
     func stageFunctions(named name: String) -> Callee? {
         let candidates = interpreter.types.filter(\.isBuiltin).sorted { $0.name < $1.name }
             .flatMap {
-                stageCallee(name, of: .named($0.name), receiver: .collected)?.overloads ?? []
+                stageCallee(name, of: $0.scriptType, receiver: .collected)?.overloads ?? []
             }
         return candidates.isEmpty
             ? nil : Callee(name: name, overloads: candidates, receiver: .collected)

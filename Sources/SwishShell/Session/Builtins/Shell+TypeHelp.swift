@@ -60,7 +60,8 @@ extension Shell {
 
     /// The type a value of `name` is held as: a list is an `Array`.
     private func heldType(named name: String) -> ScriptType {
-        name == "Array" ? .list(.named("Element")) : .named(name)
+        guard let id = interpreter.typeID(named: name) else { return .any }
+        return id == .array ? .list(Symbol.GenericParameter(name: "Element").type) : .named(id)
     }
 
     /// The cases of an enum that carry nothing: what a word for it can be.

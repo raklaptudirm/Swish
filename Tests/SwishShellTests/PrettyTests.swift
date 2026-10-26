@@ -9,7 +9,7 @@ private let wide = PrettyPrinter(width: .max)
 private func fileType(_ name: String) -> Value {
     let interpreter = Interpreter()
     _ = try? interpreter.evaluate("enum FileType { case file, directory }")
-    return interpreter.value(forCase: name, in: "FileType")!
+    return interpreter.value(forCase: name, in: FileType.id)!
 }
 
 @Test func onOneLineItIsTheDebugDescription() {

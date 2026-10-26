@@ -96,7 +96,8 @@ extension Value {
 }
 
 extension Output: ScriptConvertible {
-    static var scriptType: ScriptType { .named("Output") }
+    static let id = Symbol.ID(declaring: "Output")
+    static var scriptType: ScriptType { .named(id) }
     init(_ swiitValue: Value) throws {
         guard let value = swiitValue.commandOutput else {
             throw LibraryError("expected an Output, not \(swiitValue)")

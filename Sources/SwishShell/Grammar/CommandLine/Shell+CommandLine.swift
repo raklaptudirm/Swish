@@ -167,11 +167,11 @@ extension Shell {
     /// collection an array literal can be (`[Int]`, `Set<String>`).
     static func collection(_ type: ScriptType) -> (element: ScriptType, make: ([Value]) -> Value)? {
         switch type {
-        case .named("Array", let arguments) where arguments.count == 1:
+        case .named(.array, let arguments) where arguments.count == 1:
             return (arguments[0], { Value($0) })
-        case .named("ArraySlice", let arguments) where arguments.count == 1:
+        case .named(.arraySlice, let arguments) where arguments.count == 1:
             return (arguments[0], { Value(boxing: ArraySlice($0), as: "ArraySlice") })
-        case .named("Set", let arguments) where arguments.count == 1:
+        case .named(.set, let arguments) where arguments.count == 1:
             return (arguments[0], { Value(boxing: Set($0), as: "Set") })
         default:
             return nil
@@ -188,7 +188,7 @@ extension Shell {
         // Checking a program before it runs: an enum it declares has no cases yet, so the word is
         // read against what was declared.
         if case .named(let name, _) = type.optionalWrapped ?? type,
-            let declared = staticMembers[name],
+            let declared = staticMembers[name.description],
             declared.contains(where: { $0.memberKind == .case })
         {
             let bare = text.hasPrefix(".") ? String(text.dropFirst()) : text
@@ -202,7 +202,7 @@ extension Shell {
         }
         if let value = interpreter.parse(word: text, as: type) { return value }
         // A command's output, which is text, is what a word is for it.
-        if type == .named("Output") { return .output(Output(text: text, code: 0)) }
+        if type == .named(Output.id) { return .output(Output(text: text, code: 0)) }
         guard takesWords(type) else {
             throw RuntimeError(
                 "\(function): \(what) is \(type), which a word can't be: call it with parentheses, as in \(function)(…)"
@@ -214,6 +214,6 @@ extension Shell {
     /// Whether a word can be a value of `type` at all: a Swift type text can be, an enum, or one of
     /// Swish's own that's read from text.
     func takesWords(_ type: ScriptType) -> Bool {
-        type == .named("Output") || interpreter.acceptsWords(as: type)
+        type == .named(Output.id) || interpreter.acceptsWords(as: type)
     }
 }

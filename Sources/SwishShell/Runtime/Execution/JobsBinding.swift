@@ -3,7 +3,7 @@ import Swiit
 extension Shell {
     /// `jobs`, the jobs in the background oldest first.
     func installJobs() {
-        interpreter.register(computed: "jobs", type: .list(.named("Job", [.named("Output")]))) {
+        interpreter.register(computed: "jobs", type: .list(.named(Job.id, [.named(Output.id)]))) {
             [unowned self] in
             updateJobs()  // So their states are current.
             return Value(jobs.map { Value($0) })

@@ -19,6 +19,12 @@ extension Shell {
         } catch {
             preconditionFailure("the shell's declarations: \(error)")
         }
+        for id in PreludeTypes.all {
+            precondition(
+                interpreter.typeID(named: id.description) == id,
+                "the shell's prelude declares no \(id)"
+            )
+        }
     }
 
     /// The Swift bodies of the declarations, by name.
@@ -175,7 +181,7 @@ extension FileEntry {
             struct: "FileEntry",
             fields: [
                 "name": Value(name),
-                "type": interpreter.value(forCase: "\(type)", in: "FileType") ?? .nothing,
+                "type": interpreter.value(forCase: "\(type)", in: FileType.id) ?? .nothing,
                 "size": size.value, "modified": Value(boxing: modified, as: "Date"),
                 "permissions": Value(permissions),
                 "owner": Value(owner), "created": Value(boxing: created, as: "Date"),
