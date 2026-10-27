@@ -62,7 +62,7 @@ extension Shell {
             case .function(let callee, let args, let redirects, let environment)
             where callee.receiver == nil && !redirects.contains(where: { $0.fd == 0 }):
                 return try withEnvironment(environment) {
-                    try withRedirects(redirects) { _, _ in
+                    try withRedirects(redirects, recovering: { $0.status }) { _, _ in
                         try callCommand(callee, args, display: display)
                     }
                 }
@@ -156,13 +156,18 @@ extension Shell {
         if input >= 0 { close(input) }
 
         var failure: (any Error)?
+        // How a stage ended that raised an error `2>` caught.
+        var caught: Int32?
         if let segment {
             do {
                 let pipeOutput = segmentOutput >= 0 ? segmentOutput : stdoutFD
                 try withEnvironment(stages[segment].flatMap(\.environment)) {
-                    try withRedirects(segmentRedirects, input: segmentInput, output: pipeOutput) {
-                        input,
-                        output in
+                    try withRedirects(
+                        segmentRedirects,
+                        input: segmentInput,
+                        output: pipeOutput,
+                        recovering: { caught = $0.status }
+                    ) { input, output in
                         // Text for the next program, or, if it went to a file or
                         // the terminal, formatted as it would be displayed.
                         try runSegment(
@@ -187,6 +192,7 @@ extension Shell {
             if stages.last?.isExternal == true { status = externalStatus }
         }
         if let failure { throw failure }
+        if let caught, stages.last?.isExternal != true { status = caught }
         return status
     }
 

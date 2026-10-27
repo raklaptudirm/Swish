@@ -170,16 +170,13 @@ extension Shell {
     /// place marked.
     func reportDiagnostic(_ diagnostic: Diagnostic) {
         guard let (text, path) = diagnosticSource, diagnostic.range != nil else {
-            report(
-                (diagnostic.isSyntax ? "syntax error: " : "error: ") + diagnostic.message,
-                to: diagnostic.output
-            )
+            report((diagnostic.isSyntax ? "syntax error: " : "error: ") + diagnostic.message)
             return
         }
         // Where errors go decides whether the source is shown in color, as the line editor shows
         // it.
         var style: Diagnostic.Style?
-        if (diagnostic.output ?? interpreter.host.error).traits().isStyled {
+        if interpreter.host.error.traits().isStyled {
             nonisolated(unsafe) let shell = self  // safe: called holding the interpreter lock, as the report is
             style = Diagnostic.Style(
                 source: { shell.highlightStyles($0) },
@@ -188,7 +185,7 @@ extension Shell {
                 reset: DisplayStyle.reset
             )
         }
-        report(diagnostic.rendered(in: text, path: path, style: style), to: diagnostic.output)
+        report(diagnostic.rendered(in: text, path: path, style: style))
     }
 
     private func run(_ source: String, atPrompt: Bool) -> Int32 {

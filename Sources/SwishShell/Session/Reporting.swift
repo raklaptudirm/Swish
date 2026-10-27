@@ -2,10 +2,9 @@ import Foundation
 import Swiit
 
 extension Shell {
-    /// Reports an error, to wherever standard error is redirected, or to `destination` where a
-    /// redirect sent it.
-    func report(_ message: String, to destination: OutputSink? = nil) {
-        let output = destination ?? interpreter.host.error
+    /// Reports an error, to wherever standard error is redirected.
+    func report(_ message: String) {
+        let output = interpreter.host.error
         let styled = output.traits().isStyled
         if message.hasPrefix("error: ") {
             output.write(

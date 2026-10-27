@@ -87,7 +87,7 @@ extension Shell {
         do {
             lastStatus = try callCommand(callee, arguments.map(CommandArgument.text), display: true)
         } catch let error as Diagnostic {
-            report("error: \(error)", to: error.output)
+            report("error: \(error)")
             lastStatus = error.status
         } catch {
             report("error: \(error)")

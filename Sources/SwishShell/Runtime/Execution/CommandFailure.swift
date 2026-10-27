@@ -54,23 +54,6 @@ extension Diagnostic {
     /// The status the command line ends with.
     var status: Int32 { (cause as? ShellFailure)?.status ?? 1 }
 
-    /// Where it is told, when a redirect sent it somewhere other than the shell's own errors.
-    var output: OutputSink? {
-        guard case .sink(let output)? = failure?.destination else { return nil }
-        return output
-    }
-
-    /// The same failure, to be told where `other` is.
-    func told(where other: Diagnostic) -> Diagnostic {
-        guard let destination = other.failure?.destination, case .runtime(var failure) = kind else {
-            return self
-        }
-        failure.destination = destination
-        var copy = self
-        copy.kind = .runtime(failure)
-        return copy
-    }
-
     var isRuntime: Bool { if case .runtime = kind { true } else { false } }
     var isFatal: Bool { if case .fatal = kind { true } else { false } }
     var isSyntax: Bool { if case .syntax = kind { true } else { false } }

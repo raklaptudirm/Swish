@@ -66,12 +66,15 @@ struct DescriptorTable {
 extension Shell {
     /// Runs in-process code (a function, builtin, or run of Swish stages)
     /// with its redirects, through `stdoutFD` and `stderrFD`: what it writes
-    /// itself, and the programs it starts, go where its redirects say.
+    /// itself, and the programs it starts, go where its redirects say. An error it raises is told
+    /// there too, while the redirect is still in place, and `recovering` says what the stage
+    /// gives then: the error is caught, as `do { … } catch { … }` would.
     /// `body` gets the input (-1 for the shell's own) and output to use.
     func withRedirects<T>(
         _ redirects: [ResolvedRedirect],
         input: Int32 = -1,
         output: Int32? = nil,
+        recovering recover: ((Diagnostic) -> T)? = nil,
         _ body: (_ input: Int32, _ output: Int32) throws -> T
     ) throws -> T {
         let output = output ?? stdoutFD
@@ -86,31 +89,12 @@ extension Shell {
         defer { (stdoutFD, stderrFD) = saved }
         let (bodyInput, bodyOutput) = (table[0] == 0 ? -1 : table[0], table[1])
         guard table[2] != saved.1 else { return try body(bodyInput, bodyOutput) }
-        // What `body` raises is told where `2>` points, even after it is undone, so
-        // `f 2>/dev/null` silences f's errors too.
-        return try interpreter.withErrorOutput(errors(at: table[2])) {
-            try body(bodyInput, bodyOutput)
+        guard let recover else { return try body(bodyInput, bodyOutput) }
+        do {
+            return try body(bodyInput, bodyOutput)
+        } catch let error as Diagnostic where error.isRuntime && !(error.cause is JobSuspended) {
+            report("error: \(error.message)")
+            return recover(error)
         }
-    }
-}
-
-/// A descriptor of its own, closed when the last error that was sent to it is gone.
-private final class ErrorDescriptor: Sendable {
-    let fd: Int32
-
-    init(copying fd: Int32) { self.fd = dup(fd) }
-
-    deinit { close(fd) }
-}
-
-extension Shell {
-    /// Where errors go when `2>` points at `fd`: a copy of it, which outlives the redirect for an
-    /// error that is told after it is undone.
-    fileprivate func errors(at fd: Int32) -> OutputSink {
-        let copy = ErrorDescriptor(copying: fd)
-        return OutputSink(
-            write: { writeAll(copy.fd, $0) },
-            traits: { OutputSink.Traits(fd: copy.fd) }
-        )
     }
 }

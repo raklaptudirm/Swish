@@ -316,7 +316,7 @@ extension Shell {
             if case .failure(let error) = result, !job.givesOutput {
                 // How it ended is the awaiting task's error, not a reason for it to stop too.
                 if error.isRuntime {
-                    throw RuntimeError(error.message, status: error.status).told(where: error)
+                    throw RuntimeError(error.message, status: error.status)
                 }
                 if error.isCancelled { throw RuntimeError("\(job.source) was cancelled") }
                 throw RuntimeError("\(job.source) stopped: \(error)")
