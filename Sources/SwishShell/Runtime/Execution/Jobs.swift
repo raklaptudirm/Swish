@@ -163,7 +163,7 @@ final class Job: ScriptConvertible, Presentable, CustomStringConvertible,
     }
 
     private static func method(_ name: String, _ body: @escaping @Sendable () -> Value) -> Value {
-        Value(HostFunction(name: name) { _ in body() })
+        Value(HostSymbol.function(name: name) { _ in body() })
     }
 
     /// `[1] running  make`, in pieces to color: the number dim, the state

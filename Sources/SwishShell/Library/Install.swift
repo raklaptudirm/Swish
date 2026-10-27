@@ -18,19 +18,16 @@ extension Shell {
         // by name: a value of the Swift type `Status`, which stands for the prelude's.
         var output = Output.native.type
         output.members.append(
-            HostType.Member(
+            .property(
                 "status",
                 summary: "How the command exited.",
-                .property(
-                    .named(Symbol.ID(hostType: "Status")),
-                    .readOnly { receiver in
-                        guard let output = receiver.casting(to: Output.self) else {
-                            throw LibraryError("expected an Output, not \(receiver)")
-                        }
-                        return output.statusFields
-                    }
-                )
-            )
+                type: .named(Symbol.ID(hostType: "Status"))
+            ) { receiver in
+                guard let output = receiver.casting(to: Output.self) else {
+                    throw LibraryError("expected an Output, not \(receiver)")
+                }
+                return output.statusFields
+            }
         )
         interpreter.register(output)
         do {
