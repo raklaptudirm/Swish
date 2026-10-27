@@ -5,7 +5,7 @@ import Swiit
 // command's output.
 
 extension FileSize {
-    static let native = HostType.Builder<FileSize>("FileSize")
+    static let native = HostTypeBuilder<FileSize>("FileSize")
         .property("bytes", \.bytes)
         .property("description", \.description)
         .initializer(labels: ["bytes"]) { (bytes: Int) in FileSize(bytes: bytes) }
@@ -48,13 +48,13 @@ extension FileSize {
 }
 
 extension DisplayColumn {
-    static let native = HostType.Builder<DisplayColumn>("DisplayColumn")
+    static let native = HostTypeBuilder<DisplayColumn>("DisplayColumn")
         .property("name", \.name)
         .property("styledBy", \.styledBy)
 }
 
 extension Output {
-    static let native = HostType.Builder<Output>("Output")
+    static let native = HostTypeBuilder<Output>("Output")
         .property("text", \.text)
         .property("lines", \.lines)
         .property("code", \.code)

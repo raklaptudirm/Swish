@@ -16,20 +16,20 @@ extension Shell {
         // `output.status` is a struct of the prelude's `Status`, which the Swift type cannot name
         // (host types are process-wide, and the prelude's are each interpreter's), so it is one
         // by name: a value of the Swift type `Status`, which stands for the prelude's.
-        var output = Output.native.type
-        output.members.append(
-            .property(
-                "status",
-                summary: "How the command exited.",
-                type: .named(Symbol.ID(hostType: "Status"))
-            ) { receiver in
-                guard let output = receiver.casting(to: Output.self) else {
-                    throw LibraryError("expected an Output, not \(receiver)")
+        interpreter.register(
+            Output.native.member(
+                .property(
+                    "status",
+                    summary: "How the command exited.",
+                    type: .named(Symbol.ID(hostType: "Status"))
+                ) { receiver in
+                    guard let output = receiver.casting(to: Output.self) else {
+                        throw LibraryError("expected an Output, not \(receiver)")
+                    }
+                    return output.statusFields
                 }
-                return output.statusFields
-            }
+            )
         )
-        interpreter.register(output)
         do {
             try interpreter.declare(prelude: Shell.prelude, bodies: preludeBodies)
         } catch {
