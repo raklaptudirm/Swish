@@ -31,7 +31,7 @@ extension Shell {
             )
         )
         do {
-            try interpreter.declare(prelude: Shell.prelude, bodies: preludeBodies)
+            try interpreter.declare(Shell.prelude, bodies: preludeBodies)
         } catch {
             preconditionFailure("the shell's declarations: \(error)")
         }
