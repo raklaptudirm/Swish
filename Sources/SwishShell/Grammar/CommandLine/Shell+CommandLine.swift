@@ -214,7 +214,7 @@ extension Shell {
             }
             return Value(text)
         }
-        if let value = interpreter.parse(word: text, as: type) { return value }
+        if let value = word(text, as: type) { return value }
         // A command's output, which is text, is what a word is for it.
         if type == .named(Output.id) { return .output(Output(text: text, code: 0)) }
         guard takesWords(type) else {
@@ -228,6 +228,6 @@ extension Shell {
     /// Whether a word can be a value of `type` at all: a Swift type text can be, an enum, or one of
     /// Swish's own that's read from text.
     func takesWords(_ type: ScriptType) -> Bool {
-        type == .named(Output.id) || interpreter.acceptsWords(as: type)
+        type == .named(Output.id) || acceptsWords(as: type)
     }
 }
