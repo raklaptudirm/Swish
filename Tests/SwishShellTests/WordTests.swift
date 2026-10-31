@@ -23,6 +23,14 @@ import Testing
     #expect(shell.word("nope", as: kind) == nil)
     #expect(shell.word("y", as: letter)?.description == "b")
 
+    // A word is a literal first: one letter for a Character, which a longer word is not, and
+    // never a trap.
+    let character = ScriptType.named(shell.interpreter.typeID(named: "Character")!)
+    #expect(shell.word("a", as: character) == "a")
+    #expect(shell.word("ab", as: character) == nil)
+    #expect(shell.word("/a/b", as: .named(shell.interpreter.typeID(named: "FilePath")!)) != nil)
+    #expect(shell.word("2.5", as: .double) == 2.5)
+
     #expect(shell.word("owner.name", as: .named(.keyPath))?.description == "\\.owner.name")
 }
 
@@ -35,6 +43,7 @@ import Testing
     #expect(shell.acceptsWords(as: .string))
     #expect(shell.acceptsWords(as: .optional(.int)))
     #expect(shell.acceptsWords(as: kind))
+    #expect(shell.acceptsWords(as: .named(shell.interpreter.typeID(named: "Character")!)))
     #expect(shell.acceptsWords(as: .named(.keyPath)))
     #expect(!shell.acceptsWords(as: .list(.int)))
     #expect(!shell.acceptsWords(as: .callable))

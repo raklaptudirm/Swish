@@ -17,7 +17,16 @@ extension Shell {
         guard let symbol = interpreter.symbol(for: id) else { return nil }
         if case .enumeration = symbol.kind { return enumCase(from: text, of: type, id: id) }
 
-        return interpreter.value(from: text, as: type)
+        // What a script's text literal is for the type (a `String`, a one-letter `Character`), then
+        // an initializer that cannot fail on text.
+        if let literal = interpreter.converted(Value(text), to: type) { return literal }
+        guard let parameter = textInitializer(of: type) else { return nil }
+
+        let made = try? interpreter.call(
+            id.name,
+            arguments: [(label: parameter.label, value: Value(text))]
+        )
+        return made == .nothing ? nil : made
     }
 
     /// Whether a word can be a value of `type` at all: an enum, a Swift type text can be, a key
@@ -35,19 +44,56 @@ extension Shell {
         return hasTextInitializer(type)
     }
 
-    /// Whether a Swift type has an initializer that takes text alone: an unlabeled `String` (`init?(_
-    /// description: String)`) or `Substring`, or `init(stringLiteral:)`. (`word(_:as:)` says whether
-    /// one word is a value of it: a declaration cannot say which texts are valid.)
+    /// The parameter of an initializer a Swift type is made from text with, which cannot trap on
+    /// any text: a failable one taking an unlabeled `String` or `Substring`, or Swift's
+    /// `init(stringLiteral:)`, for which every text is valid. (`Character("ab")`, not failable,
+    /// traps, and a word is tried against many parameters before one takes it.)
+    private func textInitializer(of type: ScriptType) -> Symbol.Parameter? {
+        let candidates = textInitializers(of: type)
+            .filter { function, parameter in
+                if parameter.label == "stringLiteral" { return true }
+                guard parameter.label == nil, case .named(let result, _) = function.returns else {
+                    return false
+                }
+                return result == .optional
+            }
+
+        // `String` before `Substring`: a `String` has the last too, and `init(_: Any)` makes it
+        // ambiguous.
+        let preferred = candidates.sorted {
+            $0.1.type.description == "String" && $1.1.type.description != "String"
+        }
+        return preferred.first?.1
+    }
+
+    /// Whether a word can be a value of a Swift type at all: it has one of those initializers, or
+    /// is a type Swift writes as a single-character literal (`Character`), which `converted` checks.
     private func hasTextInitializer(_ type: ScriptType) -> Bool {
+        textInitializer(of: type) != nil
+            || interpreter.symbols(in: type)
+                .contains { symbol in
+                    guard case .initializer(let function) = symbol.kind else { return false }
+                    return function.parameters.count == 1
+                        && ["extendedGraphemeClusterLiteral", "unicodeScalarLiteral"]
+                            .contains(
+                                function.parameters[0].label
+                            )
+                }
+    }
+
+    /// The initializers of a Swift type that take one `String` or `Substring`, or its literal.
+    private func textInitializers(of type: ScriptType) -> [(Symbol.Function, Symbol.Parameter)] {
         interpreter.symbols(in: type)
-            .contains { symbol in
+            .compactMap { symbol in
                 guard case .initializer(let function) = symbol.kind, function.parameters.count == 1
-                else { return false }
+                else { return nil }
 
                 let parameter = function.parameters[0]
                 let text = parameter.type.description
-                return (parameter.label == nil && (text == "String" || text == "Substring"))
-                    || (parameter.label == "stringLiteral" && text == "String")
+                guard text == "String" || (text == "Substring" && parameter.label == nil) else {
+                    return nil
+                }
+                return (function, parameter)
             }
     }
 
