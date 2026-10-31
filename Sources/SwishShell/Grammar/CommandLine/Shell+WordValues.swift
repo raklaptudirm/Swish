@@ -17,14 +17,18 @@ extension Shell {
         guard let symbol = interpreter.symbol(for: id) else { return nil }
         if case .enumeration = symbol.kind { return enumCase(from: text, of: type, id: id) }
 
-        // What a script's text literal is for the type (a `String`, a one-letter `Character`), then
-        // an initializer that cannot fail on text.
+        // A `String`, or a one-letter `Character`, which Swiit holds as one; then an initializer
+        // that cannot fail on text.
         if let literal = interpreter.converted(Value(text), to: type) { return literal }
-        guard let parameter = textInitializer(of: type) else { return nil }
+        // The initializer takes the word as its own parameter type is made from it: a `Substring`
+        // by its text literal, since Swift does not turn a `String` into one.
+        guard let parameter = textInitializer(of: type),
+            let argument = word(text, as: parameter.type)
+        else { return nil }
 
         let made = try? interpreter.call(
             id.name,
-            arguments: [(label: parameter.label, value: Value(text))]
+            arguments: [(label: parameter.label, value: argument)]
         )
         return made == .nothing ? nil : made
     }
