@@ -32,7 +32,23 @@ extension Shell {
         guard let symbol = interpreter.symbol(for: id) else { return false }
         if case .enumeration = symbol.kind { return true }
 
-        return interpreter.isMadeFromText(type)
+        return hasTextInitializer(type)
+    }
+
+    /// Whether a Swift type has an initializer that takes text alone: an unlabeled `String` (`init?(_
+    /// description: String)`) or `Substring`, or `init(stringLiteral:)`. (`word(_:as:)` says whether
+    /// one word is a value of it: a declaration cannot say which texts are valid.)
+    private func hasTextInitializer(_ type: ScriptType) -> Bool {
+        interpreter.symbols(in: type)
+            .contains { symbol in
+                guard case .initializer(let function) = symbol.kind, function.parameters.count == 1
+                else { return false }
+
+                let parameter = function.parameters[0]
+                let text = parameter.type.description
+                return (parameter.label == nil && (text == "String" || text == "Substring"))
+                    || (parameter.label == "stringLiteral" && text == "String")
+            }
     }
 
     /// The case of the enum `id` a word names, by its name or its raw value: `.directory`,
