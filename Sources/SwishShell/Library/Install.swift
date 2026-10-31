@@ -108,11 +108,10 @@ extension Shell {
             let items = arguments["items"]?.casting(to: [Value].self) ?? []
             switch try OutputFormat(arguments["format"] ?? .nothing) {
             case .json:
-                let interpreter = interpreter
                 return Value(
                     try JSON.text(
                         items.count == 1 ? items[0] : Value(items),
-                        rawValue: { interpreter.rawValue(of: $0) }
+                        rawValue: { $0.rawValue }
                     )
                 )
             case .text: return Value(laidOut(items, useViews: true).joined(separator: "\n"))
