@@ -108,10 +108,17 @@ extension Shell {
             let items = arguments["items"]?.casting(to: [Value].self) ?? []
             switch try OutputFormat(arguments["format"] ?? .nothing) {
             case .json:
+                let interpreter = interpreter
                 return Value(
                     try JSON.text(
                         items.count == 1 ? items[0] : Value(items),
-                        rawValue: { $0.rawValue }
+                        rawValue: { value in
+                            guard let id = value.typeID,
+                                ScriptType.named(id)
+                                    .conforms(to: .rawRepresentable, in: interpreter)
+                            else { return nil }
+                            return try? interpreter.value(forMember: "rawValue", of: value)
+                        }
                     )
                 )
             case .text: return Value(laidOut(items, useViews: true).joined(separator: "\n"))
