@@ -226,7 +226,7 @@ extension Shell {
         var rows: [(String, Value)] = []
         var seen: Set<String> = []
         let functions = Dictionary(
-            grouping: interpreter.symbols().filter { $0.function != nil },
+            grouping: interpreter.globals().filter { $0.function != nil },
             by: \.name
         )
         for (name, candidates) in functions where seen.insert(name).inserted {

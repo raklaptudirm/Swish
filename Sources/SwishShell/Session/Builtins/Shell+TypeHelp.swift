@@ -45,7 +45,7 @@ extension Shell {
     /// when nothing by that name is a type.
     func typeMembers(named name: String) -> (kind: String, members: [Symbol])? {
         // A type a script declared or the shell does, or one of Swift's that the core bridges.
-        let named = interpreter.symbols(named: name) + interpreter.types.filter { $0.name == name }
+        let named = interpreter.globals(named: name) + interpreter.types.filter { $0.name == name }
         guard let type = named.first(where: \.isType) else { return nil }
         let word =
             switch type.kind {
@@ -55,12 +55,12 @@ extension Shell {
             case .actor: "actor"
             default: "protocol"
             }
-        return (word, interpreter.symbols(in: heldType(named: name)))
+        return (word, heldType(named: name).members(in: interpreter))
     }
 
     /// The type a value of `name` is held as: a list is an `Array`.
     private func heldType(named name: String) -> ScriptType {
-        guard let id = interpreter.typeID(named: name) else { return .any }
+        guard let id = Symbol.ID(named: name, in: interpreter) else { return .any }
         return id == .array ? .list(Symbol.GenericParameter(name: "Element").type) : .named(id)
     }
 

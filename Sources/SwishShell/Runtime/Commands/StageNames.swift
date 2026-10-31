@@ -55,16 +55,17 @@ extension Shell {
             }
         }
         for type in interpreter.types where type.isBuiltin {
-            type.id.map { interpreter.symbols(in: .named($0)).forEach(add) }
+            type.id.map { ScriptType.named($0).members(in: interpreter).forEach(add) }
         }
         // What every sequence has.
-        interpreter.symbols(in: .list(.any)).forEach(add)
+        ScriptType.list(.any).members(in: interpreter).forEach(add)
         names.sequence = Set(
-            interpreter.symbols(in: .named(.sequence)).filter { $0.function != nil }.map(\.name)
+            ScriptType.named(.sequence).members(in: interpreter).filter { $0.function != nil }
+                .map(\.name)
         )
         // The stream's operators: what `for` reads it with is not one.
         let reading: Set = ["makeIterator", "makeAsyncIterator", "next", "read"]
-        for symbol in interpreter.symbols(in: streamType) where !reading.contains(symbol.name) {
+        for symbol in streamType.members(in: interpreter) where !reading.contains(symbol.name) {
             add(symbol)
             if case .named(preludeTypes.stream, _)? = symbol.function?.returns {
                 names.streams.insert(symbol.name)
@@ -82,7 +83,7 @@ extension Shell {
         return interpreter.types
             .contains { type in
                 !type.isBuiltin
-                    && interpreter.symbols(named: name, in: type.scriptType)
+                    && type.scriptType.members(named: name, in: interpreter)
                         .contains { $0.function != nil && !$0.belongsToType }
             }
     }
@@ -101,7 +102,7 @@ extension Shell {
         receiver: StageReceiver,
         includingMutating: Bool = false
     ) -> Callee? {
-        let members = interpreter.symbols(named: name, in: type)
+        let members = type.members(named: name, in: interpreter)
             .filter { symbol in
                 switch symbol.kind {
                 case .method(let method):

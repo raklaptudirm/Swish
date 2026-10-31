@@ -34,7 +34,7 @@ extension Shell {
     /// `prompt() -> String`, or `prompt(status: Int) -> String` to be told
     /// how the last command exited.
     func customPrompt() throws -> String? {
-        let overloads = interpreter.symbols(named: "prompt").compactMap { $0.function }
+        let overloads = interpreter.globals(named: "prompt").compactMap { $0.function }
         guard !overloads.isEmpty else { return nil }
         let withStatus = overloads.first {
             $0.parameters.map(\.label) == ["status"] && $0.parameters[0].type == .int

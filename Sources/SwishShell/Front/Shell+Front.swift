@@ -15,7 +15,7 @@ extension Shell {
     /// The shell's front end for this shell's names.
     func makeFront(recovering: Bool = false) -> Front {
         let roles = Dictionary(
-            interpreter.symbols().map { ($0.name, NameRole($0.kind)) },
+            interpreter.globals().map { ($0.name, NameRole($0.kind)) },
             uniquingKeysWith: { first, _ in first }
         )
         let front = Front(bound: Names(roles: roles))

@@ -10,7 +10,7 @@ struct PreludeTypes {
 
     init(_ interpreter: Interpreter) {
         func declared(_ name: String) -> Symbol.ID {
-            guard let id = interpreter.typeID(named: name) else {
+            guard let id = Symbol.ID(named: name, in: interpreter) else {
                 preconditionFailure("the shell's prelude declares no \(name)")
             }
             return id

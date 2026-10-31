@@ -115,9 +115,9 @@ final class Job: ScriptConvertible, Presentable, CustomStringConvertible,
         (
             "state", "JobState",
             { job in
-                job.shell.interpreter.value(
-                    forCase: job.cancelled && job.state == .done ? "cancelled" : job.state.rawValue,
-                    in: job.shell.preludeTypes.jobState
+                job.shell.preludeTypes.jobState.enumCase(
+                    named: job.cancelled && job.state == .done ? "cancelled" : job.state.rawValue,
+                    in: job.shell.interpreter
                 ) ?? .nothing
             }
         ),

@@ -42,7 +42,7 @@ extension Shell {
             default: break
             }
             // Then what its type has, as `help Type` shows it.
-            for member in interpreter.symbols(in: interpreter.scriptType(of: item)) {
+            for member in interpreter.scriptType(of: item).members(in: interpreter) {
                 guard let kind = member.memberKind, kind != .initializer else { continue }
                 add(item.typeName, member.name, kind.rawValue)
             }

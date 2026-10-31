@@ -247,7 +247,7 @@ extension FileEntry {
             shell.preludeTypes.fileEntry,
             [
                 "name": Value(name),
-                "type": shell.interpreter.value(forCase: "\(type)", in: FileType.id) ?? .nothing,
+                "type": FileType.id.enumCase(named: "\(type)", in: shell.interpreter) ?? .nothing,
                 "size": size.value, "modified": Value(modified),
                 "permissions": Value(permissions),
                 "owner": Value(owner), "created": Value(created),

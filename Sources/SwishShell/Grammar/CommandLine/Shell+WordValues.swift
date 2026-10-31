@@ -14,7 +14,7 @@ extension Shell {
 
         // A type parameter, which text satisfies.
         if id.isGenericParameter { return Value(text) }
-        guard let symbol = interpreter.symbol(for: id) else { return nil }
+        guard let symbol = id.symbol(in: interpreter) else { return nil }
         if case .enumeration = symbol.kind { return enumCase(from: text, of: type, id: id) }
 
         // A `String`, or a one-letter `Character`, which Swiit holds as one; then an initializer
@@ -42,7 +42,7 @@ extension Shell {
         if id == .optional, arguments.count == 1 { return acceptsWords(as: arguments[0]) }
 
         if id.isGenericParameter { return true }
-        guard let symbol = interpreter.symbol(for: id) else { return false }
+        guard let symbol = id.symbol(in: interpreter) else { return false }
         if case .enumeration = symbol.kind { return true }
 
         return hasTextInitializer(type)
@@ -74,7 +74,7 @@ extension Shell {
     /// is a type Swift writes as a single-character literal (`Character`), which `converted` checks.
     private func hasTextInitializer(_ type: ScriptType) -> Bool {
         textInitializer(of: type) != nil
-            || interpreter.symbols(in: type)
+            || type.members(in: interpreter)
                 .contains { symbol in
                     guard case .initializer(let function) = symbol.kind else { return false }
                     return function.parameters.count == 1
@@ -87,7 +87,7 @@ extension Shell {
 
     /// The initializers of a Swift type that take one `String` or `Substring`, or its literal.
     private func textInitializers(of type: ScriptType) -> [(Symbol.Function, Symbol.Parameter)] {
-        interpreter.symbols(in: type)
+        type.members(in: interpreter)
             .compactMap { symbol in
                 guard case .initializer(let function) = symbol.kind, function.parameters.count == 1
                 else { return nil }
@@ -105,7 +105,7 @@ extension Shell {
     /// `directory`, or `d` for `case directory = "d"`.
     private func enumCase(from text: String, of type: ScriptType, id: Symbol.ID) -> Value? {
         let name = text.hasPrefix(".") ? String(text.dropFirst()) : text
-        let cases = interpreter.symbols(in: type)
+        let cases = type.members(in: interpreter)
             .compactMap { symbol -> (Symbol, Value?)? in
                 guard case .enumCase(let parameters, let raw) = symbol.kind, parameters.isEmpty
                 else {
@@ -116,6 +116,6 @@ extension Shell {
 
         let named = cases.first { $0.0.name == name }
         let chosen = named ?? cases.first { $0.1?.description == text }
-        return chosen.flatMap { interpreter.value(forCase: $0.0.name, in: id) }
+        return chosen.flatMap { id.enumCase(named: $0.0.name, in: interpreter) }
     }
 }

@@ -19,7 +19,7 @@ extension Shell {
 
     /// The functions a command name refers to, if it was declared with `func`.
     func commandFunctions(named name: String) -> Callee? {
-        let functions = interpreter.symbols(named: name).filter { $0.function != nil }
+        let functions = interpreter.globals(named: name).filter { $0.function != nil }
         return functions.isEmpty
             ? nil : Callee(name: name, overloads: functions, receiver: nil, marks: scriptMarks)
     }

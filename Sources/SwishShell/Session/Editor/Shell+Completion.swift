@@ -52,7 +52,7 @@ extension Shell {
 
     private func variableCandidates(prefix: String) -> [LineEditor.Candidate] {
         var names = Set(ProcessInfo.processInfo.environment.keys)
-        for symbol in interpreter.symbols() where symbol.function == nil {
+        for symbol in interpreter.globals() where symbol.function == nil {
             names.insert(symbol.name)
         }
         return names.filter { $0.hasPrefix(prefix) }.sorted()
@@ -64,9 +64,9 @@ extension Shell {
     private func commandCandidates(prefix: String, externalOnly: Bool) -> [LineEditor.Candidate] {
         var described: [String: String] = [:]
         if !externalOnly {
-            for symbol in interpreter.symbols() { described[symbol.name] = "variable" }
+            for symbol in interpreter.globals() { described[symbol.name] = "variable" }
             for (name, symbols) in Dictionary(
-                grouping: interpreter.symbols().filter { $0.function != nil },
+                grouping: interpreter.globals().filter { $0.function != nil },
                 by: \.name
             ) {
                 let summary = symbols.compactMap(\.summary).first { !$0.isEmpty }
@@ -81,7 +81,7 @@ extension Shell {
                     ?? stageCallee(name, of: .list(.any), receiver: .collected)
                 guard let callee,
                     stageNames.streams.contains(name)
-                        || interpreter.symbols(named: name, in: .list(.any))
+                        || ScriptType.list(.any).members(named: name, in: interpreter)
                             .contains(where: { $0.function != nil && !$0.belongsToType })
                 else { continue }
                 described[name] =
