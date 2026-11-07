@@ -1,13 +1,19 @@
 import Foundation
 import SwishShell
 
-let arguments = Array(CommandLine.arguments.dropFirst())
+let commandLine = Array(CommandLine.arguments.dropFirst())
+
+// A login shell, as a terminal starts one (`-swish`), or as `swish --login` or `-l` asks.
+let loginFlag = ["-l", "--login"].contains(commandLine.first ?? "")
+let isLogin = CommandLine.arguments.first?.hasPrefix("-") == true || loginFlag
+let arguments = loginFlag ? Array(commandLine.dropFirst()) : commandLine
 
 // Recursion in Swish code recurses in the interpreter too, so run it on a
 // thread with a far larger stack than the main thread's 8 MB. Only the pages
 // actually used are committed.
 let interpreter = Thread {
     let shell = Shell()
+    if isLogin { shell.setUpLogin() }
     switch arguments.first {
     case nil:
         exit(shell.runInteractive())
@@ -34,7 +40,7 @@ let interpreter = Thread {
     default:
         FileHandle.standardError.write(
             Data(
-                "usage: swish [-c command | script [arguments…] | --tasks file [task [arguments…]]]\n"
+                "usage: swish [-l] [-c command | script [arguments…] | --tasks file [task [arguments…]]]\n"
                     .utf8
             )
         )

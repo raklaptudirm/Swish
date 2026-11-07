@@ -360,6 +360,15 @@ final class Environment: CustomStringConvertible {
         set { setEnvironmentValue(name, newValue) }
     }
 
+    /// Runs `script` with `/bin/sh` and takes the environment it ends with: what it sets or
+    /// changes is set here, and what it removes is removed. It is how a tool that sets itself up
+    /// for sh is used, as in `env.load(fromShell: #"eval "$(brew shellenv)""#)` or a project's
+    /// `env.load(fromShell: ". ./env.sh")`. What the script prints is shown; one that exits before
+    /// its end changes nothing.
+    func load(fromShell script: String) throws {
+        try loadEnvironment(fromShell: script)
+    }
+
     var description: String { "Environment" }
 }
 
@@ -367,6 +376,8 @@ final class Environment: CustomStringConvertible {
 func environmentValue(_ name: String) -> String?
 /// What `env.NAME = value` does: sets the variable, or removes it for nil.
 func setEnvironmentValue(_ name: String, _ value: String?) throws
+/// What `env.load(fromShell:)` does.
+func loadEnvironment(fromShell script: String) throws
 
 /// A value that stands for another where it flows through a pipeline and where it is shown: those
 /// see what it wraps.

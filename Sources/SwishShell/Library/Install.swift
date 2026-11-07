@@ -221,6 +221,13 @@ extension Shell {
             environment.set(name, value.kind == .nothing ? nil : value.description)
             return .nothing
         }
+        add("loadEnvironment") { [unowned self] arguments in
+            guard let script = arguments["script"]?.casting(to: String.self) else {
+                throw LibraryError("the script to run must be a String")
+            }
+            try loadEnvironment(fromShell: script)
+            return .nothing
+        }
         for (name, body) in jsonBodies { add(name, body) }
         return bodies
     }

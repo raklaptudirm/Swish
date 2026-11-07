@@ -230,6 +230,24 @@ that isn't a terminal. A `prompt` that fails, or isn't `() -> String` or `(statu
 is reported, and the default prompt drawn instead. History lives in the XDG state directory,
 `$XDG_STATE_HOME/swish/history` (default `~/.local/state/swish/history`), or `$SWISH_HISTORY`.
 
+### As a login shell
+
+Started as a login shell, as a terminal starts one (`-swish`), or with `swish -l`, Swish takes the
+environment the system's login profile sets up: it runs `/bin/sh -l`, which reads `/etc/profile`
+and `~/.profile`, and keeps the variables that leaves. On macOS that is `path_helper`'s `PATH`, and
+what nix-darwin adds to it, so the programs they install are found.
+
+A tool that sets itself up for `sh` is used the same way, from the config or anywhere else:
+`env.load(fromShell:)` runs a script in `/bin/sh` and takes the environment it ends with.
+
+```swift
+try env.load(fromShell: #"eval "$(direnv export bash)""#)
+try env.load(fromShell: ". ./env.sh")
+```
+
+`source` runs Swish files only: given an `sh` or `bash` script, it says so and shows the
+`env.load` that takes what the script sets up.
+
 <details>
 <summary>Development builds and tests</summary>
 

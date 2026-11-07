@@ -1,5 +1,6 @@
 import Foundation
 import Swiit
+import SystemPackage
 
 /// A builtin that isn't a function: it changes the shell itself, so it
 /// can't be a program, and it takes words, as a program does. One table
@@ -281,6 +282,24 @@ extension Shell {
     /// `source file args…`: runs a Swish file in this shell, so what it
     /// declares stays declared. A relative path starts from the script's
     /// directory, or the working directory at the prompt.
+    /// The shell a file says it is for, by its `#!` line (`#!/bin/sh`, `#!/usr/bin/env bash`) or
+    /// else its extension (`.sh`, `.bash`, `.zsh`), when that isn't Swish.
+    static func otherShell(of path: String) -> String? {
+        let shells: Set = ["sh", "bash", "zsh", "dash", "ksh"]
+        let start = FileHandle(forReadingAtPath: path)
+            .map {
+                defer { try? $0.close() }
+                return String(decoding: $0.readData(ofLength: 128), as: UTF8.self)
+            }
+        if let start, start.hasPrefix("#!") {
+            var words = start.dropFirst(2).prefix { $0 != "\n" }.split(separator: " ")
+            if words.first?.hasSuffix("/env") == true { words.removeFirst() }
+            let program = words.first.map { String($0.split(separator: "/").last ?? $0) }
+            return program.flatMap { shells.contains($0) ? $0 : nil }
+        }
+        return FilePath(path).extension.flatMap { shells.contains($0) ? $0 : nil }
+    }
+
     private func source(_ args: [String]) -> Int32 {
         guard let path = args.first else {
             report("source: give a Swish file to run")
@@ -289,6 +308,13 @@ extension Shell {
         let resolved =
             path.hasPrefix("/")
             ? path : (scriptDirectory ?? FileManager.default.currentDirectoryPath) + "/" + path
+        // A script for another shell isn't Swish; what it sets up is taken by running it there.
+        if let shell = Shell.otherShell(of: resolved) {
+            report(
+                "source: \(path) is a \(shell) script; `try env.load(fromShell: \". \(path)\")` takes the environment it sets up"
+            )
+            return 2
+        }
         return sourceFile(resolved, arguments: Array(args.dropFirst()))
     }
 
