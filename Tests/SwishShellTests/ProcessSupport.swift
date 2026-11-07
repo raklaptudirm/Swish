@@ -51,3 +51,38 @@ func onLargeStack<T>(_ body: @escaping () throws -> T) throws -> T {
     done.wait()
     return try result!.get()
 }
+
+/// What `body` makes the shell write to its error output.
+func errorOutput(of shell: Shell, _ body: () -> Void) -> String {
+    guard let pipe = makePipe() else { return "" }
+    let collector = OutputCollector(reading: pipe.read)
+    let saved = shell.stderrFD
+    shell.stderrFD = pipe.write
+    body()
+    shell.stderrFD = saved
+    close(pipe.write)
+    return Interpreter.whileWaiting { collector.finish() }
+}
+
+/// An environment variable of this process, or nil.
+func variable(_ name: String) -> String? {
+    getenv(name).map { String(cString: $0) }
+}
+
+/// Sets an environment variable of this process.
+func setVariable(_ name: String, _ value: String) {
+    setenv(name, value, 1)
+}
+
+/// A new directory of its own for a test, removed when `body` is done, given to it.
+func withTemporaryDirectory(_ body: (String) throws -> Void) rethrows {
+    let directory = FileManager.default.temporaryDirectory.path + "/swish-test-\(UUID().uuidString)"
+    try? FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(atPath: directory) }
+    try body(directory)
+}
+
+/// Writes `text` to a new file at `path`.
+func writeFile(_ path: String, _ text: String) {
+    FileManager.default.createFile(atPath: path, contents: Data(text.utf8))
+}

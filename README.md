@@ -248,6 +248,21 @@ try env.load(fromShell: ". ./env.sh")
 `source` runs Swish files only: given an `sh` or `bash` script, it says so and shows the
 `env.load` that takes what the script sets up.
 
+### Before each prompt
+
+`beforePrompt { … }` runs its closure before each prompt is drawn, and `onDirectoryChange { from,
+to in … }` runs when the working directory has changed since the last one, however it changed.
+That is what tools that keep a shell up to date hook into:
+
+```swift
+// direnv: a directory's .envrc, loaded and unloaded as you move.
+beforePrompt { try env.load(fromShell: #"eval "$(direnv export bash)""#) }
+```
+
+At each prompt Swish also tells the terminal where it is (OSC 7, so a new tab or split opens in
+the same directory) and sets the window's title to the directory; not when the output isn't a
+terminal or `TERM` is `dumb`.
+
 <details>
 <summary>Development builds and tests</summary>
 

@@ -66,6 +66,12 @@ public final class Shell: @unchecked Sendable {
     var stoppedBySignal: Int32?
     /// The running script's directory; nil at the prompt.
     var scriptDirectory: String?
+    /// What runs before each prompt, in the order it was added (`beforePrompt`).
+    var promptHooks: [Value] = []
+    /// What runs when the working directory has changed since the last prompt (`onDirectoryChange`).
+    var directoryHooks: [Value] = []
+    /// The working directory when the last prompt was drawn, to tell when it has changed.
+    var promptDirectory: String?
 
     let editor = LineEditor()
 

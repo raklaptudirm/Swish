@@ -27,6 +27,7 @@ extension Shell {
                     writeAll(STDERR_FILENO, notice + "\n")
                 }
             }
+            if pending.isEmpty { willPrompt() }
             let prompt = pending.isEmpty ? prompt() : "…".styled(DisplayStyle.dim) + " "
             switch Interpreter.whileWaiting({ editor.readLine(prompt: prompt) }) {
             case .eof:
@@ -105,10 +106,7 @@ extension Shell {
     }
 
     private func defaultPrompt() -> String {
-        var directory = FileManager.default.currentDirectoryPath
-        if let home = env("HOME"), directory == home || directory.hasPrefix(home + "/") {
-            directory = "~" + directory.dropFirst(home.count)
-        }
+        let directory = Shell.abbreviated(FileManager.default.currentDirectoryPath)
         let failed = lastStatus != 0
         let status = failed ? "[\(lastStatus)]".styled(DisplayStyle.red) + " " : ""
         return directory.styled(DisplayStyle.cyan) + " " + status

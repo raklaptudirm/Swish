@@ -221,6 +221,14 @@ extension Shell {
             environment.set(name, value.kind == .nothing ? nil : value.description)
             return .nothing
         }
+        add("beforePrompt") { [unowned self] arguments in
+            if let action = arguments["action"] { promptHooks.append(action) }
+            return .nothing
+        }
+        add("onDirectoryChange") { [unowned self] arguments in
+            if let action = arguments["action"] { directoryHooks.append(action) }
+            return .nothing
+        }
         add("loadEnvironment") { [unowned self] arguments in
             guard let script = arguments["script"]?.casting(to: String.self) else {
                 throw LibraryError("the script to run must be a String")

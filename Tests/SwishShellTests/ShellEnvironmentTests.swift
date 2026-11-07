@@ -1,4 +1,3 @@
-import Foundation
 import Swiit
 import Testing
 
@@ -12,8 +11,8 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 }
 
 @Test func aShellScriptsEnvironmentIsTaken() throws {
-    setenv("SWISH_TEST_LOAD_GONE", "here", 1)
-    setenv("SWISH_TEST_LOAD_KEPT", "same", 1)
+    setVariable("SWISH_TEST_LOAD_GONE", "here")
+    setVariable("SWISH_TEST_LOAD_KEPT", "same")
     let shell = Shell()
     let printed = try output(
         """
@@ -43,30 +42,51 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
         shell.execute(#"try env.load(fromShell: "export SWISH_TEST_LOAD_EXIT=1; exit 3")"#)
     }
     #expect(status != 0)
-    #expect(getenv("SWISH_TEST_LOAD_EXIT") == nil)
+    #expect(variable("SWISH_TEST_LOAD_EXIT") == nil)
 }
 
 @Test func whatShItselfSetsIsNotTaken() throws {
     let shell = Shell()
-    func variable(_ name: String) -> String? { getenv(name).map { String(cString: $0) } }
     let level = variable("SHLVL"), directory = variable("PWD")
     try onLargeStack { try shell.loadEnvironment(fromShell: "cd /") }
     #expect(variable("SHLVL") == level)
     #expect(variable("PWD") == directory)
 }
 
-@Test func anotherShellsScriptIsToldApart() throws {
-    let directory = FileManager.default.temporaryDirectory.path + "/swish-other-shell-\(getpid())"
-    try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
-    defer { try? FileManager.default.removeItem(atPath: directory) }
-    func file(_ name: String, _ text: String) -> String {
-        let path = directory + "/" + name
-        FileManager.default.createFile(atPath: path, contents: Data(text.utf8))
-        return path
+@Test func anotherShellsScriptIsToldApart() {
+    withTemporaryDirectory { directory in
+        func file(_ name: String, _ text: String) -> String {
+            writeFile(directory + "/" + name, text)
+            return directory + "/" + name
+        }
+        #expect(Shell.otherShell(of: file("a.sh", "export A=1\n")) == "sh")
+        #expect(Shell.otherShell(of: file("b", "#!/usr/bin/env bash\n")) == "bash")
+        #expect(Shell.otherShell(of: file("c", "#!/bin/zsh -f\n")) == "zsh")
+        #expect(Shell.otherShell(of: file("d.swish", "print(1)\n")) == nil)
+        #expect(Shell.otherShell(of: file("e.sh", "#!/usr/bin/env swish\n")) == nil)
     }
-    #expect(Shell.otherShell(of: file("a.sh", "export A=1\n")) == "sh")
-    #expect(Shell.otherShell(of: file("b", "#!/usr/bin/env bash\n")) == "bash")
-    #expect(Shell.otherShell(of: file("c", "#!/bin/zsh -f\n")) == "zsh")
-    #expect(Shell.otherShell(of: file("d.swish", "print(1)\n")) == nil)
-    #expect(Shell.otherShell(of: file("e.sh", "#!/usr/bin/env swish\n")) == nil)
+}
+
+@Test func actionsRunBeforeEachPromptAndWhenTheDirectoryChanged() throws {
+    let shell = Shell()
+    _ = try output(
+        """
+        var seen: [String] = []
+        onDirectoryChange { from, to in seen.append("\\(from.lastComponent!)→\\(to.lastComponent!)") }
+        beforePrompt { seen.append("p") }
+        beforePrompt { throw Oops() }
+        struct Oops: Error {}
+        """,
+        in: shell
+    )
+    var directory = "/a/one"
+    let errors = errorOutput(of: shell) {
+        for next in ["/a/one", "/a/two", "/a/two"] {
+            directory = next
+            shell.willPrompt { directory }
+        }
+    }
+    // The action that failed is reported, and the others ran.
+    #expect(errors.contains("beforePrompt: "))
+    #expect(try output("print(seen)", in: shell) == #"["p", "one→two", "p", "p"]"# + "\n")
 }
