@@ -299,7 +299,12 @@ extension Shell {
     ) -> Result<pid_t, SpawnFailure> {
         let name = argv[0]
         guard let path = findExecutable(name) else {
-            return .failure(SpawnFailure(message: "\(name): command not found", status: 127))
+            return .failure(
+                SpawnFailure(
+                    message: "\(name): command not found" + commandNotFoundHint(name),
+                    status: 127
+                )
+            )
         }
 
         // Each changed descriptor, as (the child's, ours). One of ours that

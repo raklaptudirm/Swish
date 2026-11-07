@@ -270,7 +270,7 @@ extension Shell {
             return 2
         }
         guard let path = findExecutable(name) else {
-            report("exec: \(name): command not found")
+            report("exec: \(name): command not found" + commandNotFoundHint(name))
             return 127
         }
         if interactive { tcsetattr(terminal, TCSANOW, &shellModes) }
