@@ -11,6 +11,8 @@ extension Shell {
     func willPrompt(
         workingDirectory: () -> String = { FileManager.default.currentDirectoryPath }
     ) {
+        // What the other shells sharing the history file ran since, for ↑ and ^R.
+        editor.history.takeOthersEntries()
         let directory = workingDirectory()
         if let previous = promptDirectory, previous != directory {
             for action in directoryHooks {

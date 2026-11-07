@@ -24,6 +24,33 @@ import Testing
     #expect(History(path: path).entries == ["if x {\n}"])  // trimmed on disk too
 }
 
+@Test func aLineThatBeginsWithASpaceIsKeptOutOfHistory() throws {
+    let shell = Shell()
+    let path = try shell.capturing { shell.execute("mktemp") }.trimmingCharacters(in: .newlines)
+    let history = History(path: path)
+    history.add(" export TOKEN=secret")
+    history.add("echo kept")
+    #expect(history.entries == ["echo kept"])
+    #expect(History(path: path).entries == ["echo kept"])
+}
+
+@Test func shellsSharingAHistoryFileSeeEachOthersLines() throws {
+    let shell = Shell()
+    let path = try shell.capturing { shell.execute("mktemp") }.trimmingCharacters(in: .newlines)
+    let first = History(path: path), second = History(path: path)
+    first.add("echo from first")
+    second.add("echo from second")
+    first.add("echo first again")
+    first.takeOthersEntries()
+    second.takeOthersEntries()
+    // Each has its own lines in the order it ran them, and the other's as it finds them.
+    #expect(first.entries == ["echo from first", "echo first again", "echo from second"])
+    #expect(second.entries == ["echo from second", "echo from first", "echo first again"])
+    // Nothing new: nothing is taken twice.
+    first.takeOthersEntries()
+    #expect(first.entries.count == 3)
+}
+
 @Test func historyReadsItsFileAsBytes() {
     // Escaped lines decode; others, and a last line without a newline, are
     // taken as they are, multi-byte characters included.

@@ -8,6 +8,10 @@ final class History {
     private(set) var entries: [String] = []
     private let path: String?
     private let limit: Int
+    /// How far into the file has been read: what other shells add after it is theirs.
+    private var readOffset = 0
+    /// What this shell has written since it last read the file, in order, to tell from the others'.
+    private var written: [String] = []
 
     /// `path` nil keeps history in memory only.
     init(path: String?, limit: Int = 10_000) {
@@ -15,6 +19,7 @@ final class History {
         self.limit = limit
         guard let path, let data = FileManager.default.contents(atPath: path) else { return }
         entries = History.lines(of: [UInt8](data))
+        readOffset = data.count
         // Trimmed back to the limit only once it's well past it: at the
         // limit, every session adds a little, and rewriting the whole file
         // each start would make a full history slow to start with.
@@ -24,11 +29,14 @@ final class History {
         }
     }
 
-    /// Adds an entry, unless it's blank or repeats the last one.
+    /// Adds an entry, unless it's blank, repeats the last one, or begins with a space, which is
+    /// how a line is kept out of history, as other shells keep it.
     func add(_ entry: String) {
-        guard !entry.allSatisfy(\.isWhitespace), entry != entries.last else { return }
+        guard !entry.allSatisfy(\.isWhitespace), entry != entries.last, !entry.hasPrefix(" ")
+        else { return }
         entries.append(entry)
         guard let path else { return }
+        written.append(entry)
         // Appending rather than rewriting lets several shells share a file.
         var fd = open(path, O_WRONLY | O_APPEND | O_CREAT, 0o600)
         if fd < 0 && errno == ENOENT {
@@ -40,6 +48,32 @@ final class History {
         close(fd)
     }
 
+    /// Takes what other shells sharing the file have added since it was last read, so their lines
+    /// are found here too. A file rewritten since, which is shorter, is read again from its start.
+    func takeOthersEntries() {
+        guard let path, let handle = FileHandle(forReadingAtPath: path) else { return }
+        defer { try? handle.close() }
+        let size = Int((try? handle.seekToEnd()) ?? 0)
+        guard size != readOffset else { return }
+        if size < readOffset {
+            readOffset = 0
+            written = []
+        }
+        try? handle.seek(toOffset: UInt64(readOffset))
+        let added = handle.readData(ofLength: size - readOffset)
+        // A line another shell is still writing is left for the next time.
+        guard let end = added.lastIndex(of: UInt8(ascii: "\n")) else { return }
+        let complete = added[added.startIndex...end]
+        readOffset += complete.count
+        for entry in History.lines(of: [UInt8](complete)) {
+            if written.first == entry {
+                written.removeFirst()
+            } else if entry != entries.last {
+                entries.append(entry)
+            }
+        }
+    }
+
     private func rewrite() {
         guard let path else { return }
         History.makeDirectory(for: path)
@@ -49,6 +83,8 @@ final class History {
             contents: Data(text.utf8),
             attributes: [.posixPermissions: 0o600]
         )
+        readOffset = text.utf8.count
+        written = []
     }
 
     static func encode(_ entry: String) -> String {
