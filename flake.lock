@@ -1,0 +1,44 @@
+{
+  "nodes": {
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1793977579,
+        "narHash": "sha256-WrSODdZFVIs/Hh2NzC0bY+ROByi0bATg8WfePX8dPj8=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "4fe25e12eb9f4c744966dd3de5a05246cf098601",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "nixpkgs": "nixpkgs",
+        "swiit": "swiit"
+      }
+    },
+    "swiit": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1794071583,
+        "narHash": "sha256-aBYSeWPnXOt2PlIBz8gZtXtuecuTNWdnO9sm83HTDV0=",
+        "owner": "raklaptudirm",
+        "repo": "Swiit",
+        "rev": "0fad2282a4bdd779483b238299a22204b7bd5094",
+        "type": "github"
+      },
+      "original": {
+        "owner": "raklaptudirm",
+        "repo": "Swiit",
+        "type": "github"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
