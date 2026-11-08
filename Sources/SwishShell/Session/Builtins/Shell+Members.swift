@@ -4,51 +4,69 @@ import Swiit
 extension Shell {
     // MARK: Conversions
 
-    /// The body of `members`: each type's fields and members, of the input.
+    /// The body of `members`: what each type of the input has, as `help Type` lists it, and then
+    /// what a value says it has beyond that (a tuple's fields, a job's members).
     func membersBody(_ arguments: [String: Value]) throws -> Value {
         guard let items = arguments["items"]?.casting(to: [Value].self) else {
             return Value([] as [Value])
         }
+
         var rows: [Value] = []
         var seen: Set<String> = []
-        func add(_ type: String, _ name: String, _ kind: String) {
+        func add(_ type: String, _ name: String, _ kind: MemberKind, _ declaration: String) {
             guard seen.insert("\(type).\(name)").inserted else { return }
+
+            // The prelude's `MemberKind` has the cases of the Swift one a member can be.
+            let kindValue = preludeTypes.memberKind.enumCase(named: "\(kind)", in: interpreter)
             rows.append(
                 make(
                     preludeTypes.member,
-                    ["type": Value(type), "name": Value(name), "kind": Value(kind)]
+                    [
+                        "type": Value(type), "name": Value(name),
+                        "kind": kindValue ?? .nothing, "declaration": Value(declaration),
+                    ]
                 )
             )
         }
+
         for item in items {
-            let before = rows.count
-            // A struct's fields, or an object's members, are its own.
+            let type = item.typeName
+            let listed = interpreter.scriptType(of: item).members(in: interpreter)
+                .filter { $0.memberKind != nil && $0.memberKind != .initializer }
+
+            // What the value holds comes first, in its own order: a struct's or a tuple's fields,
+            // or the members of a value that says them itself. The type says what each is, where
+            // it lists it.
+            var held: [(name: String, value: Value)] = []
             switch item.kind {
             case .structure, .tuple:
-                if let fields = item.fields {
-                    for (key, value) in fields { add(item.typeName, key, value.typeName) }
-                }
+                held = item.fields?.map { (name: $0.key, value: $0.value) } ?? []
             case .object:
-                // A value that says its members, methods too: a job's, a parsed object's.
-                if let held = item.casting(toExistential: (any ScriptConvertible).self),
-                    let names = held.memberNames
+                if let object = item.casting(toExistential: (any ScriptConvertible).self),
+                    let names = object.memberNames
                 {
-                    for name in names {
-                        add(item.typeName, name, held.member(name).map { $0.typeName } ?? "")
-                    }
+                    held = names.compactMap { name in object.member(name).map { (name, $0) } }
                 }
-            case .function:
-                add("Function", item.description, "signature")
-            default: break
+            default:
+                break
             }
-            // Then what its type has, as `help Type` shows it.
-            for member in interpreter.scriptType(of: item).members(in: interpreter) {
-                guard let kind = member.memberKind, kind != .initializer else { continue }
-                add(item.typeName, member.name, kind.rawValue)
+            for (name, value) in held {
+                if let member = listed.first(where: { $0.name == name }) {
+                    add(type, name, member.memberKind!, String(declaration(of: member).characters))
+                } else {
+                    let kind: MemberKind = value.kind == .function ? .method : .property
+                    add(type, name, kind, "\(name): \(value.typeName)")
+                }
             }
-            // A type with nothing to list is still named.
-            if rows.count == before && !seen.contains("\(item.typeName).") {
-                add(item.typeName, "", "")
+
+            // Then the rest of what the type has, as `help Type` lists it.
+            for member in listed {
+                add(
+                    type,
+                    member.name,
+                    member.memberKind!,
+                    String(declaration(of: member).characters)
+                )
             }
         }
         return Value(rows)

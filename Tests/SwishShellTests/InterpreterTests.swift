@@ -466,8 +466,10 @@ private func fixture() throws -> String {
     #expect(try output("ls \(dir) | filter { $0.type != FileType.file } | get name") == "sub\n")
     #expect(try output("ls -a \(dir) | count; ls \(dir) | count") == "4\n3\n")
     #expect(
-        try output("ls \(dir) | prefix 1 | members | filter { $0.name == \"size\" } | get kind")
-            == "FileSize\n"
+        try output(
+            "ls \(dir) | prefix 1 | members | filter { $0.name == \"size\" } | get declaration"
+        )
+            == "size: FileSize\n"
     )
     #expect(try output("ls \(dir)/small.txt | get path") == "\(dir)/small.txt\n")
 }

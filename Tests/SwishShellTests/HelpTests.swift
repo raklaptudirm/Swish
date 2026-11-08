@@ -96,6 +96,14 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
     #expect(
         try output(#""a" | members | filter { $0.name == "uppercased" } | get kind"#) == "method\n"
     )
+
+    // The kind is an enum, and the declaration says the member's type.
+    let source = """
+        struct Q { var x: Int; static func make() -> Q { Q(x: 0) } }
+        [Q(x: 1)] | members | filter { $0.kind == .staticMethod } | get declaration
+        [(a: 1, b: "s")] | members | get declaration
+        """
+    #expect(try output(source) == "make() -> Q\na: Int\nb: String\n")
 }
 
 @Test func signaturesAreColoredByWhatEachPartIs() {

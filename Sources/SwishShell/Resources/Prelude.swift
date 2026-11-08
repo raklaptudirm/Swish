@@ -334,11 +334,18 @@ func capture(throwing: Bool = false, _ body: () -> Void) -> Output
 /// must handle.
 func captureThrowing(_ body: () -> Void) throws -> Output
 
-/// A member `members` describes.
+/// A member `members` describes: the type it is a member of, its name, what kind of member it is,
+/// and how it is declared (`count: Int`, `uppercased() -> String`).
 struct Member: Equatable, Hashable, Encodable {
     let type: String
     let name: String
-    let kind: String
+    let kind: MemberKind
+    let declaration: String
+}
+
+/// What kind of member a `Member` is.
+enum MemberKind: Equatable, Hashable, Encodable {
+    case `case`, property, method, staticProperty, staticMethod
 }
 
 /// Describes the input: each type's fields and members.

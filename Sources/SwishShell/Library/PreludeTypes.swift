@@ -5,7 +5,7 @@ import Synchronization
 /// Asked of the interpreter once, after the prelude loads: a name the prelude no longer declares
 /// stops the shell at startup, not at a use.
 struct PreludeTypes {
-    let status, commandFailure, fileEntry, processEntry, member, help, json: Symbol.ID
+    let status, commandFailure, fileEntry, processEntry, member, memberKind, help, json: Symbol.ID
     let glob, spread, jobState, wrapping, stream: Symbol.ID
 
     init(_ interpreter: Interpreter) {
@@ -20,6 +20,7 @@ struct PreludeTypes {
         fileEntry = declared("FileEntry")
         processEntry = declared("ProcessEntry")
         member = declared("Member")
+        memberKind = declared("MemberKind")
         help = declared("Help")
         json = declared("JSON")
         glob = declared("Glob")
