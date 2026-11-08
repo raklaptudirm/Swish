@@ -288,10 +288,12 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
 |---|---|
 | [`Swiit`](https://github.com/raklaptudirm/Swiit) | The interpreter, in a repository of its own, which knows nothing of the shell; the shell is a client of it, built against the version in `.swiit-version`. It is looked for beside this checkout (`../Swiit`; CI clones the tag), so work on both together by editing there. It holds the language, the bridges, the host API, `SwiitKit` (`Value`, and what a host converts through, a module of its own) and the bridge generator. |
 | `Sources/SwishShell` | The shell (Swish), a client of Swiit through its public interface alone: |
-| `…/Grammar` | The shell's syntax: `Syntax` (commands, pipelines, `$(…)`, redirects), `Checking` (types a pipeline's stages), `CommandLine` (binds `--flag` words to parameters) and the nodes they make. |
-| `…/Runtime` | Running it: `Execution` (pipelines, value streams, redirects, jobs, globs, `env`), `Platform` (`posix_spawn` with process groups and terminal handoff, resource limits, what differs between macOS and Linux). |
-| `…/Session` | The prompt: the `Shell` itself (loop, scripts, tasks, config), `Editor` (history, completion, highlighting) and the shell builtins and `help`. `Presentation` shows values: tables, key/value lists, and the prompt's echo of each value (the interpreter only tells it what a statement gave). |
-| `…/Library` | The shell's own functions and types (`pwd`, `readLine`, `history`, `ls`, `ps`, `from`, `to`, `table`, `list`, `JSON`, `FileSize`, `Output`), told to the interpreter through its public interface (`Install.swift`, `Prelude.swift`, `Native.swift`). |
+| `…/Front` | The shell's syntax: `Reader` reads its forms (commands, pipelines, `$(…)`, redirects) out of Swift text and writes the Swift calls they mean, with `Lexical` and `SwiftProbe` finding where Swift ends. `CommandLine` binds a command's words (`--flag`, values) to a function's parameters. |
+| `…/Runtime` | Running it: `Execution` (pipelines, statuses, value streams, redirects, jobs, globs, `env`), `Commands` (what a stage can be and the parameters it takes), `Platform` (`posix_spawn` with process groups and terminal handoff, resource limits, what differs between macOS and Linux). |
+| `…/Session` | The prompt: the `Shell` itself (the host it is, loop, scripts, tasks, config, prompt hooks), `Editor` (line editing, the completion menu, history, highlighting) and `Builtins` (the shell builtins and `help`). |
+| `…/Display` | Showing values: tables, key/value lists, pretty-printed values and the prompt's echo of each value (the interpreter only tells it what a statement gave), fitted to the terminal. |
+| `…/Library` | The shell's own functions and types (`pwd`, `readLine`, `history`, `ls`, `ps`, `from`, `to`, `table`, `list`, `JSON`, `FileSize`, `Output`), told to the interpreter through its public interface (`Install.swift`, `Native.swift`). |
+| `…/Resources` | `Prelude.swift`: what the shell declares in Swift for scripts, read by the interpreter (not compiled), its bodiless functions' bodies found by name in `Library`. |
 | `Sources/Swish` | The executable. |
 | `Tests/Interactive` | `expect` scripts that drive the shell through a real terminal. |
 
