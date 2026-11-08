@@ -57,9 +57,9 @@ extension Output {
     static let native = HostTypeBuilder<Output>("Output")
         .property("text", \.text)
         .property("lines", \.lines)
-        .property("code", \.code)
-        .property("signal", \.signal)
-        .property("succeeded", \.succeeded)
+        .property("code", \.status.code)
+        .property("signal", \.status.signal)
+        .property("succeeded", \.status.succeeded)
         .property("count", \.count)
         .property("isEmpty", \.isEmpty)
         .property("first", \.first)
@@ -70,7 +70,8 @@ extension Output {
         .property("debugDescription", \.debugDescription)
         .initializer(labels: ["text", "code", "signal"]) {
             (text: String, code: Int?, signal: Int?) in
-            Output(text: text, code: code, signal: signal)
+            let status = signal.map { Status.signaled(Int32($0)) } ?? .exited(Int32(code ?? 0))
+            return Output(text: text, status: status)
         }
         // A command's output compares with text as its text does, on either side.
         .static("==", labels: [nil, nil]) { (a: Output, b: String) -> Bool in a.text == b }

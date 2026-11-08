@@ -27,7 +27,7 @@ extension Shell {
             return
         }
         _ = sourceFile(path, arguments: [])
-        lastStatus = 0
+        lastStatus = .exited(0)
     }
 
     /// What the `prompt` function gives, or nil if there isn't one. It's
@@ -50,7 +50,7 @@ extension Shell {
         defer { lastStatus = status }  // Drawing the prompt isn't a command.
         let value = try invoke(
             Callee(name: "prompt", overloads: [], receiver: nil),
-            withStatus != nil ? [("status", Value(Int(status)))] : []
+            withStatus != nil ? [("status", Value(Int(status.number)))] : []
         )
         guard let text = value.casting(to: String.self) else {
             throw RuntimeError("it gave \(value.typeName), not a String")

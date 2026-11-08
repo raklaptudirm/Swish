@@ -32,7 +32,7 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
         let printed = try onLargeStack {
             try tasks.capturing { _ = tasks.runTasks(at: file, task: task, arguments: arguments) }
         }
-        return (printed, tasks.lastStatus)
+        return (printed, tasks.lastStatus.number)
     }
     // The top level runs first; arguments are the function's, not `args`.
     #expect(try run("hello", ["--name", "Rak", "--loud"]) == ("hi RAK 0\n", 0))

@@ -11,7 +11,7 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 private func status(_ source: String) -> Int32 {
     let shell = Shell()
     _ = try? onLargeStack { try shell.capturing { shell.execute(source) } }
-    return shell.lastStatus
+    return shell.lastStatus.number
 }
 
 @Test func arithmeticAndDisplay() throws {
@@ -478,7 +478,7 @@ private func fixture() throws -> String {
     #expect(
         try output("ls \(dir)/nope \(dir)/small.txt | get name", in: shell) == "\(dir)/small.txt\n"
     )
-    #expect(shell.lastStatus == 1)
+    #expect(shell.lastStatus.number == 1)
 }
 
 @Test func psListsProcesses() throws {
@@ -622,7 +622,7 @@ private func fixture() throws -> String {
     // As in Swift: the `??` is inside the `try?`, so a failure makes it all nil.
     let shell = Shell()
     #expect(try output(#"try? $(false) ?? "fallback""#, in: shell) == "")
-    #expect(shell.lastStatus == 1)  // nil is a failure
+    #expect(shell.lastStatus.number == 1)  // nil is a failure
     #expect(
         try output("let y = try $(echo plain); y")
             == "Output(text: \"plain\", status: Status(code: 0, signal: nil, succeeded: true))\n"

@@ -42,7 +42,7 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
     // One told the last status wins over one that isn't, and leaves the status as it was.
     _ = try output(#"func prompt(status: Int) -> String { "[\(status)]> " }; false"#, in: shell)
     #expect(try shell.customPrompt() == "[1]> ")
-    #expect(shell.lastStatus == 1)
+    #expect(shell.lastStatus.number == 1)
 
     let wrong = Shell()
     _ = try output("func prompt(_ n: Int) -> Int { n }", in: wrong)

@@ -22,10 +22,8 @@ final class Job: ScriptConvertible, Presentable, CustomStringConvertible,
     var running: [pid_t] = []
     /// nil when the last command failed to spawn.
     var lastPid: pid_t?
-    /// The status of the pipeline's last command.
-    var status: Int32 = 0
-    /// The signal that ended the last command, if one did.
-    var signal: Int32?
+    /// How the pipeline's last command ended.
+    var status = Status.success
     var state = State.running
     var cancelled = false
     /// Whether its latest change (stopping, or finishing) has been reported.
@@ -53,14 +51,10 @@ final class Job: ScriptConvertible, Presentable, CustomStringConvertible,
     func finish() {
         guard state != .done else { return }
         // A task ended as it gave a value or threw.
-        if let result = task?.result, case .failure = result { status = 1 }
+        if let result = task?.result, case .failure = result { status = .exited(1) }
         var text = capture?.finish() ?? ""
         while text.last == "\n" { text.removeLast() }
-        output = Output(
-            text: text,
-            code: signal == nil ? Int(status) : nil,
-            signal: signal.map(Int.init)
-        )
+        output = Output(text: text, status: status)
         state = .done
         capture = nil
     }
@@ -174,10 +168,16 @@ final class Job: ScriptConvertible, Presentable, CustomStringConvertible,
             case .running: ("running", DisplayStyle.green)
             case .stopped: ("stopped", DisplayStyle.yellow)
             case .done where cancelled: ("cancelled", DisplayStyle.dim)
-            case .done where signal != nil:
-                ("failed (\(String(cString: strsignal(signal!)).lowercased()))", DisplayStyle.red)
-            case .done where status != 0: ("failed (\(status))", DisplayStyle.red)
-            case .done: ("done", nil)
+            case .done:
+                switch status {
+                case .success: ("done", nil)
+                case .exited(let code): ("failed (\(code))", DisplayStyle.red)
+                case .signaled(let signal):
+                    (
+                        "failed (\(String(cString: strsignal(signal)).lowercased()))",
+                        DisplayStyle.red
+                    )
+                }
             }
         return [("[\(id)]", DisplayStyle.dim), (" ", nil), (label, style), ("  " + source, nil)]
     }
@@ -192,26 +192,6 @@ final class Job: ScriptConvertible, Presentable, CustomStringConvertible,
 
     /// A job on its own reads as `jobs` announces it: `[1] running  make`.
     var debugDescription: String { description }
-}
-
-/// The job's `$?`-less status and signal, from a `waitpid` status.
-struct Exit {
-    let status: Int32
-    let signal: Int32?
-
-    init(_ raw: Int32) {
-        let wait = WaitStatus(raw)
-        if wait.exited {
-            status = wait.exitCode
-            signal = nil
-        } else if wait.signaled {
-            signal = wait.signal
-            status = 128 + signal!
-        } else {
-            status = 1
-            signal = nil
-        }
-    }
 }
 
 /// Stopping a job you were awaiting (^Z) leaves the line; it's in `jobs`.
@@ -281,7 +261,7 @@ extension Shell {
                 if isLast { job.lastPid = pid }
             case .failure(let failure):
                 report(failure.message)
-                if isLast { job.status = failure.status }
+                if isLast { job.status = .exited(failure.status) }
             }
         }
         if job.running.isEmpty {
@@ -399,9 +379,7 @@ extension Shell {
                 }
                 job.running.removeAll { $0 == pid }
                 if pid == job.lastPid {
-                    let exit = Exit(raw)
-                    job.status = exit.status
-                    job.signal = exit.signal
+                    job.status = Status(WaitStatus(raw))
                 }
             }
             if job.running.isEmpty {

@@ -168,7 +168,7 @@ extension Shell {
     }
 
     private func exitShell(_ args: [String]) -> Int32 {
-        var code = lastStatus
+        var code = lastStatus.number
         if let arg = args.first {
             guard let parsed = Int32(arg) else {
                 report("exit: \(arg): numeric argument required")

@@ -74,7 +74,7 @@ private func scratch() throws -> String {
     #expect(try output("test [ = [ && echo ok") == "ok\n")
     let shell = Shell()
     #expect(try output("echo \(d)/*.nope", in: shell) == "")
-    #expect(shell.lastStatus == 1)
+    #expect(shell.lastStatus.number == 1)
 }
 
 // MARK: Redirects
@@ -119,7 +119,7 @@ private func scratch() throws -> String {
     let shell = Shell()
     #expect(try output("echo x > \(d)/no/such/file; echo after", in: shell) == "after\n")
     #expect(try output("echo x > \(d)/*.txt", in: shell) == "")
-    #expect(shell.lastStatus == 1)
+    #expect(shell.lastStatus.number == 1)
 }
 
 @Test func swishFunctionsAndBuiltinsRedirect() throws {
@@ -139,7 +139,7 @@ private func scratch() throws -> String {
     // A function's errors follow its `e>`.
     let shell = Shell()
     #expect(try output(funcs + "boom e> \(d)/err", in: shell) == "")
-    #expect(shell.lastStatus == 1)
+    #expect(shell.lastStatus.number == 1)
     #expect(try output("cat \(d)/err") == "swish: error: division by zero\n")
     // The `e>` catches it, as `do { boom } catch { … }` would: a `catch` around it sees nothing, and
     // the script goes on.
@@ -157,5 +157,5 @@ private func scratch() throws -> String {
     _ = try? shell.capturing {
         shell.execute("func f(@input _ x: Int) -> Int { x }; seq 2 | f > /dev/null | f")
     }
-    #expect(shell.lastStatus == 1)
+    #expect(shell.lastStatus.number == 1)
 }

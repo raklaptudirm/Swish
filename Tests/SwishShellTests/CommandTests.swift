@@ -14,7 +14,7 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 private func status(_ source: String) -> Int32 {
     let shell = Shell()
     _ = try? onLargeStack { try shell.capturing { shell.execute(source) } }
-    return shell.lastStatus
+    return shell.lastStatus.number
 }
 
 @Test func aCommandRunsAndGivesItsStatus() throws {
@@ -31,6 +31,18 @@ private func status(_ source: String) -> Int32 {
         )
             == "Optional(15)\ntrue\n"
     )
+}
+
+@Test func anExitCodeOver128IsNotASignal() throws {
+    // A command that exits 143 was not ended by signal 15, even just after one that was.
+    let killedThenExited = #"""
+        let a = $(sh -c 'kill -TERM $$'); let b = $(sh -c 'exit 143')
+        print(a.status.signal, a.status.code); print(b.status.signal, b.status.code)
+        """#
+    #expect(try output(killedThenExited) == "Optional(15) nil\nnil Optional(143)\n")
+    // `$?` is the code, or 128 and the signal, either way.
+    #expect(status("sh -c 'kill -TERM $$'") == 143)
+    #expect(status("sh -c 'exit 143'") == 143)
 }
 
 @Test func aStatusIsTheStatementsStatus() {

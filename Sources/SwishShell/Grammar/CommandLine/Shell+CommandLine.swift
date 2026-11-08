@@ -49,12 +49,12 @@ extension Shell {
         _ callee: Callee,
         _ args: [CommandArgument],
         display shouldDisplay: Bool
-    ) throws -> Int32 {
+    ) throws -> Status {
         if helpRequested(args, for: callee) {
             interpreter.host.output.write(
                 helpText(for: callee, styled: interpreter.host.output.traits().isStyled)
             )
-            return 0
+            return .success
         }
         let call = try bind(commandLine: args, to: callee, excludingInput: false)
         let result = try invoke(call.callee, call.arguments())
@@ -62,8 +62,8 @@ extension Shell {
         if shouldDisplay && result != Value([] as [Value]) {
             show(result)
         }
-        if let truth = result.casting(to: Bool.self) { return truth ? 0 : 1 }
-        return 0
+        if let truth = result.casting(to: Bool.self) { return truth ? .success : .exited(1) }
+        return .success
     }
 
     /// Calls the function a callee names, or its method on `receiver`. A failure is the shell's own
@@ -216,7 +216,7 @@ extension Shell {
         }
         if let value = word(text, as: type) { return value }
         // A command's output, which is text, is what a word is for it.
-        if type == .named(Output.id) { return .output(Output(text: text, code: 0)) }
+        if type == .named(Output.id) { return .output(Output(text: text, status: .success)) }
         guard takesWords(type) else {
             throw RuntimeError(
                 "\(function): \(what) is \(type), which a word can't be: call it with parentheses, as in \(function)(…)"

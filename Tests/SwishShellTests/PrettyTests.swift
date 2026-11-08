@@ -13,7 +13,7 @@ private func fileType(_ name: String) -> Value {
 }
 
 @Test func onOneLineItIsTheDebugDescription() throws {
-    let status = Output(text: "hi", code: 0)
+    let status = Output(text: "hi", status: .success)
     let values: [Value] = [
         .nothing, Value(3), Value("tab\there"), Value([Value(1), Value("x"), .nothing]),
         try Interpreter().evaluate(#"(k: "v")"#),
@@ -54,7 +54,7 @@ private func fileType(_ name: String) -> Value {
 }
 
 @Test func multiLineStringsInsideAreBlocks() {
-    let output = Value.output(Output(text: "one\ntwo \"\"\" \\ \u{1B}[1m", code: 0))
+    let output = Value.output(Output(text: "one\ntwo \"\"\" \\ \u{1B}[1m", status: .success))
     #expect(
         wide.format(output) == #"""
             Output(

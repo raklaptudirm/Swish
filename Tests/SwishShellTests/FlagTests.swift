@@ -20,7 +20,7 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
     let shell = Shell()
     _ = try output(#"func f(r: ClosedRange<Int>) { echo "\(r)" }"#, in: shell)
     _ = try output("f --r 1...3", in: shell)
-    #expect(shell.lastStatus != 0)
+    #expect(shell.lastStatus.number != 0)
     #expect(try output("f(r: 1...3)", in: shell) == "1...3\n")
 }
 

@@ -10,7 +10,7 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 private func status(_ source: String) -> Int32 {
     let shell = Shell()
     _ = try? onLargeStack { try shell.capturing { shell.execute(source) } }
-    return shell.lastStatus
+    return shell.lastStatus.number
 }
 
 private let point = """

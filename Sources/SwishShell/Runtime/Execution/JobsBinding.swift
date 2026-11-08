@@ -36,10 +36,9 @@ extension Shell {
                     return .nothing
                 }
                 let output = try awaitJob(job)
-                if throwing && !output.succeeded {
+                if throwing && !output.status.succeeded {
                     throw RuntimeError.commandFailure(
-                        "\(job.source) failed with status \(job.status)",
-                        status: job.status,
+                        "\(job.source) failed with status \(output.status.number)",
                         output: output,
                         shell: self
                     )

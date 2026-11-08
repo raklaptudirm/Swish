@@ -77,7 +77,7 @@ extension Shell {
         }
         // What runs in it leaves the status it ends with.
         let before = lastStatus
-        lastStatus = 0
+        lastStatus = .success
         // Its statements run as statements, which say how they went.
         let text = try capturing {
             let result = try self.callBlock(body)
@@ -89,10 +89,9 @@ extension Shell {
         lastStatus = before
         let output = output(text, status: status)
         // Without `try`, failing is just what `.status` says.
-        if arguments["throwing"]?.casting(to: Bool.self) == true && status != 0 {
+        if arguments["throwing"]?.casting(to: Bool.self) == true && !status.succeeded {
             throw RuntimeError.commandFailure(
-                "$(…) failed with status \(status)",
-                status: status,
+                "$(…) failed with status \(status.number)",
                 output: output,
                 shell: self
             )
@@ -105,7 +104,7 @@ extension Shell {
         try interpreter.call(closure, with: [])
     }
 
-    func run(_ commands: [Value], from input: Value?, display: Bool) throws -> Int32 {
+    func run(_ commands: [Value], from input: Value?, display: Bool) throws -> Status {
         try runPipeline(
             try stages(commands, from: input),
             source: source(commands, from: input),
@@ -116,12 +115,10 @@ extension Shell {
     /// As `try make`: failing throws a `CommandFailure`.
     func check(_ commands: [Value], from input: Value?) throws -> Value {
         let status = try run(commands, from: input, display: true)
-        if status != 0 {
-            let (code, signal) = exitCode(status)
+        if !status.succeeded {
             throw RuntimeError.commandFailure(
-                "\(source(commands, from: input)) failed with status \(status)",
-                status: status,
-                output: Output(text: "", code: code, signal: signal),
+                "\(source(commands, from: input)) failed with status \(status.number)",
+                output: Output(text: "", status: status),
                 shell: self
             )
         }
@@ -130,49 +127,40 @@ extension Shell {
 
     /// As `$(…)`: its output is gathered, whatever its status.
     func output(_ commands: [Value], from input: Value?) throws -> Output {
-        var status: Int32 = 0
+        var status = Status.success
         let text = try capturing { status = try run(commands, from: input, display: false) }
         return output(text, status: status)
     }
 
     /// The Output of a command's text and status, as `$(…)` gives it.
-    func output(_ text: String, status: Int32) -> Output {
+    func output(_ text: String, status: Status) -> Output {
         var text = text
         while text.last == "\n" { text.removeLast() }
-        let (code, signal) = exitCode(status)
-        return Output(text: text, code: code, signal: signal)
+        return Output(text: text, status: status)
     }
 
     /// The exit status a value gives: a Bool's truth, a `Status` or an
     /// `Output` how its command ended; anything else succeeded.
-    func status(of value: Value) -> Int32 {
-        if let truth = value.casting(to: Bool.self) { return truth ? 0 : 1 }
-        if value.isInstance(of: preludeTypes.status),
-            let succeeded = value.field("succeeded")?.casting(to: Bool.self)
-        {
-            if succeeded { return 0 }
-            if let code = value.field("code")?.casting(to: Int.self) { return Int32(code) }
+    func status(of value: Value) -> Status {
+        if let truth = value.casting(to: Bool.self) { return truth ? .success : .exited(1) }
+        if value.isInstance(of: preludeTypes.status) {
             if let signal = value.field("signal")?.casting(to: Int.self) {
-                return 128 + Int32(signal)
+                return .signaled(Int32(signal))
             }
-            return 1
+            return .exited(Int32(value.field("code")?.casting(to: Int.self) ?? 0))
         }
         // `await build && echo ok`: an Output's status is its command's.
-        if let output = value.commandOutput, !output.succeeded {
-            return output.code.map(Int32.init) ?? 128 + Int32(output.signal ?? 0)
-        }
-        return 0
+        return value.commandOutput?.status ?? .success
     }
 
     /// A command statement's value: how it ended.
-    func statusValue(_ status: Int32) -> Value {
-        let (code, signal) = exitCode(status)
-        return make(
+    func statusValue(_ status: Status) -> Value {
+        make(
             preludeTypes.status,
             [
-                "code": code.map { Value($0) } ?? Value.nothing,
-                "signal": signal.map { Value($0) } ?? Value.nothing,
-                "succeeded": Value(status == 0),
+                "code": status.code.map { Value($0) } ?? Value.nothing,
+                "signal": status.signal.map { Value($0) } ?? Value.nothing,
+                "succeeded": Value(status.succeeded),
             ]
         )
     }

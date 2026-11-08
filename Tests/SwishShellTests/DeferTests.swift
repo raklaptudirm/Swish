@@ -33,9 +33,9 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 @Test func nothingLeavesADefer() throws {
     let shell = Shell()
     _ = try output("func f() -> Int { defer { return 2 }; return 1 }", in: shell)
-    #expect(shell.lastStatus == 2)  // a syntax error: return outside a function
+    #expect(shell.lastStatus.number == 2)  // a syntax error: return outside a function
     _ = try output("func f() throws { defer { try $(false) } }", in: shell)
-    #expect(shell.lastStatus == 2)
+    #expect(shell.lastStatus.number == 2)
 }
 
 @Test func scriptsKnowWhereTheyAreAndCleanUp() throws {

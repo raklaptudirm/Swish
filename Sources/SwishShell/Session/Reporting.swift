@@ -30,14 +30,14 @@ extension Shell {
     /// `let`, succeeds. An `if` or a loop is what ran in it last.
     func recordStatuses() {
         interpreter.host.didFinishStatement = { [unowned self] value, caught in
-            var status = value.map(status(of:)) ?? 0
+            var status = value.map(status(of:)) ?? .success
             // A `try?` that caught an error failed; other nils, like a function that returns
             // nothing, didn't.
-            if caught { status = 1 }
+            if caught { status = .exited(1) }
             let state = task
             let itemErrors = state.itemErrors > state.itemErrorsSeen
             state.itemErrorsSeen = state.itemErrors
-            lastStatus = itemErrors && status == 0 ? 1 : status
+            lastStatus = itemErrors && status.succeeded ? .exited(1) : status
         }
     }
 }

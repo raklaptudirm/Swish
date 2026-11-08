@@ -16,15 +16,10 @@ public final class Shell: @unchecked Sendable {
     /// holding the lock, or for code that doesn't hold it, the main task's.
     var task: ShellTask { interpreter.taskState as! ShellTask }
 
-    /// The status the current task's last statement gave.
-    public internal(set) var lastStatus: Int32 {
+    /// How the current task's last statement ended.
+    var lastStatus: Status {
         get { task.lastStatus }
         set { task.lastStatus = newValue }
-    }
-    /// The status the current task's last signal-killed command gave.
-    var lastSignalStatus: Int32? {
-        get { task.lastSignalStatus }
-        set { task.lastSignalStatus = newValue }
     }
     /// Where the current task's output goes.
     var stdoutFD: Int32 {
@@ -202,7 +197,7 @@ extension Shell {
         case .success(let reading):
             runReportingErrors(reading, atPrompt: atPrompt)
         }
-        return lastStatus
+        return lastStatus.number
     }
 
     /// Closes the top level as a scope: the tasks started there are cancelled
@@ -261,7 +256,7 @@ extension Shell {
                 } ?? ""
             report("\(place)error: \(diagnostic.message)")
         }
-        lastStatus = 2
+        lastStatus = .exited(2)
     }
 
     /// A runtime error abandons the rest of the input, unlike a failing
@@ -301,17 +296,17 @@ extension Shell {
     /// Reports how a run failed, and says whether a script goes on with its next statement.
     func handleRunFailure(_ diagnostic: Diagnostic) -> Bool {
         if diagnostic.cause is JobSuspended {
-            lastStatus = 128 + SIGTSTP  // Already announced; the job is in `jobs`.
+            lastStatus = .exited(128 + SIGTSTP)  // Already announced; the job is in `jobs`.
             return false
         }
         if diagnostic.isCancelled, let signal = stoppedBySignal {
             stoppedBySignal = nil
             if interactive && interpreter.file == nil {
                 writeAll(STDERR_FILENO, "\n")
-                lastStatus = 128 + SIGINT
+                lastStatus = .signaled(SIGINT)
             } else {
                 // A script stops, running its defers, then ends by the signal.
-                lastStatus = 128 + signal
+                lastStatus = .signaled(signal)
                 scriptStopped = true
                 endingSignal = signal
             }
@@ -319,7 +314,7 @@ extension Shell {
         }
         if diagnostic.isFatal {
             reportDiagnostic(diagnostic)
-            lastStatus = diagnostic.status
+            lastStatus = .exited(diagnostic.status)
             // At the prompt, stopping would mean exiting your shell; the
             // config file stops, as a script does.
             scriptStopped = !interactive || interpreter.file != nil
@@ -327,11 +322,11 @@ extension Shell {
         }
         if diagnostic.isRuntime {
             reportDiagnostic(diagnostic)
-            lastStatus = diagnostic.status
+            lastStatus = .exited(diagnostic.status)
             return true
         }
         report("error: \(diagnostic.message)")
-        lastStatus = 1
+        lastStatus = .exited(1)
         return false
     }
 }
@@ -350,12 +345,8 @@ final class ShellTask {
     /// last statement had seen.
     var itemErrors = 0
     var itemErrorsSeen = 0
-    /// The status the last statement gave, kept as statements run
-    /// (`recordStatuses`).
-    var lastStatus: Int32 = 0
-    /// The status the last signal-killed command gave, to tell 130 from ^C
-    /// apart from a command that exited with 130.
-    var lastSignalStatus: Int32?
+    /// How the last statement ended, kept as statements run (`recordStatuses`).
+    var lastStatus = Status.success
     /// Whether it's the task in the foreground, whose programs get the
     /// terminal and which reads the input: the prompt's, or a task while it's
     /// awaited from there. Set from the task awaiting it, on another thread.

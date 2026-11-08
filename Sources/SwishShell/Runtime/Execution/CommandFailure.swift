@@ -19,7 +19,6 @@ extension Diagnostic {
     /// ended (`status.code`, `status.signal`) and the `text` it wrote.
     static func commandFailure(
         _ message: String,
-        status: Int32,
         output: Output,
         shell: Shell
     ) -> Diagnostic {
@@ -29,19 +28,12 @@ extension Diagnostic {
                 shell.preludeTypes.commandFailure,
                 [
                     "message": Value(message),
-                    "status": shell.make(
-                        shell.preludeTypes.status,
-                        [
-                            "code": output.code.map { Value($0) } ?? Value.nothing,
-                            "signal": output.signal.map { Value($0) } ?? Value.nothing,
-                            "succeeded": Value(false),
-                        ]
-                    ),
+                    "status": shell.statusValue(output.status),
                     "text": Value(output.text),
                     "localizedDescription": Value(message),
                 ]
             ),
-            cause: ShellFailure(status: status)
+            cause: ShellFailure(status: output.status.number)
         )
     }
 

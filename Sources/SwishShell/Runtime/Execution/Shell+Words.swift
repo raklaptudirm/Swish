@@ -1,16 +1,9 @@
 import Foundation
 import Swiit
 
-// The shell's halves of what the interpreter does with environment, words and
-// statuses: a command's words and redirects expanded, and a status read as an
-// exit code or the signal that ended the command.
+// The shell's halves of what the interpreter does with environment and words: a command's words
+// and redirects expanded.
 extension Shell {
-    /// A status as an exit code, or the signal that ended the command.
-    func exitCode(_ status: Int32) -> (code: Int?, signal: Int?) {
-        if status > 128 && status == lastSignalStatus { return (nil, Int(status - 128)) }
-        return (Int(status), nil)
-    }
-
     /// Sets environment variables around `body`, then puts them back.
     func withEnvironment<T>(_ variables: [(String, String)], _ body: () throws -> T) rethrows -> T {
         // A name given twice is the last one's.

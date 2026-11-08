@@ -9,7 +9,7 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 
 private func status(_ source: String, in shell: Shell = Shell()) -> Int32 {
     _ = try? onLargeStack { try shell.capturing { shell.execute(source) } }
-    return shell.lastStatus
+    return shell.lastStatus.number
 }
 
 @Test func umaskShowsAndSetsTheMask() throws {

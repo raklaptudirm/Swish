@@ -18,7 +18,7 @@ private func run(
     in shell: Shell = Shell()
 ) throws -> (output: String, status: Int32) {
     let output = try onLargeStack { try shell.capturing { shell.execute(source) } }
-    return (output, shell.lastStatus)
+    return (output, shell.lastStatus.number)
 }
 
 @Test func theShellsWaitsAreBlockingCalls() throws {

@@ -50,7 +50,7 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
     #expect(!(try output("help help")).contains("default: nil"))
     let shell = Shell()
     _ = try? output("help surely-not-a-command", in: shell)
-    #expect(shell.lastStatus == 1)
+    #expect(shell.lastStatus.number == 1)
 }
 
 @Test func helpCompletesNames() {

@@ -58,7 +58,7 @@ extension Shell {
         switch prepare(source) {
         case .failure(let diagnostic):
             reportReadingFailure(diagnostic, file: path)
-            return lastStatus
+            return lastStatus.number
         case .success(let read):
             reading = read
         }
@@ -68,7 +68,7 @@ extension Shell {
             reading,
             then: { [unowned self] in if !scriptStopped { finish(reading) } }
         )
-        return lastStatus
+        return lastStatus.number
     }
 
     /// A function the file declared at its top level.
@@ -88,10 +88,10 @@ extension Shell {
             lastStatus = try callCommand(callee, arguments.map(CommandArgument.text), display: true)
         } catch let error as Diagnostic {
             report("error: \(error)")
-            lastStatus = error.status
+            lastStatus = .exited(error.status)
         } catch {
             report("error: \(error)")
-            lastStatus = 1
+            lastStatus = .exited(1)
         }
     }
 }

@@ -32,7 +32,7 @@ extension Shell {
             switch Interpreter.whileWaiting({ editor.readLine(prompt: prompt) }) {
             case .eof:
                 if !pending.isEmpty { enter(pending) }
-                return lastStatus
+                return lastStatus.number
             case .interrupted:
                 pending = ""
             case .line(let line):
@@ -67,12 +67,12 @@ extension Shell {
                 reportReadingFailure(error)
             case .success(let reading):
                 runReportingErrors(reading)
-                if scriptStopped { return lastStatus }
+                if scriptStopped { return lastStatus.number }
             }
             pending = ""
         }
         if !pending.isEmpty { execute(pending) }
-        return lastStatus
+        return lastStatus.number
     }
 }
 
@@ -107,8 +107,8 @@ extension Shell {
 
     private func defaultPrompt() -> String {
         let directory = Shell.abbreviated(FileManager.default.currentDirectoryPath)
-        let failed = lastStatus != 0
-        let status = failed ? "[\(lastStatus)]".styled(DisplayStyle.red) + " " : ""
+        let failed = !lastStatus.succeeded
+        let status = failed ? "[\(lastStatus.number)]".styled(DisplayStyle.red) + " " : ""
         return directory.styled(DisplayStyle.cyan) + " " + status
             + "❯".styled(failed ? DisplayStyle.red : DisplayStyle.green) + " "
     }

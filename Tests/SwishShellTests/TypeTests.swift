@@ -15,7 +15,7 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
 @Test func typeErrorsStopBeforeAnythingRuns() throws {
     let shell = Shell()
     #expect(try output(#"echo before; let x: Int = "a""#, in: shell) == "")
-    #expect(shell.lastStatus == 2)
+    #expect(shell.lastStatus.number == 2)
     #expect(typeError(#"let x: Int = "a""#) == "the value must be Int, not String")
 }
 
@@ -92,7 +92,7 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
     #expect(typeError("let s = \"ab\"; s!")?.hasPrefix("'!' unwraps an optional") == true)
     let shell = Shell()
     _ = try output("let x: Int? = nil; x!", in: shell)
-    #expect(shell.lastStatus == 1)  // at run time: nil can only be found then
+    #expect(shell.lastStatus.number == 1)  // at run time: nil can only be found then
 }
 
 @Test func closuresTakeTypesFromContext() throws {
@@ -125,7 +125,7 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
     let script = Shell()
     let printed = try onLargeStack { try script.capturing { _ = script.runScript(at: path) } }
     #expect(printed == "")  // `echo one` didn't run
-    #expect(script.lastStatus == 2)
+    #expect(script.lastStatus.number == 2)
 }
 
 // MARK: Phase 2: functions as values, overloads, throws
@@ -344,7 +344,7 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
     #expect(typeError("let x = 5; let y = x as Any") == nil)
     let shell = Shell()
     _ = try output(#"let a: Any = "s"; a as! Int"#, in: shell)
-    #expect(shell.lastStatus == 1)  // at run time, as in Swift
+    #expect(shell.lastStatus.number == 1)  // at run time, as in Swift
     // Casts bind tighter than ??, looser than ranges, as in Swift.
     #expect(try output(#"let a: Any = "s"; a as? Int ?? 0"#) == "0\n")
 }

@@ -55,21 +55,21 @@ extension Shell {
     /// between themselves and text to and from their external neighbours.
     ///
     /// `display` shows the result of a lone function call, as for any statement.
-    func runPipeline(_ stages: [Stage], source: String, display: Bool) throws -> Int32 {
+    func runPipeline(_ stages: [Stage], source: String, display: Bool) throws -> Status {
         if stages.count == 1 {
             switch stages[0] {
             // A function reading a file (`double < numbers`) streams it, below.
             case .function(let callee, let args, let redirects, let environment)
             where callee.receiver == nil && !redirects.contains(where: { $0.fd == 0 }):
                 return try withEnvironment(environment) {
-                    try withRedirects(redirects, recovering: { $0.status }) { _, _ in
+                    try withRedirects(redirects, recovering: { .exited($0.status) }) { _, _ in
                         try callCommand(callee, args, display: display)
                     }
                 }
             case .external(let argv, let skipBuiltins, let redirects, let environment)
             where !skipBuiltins && Shell.shellBuiltins[argv[0]] != nil:
                 return try withEnvironment(environment) {
-                    try withRedirects(redirects) { _, _ in runBuiltin(argv)! }
+                    try withRedirects(redirects) { _, _ in .exited(runBuiltin(argv)!) }
                 }
             default:
                 break
@@ -150,14 +150,14 @@ extension Shell {
                 if isLast { job.lastPid = pid }
             case .failure(let failure):
                 report(failure.message)
-                if isLast { job.status = failure.status }
+                if isLast { job.status = .exited(failure.status) }
             }
         }
         if input >= 0 { close(input) }
 
         var failure: (any Error)?
         // How a stage ended that raised an error `2>` caught.
-        var caught: Int32?
+        var caught: Status?
         if let segment {
             do {
                 let pipeOutput = segmentOutput >= 0 ? segmentOutput : stdoutFD
@@ -166,7 +166,7 @@ extension Shell {
                         segmentRedirects,
                         input: segmentInput,
                         output: pipeOutput,
-                        recovering: { caught = $0.status }
+                        recovering: { caught = .exited($0.status) }
                     ) { input, output in
                         // Text for the next program, or, if it went to a file or
                         // the terminal, formatted as it would be displayed.
@@ -186,7 +186,7 @@ extension Shell {
             if segmentOutput >= 0 { close(segmentOutput) }
         }
 
-        var status: Int32 = 0
+        var status = Status.success
         if !job.running.isEmpty || stages.last?.isExternal == true {
             let externalStatus = job.running.isEmpty ? job.status : waitForeground(job)
             if stages.last?.isExternal == true { status = externalStatus }
@@ -223,7 +223,7 @@ extension Shell {
 
     /// Gives `job` the terminal and waits until it finishes or stops. A job
     /// stopped with ^Z keeps its terminal modes and goes to `jobs`.
-    func waitForeground(_ job: Job) -> Int32 {
+    func waitForeground(_ job: Job) -> Status {
         // A task in the background waits for its programs without the terminal.
         let ownsTerminal = ownsTerminal
         if ownsTerminal && job.pgid > 0 {
@@ -260,12 +260,11 @@ extension Shell {
                     STDERR_FILENO,
                     "\n" + job.line(styled: DisplayStyle.enabled(for: STDERR_FILENO)) + "\n"
                 )
-                return 128 + SIGTSTP
+                return .exited(128 + SIGTSTP)
             }
             job.running.removeFirst()
             if pid == job.lastPid {
                 job.status = decode(raw, quiet: job.cancelled)
-                job.signal = Exit(raw).signal
             }
         }
         return job.status
@@ -273,22 +272,16 @@ extension Shell {
 
     /// A job's status from `waitpid`'s, reporting the signal that ended it,
     /// unless `quiet` (a job you cancelled ended as you asked).
-    private func decode(_ raw: Int32, quiet: Bool = false) -> Int32 {
-        let status = WaitStatus(raw)
-        if status.exited {
-            return status.exitCode
-        }
-        if status.signaled {
-            let signal = status.signal
-            lastSignalStatus = 128 + signal
+    private func decode(_ raw: Int32, quiet: Bool = false) -> Status {
+        let status = Status(WaitStatus(raw))
+        if case .signaled(let signal) = status {
             switch signal {
             case SIGINT: if interactive { writeAll(STDERR_FILENO, "\n") }
             case SIGPIPE: break
             default: if !quiet { report(String(cString: strsignal(signal))) }
             }
-            return 128 + signal
         }
-        return 1
+        return status
     }
 
     private func spawn(

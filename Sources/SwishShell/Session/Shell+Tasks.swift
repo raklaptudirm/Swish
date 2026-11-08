@@ -14,7 +14,7 @@ extension Shell {
             }
             guard let function = topLevelFunction(task, in: reading) else {
                 report("run: no task named '\(task)' in \(path); `run` lists them")
-                lastStatus = 127
+                lastStatus = .exited(127)
                 return
             }
             callAsCommand(function, named: "run \(task)", arguments)
@@ -34,7 +34,7 @@ extension Shell {
         }
         guard !tasks.isEmpty else {
             writeAll(stdoutFD, "No tasks: a task is a function in the file.\n")
-            lastStatus = 0
+            lastStatus = .exited(0)
             return
         }
         let width = tasks.map(\.name.count).max()!
@@ -47,7 +47,7 @@ extension Shell {
                 + (task.summary.isEmpty ? "" : "  " + task.summary) + "\n"
         }
         writeAll(stdoutFD, text)
-        lastStatus = 0
+        lastStatus = .exited(0)
     }
 }
 
