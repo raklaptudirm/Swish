@@ -382,3 +382,11 @@ private func run(_ source: String) throws -> String {
     )
     #expect(try run("let jobsNow: [Job] = jobs; print(jobsNow.count)") == "0\n")
 }
+
+@Test func everyMemberTheJobProtocolDeclaresHasAValue() {
+    // The prelude's `protocol Job` is what scripts are checked against; `Job.members` is what a
+    // job gives. Each must have what the other does.
+    let declared = Shell().typeMembers(named: "Job")?.members.map(\.name) ?? []
+    #expect(Set(declared) == Set(Job.members.map(\.name)))
+    #expect(declared.count == Job.members.count)
+}

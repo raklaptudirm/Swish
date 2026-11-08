@@ -6,8 +6,7 @@ import Swiit
 
 extension Shell {
     static var prelude: String {
-        String(decoding: PackageResources.Prelude_swift, as: UTF8.self)
-            .replacingOccurrences(of: "func __jobMembers()", with: Job.declaration) + fileSizeUnits
+        String(decoding: PackageResources.Prelude_swift, as: UTF8.self) + fileSizeUnits
     }
 
     /// `2.mb` and `1.5.gib`: each unit a file size is written in is a property of `Int` and

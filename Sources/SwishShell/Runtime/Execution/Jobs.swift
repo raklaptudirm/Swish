@@ -102,12 +102,12 @@ final class Job: ScriptConvertible, Presentable, CustomStringConvertible,
         "id", DisplayColumn("state", styledBy: "state"), "command",
     ]
 
-    /// A job's members: each one's type as Swift writes it, for the checker, and its value.
-    static let members: [(name: String, type: String, value: @Sendable (Job) -> Value)] = [
-        ("id", "Int", { Value($0.id) }),
-        ("command", "String", { Value($0.source) }),
+    /// The value of each of a job's members, which are what the prelude's `protocol Job` declares.
+    static let members: [(name: String, value: @Sendable (Job) -> Value)] = [
+        ("id", { Value($0.id) }),
+        ("command", { Value($0.source) }),
         (
-            "state", "JobState",
+            "state",
             { job in
                 job.shell.preludeTypes.jobState.enumCase(
                     named: job.cancelled && job.state == .done ? "cancelled" : job.state.rawValue,
@@ -115,33 +115,13 @@ final class Job: ScriptConvertible, Presentable, CustomStringConvertible,
                 ) ?? .nothing
             }
         ),
-        ("pids", "[Int]", { Value($0.running.map { Value(Int($0)) }) }),
-        ("output", "Output?", { $0.output.map { Value.output($0) } ?? .nothing }),
+        ("pids", { Value($0.running.map { Value(Int($0)) }) }),
+        ("output", { $0.output.map { Value.output($0) } ?? .nothing }),
         // A method, as it's not data: a table or `to json` of jobs can't read it.
-        (
-            "lines", "() -> ThrowingStream<String>",
-            { job in method("lines") { [unowned job] in job.lines } }
-        ),
-        (
-            "resume", "() -> Void",
-            { job in method("resume") { [unowned job] in job.shell.resume(job) } }
-        ),
-        (
-            "cancel", "() -> Void",
-            { job in method("cancel") { [unowned job] in job.shell.cancel(job) } }
-        ),
+        ("lines", { job in method("lines") { [unowned job] in job.lines } }),
+        ("resume", { job in method("resume") { [unowned job] in job.shell.resume(job) } }),
+        ("cancel", { job in method("cancel") { [unowned job] in job.shell.cancel(job) } }),
     ]
-    /// What scripts may use of a job, as the protocol the checker knows it by.
-    static var declaration: String {
-        members.map { member in
-            if member.type.hasPrefix("() -> ") {
-                let result = member.type.dropFirst(6)
-                return "func \(member.name)()" + (result == "Void" ? "" : " -> \(result)")
-            }
-            return "var \(member.name): \(member.type) { get }"
-        }
-        .joined(separator: "; ")
-    }
 
     var memberNames: [String]? { Job.members.map(\.name) }
 

@@ -128,8 +128,21 @@ struct ThrowingStream<Element> {
 
 /// A command or task started in the background, which `await` joins and
 /// `jobs` lists. What scripts may use of it is what the shell's jobs have
-/// (Jobs.swift); a `Job<Int>` is one of these too.
-protocol Job { func __jobMembers() }
+/// (Jobs.swift, `Job.members`, which gives each of these its value); a `Job<Int>` is one of these
+/// too.
+protocol Job {
+    var id: Int { get }
+    var command: String { get }
+    var state: JobState { get }
+    var pids: [Int] { get }
+    var output: Output? { get }
+    /// Its output's lines as they come, for a job that keeps its output.
+    func lines() -> ThrowingStream<String>
+    /// Continues it in the background, if it stopped.
+    func resume()
+    /// Asks it to stop.
+    func cancel()
+}
 
 /// How a command exited: `output.status`, and what `Command.run()` gives.
 /// A command statement is a `Status`, and `a && b || c` is
