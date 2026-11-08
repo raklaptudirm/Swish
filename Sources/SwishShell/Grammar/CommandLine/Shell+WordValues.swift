@@ -64,14 +64,14 @@ extension Shell {
 
         // `String` before `Substring`: a `String` has the last too, and `init(_: Any)` makes it
         // ambiguous.
-        let preferred = candidates.sorted {
-            $0.1.type.description == "String" && $1.1.type.description != "String"
-        }
+        let preferred = candidates.sorted { $0.1.type == .string && $1.1.type != .string }
         return preferred.first?.1
     }
 
     /// Whether a word can be a value of a Swift type at all: it has one of those initializers, or
     /// is a type Swift writes as a single-character literal (`Character`), which `converted` checks.
+    /// The literal protocols are told by their requirements, the initializers named here, as
+    /// `conforms(to:)` doesn't yet tell them apart for a Swift type.
     private func hasTextInitializer(_ type: ScriptType) -> Bool {
         textInitializer(of: type) != nil
             || type.members(in: interpreter)
@@ -93,8 +93,10 @@ extension Shell {
                 else { return nil }
 
                 let parameter = function.parameters[0]
-                let text = parameter.type.description
-                guard text == "String" || (text == "Substring" && parameter.label == nil) else {
+                guard
+                    parameter.type == .string
+                        || (parameter.type == Shell.substring && parameter.label == nil)
+                else {
                     return nil
                 }
                 return (function, parameter)
@@ -118,4 +120,8 @@ extension Shell {
         let chosen = named ?? cases.first { $0.1?.description == text }
         return chosen.flatMap { id.enumCase(named: $0.0.name, in: interpreter) }
     }
+}
+
+extension Shell {
+    fileprivate static let substring = ScriptType.named(Symbol.ID(hostType: "Substring"))
 }

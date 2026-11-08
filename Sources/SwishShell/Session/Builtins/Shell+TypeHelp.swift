@@ -14,6 +14,17 @@ enum MemberKind: String, CaseIterable {
 }
 
 extension Symbol {
+    /// The keyword a type is declared with, as `help` heads it: `struct`, `enum`, `protocol`.
+    var declarationKeyword: String {
+        switch kind {
+        case .structure: "struct"
+        case .enumeration: "enum"
+        case .class: "class"
+        case .actor: "actor"
+        default: "protocol"
+        }
+    }
+
     /// What a member of a type is, or nil for a symbol that is not one.
     var memberKind: MemberKind? {
         switch kind {
@@ -43,19 +54,11 @@ extension Symbol {
 extension Shell {
     /// What the type called `name` is and has: "struct", "enum", and its members as symbols. Nil
     /// when nothing by that name is a type.
-    func typeMembers(named name: String) -> (kind: String, members: [Symbol])? {
+    func typeMembers(named name: String) -> (type: Symbol, members: [Symbol])? {
         // A type a script declared or the shell does, or one of Swift's that the core bridges.
         let named = interpreter.globals(named: name) + interpreter.types.filter { $0.name == name }
         guard let type = named.first(where: \.isType) else { return nil }
-        let word =
-            switch type.kind {
-            case .structure: "struct"
-            case .enumeration: "enum"
-            case .class: "class"
-            case .actor: "actor"
-            default: "protocol"
-            }
-        return (word, heldType(named: name).members(in: interpreter))
+        return (type, heldType(named: name).members(in: interpreter))
     }
 
     /// The type a value of `name` is held as: a list is an `Array`.

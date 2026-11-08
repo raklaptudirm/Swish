@@ -192,7 +192,7 @@ extension Shell {
     /// A type as `--help` shows it: an enum as its choices.
     private func placeholder(_ type: ScriptType) -> String {
         if case .named(let name, _) = type, let found = typeMembers(named: name.description),
-            found.kind == "enum"
+            case .enumeration = found.type.kind
         {
             return plainCases(of: found.members).joined(separator: "|")
         }
@@ -298,7 +298,11 @@ extension Shell {
             ]
         } else if let found = typeMembers(named: name) {
             // `help String`: what the type has.
-            return helpLines(named: name, kind: found.kind, members: found.members)
+            return helpLines(
+                named: name,
+                kind: found.type.declarationKeyword,
+                members: found.members
+            )
         } else if let path = findExecutable(name) {
             return [
                 AttributedString(
