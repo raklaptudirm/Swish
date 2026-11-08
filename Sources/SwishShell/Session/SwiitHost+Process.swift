@@ -58,3 +58,12 @@ func terminalWidth(_ fd: Int32) -> Int? {
     }
     return Int(size.ws_col)
 }
+
+/// The height of the terminal `fd` is, in rows, if it is one.
+func terminalHeight(_ fd: Int32) -> Int? {
+    var size = winsize()
+    guard isatty(fd) != 0, ioctl(fd, UInt(TIOCGWINSZ), &size) == 0, size.ws_row > 0 else {
+        return nil
+    }
+    return Int(size.ws_row)
+}

@@ -181,6 +181,10 @@ change the shell.
 
 Interactively there's syntax highlighting, completion of commands, paths and
 function flags, history with prefix and `^R` search, and multi-line editing.
+When Tab finds several candidates they show in a menu under the input, in the
+rows free there, so the prompt stays put. Tab, Shift-Tab and the arrows choose
+one and show it in place, Enter takes it, Esc puts back what was typed, and
+typing on narrows the menu.
 Values print as Swift would show them, colored like the input and broken
 over lines when they're wide.
 
