@@ -1,7 +1,7 @@
 import Foundation
 
-// Spike: the shell's own text, read by the shell. Nothing here knows the interpreter: this is the
-// lexical level of Swift's text with the shell's in it (strings and their interpolations, comments,
+// The shell's own text, read by the shell. Nothing here knows the interpreter: this is the lexical
+// level of Swift's text with the shell's in it (strings and their interpolations, comments,
 // brackets), enough to find where a form ends.
 
 /// The characters of a source, and what its bytes are (SwiftParser's positions are bytes).

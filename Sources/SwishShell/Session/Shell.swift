@@ -2,13 +2,10 @@ import Foundation
 import SwiftSyntax
 import Swiit
 
-/// The shell: a process with a terminal, jobs and a line editor, over an
-/// `Interpreter` that knows none of that. It supplies the interpreter's host
-/// (the process) and the shell constructs the core still depends on.
+/// The shell: a process with a terminal, jobs and a line editor, over an `Interpreter` that knows
+/// none of that. It is the interpreter's host (the process), and declares the shell's own types and
+/// functions in Swift for it (Resources/Prelude.swift).
 public final class Shell: @unchecked Sendable {
-    /// Whether a pipeline of Swift's own calls runs as those calls (see
-    /// `Desugarer`); tests turn it off to compare.
-
     /// The language.
     let interpreter: Interpreter
 
@@ -73,11 +70,13 @@ public final class Shell: @unchecked Sendable {
     /// The names a stage could be, known from the types.
     lazy var stageNames: StageNames = computeStageNames()
 
-    /// The enums the program being checked declares, which a word for one can't be read against
-    /// yet. What the functions a script declared say of their parameters (`@input`, `@flag`), by
+    /// What the functions a script declared say of their parameters (`@input`, `@flag`), by
     /// `function.parameter`.
     var scriptMarks: [String: CommandMarks.Marks] = [:]
 
+    /// The static members (an enum's cases among them) of the types the program being checked
+    /// declares, by type: the interpreter has none of them yet, and a command's word for one is
+    /// read against these.
     var staticMembers: [String: [Symbol]] = [:]
 
     /// What the prelude declared that Swift code builds values of; set once, at the end of
@@ -218,7 +217,7 @@ extension Shell {
         let swift: String
         do {
             swift = try cured(source)
-        } catch let failure as Failure {
+        } catch let failure as Reader.Failure {
             return .failure(
                 Diagnostic(
                     kind: .syntax(isIncomplete: failure.incomplete),
@@ -331,9 +330,9 @@ extension Shell {
     }
 }
 
-/// What the shell keeps for each task (the core's `TaskContext`): where its
-/// output and errors go, and how its last statement went. The prompt is the
-/// one task for now (https://github.com/raklaptudirm/Swiit/blob/main/Docs/async.md, step 1).
+/// What the shell keeps for each task (the interpreter's task state): where its output and errors
+/// go, and how its last statement went. The prompt's is the main task's; `async` and `Task { }`
+/// make one each (`Interpreter.Host.makeTaskState`).
 final class ShellTask {
     /// Where builtins, displayed values and the last stage of a pipeline
     /// write. Redirected while capturing `$(…)`.

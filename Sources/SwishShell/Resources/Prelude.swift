@@ -211,7 +211,6 @@ struct Command {
     var variables: [String: String] = [:]
     /// A call's arguments, as a tuple: `sorted(by: "size")` after a `|`.
     var arguments: Any? = nil
-    /// What the checker decided about it as a stage of a pipeline.
 
     init(_ words: Any...) { self.words = words }
 

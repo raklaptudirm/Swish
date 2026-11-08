@@ -1,96 +1,98 @@
 import Foundation
 
-// Spike: the shell's grammar, read by the shell. A `Reader` stands on the text of one source at the
-// start of a form of the shell's (a command, a pipeline, `$(…)`, `$name`, `async …`) and reads it
-// as characters; where the form holds Swift (an argument, `\(…)`, a closure, the program in `$(…)`)
-// it finds the extent with the lexical scanner and has the front end cure that text in turn. What
-// it gives back is Swift: the form as the calls it means, which a plain Swift front end reads.
+// The shell's grammar, read by the shell. A `Reader` stands on the text of one source at the start
+// of a form of the shell's (a command, a pipeline, `$(…)`, `$name`, `async …`) and reads it as
+// characters; where the form holds Swift (an argument, `\(…)`, a closure, the program in `$(…)`) it
+// finds the extent with the lexical scanner and has the front end cure that text in turn. What it
+// gives back is Swift: the form as the calls it means, which a plain Swift front end reads.
 
-struct Failure: Error, CustomStringConvertible {
-    var message: String
-    var incomplete: Bool
-    init(_ message: String, incomplete: Bool = false) {
-        self.message = message
-        self.incomplete = incomplete
+extension Reader {
+    struct Failure: Error, CustomStringConvertible {
+        var message: String
+        var incomplete: Bool
+        init(_ message: String, incomplete: Bool = false) {
+            self.message = message
+            self.incomplete = incomplete
+        }
+        static func incomplete(_ message: String) -> Failure { Failure(message, incomplete: true) }
+        var description: String { message }
     }
-    static func incomplete(_ message: String) -> Failure { Failure(message, incomplete: true) }
-    var description: String { message }
-}
 
-enum Attempt: Equatable {
-    case plain, optional, forced
+    enum Attempt: Equatable {
+        case plain, optional, forced
 
-    var keyword: String {
-        switch self {
-        case .plain: "try"
-        case .optional: "try?"
-        case .forced: "try!"
+        var keyword: String {
+            switch self {
+            case .plain: "try"
+            case .optional: "try?"
+            case .forced: "try!"
+            }
         }
     }
-}
 
-/// A piece of a command's word.
-enum Piece: Equatable {
-    case literal(String)
-    /// Unquoted text with a wildcard in it.
-    case glob(String)
-    /// Swift, an expression's value in the text.
-    case expression(String)
-    /// An unquoted `$xs` or `\(xs)`: a list in a word of its own is a word per item.
-    case spread(String)
-}
-
-enum ShellWord: Equatable {
-    case text([Piece])
-    /// A closure passed as an argument: Swift.
-    case closure(String)
-}
-
-struct ShellRedirect: Equatable {
-    enum Target: Equatable {
-        case file([Piece], Mode)
-        case descriptor(Int)
+    /// A piece of a command's word.
+    enum Piece: Equatable {
+        case literal(String)
+        /// Unquoted text with a wildcard in it.
+        case glob(String)
+        /// Swift, an expression's value in the text.
+        case expression(String)
+        /// An unquoted `$xs` or `\(xs)`: a list in a word of its own is a word per item.
+        case spread(String)
     }
-    enum Mode: Equatable { case read, write, append }
-    var fd: Int
-    var target: Target
-}
 
-struct CommandOut {
-    var words: [ShellWord]
-    var external = false
-    var redirects: [ShellRedirect] = []
-    var environment: [(name: String, value: [Piece])] = []
-    var call: String?
-}
-
-struct PipelineOut {
-    var commands: [CommandOut]
-    var source: String
-    var input: String?
-    var throwing: Attempt?
-}
-
-enum Operand {
-    case command(PipelineOut)
-    case expression(String)
-
-    var isOptionalAttempt: Bool {
-        if case .expression(let text) = self { text.hasPrefix("try?") } else { false }
+    enum Word: Equatable {
+        case text([Piece])
+        /// A closure passed as an argument: Swift.
+        case closure(String)
     }
-}
 
-struct Chain {
-    var first: Operand
-    var links: [(isAnd: Bool, operand: Operand)] = []
-    var isCondition = false
-    var operands: [Operand] { [first] + links.map(\.operand) }
-}
+    struct Redirect: Equatable {
+        enum Target: Equatable {
+            case file([Piece], Mode)
+            case descriptor(Int)
+        }
+        enum Mode: Equatable { case read, write, append }
+        var fd: Int
+        var target: Target
+    }
 
-enum UnitStart {
-    case expression
-    case command(notAnExpression: String?)
-    var isCommand: Bool { if case .command = self { true } else { false } }
+    struct Command {
+        var words: [Word]
+        var external = false
+        var redirects: [Redirect] = []
+        var environment: [(name: String, value: [Piece])] = []
+        var call: String?
+    }
+
+    struct Pipeline {
+        var commands: [Command]
+        var source: String
+        var input: String?
+        var throwing: Attempt?
+    }
+
+    enum Operand {
+        case command(Pipeline)
+        case expression(String)
+
+        var isOptionalAttempt: Bool {
+            if case .expression(let text) = self { text.hasPrefix("try?") } else { false }
+        }
+    }
+
+    struct Chain {
+        var first: Operand
+        var links: [(isAnd: Bool, operand: Operand)] = []
+        var isCondition = false
+        var operands: [Operand] { [first] + links.map(\.operand) }
+    }
+
+    enum UnitStart {
+        case expression
+        case command(notAnExpression: String?)
+        var isCommand: Bool { if case .command = self { true } else { false } }
+    }
 }
 
 /// What a stretch of source is, for coloring it as it is typed.
@@ -326,7 +328,7 @@ struct Reader {
         return .command(try parsePipeline(from: start, input: cured))
     }
 
-    private func swiftExpression(logical: Bool) -> Probe? {
+    private func swiftExpression(logical: Bool) -> SwiftProbe.Extent? {
         let probe = SwiftProbe.expression(
             in: blanked,
             at: pos,
@@ -340,7 +342,7 @@ struct Reader {
 
     /// `try cmd …` or `try! cmd …`, or nil (having looked ahead) when what follows the `try` is an
     /// expression.
-    mutating func parseThrowingCommand() throws -> PipelineOut? {
+    mutating func parseThrowingCommand() throws -> Pipeline? {
         let before = self
         guard let kind = parseTry() else { return nil }
         skipSpaces()
@@ -368,9 +370,8 @@ struct Reader {
         return .plain
     }
 
-    /// Whether the unit ahead is a command rather than an expression (see the grammar's rules in
-    /// `commandAhead` of the interpreter's old plug-in): an expression if one parses there and the
-    /// unit ends after it.
+    /// Whether the unit ahead is a command rather than an expression: an expression if one parses
+    /// there and the unit ends after it.
     mutating func commandAhead(boolIsCommand: Bool = false) -> UnitStart {
         let saved = self
         defer { self = saved }
@@ -426,8 +427,7 @@ struct Reader {
 
     // MARK: Pipelines and commands
 
-    mutating func parsePipeline(from start: Int? = nil, input: String? = nil) throws -> PipelineOut
-    {
+    mutating func parsePipeline(from start: Int? = nil, input: String? = nil) throws -> Pipeline {
         let start = start ?? pos
         var commands = [try parseCommand()]
         // A method with nothing piped in, and no function or program by that name, has nothing to
@@ -475,10 +475,10 @@ struct Reader {
                 )
             }
         }
-        return PipelineOut(commands: commands, source: source, input: input, throwing: nil)
+        return Pipeline(commands: commands, source: source, input: input, throwing: nil)
     }
 
-    mutating func parseCommand() throws -> CommandOut {
+    mutating func parseCommand() throws -> Command {
         skipSpaces()
         let nameStart = pos
         var external = consume("^")
@@ -489,7 +489,7 @@ struct Reader {
             skipSpaces()
             external = true
         }
-        var command = CommandOut(words: [], external: external)
+        var command = Command(words: [], external: external)
         while true {
             skipSpaces()
             guard let c = peek(), !endsCommand(c) else { break }
@@ -578,19 +578,19 @@ struct Reader {
 
     // MARK: Redirects
 
-    mutating func parseRedirect() throws -> [ShellRedirect]? {
+    mutating func parseRedirect() throws -> [Redirect]? {
         let start = pos
         try rejectPosixRedirect()
         func touchesBoundary(after count: Int) -> Bool { peek(count).map(isWordBoundary) ?? true }
         if startsWith("e>o") && touchesBoundary(after: 3) {
             pos += 3
             mark(.punctuation, from: start)
-            return [ShellRedirect(fd: 2, target: .descriptor(1))]
+            return [Redirect(fd: 2, target: .descriptor(1))]
         }
         if startsWith("o>e") && touchesBoundary(after: 3) {
             pos += 3
             mark(.punctuation, from: start)
-            return [ShellRedirect(fd: 1, target: .descriptor(2))]
+            return [Redirect(fd: 1, target: .descriptor(2))]
         }
         let fds: [Int]
         if consume("o+e>") {
@@ -612,14 +612,14 @@ struct Reader {
             throw expected("a file to redirect to")
         }
         let file = try parseWord()
-        let mode: ShellRedirect.Mode = fds == [0] ? .read : append ? .append : .write
+        let mode: Redirect.Mode = fds == [0] ? .read : append ? .append : .write
         if fds == [1, 2] {
             return [
-                ShellRedirect(fd: 1, target: .file(file, mode)),
-                ShellRedirect(fd: 2, target: .descriptor(1)),
+                Redirect(fd: 1, target: .file(file, mode)),
+                Redirect(fd: 2, target: .descriptor(1)),
             ]
         }
-        return [ShellRedirect(fd: fds[0], target: .file(file, mode))]
+        return [Redirect(fd: fds[0], target: .file(file, mode))]
     }
 
     func rejectPosixRedirect() throws {
@@ -807,7 +807,7 @@ struct Reader {
     }
 
     /// `{ … }` at the brace: the closure, cured.
-    mutating func parseClosure(arityOf command: CommandOut? = nil) throws -> String {
+    mutating func parseClosure(arityOf command: Command? = nil) throws -> String {
         guard let close = Lex.closing(chars, from: pos) else {
             throw Failure.incomplete("expected '}'")
         }
@@ -1019,14 +1019,14 @@ struct Reader {
         return chain.isCondition ? "(\(result)).succeeded" : result
     }
 
-    func emit(_ pipeline: PipelineOut) -> String {
+    func emit(_ pipeline: Pipeline) -> String {
         let commands = pipeline.commands.map(emit)
         if commands.count == 1, pipeline.input == nil { return commands[0] }
         let input = pipeline.input.map { ["from: \($0)"] } ?? []
         return "Pipeline(\((input + commands).joined(separator: ", ")))"
     }
 
-    func emit(_ command: CommandOut) -> String {
+    func emit(_ command: Command) -> String {
         var out =
             "Command("
             + command.words

@@ -1,7 +1,7 @@
 import Foundation
 import Swiit
 
-extension NameRole {
+extension Names.Role {
     init(_ kind: Symbol.Kind) {
         switch kind {
         case .variable, .property, .enumCase: self = .variable
@@ -15,7 +15,7 @@ extension Shell {
     /// The shell's front end for this shell's names.
     func makeFront(recovering: Bool = false) -> Front {
         let roles = Dictionary(
-            interpreter.globals().map { ($0.name, NameRole($0.kind)) },
+            interpreter.globals().map { ($0.name, Names.Role($0.kind)) },
             uniquingKeysWith: { first, _ in first }
         )
         let front = Front(bound: Names(roles: roles))

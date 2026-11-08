@@ -1,7 +1,7 @@
 import Foundation
 import Swiit
 
-// Spike: what a stage is, decided from what flows into it, when it flows. The front end emits
+// What a stage is, decided from what flows into it, when it flows. The front end emits
 // `Command("sorted")` and nothing about the type; here the first item says what the items are, and
 // the forms are looked up in the order the checker looked (the items as they come, the prelude's
 // sequence methods, the items collected, a method of each item, each item's Swift members), then a

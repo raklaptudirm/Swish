@@ -2,8 +2,8 @@ import Foundation
 import SwiftParser
 import SwiftSyntax
 
-// Spike: the front end the shell owns. Source text that is Swift's with the shell's in it goes in;
-// Swift comes out, which a plain Swift front end reads. The loop: parse the text as Swift (with the
+// The front end the shell owns. Source text that is Swift's with the shell's in it goes in; Swift
+// comes out, which a plain Swift front end reads. The loop: parse the text as Swift (with the
 // insides of `$(…)` blanked), take the first place at or after the cursor where a form of the
 // shell's may start, and read it; if it is one, replace it with the Swift it means, move the cursor
 // past that, and parse again, so that everything before the cursor is Swift by the time anything
@@ -144,7 +144,7 @@ final class Front {
                         names: names,
                         partial: &partial
                     )
-                } catch is Failure where recovering {
+                } catch is Reader.Failure where recovering {
                     // What was read of it before the problem is colored, and the rest is Swift's.
                     spans += partial.spans.map {
                         HighlightSpan(
@@ -183,7 +183,7 @@ final class Front {
             delta += found.replacement.count - (found.end - found.start)
             cursor = found.start + found.replacement.count
         }
-        throw Failure("the front end did not settle")
+        throw Reader.Failure("the front end did not settle")
     }
 
     private func read(

@@ -2,42 +2,24 @@ import Foundation
 import SwiftParser
 import SwiftSyntax
 
-// Spike: what the shell asks of Swift's grammar, answered by SwiftParser's tree: where an
-// expression ends, whether one is there at all, and which names the text around declares. The text
-// is the shell's with Swift in it, so a probe reads a stretch of it as Swift and says how far Swift
-// gets.
-
-/// What a name refers to where the reader is, which decides the mode of a statement starting with
-/// it.
-enum NameRole: Equatable, Sendable {
-    case variable, function, type, member, staticMember
-}
-
-/// A name a tree declares, and where it can be read: a scope (a byte range) and the offset it is
-/// readable from.
-struct NameDeclaration {
-    var name: String
-    var role: NameRole
-    var scope: Range<Int>
-    var from: Int
-    /// A static member, readable only in the bodies of static members.
-    var staticOnly = false
-}
+// What the shell asks of Swift's grammar, answered by SwiftParser's tree: where an expression ends,
+// whether one is there at all, and which names the text around declares. The text is the shell's
+// with Swift in it, so a probe reads a stretch of it as Swift and says how far Swift gets.
 
 /// The names there are where a stretch of the text is: those the interpreter has, and those the
 /// text declares, each in its scope.
 struct Names {
-    var base: [String: NameRole]
-    var declarations: [NameDeclaration] = []
+    var base: [String: Role]
+    var declarations: [Declaration] = []
     var staticBodies: [Range<Int>] = []
     /// How many parameters the closure a declared function takes has.
     var closureArities: [String: Int] = [:]
 
-    init(roles: [String: NameRole]) { base = roles }
+    init(roles: [String: Role]) { base = roles }
 
-    func role(of name: String, at byte: Int? = nil) -> NameRole? {
+    func role(of name: String, at byte: Int? = nil) -> Role? {
         guard let byte else { return declarations.last { $0.name == name }?.role ?? base[name] }
-        var best: NameDeclaration?
+        var best: Declaration?
         for declaration in declarations
         where declaration.name == name && declaration.scope.contains(byte)
             && declaration.from <= byte
@@ -85,8 +67,27 @@ struct Names {
     }
 }
 
+extension Names {
+    /// What a name refers to where the reader is, which decides the mode of a statement starting with
+    /// it.
+    enum Role: Equatable, Sendable {
+        case variable, function, type, member, staticMember
+    }
+
+    /// A name a tree declares, and where it can be read: a scope (a byte range) and the offset it is
+    /// readable from.
+    struct Declaration {
+        var name: String
+        var role: Role
+        var scope: Range<Int>
+        var from: Int
+        /// A static member, readable only in the bodies of static members.
+        var staticOnly = false
+    }
+}
+
 private final class DeclarationFinder: SyntaxVisitor {
-    var found: [NameDeclaration] = []
+    var found: [Names.Declaration] = []
     var staticBodies: [Range<Int>] = []
     var closureArities: [String: Int] = [:]
 
@@ -114,14 +115,14 @@ private final class DeclarationFinder: SyntaxVisitor {
 
     private func declare(
         _ name: String,
-        _ role: NameRole,
+        _ role: Names.Role,
         in scope: Range<Int>,
         from: Int,
         staticOnly: Bool = false
     ) {
         guard name != "_" else { return }
         found.append(
-            NameDeclaration(
+            Names.Declaration(
                 name: name,
                 role: role,
                 scope: scope,
@@ -330,16 +331,16 @@ private final class DeclarationFinder: SyntaxVisitor {
     }
 }
 
-/// How far Swift reads from a position.
-struct Probe {
-    /// Where the expression ends (a character index into the text probed), when there is one.
-    var end: Int
-    /// Where the first thing is that is no Swift (the character index), when there is such a thing
-    /// before `end`.
-    var failure: Int?
-}
-
 enum SwiftProbe {
+    /// How far Swift reads from a position.
+    struct Extent {
+        /// Where the expression ends (a character index into the text probed), when there is one.
+        var end: Int
+        /// Where the first thing is that is no Swift (the character index), when there is such a thing
+        /// before `end`.
+        var failure: Int?
+    }
+
     /// The expression starting at `start`: where it ends, and where it stops being Swift. The
     /// expression stops before a single `|` (the shell's pipe) and, when `logical`, before `&&` and
     /// `||`. `text` has its substitutions blanked.
@@ -350,14 +351,14 @@ enum SwiftProbe {
         names: Names,
         strictNames: Bool = true,
         inCondition: Bool = false
-    ) -> Probe {
+    ) -> Extent {
         var tail = Array(text.chars[start...])
         if inCondition { tail = Lex.truncatingAtBlock(tail) }
         let rest = Text(Lex.blankingBlocks(tail))
         let tree = Parser.parse(source: rest.string)
         let names = names.snapshot(atByte: text.byteOf[start]).adding(declaredIn: tree)
         guard let first = tree.statements.first, case .expr(let expr) = first.item else {
-            return Probe(end: 0, failure: 0)
+            return Extent(end: 0, failure: 0)
         }
         var endByte = expr.endPositionBeforeTrailingTrivia.utf8Offset
         // A sequence of operands and operators, as SwiftParser leaves it unfolded: cut at the first
@@ -379,7 +380,7 @@ enum SwiftProbe {
         let problems = Problems(names: names, limit: endByte, checkNames: strictNames)
         problems.walk(tree)
         // Statement-level tokens left over after the item are not the expression's.
-        return Probe(
+        return Extent(
             end: rest.character(atByte: endByte) + start,
             failure: problems.first.map { rest.character(atByte: $0) + start }
         )

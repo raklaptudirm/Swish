@@ -13,7 +13,7 @@ private func front(
     functions: Set<String> = [],
     tests: ((String) -> Bool)? = nil
 ) -> Front {
-    var roles: [String: NameRole] = [:]
+    var roles: [String: Names.Role] = [:]
     for name in variables { roles[name] = .variable }
     for name in functions { roles[name] = .function }
     return Front(bound: Names(roles: roles))
@@ -42,12 +42,12 @@ private func modes(
         }
 }
 
-private func failure(_ source: String, variables: Set<String> = []) -> Failure? {
+private func failure(_ source: String, variables: Set<String> = []) -> Reader.Failure? {
     do {
         _ = try cure(source, variables: variables)
         return nil
     } catch {
-        return error as? Failure
+        return error as? Reader.Failure
     }
 }
 
