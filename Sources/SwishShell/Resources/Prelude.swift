@@ -219,32 +219,28 @@ struct Command {
     /// `< file`, `0< file`.
     func reading(_ fd: Int, from path: Any) -> Command {
         var command = self
-        command.redirections =
-            command.redirections + [Redirection(fd: fd, mode: "read", path: path, other: 0)]
+        command.redirections = command.redirections + [Redirection.reading(fd, from: path)]
         return command
     }
 
     /// `> file`, `e> file`.
     func writing(_ fd: Int, to path: Any) -> Command {
         var command = self
-        command.redirections =
-            command.redirections + [Redirection(fd: fd, mode: "write", path: path, other: 0)]
+        command.redirections = command.redirections + [Redirection.writing(fd, to: path)]
         return command
     }
 
     /// `>> file`, `e>> file`.
     func appending(_ fd: Int, to path: Any) -> Command {
         var command = self
-        command.redirections =
-            command.redirections + [Redirection(fd: fd, mode: "append", path: path, other: 0)]
+        command.redirections = command.redirections + [Redirection.appending(fd, to: path)]
         return command
     }
 
     /// `e>o`: a descriptor to wherever another one goes at this point.
     func sending(_ fd: Int, to other: Int) -> Command {
         var command = self
-        command.redirections =
-            command.redirections + [Redirection(fd: fd, mode: "send", path: nil, other: other)]
+        command.redirections = command.redirections + [Redirection.sending(fd, to: other)]
         return command
     }
 
@@ -296,13 +292,13 @@ struct Pipeline {
     func startCapturing() -> Job<Output>
 }
 
-/// A redirect of a `Command`'s: `mode` is "read", "write", "append", or
-/// "send" (to the descriptor `other`).
-struct Redirection {
-    let fd: Int
-    let mode: String
-    let path: Any?
-    let other: Int
+/// A redirect of a `Command`'s, as the method that adds it makes it: a descriptor read from a
+/// file, written or appended to one, or sent to wherever another descriptor goes.
+enum Redirection {
+    case reading(Int, from: Any)
+    case writing(Int, to: Any)
+    case appending(Int, to: Any)
+    case sending(Int, to: Int)
 }
 
 /// A value as a status, as it is where commands join it with `&&` and

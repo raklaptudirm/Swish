@@ -226,19 +226,24 @@ extension Shell {
     }
 
     private func redirect(_ value: Value) throws -> ResolvedRedirect {
-        guard let fd = value.field("fd")?.casting(to: Int.self),
-            let mode = value.field("mode")?.casting(to: String.self)
+        let payload = value.enumPayload
+        guard let name = value.enumCaseName, payload.count == 2,
+            let fd = payload[0].value.casting(to: Int.self)
         else {
             throw RuntimeError("\(value.typeName) isn't a Redirection")
         }
-        let modes: [String: RedirectMode] = ["read": .read, "write": .write, "append": .append]
-        guard let open = modes[mode] else {
-            guard mode == "send", let other = value.field("other")?.casting(to: Int.self) else {
-                throw RuntimeError("no redirection '\(mode)'")
+        let target = payload[1].value
+        // The cases are the prelude's `Redirection`'s.
+        let modes: [String: RedirectMode] = [
+            "reading": .read, "writing": .write, "appending": .append,
+        ]
+        guard let open = modes[name] else {
+            guard name == "sending", let other = target.casting(to: Int.self) else {
+                throw RuntimeError("no redirection '\(name)'")
             }
             return ResolvedRedirect(fd: Int32(fd), action: .duplicate(Int32(other)))
         }
-        let paths = try arguments(value.field("path") ?? .nothing)
+        let paths = try arguments(target)
         guard paths.count == 1, case .text(let path) = paths[0] else {
             throw RuntimeError("ambiguous redirect: \(paths.count) files match")
         }
