@@ -13,6 +13,14 @@ extension Shell {
         interpreter.register(FileSize.native)
         interpreter.register(Date.native)
         interpreter.register(DisplayColumn.native)
+        // What `ls` and `ps` give, with the enums their fields are (`FileType`).
+        interpreter.register(FileEntry.native)
+        interpreter.register(ProcessEntry.native)
+        // The enums the declarations below name, which nothing registered gives.
+        interpreter.register(InputFormat.self)
+        interpreter.register(OutputFormat.self)
+        interpreter.register(TextStyle.self)
+        interpreter.register(JobState.self)
         // `output.status` is a struct of the prelude's `Status`, which the Swift type cannot name
         // (host types are process-wide, and the prelude's are each interpreter's), so it is one
         // by name: a value of the Swift type `Status`, which stands for the prelude's.
@@ -156,9 +164,9 @@ extension Shell {
                 .map { try FilePath($0) }
             let partial = ls(paths, all: arguments["all"]?.casting(to: Bool.self) ?? false)
             for error in partial.errors { reportItemError("ls: \(error)") }
-            return Value(partial.value.map { $0.value(in: self) })
+            return Value(partial.value.map(\.value))
         }
-        add("ps") { [unowned self] _ in Value(ps().map { $0.value(in: self) }) }
+        add("ps") { _ in Value(ps().map(\.value)) }
         add("history") { [unowned self] _ in Value(historyEntries.map { Value($0) }) }
         add("readLine") { arguments in
             readLine(
@@ -250,68 +258,5 @@ extension Shell {
         for item in items { formatter.add(item) }
         formatter.finish()
         return lines
-    }
-}
-
-// MARK: Making values
-
-extension FileEntry {
-    /// The struct `ls` gives for it.
-    func value(in shell: Shell) -> Value {
-        shell.make(
-            shell.preludeTypes.fileEntry,
-            [
-                "name": Value(name),
-                "type": FileType.id.enumCase(named: "\(type)", in: shell.interpreter) ?? .nothing,
-                "size": size.value, "modified": Value(modified),
-                "permissions": Value(permissions),
-                "owner": Value(owner), "created": Value(created),
-                "accessed": Value(accessed),
-                "path": Value(path),
-                "target": target.map { Value($0) } ?? .nothing,
-            ]
-        )
-    }
-}
-
-extension ProcessEntry {
-    /// The struct `ps` gives for it.
-    func value(in shell: Shell) -> Value {
-        shell.make(
-            shell.preludeTypes.processEntry,
-            [
-                "pid": Value(pid), "ppid": Value(ppid), "name": Value(name), "user": Value(user),
-                "memory": memory.map { $0.value } ?? .nothing,
-                "cpuTime": cpuTime.map { Value($0) } ?? .nothing,
-                "threads": threads.map { Value($0) } ?? .nothing,
-            ]
-        )
-    }
-}
-
-extension InputFormat {
-    init(_ value: Value) throws {
-        guard let found = Self.allCases.first(where: { "\($0)" == value.enumCaseName }) else {
-            throw LibraryError("expected an InputFormat")
-        }
-        self = found
-    }
-}
-
-extension OutputFormat {
-    init(_ value: Value) throws {
-        guard let found = Self.allCases.first(where: { "\($0)" == value.enumCaseName }) else {
-            throw LibraryError("expected an OutputFormat")
-        }
-        self = found
-    }
-}
-
-extension TextStyle {
-    init(_ value: Value) throws {
-        guard let found = Self.allCases.first(where: { "\($0)" == value.enumCaseName }) else {
-            throw LibraryError("expected a TextStyle")
-        }
-        self = found
     }
 }

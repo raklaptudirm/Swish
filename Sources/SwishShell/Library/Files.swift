@@ -12,10 +12,8 @@ import Musl
 
 /// What kind of entry `ls` found: `ls | filter { $0.type == .directory }`.
 /// In this order, so `ls | sorted --by type` puts files first.
-enum FileType: String, CaseIterable, Comparable, Codable {
+enum FileType: String, CaseIterable, Comparable, Codable, ScriptConvertible {
     case file, directory, symlink, other
-
-    static let id = Symbol.ID(hostType: "FileType")
 
     public static func < (lhs: FileType, rhs: FileType) -> Bool {
         allCases.firstIndex(of: lhs)! < allCases.firstIndex(of: rhs)!
@@ -33,7 +31,7 @@ extension FileType: DisplayStyled {
 }
 
 /// An entry `ls` lists.
-struct FileEntry: Encodable, Equatable, Hashable {
+struct FileEntry: Encodable, Equatable, Hashable, Record {
     public let name: String
     public let type: FileType
     public let size: FileSize

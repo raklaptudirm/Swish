@@ -1,7 +1,7 @@
 import Swiit
 
 /// How a job is going: its `state`.
-enum JobState: Comparable, CaseIterable, DisplayStyled {
+enum JobState: Comparable, CaseIterable, DisplayStyled, ScriptConvertible {
     case running, stopped, done, cancelled
 
     public var displayStyle: DisplayStyle? {

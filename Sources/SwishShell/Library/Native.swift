@@ -47,6 +47,48 @@ extension FileSize {
         .static("/", labels: [nil, nil]) { (a: FileSize, b: FileSize) -> Double in a / b }
 }
 
+/// A Swift struct scripts hold as data, as `ls` gives `FileEntry`s: its stored properties are its
+/// fields, in the order they are declared, wherever its fields are laid out (a table, `to json`,
+/// `select`), as a struct a script declares has. Its type registers the same properties for the
+/// checker.
+protocol Record: ScriptConvertible, Sendable {}
+
+extension Record {
+    var memberNames: [String]? {
+        Mirror(reflecting: self).children.compactMap(\.label)
+    }
+
+    func member(_ name: String) -> Value? {
+        let field = Mirror(reflecting: self).children.first { $0.label == name }
+        return field.map { ($0.value as? any ScriptConvertible)?.value ?? .nothing }
+    }
+}
+
+extension FileEntry {
+    static let native = HostTypeBuilder<FileEntry>("FileEntry")
+        .property("name", \.name)
+        .property("type", \.type)
+        .property("size", \.size)
+        .property("modified", \.modified)
+        .property("permissions", \.permissions)
+        .property("owner", \.owner)
+        .property("created", \.created)
+        .property("accessed", \.accessed)
+        .property("path", \.path)
+        .property("target", \.target)
+}
+
+extension ProcessEntry {
+    static let native = HostTypeBuilder<ProcessEntry>("ProcessEntry")
+        .property("pid", \.pid)
+        .property("ppid", \.ppid)
+        .property("name", \.name)
+        .property("user", \.user)
+        .property("memory", \.memory)
+        .property("cpuTime", \.cpuTime)
+        .property("threads", \.threads)
+}
+
 extension DisplayColumn {
     static let native = HostTypeBuilder<DisplayColumn>("DisplayColumn")
         .property("name", \.name)

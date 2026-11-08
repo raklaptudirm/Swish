@@ -287,7 +287,7 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
 @Test func pipelinesAreCheckedStageByStageAsTheItemsArrive() throws {
     // A stage is found out when the pipeline starts, from the first item: what is wrong with it is
     // said then.
-    #expect(errorText("ls | sorted --by sise")?.hasSuffix("FileEntry has no field 'sise'") == true)
+    #expect(errorText("ls | sorted --by sise")?.hasSuffix("FileEntry has no member 'sise'") == true)
     #expect(errorText("ls | filter { $0.size > 1 }")?.contains("FileSize") == true)
     #expect(errorText("ls | prefix x")?.contains("prefix") == true)
     #expect(

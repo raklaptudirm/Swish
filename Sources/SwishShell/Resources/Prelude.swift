@@ -2,58 +2,6 @@
 // prelude: the checker works from the signatures, and the bodies are in Swift too, found by name
 // (Library/Install.swift). Not compiled: it is embedded in the target.
 
-/// What text `from` can parse.
-enum InputFormat: Equatable, Hashable {
-    case json
-}
-
-/// What `to` can make of values.
-enum OutputFormat: Equatable, Hashable {
-    case json, text
-}
-
-/// What kind of entry `ls` found: `ls | filter { $0.type == .directory }`. In this order, so
-/// `ls | sorted --by type` puts files first.
-enum FileType: Equatable, Hashable, Comparable {
-    case file, directory, symlink, other
-}
-
-/// How a job is going: its `state`.
-enum JobState: Equatable, Hashable, Comparable {
-    case running, stopped, done, cancelled
-}
-
-/// What `String.styled` can make text (the shell's: the core knows only `DisplayStyle`), each with
-/// its terminal code as its raw value.
-enum TextStyle: Equatable, Hashable {
-    case bold, dim, italic, underline, red, green, yellow, blue, magenta, cyan, white, gray
-}
-
-/// An entry `ls` lists.
-struct FileEntry: Equatable, Hashable, Encodable {
-    let name: String
-    let type: FileType
-    let size: FileSize
-    let modified: Date
-    let permissions: String
-    let owner: String
-    let created: Date
-    let accessed: Date
-    let path: FilePath
-    let target: FilePath?
-}
-
-/// A process `ps` lists.
-struct ProcessEntry: Equatable, Hashable, Encodable {
-    let pid: Int
-    let ppid: Int
-    let name: String
-    let user: String
-    let memory: FileSize?
-    let cpuTime: Double?
-    let threads: Int?
-}
-
 /// A struct that says which of its fields a table shows by default, in
 /// order. The rest are still there for `filter`, `select` and `get`, and
 /// `table` shows every one.

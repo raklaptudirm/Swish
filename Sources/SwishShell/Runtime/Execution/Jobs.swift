@@ -102,19 +102,21 @@ final class Job: ScriptConvertible, Presentable, CustomStringConvertible,
         "id", DisplayColumn("state", styledBy: "state"), "command",
     ]
 
+    /// How it's going, as scripts see it: a job that ended because it was cancelled is
+    /// `cancelled`, not `done`.
+    var scriptState: JobState {
+        switch state {
+        case .running: .running
+        case .stopped: .stopped
+        case .done: cancelled ? .cancelled : .done
+        }
+    }
+
     /// The value of each of a job's members, which are what the prelude's `protocol Job` declares.
     static let members: [(name: String, value: @Sendable (Job) -> Value)] = [
         ("id", { Value($0.id) }),
         ("command", { Value($0.source) }),
-        (
-            "state",
-            { job in
-                job.shell.preludeTypes.jobState.enumCase(
-                    named: job.cancelled && job.state == .done ? "cancelled" : job.state.rawValue,
-                    in: job.shell.interpreter
-                ) ?? .nothing
-            }
-        ),
+        ("state", { $0.scriptState.value }),
         ("pids", { Value($0.running.map { Value(Int($0)) }) }),
         ("output", { $0.output.map { Value.output($0) } ?? .nothing }),
         // A method, as it's not data: a table or `to json` of jobs can't read it.

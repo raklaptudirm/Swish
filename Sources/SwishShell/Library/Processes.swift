@@ -16,7 +16,7 @@ func userName(_ uid: uid_t) -> String {
 }
 
 /// A process `ps` lists.
-struct ProcessEntry: Encodable, Equatable, Hashable {
+struct ProcessEntry: Encodable, Equatable, Hashable, Record {
     public var pid: Int
     public var ppid: Int
     public var name: String

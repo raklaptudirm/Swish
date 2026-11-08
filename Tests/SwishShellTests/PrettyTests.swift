@@ -5,11 +5,9 @@ import Testing
 
 private let wide = PrettyPrinter(width: .max)
 
-/// A case of an enum the interpreter was told of.
+/// A case of the shell's `FileType`, as scripts hold it.
 private func fileType(_ name: String) -> Value {
-    let interpreter = Interpreter()
-    _ = try? interpreter.evaluate("enum FileType { case file, directory }")
-    return FileType.id.enumCase(named: name, in: interpreter)!
+    FileType(rawValue: name)!.value
 }
 
 @Test func onOneLineItIsTheDebugDescription() throws {
