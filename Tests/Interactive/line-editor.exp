@@ -21,6 +21,10 @@ proc step {name pattern} {
 spawn .build/debug/swish
 expect -re $ok
 
+# A terminal answers where its cursor is; the completion menu asks, to draw in the free rows
+# under the prompt. This one says the top row, so every row under it is free.
+expect_before -re {\x1b\[6n} { send "\x1b\[1;1R"; exp_continue }
+
 send "echo"
 step "a known command is green" {\x1b\[32mecho}
 # Tcl's \x takes every hex digit that follows, so ^U is sent on its own.
