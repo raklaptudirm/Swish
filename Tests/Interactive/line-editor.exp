@@ -88,6 +88,49 @@ expect -re $ok
 send "\x04"
 expect eof
 
+# A session of its own, with no history: the steps above have left the completion menu's state behind.
+set env(SWISH_HISTORY) ""
+spawn .build/debug/swish
+expect -re $ok
+
+# A `case` opens a level, and the next `case` or `default` takes it back to its own.
+set keyword {(?:\x1b\[[0-9;]*m)*}
+set between {[ \x1b\[0-9;m]*}
+send "switch 2 \{\r"
+after 150
+send "case 1:\r"
+after 150
+send "echo one\r"
+after 150
+send "case"
+after 150
+send " "
+after 150
+send "2:"
+# Not the first `case`, which is at that level too: this one has the 2.
+step "a new case takes the level back" "${ellipsis} {5}${keyword}case${between}2"
+after 150
+send "\r"
+after 150
+send "echo two\r"
+after 150
+send "default"
+after 150
+send ":"
+step "and so does default" "${ellipsis} {5}${keyword}default"
+after 150
+send "\r"
+after 150
+send "break\r"
+after 150
+send "\}\r"
+step "the switch runs" "\r\ntwo\r\n"
+expect -re $ok
+
+send "\x04"
+expect eof
+set env(SWISH_HISTORY) $history
+
 # A new session reads the same history file.
 spawn .build/debug/swish
 expect -re $ok

@@ -109,7 +109,12 @@ final class LineEditor {
             }
             switch key {
             case .character(let character):
-                if "}])".contains(character), !inputPending() { dedentLine() }
+                if !inputPending(),
+                    "}])".contains(character) && cursorIsInIndentation
+                        || startsCase(typing: character)
+                {
+                    dedentLine()
+                }
                 insert([character])
             case .enter:
                 let text = String(buffer)
@@ -223,17 +228,52 @@ final class LineEditor {
         insert(["\n"] + Array(indent))
     }
 
-    /// A closing bracket typed first on a line takes the line back a level.
+    /// Whether only indentation lies between the start of the line and the cursor.
+    private var cursorIsInIndentation: Bool {
+        let before = buffer[lineStart(from: cursor)..<cursor]
+        return !before.isEmpty && before.allSatisfy { $0 == " " || $0 == "\t" }
+    }
+
+    /// Takes the cursor's line back a level, wherever on the line the cursor is.
     private func dedentLine() {
         let start = lineStart(from: cursor)
-        let before = buffer[start..<cursor]
-        guard !before.isEmpty, before.allSatisfy({ $0 == " " || $0 == "\t" }) else { return }
-        if before.last == "\t" {
-            remove(cursor - 1..<cursor)
-        } else {
-            let spaces = min(before.count, LineEditor.indentation.count)
-            remove(cursor - spaces..<cursor)
+        let indent = buffer[start...].prefix { $0 == " " || $0 == "\t" }
+        guard let last = indent.last else { return }
+
+        let removed = last == "\t" ? 1 : min(indent.count, LineEditor.indentation.count)
+        let end = start + indent.count
+        buffer.removeSubrange(end - removed..<end)
+        cursor -= removed
+        startedEditing()
+    }
+
+    /// Whether the character being typed finishes a `case ` or `default:` that is first on its line,
+    /// under the body of an earlier case. That body is a level deeper than its `case`, and a new
+    /// `case` belongs back with the old one.
+    private func startsCase(typing character: Character) -> Bool {
+        let start = lineStart(from: cursor)
+        let line = buffer[start..<cursor]
+        let indent = String(line.prefix { $0 == " " || $0 == "\t" })
+        let word = String(line.dropFirst(indent.count))
+        guard (character == " " && word == "case") || (character == ":" && word == "default")
+        else { return false }
+
+        // The nearest line above that is indented less is the one this line's block belongs to.
+        var end = start
+        while end > 0 {
+            let previousStart = lineStart(from: end - 1)
+            let previous = String(buffer[previousStart..<(end - 1)])
+            end = previousStart
+            let text = previous.drop { $0 == " " || $0 == "\t" }
+            let previousIndent = String(previous.prefix { $0 == " " || $0 == "\t" })
+            guard !text.isEmpty, previousIndent.count < indent.count else { continue }
+
+            let isCase = text.hasPrefix("case ") || text.hasPrefix("default")
+            return isCase
+                && (indent == previousIndent + "\t"
+                    || indent == previousIndent + LineEditor.indentation)
         }
+        return false
     }
 
     private func remove(_ range: Range<Int>) {
