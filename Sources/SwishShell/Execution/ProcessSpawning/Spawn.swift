@@ -183,3 +183,8 @@ struct Errno: Error {
     let code: Int32
     init(_ code: Int32) { self.code = code }
 }
+
+/// What the system says an error number means.
+func errorMessage(_ code: Int32) -> String {
+    String(cString: strerror(code))
+}

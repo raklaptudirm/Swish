@@ -1,7 +1,7 @@
 import Foundation
 import Swiit
 
-// The shell's own declarations are Resources/Prelude.swift, embedded in the target by
+// The shell's own declarations are ScriptLibrary/Prelude/Prelude.swift, embedded in the target by
 // Package.swift; the only part made at run time is the size units, from the table `FileSize` reads.
 
 extension Shell {

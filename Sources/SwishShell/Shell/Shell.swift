@@ -4,7 +4,7 @@ import Swiit
 
 /// The shell: a process with a terminal and jobs, over an `Interpreter` that knows
 /// none of that. It is the interpreter's host (the process), and declares the shell's own types and
-/// functions in Swift for it (Resources/Prelude.swift).
+/// functions in Swift for it (ScriptLibrary/Prelude/Prelude.swift).
 public final class Shell: @unchecked Sendable {
     /// The language underneath. A client adds its own functions to it through Swiit's public
     /// interface.

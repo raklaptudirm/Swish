@@ -33,3 +33,8 @@ extension EnvironmentAccess {
         }
     )
 }
+
+/// A variable of this process's environment, or nil.
+func env(_ name: String) -> String? {
+    getenv(name).map { String(cString: $0) }
+}

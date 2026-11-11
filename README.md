@@ -287,14 +287,14 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
 | Path | What |
 |---|---|
 | [`Swiit`](https://github.com/raklaptudirm/Swiit) | The interpreter, in a repository of its own, which knows nothing of the shell; the shell is a client of it, built against the version in `.swiit-version`. It is looked for beside this checkout (`../Swiit`; CI clones the tag), so work on both together by editing there. It holds the language, the bridges, the host API, `SwiitKit` (`Value`, and what a host converts through, a module of its own) and the bridge generator. |
-| `Sources/SwishShell` | The shell (Swish), a client of Swiit through its public interface alone: |
-| `…/Front` | The shell's syntax: `Reader` reads its forms (commands, pipelines, `$(…)`, redirects) out of Swift text and writes the Swift calls they mean, with `Lexical` and `SwiftProbe` finding where Swift ends. `CommandLine` binds a command's words (`--flag`, values) to a function's parameters. |
-| `…/Runtime` | Running it: `Execution` (pipelines, statuses, value streams, redirects, jobs, globs, `env`), `Commands` (what a stage can be and the parameters it takes), `Platform` (`posix_spawn` with process groups and terminal handoff, resource limits, what differs between macOS and Linux). |
-| `…/Session` | The prompt: the `Shell` itself (the host it is, loop, scripts, tasks, config, prompt hooks), `Editor` (line editing, the completion menu, history, highlighting) and `Builtins` (the shell builtins and `help`). |
-| `…/Display` | Showing values: tables, key/value lists, pretty-printed values and the prompt's echo of each value (the interpreter only tells it what a statement gave), fitted to the terminal. |
-| `…/Library` | The shell's own functions and types (`pwd`, `readLine`, `history`, `ls`, `ps`, `from`, `to`, `table`, `list`, `JSON`, `FileSize`, `Output`), told to the interpreter through its public interface (`Install.swift`, `Native.swift`). |
-| `…/Resources` | `Prelude.swift`: what the shell declares in Swift for scripts, read by the interpreter (not compiled), its bodiless functions' bodies found by name in `Library`. |
-| `Sources/Swish` | The executable. |
+| `Sources/SwishShell` | The shell: the language, running commands, the library scripts get, and showing values. A client of Swiit through its public interface alone, and offered to a program through its own (`Tests/SwishShellTests/PublicSurface.swift` lists it): |
+| `…/ShellSyntax` | The shell's syntax: `Reader` reads its forms (commands, pipelines, `$(…)`, redirects) out of Swift text and writes the Swift calls they mean, with `Lexical` and `SwiftProbe` finding where Swift ends. |
+| `…/Execution` | Running a command line: `CommandBinding` (a command's words, `--flag` and values, bound to a function's parameters), `Pipelines` (stages, value streams, redirects, statuses), `Jobs` (the terminal the shell holds and its background jobs), `WordExpansion` (globs) and `ProcessSpawning` (`posix_spawn` with process groups and terminal handoff, the environment, what differs between macOS and Linux). |
+| `…/ScriptLibrary` | What scripts get: `Types` (`FileSize`, `FileEntry`, `Output`, `JSON`, `Date`…), `Functions`, `Prelude` (`Prelude.swift`, what the shell declares in Swift, read by the interpreter and not compiled, its bodiless functions' bodies found by name), `Registration` (telling the interpreter, through its public interface) and `Help`. |
+| `…/ValueDisplay` | Showing values: tables, key/value lists, pretty-printed values and the prompt's echo of each value (the interpreter only tells it what a statement gave), fitted to the terminal. |
+| `…/Shell` | The `Shell` itself: the host it is for the interpreter, running lines, files and scripts, answering what an editor asks (highlighting and completion), and its builtins. |
+| `Sources/Swish` | The program, a client of `SwishShell`'s public interface: the command line, the `InteractivePrompt` (the line editor, history, config and prompt hooks), the `TaskRunner` behind `run`, and the login shell. |
+| `Tests/SwishShellTests`, `Tests/SwishTests` | The shell's tests, and the program's. |
 | `Tests/Interactive` | `expect` scripts that drive the shell through a real terminal. |
 
 </details>

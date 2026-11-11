@@ -31,7 +31,7 @@ let package = Package(
                 .product(name: "SwiftParser", package: "swift-syntax"),
             ],
             // The shell's prelude is Swift source that is read, not compiled: it is embedded in the target.
-            resources: [.embedInCode("Resources/Prelude.swift")]
+            resources: [.embedInCode("ScriptLibrary/Prelude/Prelude.swift")]
         ),
         // The client: the prompt, the editor, the config and the task runner, as a program uses the shell.
         .testTarget(name: "SwishTests", dependencies: [
