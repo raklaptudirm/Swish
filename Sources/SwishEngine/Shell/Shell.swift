@@ -108,14 +108,14 @@ extension Shell {
     /// script or `swish -c`. Use `print` to show a value.
     @discardableResult
     public func execute(_ source: String) -> Int32 {
-        run(source, atPrompt: false)
+        runSource(source, atPrompt: false)
     }
 
     /// Runs what was entered at the prompt: like `execute`, but the value of
     /// each expression is shown, as a REPL does.
     @discardableResult
     public func enter(_ source: String) -> Int32 {
-        run(source, atPrompt: true)
+        runSource(source, atPrompt: true)
     }
 
     /// Runs `body`, then puts `lastStatus` back as it was: what runs a prompt, a hook or a config
@@ -148,7 +148,7 @@ extension Shell {
         report(diagnostic.rendered(in: text, path: path, style: style))
     }
 
-    func run(_ source: String, atPrompt: Bool) -> Int32 {
+    func runSource(_ source: String, atPrompt: Bool) -> Int32 {
         runState.diagnosticSource = (source, nil)
         switch prepare(source) {
         case .failure(let diagnostic):

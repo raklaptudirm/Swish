@@ -48,7 +48,7 @@ extension Shell {
     public func finishInput(atPrompt: Bool) -> Int32 {
         let rest = unfinishedStatement
         unfinishedStatement = ""
-        if !rest.isEmpty { _ = run(rest, atPrompt: atPrompt) }
+        if !rest.isEmpty { _ = runSource(rest, atPrompt: atPrompt) }
         return lastStatus.number
     }
 

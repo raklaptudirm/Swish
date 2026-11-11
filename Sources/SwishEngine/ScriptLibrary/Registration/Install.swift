@@ -215,7 +215,7 @@ extension Shell {
             runner.statusValue(runner.status(of: arguments["value"] ?? .nothing))
         }
         add("exitShell") { [unowned self] arguments in
-            _ = try runner.run([arguments["command"] ?? .nothing], from: nil, display: true)
+            _ = try runner.runCommands([arguments["command"] ?? .nothing], from: nil, display: true)
             throw RuntimeError("exit did not leave")
         }
         add("shellText") { [unowned self] arguments in

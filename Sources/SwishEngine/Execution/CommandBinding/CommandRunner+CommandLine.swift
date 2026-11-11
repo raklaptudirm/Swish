@@ -215,7 +215,7 @@ extension CommandRunner {
             return Value(text)
         }
 
-        if let value = word(text, as: type) { return value }
+        if let value = value(forWord: text, as: type) { return value }
 
         // A command's output, which is text, is what a word is for it.
         if type == .named(Output.id) { return .output(Output(text: text, status: .success)) }

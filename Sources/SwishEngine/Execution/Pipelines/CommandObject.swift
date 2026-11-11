@@ -17,15 +17,17 @@ extension CommandRunner {
     var commandMethods: [String: @Sendable ([String: Value]) throws -> Value] {
         let methods: [String: ([Value], Value?) throws -> Value] = [
             // As a statement: its output goes where the shell's does.
-            "run": { [unowned self] in statusValue(try run($0, from: $1, display: true)) },
+            "run": { [unowned self] in statusValue(try runCommands($0, from: $1, display: true)) },
             // In a chain or a condition: a function used as a command shows nothing.
-            "runQuietly": { [unowned self] in statusValue(try run($0, from: $1, display: false)) },
-            "check": { [unowned self] in try check($0, from: $1) },
+            "runQuietly": { [unowned self] in
+                statusValue(try runCommands($0, from: $1, display: false))
+            },
+            "check": { [unowned self] in try checkCommands($0, from: $1) },
             "output": { [unowned self] in .output(try output($0, from: $1)) },
             "start": { [unowned self] in
                 Value(
                     try startJob(
-                        try stages($0, from: $1),
+                        try stages(ofCommandValues: $0, from: $1),
                         source: source($0, from: $1),
                         capture: false
                     )
@@ -34,7 +36,7 @@ extension CommandRunner {
             "startCapturing": { [unowned self] in
                 Value(
                     try startJob(
-                        try stages($0, from: $1),
+                        try stages(ofCommandValues: $0, from: $1),
                         source: source($0, from: $1),
                         capture: true
                     )
@@ -109,17 +111,17 @@ extension CommandRunner {
         try interpreter.call(closure, with: [])
     }
 
-    func run(_ commands: [Value], from input: Value?, display: Bool) throws -> Status {
+    func runCommands(_ commands: [Value], from input: Value?, display: Bool) throws -> Status {
         try runPipeline(
-            try stages(commands, from: input),
+            try stages(ofCommandValues: commands, from: input),
             source: source(commands, from: input),
             display: display
         )
     }
 
     /// As `try make`: failing throws a `CommandFailure`.
-    func check(_ commands: [Value], from input: Value?) throws -> Value {
-        let status = try run(commands, from: input, display: true)
+    func checkCommands(_ commands: [Value], from input: Value?) throws -> Value {
+        let status = try runCommands(commands, from: input, display: true)
         if !status.succeeded {
             throw RuntimeError.commandFailure(
                 "\(source(commands, from: input)) failed with status \(status.number)",
@@ -133,7 +135,7 @@ extension CommandRunner {
     /// As `$(…)`: its output is gathered, whatever its status.
     func output(_ commands: [Value], from input: Value?) throws -> Output {
         var status = Status.success
-        let text = try capturing { status = try run(commands, from: input, display: false) }
+        let text = try capturing { status = try runCommands(commands, from: input, display: false) }
         return output(text, status: status)
     }
 
@@ -170,7 +172,7 @@ extension CommandRunner {
         )
     }
 
-    func stages(_ commands: [Value], from input: Value?) throws -> [Stage] {
+    func stages(ofCommandValues commands: [Value], from input: Value?) throws -> [Stage] {
         try stages(input: input, commands: try commands.map(spec))
     }
 

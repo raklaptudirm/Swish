@@ -5,12 +5,12 @@ extension CommandRunner {
     /// `.directory`) or raw value, a Swift type by its own initializer from text (`5` for an `Int`,
     /// a path for a `FilePath`), a key path by the field names (`size`, `owner.name`), and anything
     /// else by being text, as `String`, `Any` and a type parameter are. Nil if the word is not one.
-    func word(_ text: String, as type: ScriptType) -> Value? {
+    func value(forWord text: String, as type: ScriptType) -> Value? {
         guard case .named(let id, let arguments) = type else { return nil }
 
         if id == .any { return Value(text) }
         if id == .keyPath { return Value(keyPath: text.split(separator: ".").map(String.init)) }
-        if id == .optional, arguments.count == 1 { return word(text, as: arguments[0]) }
+        if id == .optional, arguments.count == 1 { return value(forWord: text, as: arguments[0]) }
 
         // A type parameter, which text satisfies.
         if id.isGenericParameter { return Value(text) }
@@ -23,7 +23,7 @@ extension CommandRunner {
         // The initializer takes the word as its own parameter type is made from it: a `Substring`
         // by its text literal, since Swift does not turn a `String` into one.
         guard let parameter = textInitializer(of: type),
-            let argument = word(text, as: parameter.type)
+            let argument = value(forWord: text, as: parameter.type)
         else { return nil }
 
         let made = try? interpreter.call(
