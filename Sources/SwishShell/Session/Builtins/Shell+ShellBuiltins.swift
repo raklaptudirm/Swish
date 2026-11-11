@@ -86,13 +86,6 @@ extension Shell {
             action: .run { $0.exitShell($1) }
         ),
         Builtin(
-            name: "run",
-            usage: "run [<task> [<argument>...]]",
-            summary:
-                "Runs a task: a function in the nearest Tasks.swish, here or in a parent directory, in a Swish of its own. Alone, lists the tasks.",
-            action: .program { try $0.taskCommand($1) }
-        ),
-        Builtin(
             name: "source",
             usage: "source <file> [<argument>...]",
             summary: "Runs a Swish file in this shell, so what it declares stays declared.",

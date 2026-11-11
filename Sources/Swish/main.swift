@@ -13,10 +13,13 @@ let arguments = loginFlag ? Array(commandLine.dropFirst()) : commandLine
 // actually used are committed.
 let interpreter = Thread {
     let shell = Shell()
-    if isLogin { shell.setUpLogin() }
+    let prompt = InteractivePrompt(shell: shell)
+    prompt.declareScriptFunctions()
+    TaskRunner(shell: shell).registerRunBuiltin()
+    if isLogin { setUpLogin(shell) }
     switch arguments.first {
     case nil:
-        exit(shell.runInteractive())
+        exit(prompt.run())
     // A script's top level is a scope: its tasks are cancelled and waited for at its end.
     case "-c" where arguments.count == 2:
         let status = shell.execute(arguments[1])
@@ -24,11 +27,12 @@ let interpreter = Thread {
         exit(status)
     // What `run` starts: a task file, and the task to run from it.
     case "--tasks" where arguments.count >= 2:
-        let status = shell.runTasks(
-            at: arguments[1],
-            task: arguments.dropFirst(2).first,
-            arguments: Array(arguments.dropFirst(3))
-        )
+        let status = TaskRunner(shell: shell)
+            .run(
+                at: arguments[1],
+                task: arguments.dropFirst(2).first,
+                arguments: Array(arguments.dropFirst(3))
+            )
         shell.cancelAndJoinTasks()
         shell.endBySignal()
         exit(status)

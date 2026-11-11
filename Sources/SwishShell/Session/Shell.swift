@@ -2,7 +2,7 @@ import Foundation
 import SwiftSyntax
 import Swiit
 
-/// The shell: a process with a terminal, jobs and a line editor, over an `Interpreter` that knows
+/// The shell: a process with a terminal and jobs, over an `Interpreter` that knows
 /// none of that. It is the interpreter's host (the process), and declares the shell's own types and
 /// functions in Swift for it (Resources/Prelude.swift).
 public final class Shell: @unchecked Sendable {
@@ -63,15 +63,6 @@ public final class Shell: @unchecked Sendable {
     var stoppedBySignal: Int32?
     /// The running script's directory; nil at the prompt.
     var scriptDirectory: String?
-    /// What runs before each prompt, in the order it was added (`beforePrompt`).
-    var promptHooks: [Value] = []
-    /// What runs when the working directory has changed since the last prompt (`onDirectoryChange`).
-    var directoryHooks: [Value] = []
-    /// The working directory when the last prompt was drawn, to tell when it has changed.
-    var promptDirectory: String?
-
-    let editor = LineEditor()
-
     /// The names a stage could be, known from the types.
     lazy var stageNames: StageNames = computeStageNames()
 
@@ -87,12 +78,6 @@ public final class Shell: @unchecked Sendable {
     /// What the prelude declared that Swift code builds values of; set once, at the end of
     /// `installLibrary`, which is why it is not a `let`.
     var preludeTypes: PreludeTypes!
-
-    /// What's been entered at the prompt: this shell's history, or the
-    /// history file's outside the interactive shell.
-    var historyEntries: [String] {
-        interactive ? editor.history.entries : History(path: History.defaultPath).entries
-    }
 
     /// Tasks still running end with the shell: they're cancelled, and waited for, as the scope that
     /// starts a task closes it (https://github.com/raklaptudirm/Swiit/blob/main/Docs/async.md).

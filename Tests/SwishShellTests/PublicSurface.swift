@@ -33,8 +33,6 @@ enum PublicSurface {
         // What a client adds
         "Shell.register", "Shell.Builtin", "Shell.Builtin.run", "Shell.Builtin.program",
         "Shell.report",
-        // The entry points a client does not yet provide itself (they move to Sources/Swish)
-        "Shell.runInteractive", "Shell.runTasks", "Shell.setUpLogin",
         // How a statement ended, and what the spans of a source say
         "Status.success", "Status.succeeded", "Status.number", "Status.code", "Status.signal",
         "Status.encode",
@@ -45,6 +43,10 @@ enum PublicSurface {
         "Date.init",
         // The terminal a client draws on, and where a descriptor may be styled
         "Terminal.width", "Terminal.height", "Terminal.write", "DisplayStyle.enabled",
+        // A doc comment's first sentence, which a list of functions shows
+        "String.firstSentence",
+        // Painting spans onto characters, for an editor and for the shell's own diagnostics
+        "Sequence.paintedStyles",
     ]
 
     private static let sources = URL(fileURLWithPath: #filePath).deletingLastPathComponent()

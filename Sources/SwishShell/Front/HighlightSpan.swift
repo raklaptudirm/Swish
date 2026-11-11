@@ -35,3 +35,18 @@ public struct HighlightSpan: Equatable, Sendable {
         self.kind = kind
     }
 }
+
+extension Sequence where Element == HighlightSpan {
+    /// The style of each of `count` characters: the span that covers it, and for a span inside
+    /// another (an interpolation in a string) the inner one. Characters no span covers have none.
+    public func paintedStyles(count: Int) -> [DisplayStyle?] {
+        var styles = [DisplayStyle?](repeating: nil, count: count)
+        // Longer spans first, so what is inside them is painted over them.
+        for span in sorted(by: { $0.range.count > $1.range.count }) {
+            for index in span.range.clamped(to: 0..<count) {
+                styles[index] = span.kind.displayStyle
+            }
+        }
+        return styles
+    }
+}

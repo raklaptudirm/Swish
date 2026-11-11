@@ -44,7 +44,8 @@ final class History {
             fd = open(path, O_WRONLY | O_APPEND | O_CREAT, 0o600)
         }
         guard fd >= 0 else { return }
-        writeAll(fd, History.encode(entry) + "\n")
+        let line = Array((History.encode(entry) + "\n").utf8)
+        _ = write(fd, line, line.count)
         close(fd)
     }
 

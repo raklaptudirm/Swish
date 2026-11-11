@@ -342,17 +342,6 @@ func setEnvironmentValue(_ name: String, _ value: String?) throws
 /// What `env.load(fromShell:)` does.
 func loadEnvironment(fromShell script: String) throws
 
-/// Runs `action` each time a prompt is about to be drawn, after those added before it: what a tool
-/// that keeps the shell up to date hooks into, as direnv does with
-/// `beforePrompt { try env.load(fromShell: #"eval "$(direnv export bash)""#) }`. One that fails is
-/// reported, and the prompt drawn.
-func beforePrompt(_ action: @escaping () throws -> Void)
-
-/// Runs `action` with the directory it was and the one it is, when the working directory has
-/// changed since the last prompt, before that prompt's own `beforePrompt` actions: however it
-/// changed, by `cd` or by a script.
-func onDirectoryChange(_ action: @escaping (_ from: FilePath, _ to: FilePath) throws -> Void)
-
 /// A value that stands for another where it flows through a pipeline and where it is shown: those
 /// see what it wraps.
 protocol Wrapping {
@@ -435,9 +424,6 @@ func with<T>(env variables: [String: String], _ body: () throws -> T) rethrows -
 /// - Parameter paths: files or directories to list (default: the current directory)
 /// - Parameter all: include hidden files
 func ls(_ paths: FilePath..., all: Bool = false) -> [FileEntry]
-
-/// What you've entered at the prompt, oldest first.
-func history() -> [String]
 
 /// A line of standard input, or nil at its end.
 /// - Parameter strippingNewline: leave the line's newline off

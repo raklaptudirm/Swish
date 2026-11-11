@@ -1,15 +1,16 @@
+import Foundation
 import Swiit
+import SwishShell
 import Testing
 
-@testable import SwishShell
-
-private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
-    try onLargeStack { try shell.capturing { shell.enter(source) } }
-}
+@testable import Swish
 
 @Test func tasksRunFromTheNearestTaskFile() throws {
-    let shell = Shell()
-    let directory = try output("mktemp -d", in: shell).trimmingCharacters(in: .newlines)
+    let directory = NSTemporaryDirectory() + "swish-tasks-" + UUID().uuidString
+    try FileManager.default.createDirectory(
+        atPath: directory + "/sub",
+        withIntermediateDirectories: true
+    )
     let file = directory + "/Tasks.swish"
     let tasks = """
         let greeting = "hi"
@@ -27,12 +28,15 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
         }
         """
     try tasks.write(toFile: file, atomically: true, encoding: .utf8)
+
+    // What a task prints goes to standard output, so it is read from a pipe.
     func run(_ task: String?, _ arguments: [String] = []) throws -> (String, Int32) {
-        let tasks = Shell()
-        let printed = try onLargeStack {
-            try tasks.capturing { _ = tasks.runTasks(at: file, task: task, arguments: arguments) }
+        let shell = Shell()
+        var status: Int32 = 0
+        let printed = try capturingStandardOutput {
+            status = TaskRunner(shell: shell).run(at: file, task: task, arguments: arguments)
         }
-        return (printed, tasks.lastStatus.number)
+        return (printed, status)
     }
     // The top level runs first; arguments are the function's, not `args`.
     #expect(try run("hello", ["--name", "Rak", "--loud"]) == ("hi RAK 0\n", 0))
@@ -47,7 +51,6 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
     #expect(try run("missing").1 == 127)
 
     // `run` finds the file from a subdirectory, and runs it as its own Swish.
-    shell.execute("mkdir \(directory)/sub")
-    let command = try shell.taskCommand(["hello", "--loud"], from: directory + "/sub")
+    let command = try TaskRunner.command(for: ["hello", "--loud"], from: directory + "/sub")
     #expect(Array(command.dropFirst()) == ["--tasks", file, "hello", "--loud"])
 }

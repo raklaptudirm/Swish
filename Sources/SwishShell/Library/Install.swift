@@ -167,7 +167,6 @@ extension Shell {
             return Value(partial.value.map(\.value))
         }
         add("ps") { _ in Value(ps().map(\.value)) }
-        add("history") { [unowned self] _ in Value(historyEntries.map { Value($0) }) }
         add("readLine") { arguments in
             readLine(
                 strippingNewline: arguments["strippingNewline"]?.casting(to: Bool.self) ?? true
@@ -227,14 +226,6 @@ extension Shell {
             }
             let value = arguments["value"] ?? .nothing
             environment.set(name, value.kind == .nothing ? nil : value.description)
-            return .nothing
-        }
-        add("beforePrompt") { [unowned self] arguments in
-            if let action = arguments["action"] { promptHooks.append(action) }
-            return .nothing
-        }
-        add("onDirectoryChange") { [unowned self] arguments in
-            if let action = arguments["action"] { directoryHooks.append(action) }
             return .nothing
         }
         add("loadEnvironment") { [unowned self] arguments in

@@ -1,16 +1,15 @@
 import Swiit
+import SwishShell
 import Testing
 
-@testable import SwishShell
+@testable import Swish
 
-private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
-    try onLargeStack { try shell.capturing { shell.enter(source) } }
-}
+// The config file, and the prompt function it may declare.
 
 @Test func configLivesInTheXDGConfigDirectories() {
     // Only the files that exist count, in the spec's order.
     func path(_ environment: [String: String], existing: Set<String>) -> String? {
-        Shell.configPath(environment: environment, exists: existing.contains)
+        Configuration.path(environment: environment, exists: existing.contains)
     }
     let home = "/h/.config/swish/config.swish"
     #expect(path(["HOME": "/h"], existing: [home]) == home)
@@ -36,24 +35,18 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
 
 @Test func promptFunctions() throws {
     let shell = Shell()
-    #expect(try shell.customPrompt() == nil)
-    _ = try output(#"func prompt() -> String { "plain> " }"#, in: shell)
-    #expect(try shell.customPrompt() == "plain> ")
+    let prompt = InteractivePrompt(shell: shell)
+    #expect(try prompt.customPrompt() == nil)
+
+    shell.execute(#"func prompt() -> String { "plain> " }"#)
+    #expect(try prompt.customPrompt() == "plain> ")
+
     // One told the last status wins over one that isn't, and leaves the status as it was.
-    _ = try output(#"func prompt(status: Int) -> String { "[\(status)]> " }; false"#, in: shell)
-    #expect(try shell.customPrompt() == "[1]> ")
+    shell.execute(#"func prompt(status: Int) -> String { "[\(status)]> " }; false"#)
+    #expect(try prompt.customPrompt() == "[1]> ")
     #expect(shell.lastStatus.number == 1)
 
     let wrong = Shell()
-    _ = try output("func prompt(_ n: Int) -> Int { n }", in: wrong)
-    #expect(throws: Diagnostic.self) { try wrong.customPrompt() }
-}
-
-@Test func styledTextIsPlainOffATerminal() throws {
-    #expect(
-        try output(
-            #""x".styled(.red, .bold); let c = true ? TextStyle.green : .red; "y".styled(c) + "!""#
-        )
-            == "\"x\"\n\"y!\"\n"
-    )
+    wrong.execute("func prompt(_ n: Int) -> Int { n }")
+    #expect(throws: PromptError.self) { try InteractivePrompt(shell: wrong).customPrompt() }
 }

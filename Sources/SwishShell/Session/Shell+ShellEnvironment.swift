@@ -82,14 +82,4 @@ extension Shell {
             environment.set(name, nil)
         }
     }
-
-    /// Sets the shell up as a login shell: the environment the system's login profile makes
-    /// (`loadEnvironment(fromShell:login:)`). A terminal starts the login shell with little more
-    /// than `HOME` and `USER` set, so without it the programs nix-darwin or Homebrew install are
-    /// not on `PATH`. A profile that fails is reported, and the shell starts with what it has.
-    public func setUpLogin() {
-        do { try loadEnvironment(fromShell: ":", login: true) } catch {
-            report("error: the login profile: \(error)")
-        }
-    }
 }

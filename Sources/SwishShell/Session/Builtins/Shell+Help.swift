@@ -379,7 +379,7 @@ extension Shell {
 extension String {
     /// A doc comment's first sentence, on one line, for a list: up to the
     /// first ". " of its first paragraph.
-    var firstSentence: String {
+    public var firstSentence: String {
         let paragraph =
             components(separatedBy: "\n\n").first?.replacingOccurrences(of: "\n", with: " ") ?? ""
         return paragraph.range(of: ". ").map { String(paragraph[..<$0.lowerBound]) + "." }

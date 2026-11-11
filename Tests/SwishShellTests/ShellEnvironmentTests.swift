@@ -66,27 +66,3 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
         #expect(Shell.otherShell(of: file("e.sh", "#!/usr/bin/env swish\n")) == nil)
     }
 }
-
-@Test func actionsRunBeforeEachPromptAndWhenTheDirectoryChanged() throws {
-    let shell = Shell()
-    _ = try output(
-        """
-        var seen: [String] = []
-        onDirectoryChange { from, to in seen.append("\\(from.lastComponent!)→\\(to.lastComponent!)") }
-        beforePrompt { seen.append("p") }
-        beforePrompt { throw Oops() }
-        struct Oops: Error {}
-        """,
-        in: shell
-    )
-    var directory = "/a/one"
-    let errors = errorOutput(of: shell) {
-        for next in ["/a/one", "/a/two", "/a/two"] {
-            directory = next
-            shell.willPrompt { directory }
-        }
-    }
-    // The action that failed is reported, and the others ran.
-    #expect(errors.contains("beforePrompt: "))
-    #expect(try output("print(seen)", in: shell) == #"["p", "one→two", "p", "p"]"# + "\n")
-}

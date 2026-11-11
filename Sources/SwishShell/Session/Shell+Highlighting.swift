@@ -23,15 +23,7 @@ extension Shell {
 
     /// An ANSI style for each character of `text`, from `highlighting(of:)`.
     func highlightStyles(_ text: String) -> [String?] {
-        let characters = Array(text)
-        var styles = [String?](repeating: nil, count: characters.count)
-        // Longer spans first, so what's inside them (an interpolation in a
-        // string) is painted over them.
-        for span in highlighting(of: text).sorted(by: { $0.range.count > $1.range.count }) {
-            let range = span.range.clamped(to: 0..<characters.count)
-            for index in range { styles[index] = span.kind.displayStyle.escape }
-        }
-        return styles
+        highlighting(of: text).paintedStyles(count: text.count).map { $0?.escape }
     }
 
     /// Whether the command starting at `index` comes after a `|`.

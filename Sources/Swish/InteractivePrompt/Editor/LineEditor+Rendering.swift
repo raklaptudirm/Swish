@@ -1,5 +1,6 @@
 import Foundation
 import Swiit
+import SwishShell
 
 // Drawing the prompt and the input in place, and finding the terminal's size.
 
@@ -50,7 +51,7 @@ extension LineEditor {
         // The menu goes in the rows free under the input, and no further, so nothing scrolls.
         var menuRows = 0
         if let menu, let row = promptRow {
-            let height = terminalHeight(output) ?? 24
+            let height = Terminal.height(of: output) ?? 24
             // Input that grew past the bottom has pushed the prompt up.
             let top = max(min(row, height - 1 - end.row), 0)
             promptRow = top
@@ -72,10 +73,10 @@ extension LineEditor {
     }
 
     func terminalWidth() -> Int {
-        SwishShell.terminalWidth(output) ?? 80
+        Terminal.width(of: output) ?? 80
     }
 
     func writeOut(_ text: String) {
-        writeAll(output, text)
+        Terminal.write(text, to: output)
     }
 }
