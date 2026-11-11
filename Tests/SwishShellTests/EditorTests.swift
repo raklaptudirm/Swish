@@ -146,7 +146,11 @@ private func completion(
     let result = shell.completions(for: "zzg", cursor: 3)
     #expect(
         result?.candidates == [
-            LineEditor.Candidate(replacement: "zzgreet", display: "zzgreet", description: "Greets.")
+            Shell.Completions.Candidate(
+                replacement: "zzgreet",
+                display: "zzgreet",
+                description: "Greets."
+            )
         ]
     )
     #expect(completion("ech").replacements.contains("echo"))

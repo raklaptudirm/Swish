@@ -251,7 +251,7 @@ extension Shell {
                 )
             )
         }
-        for builtin in Shell.shellBuiltins.values
+        for builtin in builtins.values
         where builtin.works && !seen.contains(builtin.name) {
             rows.append(
                 (
@@ -290,7 +290,7 @@ extension Shell {
     func helpOutput(for name: String) throws -> [AttributedString] {
         if let callee = commandFunctions(named: name) ?? stageMethods(named: name) {
             return helpLines(for: callee)
-        } else if let builtin = Shell.shellBuiltins[name], builtin.works {
+        } else if let builtin = builtins[name], builtin.works {
             return [
                 AttributedString(documentation: builtin.summary), AttributedString(""),
                 HelpStyle.heading("Usage:"),

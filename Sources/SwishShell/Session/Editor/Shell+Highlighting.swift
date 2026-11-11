@@ -4,31 +4,32 @@ import Swiit
 extension Shell {
     // MARK: Highlighting
 
-    /// An ANSI style for each character of `text`, from the parser's spans.
-    /// Command names are green if they'd run something and red if not.
+    /// What each stretch of `text` is, from the parser's spans. A command word is `.command` if it
+    /// would run something and `.unknownCommand` if not; one built at run time can't be told while
+    /// typing, and has no span.
+    public func highlighting(of text: String) -> [HighlightSpan] {
+        let characters = Array(text)
+        return highlightSpans(text)
+            .compactMap { span in
+                guard span.kind == .command else { return span }
+                let range = span.range.clamped(to: 0..<characters.count)
+                let piped = Shell.isPiped(characters, before: range.lowerBound)
+                guard let known = isKnownCommand(String(characters[range]), piped: piped) else {
+                    return nil
+                }
+                return HighlightSpan(range: span.range, kind: known ? .command : .unknownCommand)
+            }
+    }
+
+    /// An ANSI style for each character of `text`, from `highlighting(of:)`.
     func highlightStyles(_ text: String) -> [String?] {
         let characters = Array(text)
         var styles = [String?](repeating: nil, count: characters.count)
         // Longer spans first, so what's inside them (an interpolation in a
         // string) is painted over them.
-        for span in highlightSpans(text).sorted(by: { $0.range.count > $1.range.count }) {
+        for span in highlighting(of: text).sorted(by: { $0.range.count > $1.range.count }) {
             let range = span.range.clamped(to: 0..<characters.count)
-            let style: String? =
-                switch span.kind {
-                case .keyword, .punctuation: DisplayStyle.keyword.escape
-                case .command:
-                    commandStyle(
-                        String(characters[range]),
-                        piped: Shell.isPiped(characters, before: range.lowerBound)
-                    )
-                case .flag: DisplayStyle.flag.escape
-                case .string: DisplayStyle.string.escape
-                case .number, .constant: DisplayStyle.constant.escape
-                case .variable: DisplayStyle.variable.escape
-                case .comment: DisplayStyle.comment.escape
-                case .type: DisplayStyle.type.escape
-                }
-            for index in range { styles[index] = style }
+            for index in range { styles[index] = span.kind.displayStyle.escape }
         }
         return styles
     }
@@ -41,29 +42,29 @@ extension Shell {
             && (before == 0 || characters[before - 1] != "|")
     }
 
-    private func commandStyle(_ word: String, piped: Bool) -> String? {
+    /// Whether `word` names something that would run, or nil when it is built at run time.
+    private func isKnownCommand(_ word: String, piped: Bool) -> Bool? {
         let external = word.hasPrefix("^")
         let name = external ? String(word.dropFirst()) : word
         // Names built at run time can't be checked while typing.
         guard !name.isEmpty, !name.contains(where: { "$\\\"'(".contains($0) }) else { return nil }
-        let known: Bool
         if !external
             && (commandFunctions(named: name) != nil || stageNames.sequence.contains(name)
                 || stageNames.streams.contains(name)
-                || Shell.shellBuiltins[name] != nil)
+                || builtins[name] != nil)
         {
-            known = true
-        } else if !external && piped && isMemberName(name) {
+            return true
+        }
+        if !external && piped && isMemberName(name) {
             // After a `|`, a method of what's piped in: which type's isn't
             // known while typing, so any type's will do.
-            known = true
-        } else if name.contains("/") {
-            let path = name.hasPrefix("~") ? (env("HOME") ?? "") + name.dropFirst() : name
-            known = FileManager.default.isExecutableFile(atPath: path)
-        } else {
-            known = executableNames().contains(name)
+            return true
         }
-        return (known ? DisplayStyle.green : DisplayStyle.red).escape
+        if name.contains("/") {
+            let path = name.hasPrefix("~") ? (env("HOME") ?? "") + name.dropFirst() : name
+            return FileManager.default.isExecutableFile(atPath: path)
+        }
+        return executableNames().contains(name)
     }
 
     /// Names of programs on PATH, cached for a few seconds, since the

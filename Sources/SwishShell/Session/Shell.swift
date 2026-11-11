@@ -48,6 +48,8 @@ public final class Shell: @unchecked Sendable {
     var warnedAboutJobs = false
     /// A `try!` failed in a script, which stops it.
     var scriptStopped = false
+    /// The builtins by name: the shell's own, and a client's (`register(_:)`).
+    var builtins: [String: Builtin] = Shell.standardBuiltins
     /// The lines of a statement that is not finished yet, like the start of an `if` block.
     var unfinishedStatement = ""
     /// The variables `env` reads and writes: the process's own, unless a host gives others.

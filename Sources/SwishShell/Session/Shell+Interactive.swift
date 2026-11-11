@@ -12,7 +12,9 @@ extension Shell {
         // These run while a line is read, when nothing else runs.
         editor.isComplete = { [unowned self] text in !isUnfinished(text) }
         editor.highlight = { [unowned self] text in highlightStyles(text) }
-        editor.complete = { [unowned self] text, cursor in completions(for: text, cursor: cursor) }
+        editor.complete = { [unowned self] text, cursor in
+            completions(for: text, cursor: cursor).map(LineEditor.Completion.init)
+        }
         loadConfig()
 
         while true {
@@ -88,5 +90,22 @@ extension Shell {
         let status = failed ? "[\(lastStatus.number)]".styled(DisplayStyle.red) + " " : ""
         return directory.styled(DisplayStyle.cyan) + " " + status
             + "❯".styled(failed ? DisplayStyle.red : DisplayStyle.green) + " "
+    }
+}
+
+extension LineEditor.Completion {
+    /// The editor's form of what the shell offers to complete the word being typed.
+    init(_ completions: Shell.Completions) {
+        self.init(
+            start: completions.start,
+            candidates: completions.candidates.map {
+                LineEditor.Candidate(
+                    replacement: $0.replacement,
+                    suffix: $0.suffix,
+                    display: $0.display,
+                    description: $0.description
+                )
+            }
+        )
     }
 }

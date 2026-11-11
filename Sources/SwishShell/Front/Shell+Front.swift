@@ -31,7 +31,7 @@ extension Shell {
         }
         front.isMethodWithoutInput = { [unowned self] name in
             isStageMethod(name) && commandFunctions(named: name) == nil
-                && Shell.shellBuiltins[name] == nil
+                && builtins[name] == nil
                 && findExecutable(name) == nil
         }
         front.recovering = recovering

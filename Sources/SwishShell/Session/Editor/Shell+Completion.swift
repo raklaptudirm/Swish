@@ -2,15 +2,46 @@ import Foundation
 import Swiit
 
 extension Shell {
+    /// What could complete the word being typed: where it starts and what could replace it.
+    public struct Completions: Sendable {
+        public struct Candidate: Equatable, Sendable {
+            /// What replaces the word being completed, escaped as needed.
+            public var replacement: String
+            /// Added after a unique completion: a space, or nothing after a directory.
+            public var suffix = " "
+            /// Shown in the list of candidates.
+            public var display: String
+            public var description: String?
+
+            public init(
+                replacement: String,
+                suffix: String = " ",
+                display: String,
+                description: String? = nil
+            ) {
+                self.replacement = replacement
+                self.suffix = suffix
+                self.display = display
+                self.description = description
+            }
+        }
+
+        /// Where the word being completed starts, in characters.
+        public var start: Int
+        public var candidates: [Candidate]
+    }
+}
+
+extension Shell {
     // MARK: Completion
 
     /// Completions for the word before `cursor`: commands where a command
     /// name goes, a function's flags (from its signature) after a `-`,
     /// variables after a `$`, and paths otherwise.
-    func completions(for text: String, cursor: Int) -> LineEditor.Completion? {
+    public func completions(for text: String, cursor: Int) -> Shell.Completions? {
         let context = CompletionContext(scanning: Array(text)[..<cursor])
         let word = context.current
-        var candidates: [LineEditor.Candidate]
+        var candidates: [Shell.Completions.Candidate]
 
         if word.hasPrefix("$") && context.quote != "'" {
             candidates = variableCandidates(prefix: String(word.dropFirst()))
@@ -47,21 +78,24 @@ extension Shell {
         } else {
             candidates = pathCandidates(for: word, quote: context.quote, executablesOnly: false)
         }
-        return LineEditor.Completion(start: context.start, candidates: candidates)
+        return Shell.Completions(start: context.start, candidates: candidates)
     }
 
-    private func variableCandidates(prefix: String) -> [LineEditor.Candidate] {
+    private func variableCandidates(prefix: String) -> [Shell.Completions.Candidate] {
         var names = Set(ProcessInfo.processInfo.environment.keys)
         for symbol in interpreter.globals() where symbol.function == nil {
             names.insert(symbol.name)
         }
         return names.filter { $0.hasPrefix(prefix) }.sorted()
             .map {
-                LineEditor.Candidate(replacement: "$" + $0, suffix: "", display: "$" + $0)
+                Shell.Completions.Candidate(replacement: "$" + $0, suffix: "", display: "$" + $0)
             }
     }
 
-    private func commandCandidates(prefix: String, externalOnly: Bool) -> [LineEditor.Candidate] {
+    private func commandCandidates(
+        prefix: String,
+        externalOnly: Bool
+    ) -> [Shell.Completions.Candidate] {
         var described: [String: String] = [:]
         if !externalOnly {
             for symbol in interpreter.globals() { described[symbol.name] = "variable" }
@@ -72,7 +106,7 @@ extension Shell {
                 let summary = symbols.compactMap(\.summary).first { !$0.isEmpty }
                 described[name] = summary.map { String($0.prefix { $0 != "\n" }) } ?? "function"
             }
-            for builtin in Shell.shellBuiltins.values where builtin.works {
+            for builtin in builtins.values where builtin.works {
                 described[builtin.name] = "shell builtin"
             }
             for name in stageNames.methods {
@@ -93,12 +127,15 @@ extension Shell {
                 described[keyword] = "keyword"
             }
         }
-        var candidates: [String: LineEditor.Candidate] = [:]
+        var candidates: [String: Shell.Completions.Candidate] = [:]
         for name in executableNames() where name.hasPrefix(prefix) {
-            candidates[name] = LineEditor.Candidate(replacement: escaped(name), display: name)
+            candidates[name] = Shell.Completions.Candidate(
+                replacement: escaped(name),
+                display: name
+            )
         }
         for (name, description) in described where name.hasPrefix(prefix) {
-            candidates[name] = LineEditor.Candidate(
+            candidates[name] = Shell.Completions.Candidate(
                 replacement: escaped(name),
                 display: name,
                 description: description
@@ -107,11 +144,12 @@ extension Shell {
         return candidates.keys.sorted().map { candidates[$0]! }
     }
 
-    private func flagCandidates(for callee: Callee, prefix: String) -> [LineEditor.Candidate] {
-        var candidates: [String: LineEditor.Candidate] = [:]
+    private func flagCandidates(for callee: Callee, prefix: String) -> [Shell.Completions.Candidate]
+    {
+        var candidates: [String: Shell.Completions.Candidate] = [:]
         func add(_ flag: String, _ description: String) {
             guard flag.hasPrefix(prefix), candidates[flag] == nil else { return }
-            candidates[flag] = LineEditor.Candidate(
+            candidates[flag] = Shell.Completions.Candidate(
                 replacement: flag,
                 display: flag,
                 description: description
@@ -140,7 +178,7 @@ extension Shell {
         for word: String,
         quote: Character?,
         executablesOnly: Bool
-    ) -> [LineEditor.Candidate] {
+    ) -> [Shell.Completions.Candidate] {
         let home = env("HOME") ?? "~"
         let expanded = word.hasPrefix("~") ? home + word.dropFirst() : word
         let typedDirectory = word.lastIndex(of: "/").map { String(word[...$0]) } ?? ""
@@ -153,7 +191,7 @@ extension Shell {
                 atPath: directory.isEmpty ? "." : directory
             )) ?? []
 
-        var candidates: [LineEditor.Candidate] = []
+        var candidates: [Shell.Completions.Candidate] = []
         for name in names.sorted()
         where name.hasPrefix(partial) && (partial.hasPrefix(".") || !name.hasPrefix(".")) {
             var isDirectory: ObjCBool = false
@@ -170,7 +208,7 @@ extension Shell {
             let replacement = quote.map { String($0) + text } ?? escaped(text)
             let suffix = isDirectory.boolValue ? "/" : quote.map { String($0) + " " } ?? " "
             candidates.append(
-                LineEditor.Candidate(
+                Shell.Completions.Candidate(
                     replacement: replacement,
                     suffix: suffix,
                     display: name + (isDirectory.boolValue ? "/" : "")

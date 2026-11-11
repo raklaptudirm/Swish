@@ -11,7 +11,7 @@ extension Shell {
         for symbol in interpreter.globals() where symbol.function != nil {
             names.insert(symbol.name)
         }
-        for builtin in Shell.shellBuiltins.values where builtin.works { names.insert(builtin.name) }
+        for builtin in builtins.values where builtin.works { names.insert(builtin.name) }
         let allowed = name.count <= 5 ? 1 : 2
         return
             names

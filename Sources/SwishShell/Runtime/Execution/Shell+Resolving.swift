@@ -141,7 +141,7 @@ extension Shell {
             switch fallback {
             case .function?: break
             case .external(let argv, _, _, _)?
-            where Shell.shellBuiltins[argv[0]] != nil || findExecutable(argv[0]) != nil: break
+            where builtins[argv[0]] != nil || findExecutable(argv[0]) != nil: break
             default: throw firstFailure
             }
         }

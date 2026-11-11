@@ -81,7 +81,7 @@ extension Shell {
             return text
         }
         // A builtin that becomes a program, as `run` becomes Swish on a task file.
-        if !command.external, case .program(let make)? = Shell.shellBuiltins[name]?.action {
+        if !command.external, case .program(let make)? = builtins[name]?.action {
             return .external(
                 try make(self, Array(argv.dropFirst())),
                 skipBuiltins: true,

@@ -67,7 +67,7 @@ extension Shell {
                     }
                 }
             case .external(let argv, let skipBuiltins, let redirects, let environment)
-            where !skipBuiltins && Shell.shellBuiltins[argv[0]] != nil:
+            where !skipBuiltins && builtins[argv[0]] != nil:
                 return try withEnvironment(environment) {
                     try withRedirects(redirects) { _, _ in .exited(runBuiltin(argv)!) }
                 }
