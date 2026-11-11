@@ -14,7 +14,13 @@ extension Shell {
     func commandFunctions(named name: String) -> Callee? {
         let functions = interpreter.globals(named: name).filter { $0.function != nil }
         return functions.isEmpty
-            ? nil : Callee(name: name, overloads: functions, receiver: nil, marks: scriptMarks)
+            ? nil
+            : Callee(
+                name: name,
+                overloads: functions,
+                receiver: nil,
+                marks: programKnowledge.scriptMarks
+            )
     }
 
     /// The paths a pattern matches; without a wildcard, itself.

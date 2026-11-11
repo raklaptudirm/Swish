@@ -328,7 +328,8 @@ extension Shell {
         }
         let resolved =
             path.hasPrefix("/")
-            ? path : (scriptDirectory ?? FileManager.default.currentDirectoryPath) + "/" + path
+            ? path
+            : (runState.scriptDirectory ?? FileManager.default.currentDirectoryPath) + "/" + path
         // A script for another shell isn't Swish; what it sets up is taken by running it there.
         if let shell = Shell.otherShell(of: resolved) {
             report(
@@ -342,11 +343,13 @@ extension Shell {
     /// Runs a file's top level in this shell, then puts back what running a
     /// file changes: `args`, `#filePath`, and whether a script stopped.
     public func source(fileAt path: String, arguments: [String] = []) -> Int32 {
-        let saved = (interpreter.file, scriptDirectory, interpreter["args"], scriptStopped)
+        let saved = (
+            interpreter.file, runState.scriptDirectory, interpreter["args"], runState.scriptStopped
+        )
         defer {
-            (interpreter.file, scriptDirectory) = (saved.0, saved.1)
+            (interpreter.file, runState.scriptDirectory) = (saved.0, saved.1)
             interpreter["args"] = saved.2
-            scriptStopped = saved.3
+            runState.scriptStopped = saved.3
         }
         return runFile(at: path, arguments: arguments) { _ in }
     }

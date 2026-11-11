@@ -78,7 +78,7 @@ private func shellWithRecorder() -> (Shell, Recorder) {
     recorder.interrupt = {
         checks += 1
         guard checks > 100 else { return false }
-        shell.stoppedBySignal = 2
+        shell.runState.stoppedBySignal = 2
         return true
     }
     // An endless loop ends at the host's say-so, as ^C ends it in the shell.

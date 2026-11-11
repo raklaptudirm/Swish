@@ -66,8 +66,8 @@ extension Shell {
         let front = makeFront()
         let cured = try front.cure(source)
         let (result, marks) = removingMarks(from: cured)
-        scriptMarks.merge(marks) { $1 }
-        commandUses = front.uses
+        programKnowledge.scriptMarks.merge(marks) { $1 }
+        programKnowledge.commandUses = front.uses
         if ProcessInfo.processInfo.environment["SWISH_SHOWCURE"] != nil {
             FileHandle.standardError.write(Data((result + "\n").utf8))
         }
@@ -85,8 +85,8 @@ extension Shell {
     ) -> String? {
         // The enums the program declares have no cases to read yet: a word for one is read against
         // what was declared.
-        staticMembers = declarations.members
-        defer { staticMembers = [:] }
+        programKnowledge.staticMembers = declarations.members
+        defer { programKnowledge.staticMembers = [:] }
         let declared = declarations.symbols
         for use in uses {
             let functions = declared.filter { $0.name == use.name && $0.function != nil }
@@ -97,7 +97,7 @@ extension Shell {
                         name: use.name,
                         overloads: functions,
                         receiver: nil,
-                        marks: scriptMarks
+                        marks: programKnowledge.scriptMarks
                     )
             else { continue }
             // After a `|`, a name some type has as a member may be that member, which is found when

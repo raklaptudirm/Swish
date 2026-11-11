@@ -39,7 +39,7 @@ extension Shell {
     /// process by that signal, as the script would have without them, so
     /// whatever started it sees how it ended.
     public func endBySignal() {
-        guard let ending = endingSignal else { return }
+        guard let ending = runState.endingSignal else { return }
         signal(ending, SIG_DFL)
         kill(getpid(), ending)
     }
@@ -78,7 +78,7 @@ extension Shell {
         }
         interpreter["args"] = Value(arguments.map { Value($0) })
         interpreter.file = URL(fileURLWithPath: path).standardizedFileURL.path
-        scriptDirectory =
+        runState.scriptDirectory =
             URL(fileURLWithPath: path).standardizedFileURL.deletingLastPathComponent().path
         // Read and checked whole, so doc comments reach their functions and a mistake anywhere
         // stops the script before any of it runs; then run a statement at a time, so a runtime
@@ -87,7 +87,7 @@ extension Shell {
         // `#!/usr/bin/env swish`, so it runs as a program; the line stays,
         // blank, so line numbers do too.
         if source.hasPrefix("#!") { source = String(source.drop { $0 != "\n" }) }
-        diagnosticSource = (source, path)
+        runState.diagnosticSource = (source, path)
         let reading: Reading
         switch prepare(source) {
         case .failure(let diagnostic):
@@ -100,7 +100,7 @@ extension Shell {
         // top-level defers.
         runReportingErrors(
             reading,
-            then: { [unowned self] in if !scriptStopped { finish(reading) } }
+            then: { [unowned self] in if !runState.scriptStopped { finish(reading) } }
         )
         return lastStatus.number
     }
@@ -109,7 +109,13 @@ extension Shell {
     func topLevelFunction(_ name: String, in reading: Reading) -> Callee? {
         let functions = reading.declared.symbols.filter { $0.name == name && $0.function != nil }
         return functions.isEmpty
-            ? nil : Callee(name: name, overloads: functions, receiver: nil, marks: scriptMarks)
+            ? nil
+            : Callee(
+                name: name,
+                overloads: functions,
+                receiver: nil,
+                marks: programKnowledge.scriptMarks
+            )
     }
 
     /// Calls a script's function with command-line `arguments`, under `name`
@@ -117,7 +123,7 @@ extension Shell {
     func callAsCommand(_ callee: Callee, named name: String, _ arguments: [String]) {
         var callee = callee
         callee.shownName = name
-        stoppedBySignal = nil
+        runState.stoppedBySignal = nil
         do {
             lastStatus = try callCommand(callee, arguments.map(CommandArgument.text), display: true)
         } catch let error as Diagnostic {

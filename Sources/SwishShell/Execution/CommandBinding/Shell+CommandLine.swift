@@ -202,7 +202,7 @@ extension Shell {
         // Checking a program before it runs: an enum it declares has no cases yet, so the word is
         // read against what was declared.
         if case .named(let name, _) = type.optionalWrapped ?? type,
-            let declared = staticMembers[name.description],
+            let declared = programKnowledge.staticMembers[name.description],
             declared.contains(where: { $0.memberKind == .case })
         {
             let bare = text.hasPrefix(".") ? String(text.dropFirst()) : text

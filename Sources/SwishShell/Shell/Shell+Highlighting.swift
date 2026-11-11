@@ -63,7 +63,7 @@ extension Shell {
     /// highlighter asks on every keystroke.
     func executableNames() -> Set<String> {
         let path = env("PATH") ?? ""
-        if let cache = executableCache, cache.path == path,
+        if let cache = programKnowledge.executableCache, cache.path == path,
             Date().timeIntervalSince(cache.time) < 10
         {
             return cache.names
@@ -75,7 +75,7 @@ extension Shell {
                 if access(directory + "/" + name, X_OK) == 0 { names.insert(name) }
             }
         }
-        executableCache = (path, Date(), names)
+        programKnowledge.executableCache = (path, Date(), names)
         return names
     }
 }

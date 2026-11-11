@@ -22,7 +22,7 @@ extension Shell {
     @discardableResult
     public func accept(line: String, atPrompt: Bool) -> Acceptance {
         unfinishedStatement = hasUnfinishedStatement ? unfinishedStatement + "\n" + line : line
-        diagnosticSource = (unfinishedStatement, nil)
+        runState.diagnosticSource = (unfinishedStatement, nil)
 
         switch prepare(unfinishedStatement) {
         case .failure(let error) where error.isIncomplete:
@@ -35,7 +35,7 @@ extension Shell {
         }
 
         unfinishedStatement = ""
-        return .ran(status: lastStatus.number, shouldStop: scriptStopped)
+        return .ran(status: lastStatus.number, shouldStop: runState.scriptStopped)
     }
 
     /// Drops an unfinished statement, as ^C does at the prompt.

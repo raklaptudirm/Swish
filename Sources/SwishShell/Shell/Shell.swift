@@ -32,42 +32,24 @@ public final class Shell: @unchecked Sendable {
         get { task.stderrFD }
         set { task.stderrFD = newValue }
     }
-    /// Programs on PATH, for highlighting and completion.
-    var executableCache: (path: String, time: Date, names: Set<String>)?
-    /// The command lines the last program read has (Front/), to check against the functions they
-    /// name.
-    var commandUses: [Front.CommandUse] = []
 
     /// The terminal the shell holds and the jobs it keeps.
     let jobControl = JobControl()
-    /// A `try!` failed in a script, which stops it.
-    var scriptStopped = false
+
+    /// What the last run left behind (`RunState`).
+    var runState = RunState()
+
+    /// What the front end knows of the programs around a command line (`ProgramKnowledge`).
+    var programKnowledge = ProgramKnowledge()
+
     /// The builtins by name: the shell's own, and a client's (`register(_:)`).
     var builtins: [String: Builtin] = Shell.standardBuiltins
     /// The lines of a statement that is not finished yet, like the start of an `if` block.
     var unfinishedStatement = ""
     /// The variables `env` reads and writes: the process's own, unless a host gives others.
     var environment = EnvironmentAccess.process
-    /// The source being run, so an error can show the line it is in (and the file it is from, if it
-    /// is one).
-    var diagnosticSource: (text: String, path: String?)?
-    /// The signal that stopped the script, which it then ends by.
-    var endingSignal: Int32?
-    /// The signal that asked the run to stop, as the run is stopping.
-    var stoppedBySignal: Int32?
-    /// The running script's directory; nil at the prompt.
-    var scriptDirectory: String?
     /// The names a stage could be, known from the types.
     lazy var stageNames: StageNames = computeStageNames()
-
-    /// What the functions a script declared say of their parameters (`@input`, `@flag`), by
-    /// `function.parameter`.
-    var scriptMarks: [String: CommandMarks.Marks] = [:]
-
-    /// The static members (an enum's cases among them) of the types the program being checked
-    /// declares, by type: the interpreter has none of them yet, and a command's word for one is
-    /// read against these.
-    var staticMembers: [String: [Symbol]] = [:]
 
     /// What the prelude declared that Swift code builds values of; set once, at the end of
     /// `installLibrary`, which is why it is not a `let`.
@@ -161,7 +143,7 @@ extension Shell {
     /// Reports what went wrong the way a compiler does: the message, and the line it is in with the
     /// place marked.
     func reportDiagnostic(_ diagnostic: Diagnostic) {
-        guard let (text, path) = diagnosticSource, diagnostic.range != nil else {
+        guard let (text, path) = runState.diagnosticSource, diagnostic.range != nil else {
             report((diagnostic.isSyntax ? "syntax error: " : "error: ") + diagnostic.message)
             return
         }
@@ -181,7 +163,7 @@ extension Shell {
     }
 
     func run(_ source: String, atPrompt: Bool) -> Int32 {
-        diagnosticSource = (source, nil)
+        runState.diagnosticSource = (source, nil)
         switch prepare(source) {
         case .failure(let diagnostic):
             reportReadingFailure(diagnostic)
@@ -221,7 +203,8 @@ extension Shell {
         }
         do {
             let declared = try interpreter.check(swift)
-            if let message = firstCommandLineError(commandUses, declared: declared) {
+            if let message = firstCommandLineError(programKnowledge.commandUses, declared: declared)
+            {
                 return .failure(
                     Diagnostic(kind: .type, message: message)
                 )
@@ -235,7 +218,7 @@ extension Shell {
     /// Tells what was wrong with a program that mustn't run (with the line, in a file), and fails
     /// the input.
     func reportReadingFailure(_ diagnostic: Diagnostic, file: String? = nil) {
-        if diagnostic.range != nil, diagnosticSource != nil {
+        if diagnostic.range != nil, runState.diagnosticSource != nil {
             reportDiagnostic(diagnostic)
         } else if diagnostic.isSyntax {
             report((file.map { "\($0): " } ?? "") + "syntax error: \(diagnostic.message)")
@@ -259,7 +242,7 @@ extension Shell {
     ) {
         // Drop a stale ^C from while the prompt was up; a script's stops it.
         if jobControl.isInteractive && interpreter.file == nil { _ = takeInterrupt() }
-        stoppedBySignal = nil
+        runState.stoppedBySignal = nil
         var handled = false
         // Only the prompt shows values; running code prints what it prints. A script goes on with
         // the next statement after an error in one.
@@ -290,16 +273,16 @@ extension Shell {
             lastStatus = .exited(128 + SIGTSTP)  // Already announced; the job is in `jobs`.
             return false
         }
-        if diagnostic.isCancelled, let signal = stoppedBySignal {
-            stoppedBySignal = nil
+        if diagnostic.isCancelled, let signal = runState.stoppedBySignal {
+            runState.stoppedBySignal = nil
             if jobControl.isInteractive && interpreter.file == nil {
                 writeAll(STDERR_FILENO, "\n")
                 lastStatus = .signaled(SIGINT)
             } else {
                 // A script stops, running its defers, then ends by the signal.
                 lastStatus = .signaled(signal)
-                scriptStopped = true
-                endingSignal = signal
+                runState.scriptStopped = true
+                runState.endingSignal = signal
             }
             return false
         }
@@ -308,7 +291,7 @@ extension Shell {
             lastStatus = .exited(diagnostic.status)
             // At the prompt, stopping would mean exiting your shell; the
             // config file stops, as a script does.
-            scriptStopped = !jobControl.isInteractive || interpreter.file != nil
+            runState.scriptStopped = !jobControl.isInteractive || interpreter.file != nil
             return false
         }
         if diagnostic.isRuntime {

@@ -17,7 +17,7 @@ extension Interpreter.Host {
             shouldStop: { [unowned shell] in
                 // The signal that asked is kept, for the shell to end by once the run has stopped.
                 guard let signal = takeInterruptSignal() else { return false }
-                shell.stoppedBySignal = signal
+                shell.runState.stoppedBySignal = signal
                 return true
             }
         )
