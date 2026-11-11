@@ -11,24 +11,7 @@ enum Layering {
 
     /// The files that still break a rule, until the step that moves them: `file: name`. A file that
     /// stops breaking its rule must leave this list, so the list only shrinks.
-    static let known: Set<String> = [
-        "Execution/CommandBinding/CommandLineBinder.swift: Shell",
-        "Execution/CommandBinding/Shell+CommandLine.swift: Shell",
-        "Execution/CommandBinding/Shell+WordValues.swift: Shell",
-        "Execution/CommandBinding/StageNames.swift: Shell",
-        "Execution/Jobs/Jobs.swift: Shell",
-        "Execution/Jobs/Jobs.swift: ShellTask",
-        "Execution/Jobs/JobsBinding.swift: Shell",
-        "Execution/Pipelines/CommandFailure.swift: Shell",
-        "Execution/Pipelines/CommandObject.swift: Shell",
-        "Execution/Pipelines/Redirects.swift: Shell",
-        "Execution/Pipelines/Shell+Capturing.swift: Shell",
-        "Execution/Pipelines/Shell+Pipelines.swift: Shell",
-        "Execution/Pipelines/Shell+Resolving.swift: Shell",
-        "Execution/Pipelines/Shell+Stages.swift: Shell",
-        "Execution/Pipelines/Shell+Streams.swift: Shell",
-        "Execution/WordExpansion/Shell+Words.swift: Shell",
-    ]
+    static let known: Set<String> = []
 
     private static let sources = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         .deletingLastPathComponent()

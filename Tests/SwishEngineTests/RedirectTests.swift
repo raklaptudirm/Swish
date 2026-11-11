@@ -4,7 +4,7 @@ import Testing
 @testable import SwishEngine
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
-    try onLargeStack { try shell.capturing { shell.enter(source) } }
+    try onLargeStack { try shell.runner.capturing { shell.enter(source) } }
 }
 
 /// A fresh directory with a few files, by absolute path, since tests run
@@ -154,7 +154,7 @@ private func scratch() throws -> String {
 
 @Test func onlyTheEndsOfASwishRunRedirect() {
     let shell = Shell()
-    _ = try? shell.capturing {
+    _ = try? shell.runner.capturing {
         shell.execute("func f(@input _ x: Int) -> Int { x }; seq 2 | f > /dev/null | f")
     }
     #expect(shell.lastStatus.number == 1)

@@ -41,13 +41,14 @@ extension Shell {
         // Names built at run time can't be checked while typing.
         guard !name.isEmpty, !name.contains(where: { "$\\\"'(".contains($0) }) else { return nil }
         if !external
-            && (commandFunctions(named: name) != nil || stageNames.sequence.contains(name)
-                || stageNames.streams.contains(name)
+            && (runner.commandFunctions(named: name) != nil
+                || runner.stageNames.sequence.contains(name)
+                || runner.stageNames.streams.contains(name)
                 || builtins[name] != nil)
         {
             return true
         }
-        if !external && piped && isMemberName(name) {
+        if !external && piped && runner.isMemberName(name) {
             // After a `|`, a method of what's piped in: which type's isn't
             // known while typing, so any type's will do.
             return true

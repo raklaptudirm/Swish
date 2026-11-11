@@ -20,7 +20,7 @@ extension Shell {
         )
         let front = Front(bound: Names(roles: roles))
         front.closureArity = { [unowned self] (name: String) -> Int? in
-            for overload in commandFunctions(named: name)?.overloads ?? [] {
+            for overload in runner.commandFunctions(named: name)?.overloads ?? [] {
                 for parameter in overload.function?.parameters ?? [] {
                     if case .function(let parameters, _, _, _) = parameter.type {
                         return parameters.count
@@ -30,9 +30,9 @@ extension Shell {
             return nil
         }
         front.isMethodWithoutInput = { [unowned self] name in
-            isStageMethod(name) && commandFunctions(named: name) == nil
+            runner.isStageMethod(name) && runner.commandFunctions(named: name) == nil
                 && builtins[name] == nil
-                && findExecutable(name) == nil
+                && runner.findExecutable(name) == nil
         }
         front.recovering = recovering
         front.swiftHighlight = { [unowned self] source in
@@ -92,7 +92,7 @@ extension Shell {
             let functions = declared.filter { $0.name == use.name && $0.function != nil }
             guard
                 let callee = functions.isEmpty
-                    ? commandFunctions(named: use.name)
+                    ? runner.commandFunctions(named: use.name)
                     : Callee(
                         name: use.name,
                         overloads: functions,
@@ -102,11 +102,13 @@ extension Shell {
             else { continue }
             // After a `|`, a name some type has as a member may be that member, which is found when
             // items arrive.
-            if use.piped, isMemberName(use.name) || isStageMethod(use.name) { continue }
+            if use.piped, runner.isMemberName(use.name) || runner.isStageMethod(use.name) {
+                continue
+            }
             let words = use.words.map { CommandWordShape.text($0) }
-            if helpRequested(words, for: callee) { continue }
+            if runner.helpRequested(words, for: callee) { continue }
             do {
-                _ = try bindCommandLine(words, to: callee, excludingInput: use.piped)
+                _ = try runner.bindCommandLine(words, to: callee, excludingInput: use.piped)
             } catch {
                 return "\(error)"
             }

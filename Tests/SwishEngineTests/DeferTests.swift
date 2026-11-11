@@ -4,7 +4,7 @@ import Testing
 @testable import SwishEngine
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
-    try onLargeStack { try shell.capturing { shell.enter(source) } }
+    try onLargeStack { try shell.runner.capturing { shell.enter(source) } }
 }
 
 @Test func deferRunsWhenTheBlockEnds() throws {
@@ -47,7 +47,9 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
         #"printf '%s\n' '#!/usr/bin/env swish' 'defer { rm \#(directory)/marker; echo deferred }' 'touch \#(directory)/marker' 'echo "at \(#filePath)"' 'func main() { echo main }' > \#(script)"#
     )
     let script2 = Shell()
-    let printed = try onLargeStack { try script2.capturing { _ = script2.runScript(at: script) } }
+    let printed = try onLargeStack {
+        try script2.runner.capturing { _ = script2.runScript(at: script) }
+    }
     #expect(printed == "at \(script)\nmain\ndeferred\n")
     #expect(
         try output("test -e \(directory)/marker && echo left || echo gone", in: shell) == "gone\n"

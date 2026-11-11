@@ -86,7 +86,7 @@ let separators = ["; ", "\n", "\n\n", " ;\n", ";\n", "\n  "]
 
 private func run(_ source: String) throws -> String {
     let shell = Shell()
-    return try onLargeStack { try shell.capturing { shell.execute(source) } }
+    return try onLargeStack { try shell.runner.capturing { shell.execute(source) } }
 }
 
 /// How many programs to try: a hundred and fifty as part of the suite; `SWISH_FUZZ=3000` for a long

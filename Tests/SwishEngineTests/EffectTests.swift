@@ -9,7 +9,7 @@ import Testing
 
 private func effect(of name: String, after source: String) throws -> Bool? {
     let shell = Shell()
-    _ = try onLargeStack { try shell.capturing { shell.execute(source) } }
+    _ = try onLargeStack { try shell.runner.capturing { shell.execute(source) } }
     return shell.interpreter.globals(named: name).first?.function?.isAsync
 }
 
@@ -17,7 +17,7 @@ private func run(
     _ source: String,
     in shell: Shell = Shell()
 ) throws -> (output: String, status: Int32) {
-    let output = try onLargeStack { try shell.capturing { shell.execute(source) } }
+    let output = try onLargeStack { try shell.runner.capturing { shell.execute(source) } }
     return (output, shell.lastStatus.number)
 }
 

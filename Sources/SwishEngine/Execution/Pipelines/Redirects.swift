@@ -63,7 +63,7 @@ struct DescriptorTable {
     }
 }
 
-extension Shell {
+extension CommandRunner {
     /// Runs in-process code (a function, builtin, or run of Swish stages)
     /// with its redirects, through `stdoutFD` and `stderrFD`: what it writes
     /// itself, and the programs it starts, go where its redirects say. An error it raises is told
@@ -93,7 +93,7 @@ extension Shell {
         do {
             return try body(bodyInput, bodyOutput)
         } catch let error as Diagnostic where error.isRuntime && !(error.cause is JobSuspended) {
-            report("error: \(error.message)")
+            services.report("error: \(error.message)")
             return recover(error)
         }
     }

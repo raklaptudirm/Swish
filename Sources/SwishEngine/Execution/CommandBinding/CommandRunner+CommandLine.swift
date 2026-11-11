@@ -32,14 +32,14 @@ struct BoundCall {
     }
 }
 
-extension Shell {
+extension CommandRunner {
     // MARK: Command-mode calls
 
     /// For an option a function doesn't have, when a program of the same name is on PATH: that the
     /// function is Swish's, and how to run the program. (It is never run in its place: a function
     /// is what was asked for.)
     func programHint(_ name: String) -> String {
-        executableNames().contains(name)
+        services.executableNames().contains(name)
             ? "; this is Swish's \(name): ^\(name) runs the program" : ""
     }
 
@@ -50,9 +50,9 @@ extension Shell {
         _ args: [CommandArgument],
         display shouldDisplay: Bool
     ) throws -> Status {
-        if helpRequested(args, for: callee) {
+        if helpRequested(args.map(\.shape), for: callee) {
             interpreter.host.output.write(
-                helpText(for: callee, styled: interpreter.host.output.traits().isStyled)
+                services.helpText(for: callee, styled: interpreter.host.output.traits().isStyled)
             )
             return .success
         }
@@ -60,7 +60,7 @@ extension Shell {
         let result = try invoke(call.callee, call.arguments())
         // A command that found nothing (`ls` of an empty directory) shows nothing.
         if shouldDisplay && result != Value([] as [Value]) {
-            show(result)
+            services.show(result, debug: false)
         }
         if let truth = result.casting(to: Bool.self) { return truth ? .success : .exited(1) }
         return .success
@@ -127,7 +127,7 @@ extension Shell {
                     bound[parameter.name] = try pieces.map {
                         try take($0.word, text: $0.text, as: parameter.type, for: what)
                     }
-                } else if let (element, make) = Shell.collection(parameter.type) {
+                } else if let (element, make) = CommandRunner.collection(parameter.type) {
                     bound[parameter.name] = [
                         make(
                             try pieces.map {
@@ -147,7 +147,7 @@ extension Shell {
             case .omitted?:
                 if parameter.type.isBool {
                     bound[parameter.name] = [Value(false)]
-                } else if let (_, make) = Shell.collection(parameter.type) {
+                } else if let (_, make) = CommandRunner.collection(parameter.type) {
                     bound[parameter.name] = [make([])]
                 } else {
                     bound[parameter.name] = [Value.nothing]
@@ -202,14 +202,14 @@ extension Shell {
         // Checking a program before it runs: an enum it declares has no cases yet, so the word is
         // read against what was declared.
         if case .named(let name, _) = type.optionalWrapped ?? type,
-            let declared = programKnowledge.staticMembers[name.description],
+            let declared = services.staticMembers[name.description],
             declared.contains(where: { $0.memberKind == .case })
         {
             let bare = text.hasPrefix(".") ? String(text.dropFirst()) : text
             let hasRawValues = declared.contains { symbol in
                 if case .enumCase(_, let raw) = symbol.kind { raw != nil } else { false }
             }
-            guard plainCases(of: declared).contains(bare) || hasRawValues else {
+            guard Symbol.plainCaseNames(of: declared).contains(bare) || hasRawValues else {
                 throw RuntimeError("\(function): \(what) must be \(type), got '\(text)'")
             }
             return Value(text)

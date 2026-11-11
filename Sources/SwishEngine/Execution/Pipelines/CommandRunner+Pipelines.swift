@@ -49,7 +49,7 @@ enum Stage {
     }
 }
 
-extension Shell {
+extension CommandRunner {
     /// Runs a pipeline. External stages are spawned first; then the
     /// in-process stages run on the shell's thread, streaming values
     /// between themselves and text to and from their external neighbours.
@@ -67,9 +67,9 @@ extension Shell {
                     }
                 }
             case .external(let argv, let skipBuiltins, let redirects, let environment)
-            where !skipBuiltins && builtins[argv[0]] != nil:
+            where !skipBuiltins && services.hasBuiltin(named: argv[0]):
                 return try withEnvironment(environment) {
-                    try withRedirects(redirects) { _, _ in .exited(runBuiltin(argv)!) }
+                    try withRedirects(redirects) { _, _ in .exited(services.runBuiltin(argv)!) }
                 }
             default:
                 break
@@ -105,7 +105,7 @@ extension Shell {
             }
         }
 
-        let job = Job(source: source, shell: self)
+        let job = Job(source: source, runner: self)
         var input: Int32 = -1
         var segmentInput: Int32 = -1
         var segmentOutput: Int32 = -1
@@ -149,7 +149,7 @@ extension Shell {
                 job.running.append(pid)
                 if isLast { job.lastPid = pid }
             case .failure(let failure):
-                report(failure.message)
+                services.report(failure.message)
                 if isLast { job.status = .exited(failure.status) }
             }
         }
@@ -271,7 +271,7 @@ extension Shell {
             switch signal {
             case SIGINT: if jobControl.isInteractive { writeAll(STDERR_FILENO, "\n") }
             case SIGPIPE: break
-            default: if !quiet { report(String(cString: strsignal(signal))) }
+            default: if !quiet { services.report(String(cString: strsignal(signal))) }
             }
         }
         return status
@@ -287,7 +287,7 @@ extension Shell {
         guard let path = findExecutable(name) else {
             return .failure(
                 SpawnFailure(
-                    message: "\(name): command not found" + commandNotFoundHint(name),
+                    message: "\(name): command not found" + services.commandNotFoundHint(name),
                     status: 127
                 )
             )

@@ -67,16 +67,6 @@ extension Shell {
         return id == .array ? .list(Symbol.GenericParameter(name: "Element").type) : .named(id)
     }
 
-    /// The cases of an enum that carry nothing: what a word for it can be.
-    func plainCases(of members: [Symbol]) -> [String] {
-        members.compactMap { symbol in
-            if case .enumCase(let parameters, _) = symbol.kind, parameters.isEmpty {
-                return symbol.name
-            }
-            return nil
-        }
-    }
-
     /// A member as Swift declares it, in pieces by what each is: `init(_ description: String)`,
     /// `count: Int`, `contains(_ element: Element) -> Bool`.
     func declaration(of symbol: Symbol) -> AttributedString {

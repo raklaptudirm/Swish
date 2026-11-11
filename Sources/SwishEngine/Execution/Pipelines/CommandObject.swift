@@ -11,7 +11,7 @@ import Swiit
 // Here is how they run: through the same machinery as a command typed at the
 // prompt.
 
-extension Shell {
+extension CommandRunner {
     /// The Swift bodies of `Command`'s and `Pipeline`'s methods that run them, by the names the
     /// prelude gives them.
     var commandMethods: [String: @Sendable ([String: Value]) throws -> Value] {
@@ -93,7 +93,7 @@ extension Shell {
             throw RuntimeError.commandFailure(
                 "$(…) failed with status \(status.number)",
                 output: output,
-                shell: self
+                runner: self
             )
         }
         return .output(output)
@@ -119,7 +119,7 @@ extension Shell {
             throw RuntimeError.commandFailure(
                 "\(source(commands, from: input)) failed with status \(status.number)",
                 output: Output(text: "", status: status),
-                shell: self
+                runner: self
             )
         }
         return statusValue(status)
@@ -155,7 +155,7 @@ extension Shell {
 
     /// A command statement's value: how it ended.
     func statusValue(_ status: Status) -> Value {
-        make(
+        preludeTypes.make(
             preludeTypes.status,
             [
                 "code": status.code.map { Value($0) } ?? Value.nothing,

@@ -7,12 +7,12 @@ import Testing
 
 /// Runs `source` in `shell`, returning what it wrote to standard output.
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
-    try onLargeStack { try shell.capturing { shell.enter(source) } }
+    try onLargeStack { try shell.runner.capturing { shell.enter(source) } }
 }
 
 private func status(_ source: String) -> Int32 {
     let shell = Shell()
-    _ = try? onLargeStack { try shell.capturing { shell.execute(source) } }
+    _ = try? onLargeStack { try shell.runner.capturing { shell.execute(source) } }
     return shell.lastStatus.number
 }
 
@@ -60,12 +60,14 @@ private func status(_ source: String) -> Int32 {
     let script = Shell()
     var status: Int32 = 0
     #expect(
-        try script.capturing { status = script.runScript(at: path, arguments: ["Rak", "--loud"]) }
+        try script.runner.capturing {
+            status = script.runScript(at: path, arguments: ["Rak", "--loud"])
+        }
             == "args 2\nHI Rak\n"
     )
     #expect(status == 0)
     let helper = Shell()
-    let help = try helper.capturing { _ = helper.runScript(at: path, arguments: ["--help"]) }
+    let help = try helper.runner.capturing { _ = helper.runScript(at: path, arguments: ["--help"]) }
     #expect(help.contains("Greets someone.") && help.contains("[--loud] <name>"))
     let missing = Shell()
     #expect(missing.runScript(at: path) == 1)  // main needs a name

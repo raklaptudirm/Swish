@@ -20,15 +20,15 @@ extension Diagnostic {
     static func commandFailure(
         _ message: String,
         output: Output,
-        shell: Shell
+        runner: CommandRunner
     ) -> Diagnostic {
         .runtime(
             message,
-            thrown: shell.make(
-                shell.preludeTypes.commandFailure,
+            thrown: runner.preludeTypes.make(
+                runner.preludeTypes.commandFailure,
                 [
                     "message": Value(message),
-                    "status": shell.statusValue(output.status),
+                    "status": runner.statusValue(output.status),
                     "text": Value(output.text),
                     "localizedDescription": Value(message),
                 ]

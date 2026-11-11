@@ -7,12 +7,12 @@ import Testing
 
 /// Runs `source` in `shell`, returning what it wrote to standard output.
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
-    try onLargeStack { try shell.capturing { shell.enter(source) } }
+    try onLargeStack { try shell.runner.capturing { shell.enter(source) } }
 }
 
 private func status(_ source: String) -> Int32 {
     let shell = Shell()
-    _ = try? onLargeStack { try shell.capturing { shell.execute(source) } }
+    _ = try? onLargeStack { try shell.runner.capturing { shell.execute(source) } }
     return shell.lastStatus.number
 }
 
@@ -97,7 +97,7 @@ private func status(_ source: String) -> Int32 {
     )
     let script = Shell()
     var status: Int32 = 0
-    let printed = try script.capturing { status = script.runScript(at: path) }
+    let printed = try script.runner.capturing { status = script.runScript(at: path) }
     // A plain error abandons its statement; `try!` stops the script.
     #expect(printed == "one\ntwo\n")
     #expect(status == 4)
@@ -160,7 +160,7 @@ private func status(_ source: String) -> Int32 {
     )
     let script = Shell()
     var code: Int32 = 0
-    #expect(try script.capturing { code = script.runScript(at: path) } == "one\ntwo\n")
+    #expect(try script.runner.capturing { code = script.runScript(at: path) } == "one\ntwo\n")
     #expect(code == 5)
 }
 

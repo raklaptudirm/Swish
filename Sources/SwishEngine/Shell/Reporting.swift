@@ -19,7 +19,7 @@ extension Shell {
     /// statement's status becomes a failure.
     func reportItemError(_ message: String) {
         report(message)
-        task.itemErrors += 1
+        runner.task.itemErrors += 1
     }
 }
 
@@ -30,14 +30,33 @@ extension Shell {
     /// `let`, succeeds. An `if` or a loop is what ran in it last.
     func recordStatuses() {
         interpreter.host.didFinishStatement = { [unowned self] value, caught in
-            var status = value.map(status(of:)) ?? .success
+            var status = value.map(runner.status(of:)) ?? .success
             // A `try?` that caught an error failed; other nils, like a function that returns
             // nothing, didn't.
             if caught { status = .exited(1) }
-            let state = task
+            let state = runner.task
             let itemErrors = state.itemErrors > state.itemErrorsSeen
             state.itemErrorsSeen = state.itemErrors
             lastStatus = itemErrors && status.succeeded ? .exited(1) : status
         }
+    }
+}
+
+extension Shell: ExecutionServices {
+    func hasBuiltin(named name: String) -> Bool {
+        builtins[name] != nil
+    }
+
+    func program(ofBuiltin name: String, arguments: [String]) throws -> [String]? {
+        guard case .program(let make)? = builtins[name]?.action else { return nil }
+        return try make(self, arguments)
+    }
+
+    var staticMembers: [String: [Symbol]] {
+        programKnowledge.staticMembers
+    }
+
+    var scriptMarks: [String: CommandMarks.Marks] {
+        programKnowledge.scriptMarks
     }
 }

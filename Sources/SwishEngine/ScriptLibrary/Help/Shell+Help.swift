@@ -5,33 +5,17 @@ import SystemPackage
 extension Shell {
     // MARK: Help
 
-    /// `--help` or `-h`, unless a function claims them for itself.
-    func helpRequested(_ args: [CommandArgument], for callee: Callee) -> Bool {
-        guard !helpClaimed(by: callee) else { return false }
-        for case .text(let arg) in args {
-            if arg == "--" { return false }
-            if arg == "--help" || arg == "-h" { return true }
-        }
-        return false
-    }
-
     /// What a table of `help` entries starts with.
     static let helpColumns: [DisplayColumn] = [
         DisplayColumn("name", style: .green), "source", "summary",
     ]
 
-    /// Whether a function has a `--help` or `-h` of its own; if not, the
-    /// shell answers them with the function's help, as programs do.
     /// Whether an unlabeled parameter is given every remaining word: a
     /// variadic one, or one that's a collection (`_ paths: [FilePath]`).
     func takesRemainingWords(_ parameter: CommandParameter) -> Bool {
         parameter.takesRest
             || (parameter.label == nil && !parameter.isInput
-                && Shell.collection(parameter.type) != nil)
-    }
-
-    func helpClaimed(by callee: Callee) -> Bool {
-        callee.parameters.contains { $0.contains { $0.label == "help" || $0.shortFlag == "h" } }
+                && CommandRunner.collection(parameter.type) != nil)
     }
 
     /// What `--help` shows: usage, arguments and options, in color on a terminal.
@@ -194,7 +178,7 @@ extension Shell {
         if case .named(let name, _) = type, let found = typeMembers(named: name.description),
             case .enumeration = found.type.kind
         {
-            return plainCases(of: found.members).joined(separator: "|")
+            return Symbol.plainCaseNames(of: found.members).joined(separator: "|")
         }
         return type.description
     }
@@ -245,7 +229,7 @@ extension Shell {
                     helpRecord(
                         name,
                         source: source,
-                        usage: candidates.map(signature(of:)).joined(separator: " or "),
+                        usage: candidates.map(\.signature).joined(separator: " or "),
                         descriptions: summaries
                     )
                 )
@@ -277,7 +261,7 @@ extension Shell {
     ) -> Value {
         // Each one's first sentence, for the table.
         let summary = descriptions.map(\.firstSentence).joined(separator: " ")
-        return make(
+        return preludeTypes.make(
             preludeTypes.help,
             [
                 "name": Value(name), "source": Value(source), "summary": Value(summary),
@@ -288,7 +272,7 @@ extension Shell {
 
     /// What `name --help` shows, or what a shell builtin or program is.
     func helpOutput(for name: String) throws -> [AttributedString] {
-        if let callee = commandFunctions(named: name) ?? stageMethods(named: name) {
+        if let callee = runner.commandFunctions(named: name) ?? runner.stageMethods(named: name) {
             return helpLines(for: callee)
         } else if let builtin = builtins[name], builtin.works {
             return [
@@ -303,7 +287,7 @@ extension Shell {
                 kind: found.type.declarationKeyword,
                 members: found.members
             )
-        } else if let path = findExecutable(name) {
+        } else if let path = runner.findExecutable(name) {
             return [
                 AttributedString(
                     joining: [
@@ -355,24 +339,6 @@ extension Shell {
             }
         }
         return lines
-    }
-
-    /// A function as Swift declares it: `greet(_ name: String, times: Int) -> String`. What a pipe
-    /// feeds is marked `@input`.
-    func signature(of symbol: Symbol) -> String {
-        guard let function = symbol.function else { return symbol.name }
-        let parameters = function.parameters.map { parameter -> String in
-            let marked = CommandParameter(parameter, of: symbol.name)
-            var text = marked.isInput ? "@input " : ""
-            if parameter.label == parameter.name {
-                text += parameter.name
-            } else {
-                text += "\(parameter.label ?? "_") \(parameter.name)"
-            }
-            return text + ": \(parameter.type)" + (parameter.arity == .variadic ? "..." : "")
-        }
-        return "\(symbol.name)(\(parameters.joined(separator: ", ")))"
-            + (function.returns == .void ? "" : " -> \(function.returns)")
     }
 }
 

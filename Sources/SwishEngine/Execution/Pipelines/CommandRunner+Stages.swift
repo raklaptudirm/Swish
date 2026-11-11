@@ -12,7 +12,7 @@ struct CommandSpec {
     var call: [(label: String?, value: Value)]? = nil
 }
 
-extension Shell {
+extension CommandRunner {
     /// The stages of commands fed `input`, if any.
     func stages(input: Value?, commands: [CommandSpec]) throws -> [Stage] {
         var stages: [Stage] = []
@@ -81,9 +81,11 @@ extension Shell {
             return text
         }
         // A builtin that becomes a program, as `run` becomes Swish on a task file.
-        if !command.external, case .program(let make)? = builtins[name]?.action {
+        if !command.external,
+            let program = try services.program(ofBuiltin: name, arguments: Array(argv.dropFirst()))
+        {
             return .external(
-                try make(self, Array(argv.dropFirst())),
+                program,
                 skipBuiltins: true,
                 redirects: redirects,
                 environment: environment

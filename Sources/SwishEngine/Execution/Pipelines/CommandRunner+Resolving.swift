@@ -24,7 +24,7 @@ struct DeferredStage {
 
 private struct ConstraintFailure: Error { var message: String }
 
-extension Shell {
+extension CommandRunner {
     /// The stage `deferred` is, fed by `upstream`, and the stream to read in its place (the first
     /// item put back). `single`: the one value the pipeline started from, when it isn't a sequence.
     func resolve(
@@ -55,7 +55,7 @@ extension Shell {
 
         var candidates: [() -> Stage?] = []
         // The one value a pipeline started from: its own members.
-        if let single, reader(of: single) == nil {
+        if let single, preludeTypes.reader(of: single) == nil {
             candidates.append {
                 self.stageCallee(
                     name,
@@ -141,7 +141,7 @@ extension Shell {
             switch fallback {
             case .function?: break
             case .external(let argv, _, _, _)?
-            where builtins[argv[0]] != nil || findExecutable(argv[0]) != nil: break
+            where services.hasBuiltin(named: argv[0]) || findExecutable(argv[0]) != nil: break
             default: throw firstFailure
             }
         }
@@ -149,7 +149,7 @@ extension Shell {
     }
 }
 
-extension Shell {
+extension CommandRunner {
     /// Whether a call with these arguments could mean the function: by their labels, and whether
     /// each converts to the type its parameter has (a one-letter text to a `Character`).
     func accepts(_ symbol: Symbol, _ arguments: [(label: String?, value: Value)]) -> Bool {

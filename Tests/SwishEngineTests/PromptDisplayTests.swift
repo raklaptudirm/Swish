@@ -7,7 +7,7 @@ import Testing
 
 /// Runs `source` in `shell`, returning what it wrote to standard output.
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
-    try onLargeStack { try shell.capturing { shell.enter(source) } }
+    try onLargeStack { try shell.runner.capturing { shell.enter(source) } }
 }
 
 @Test func bareValuesShowTheirDebugDescription() throws {
@@ -46,6 +46,6 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
     #expect(try output("func f() -> Int { 1 }; f()") == "1\n")
     // Running code (a script, `swish -c`, `execute`) shows nothing for a bare expression.
     let shell = Shell()
-    let code = try onLargeStack { try shell.capturing { shell.execute("1; 2; print(3)") } }
+    let code = try onLargeStack { try shell.runner.capturing { shell.execute("1; 2; print(3)") } }
     #expect(code == "3\n")
 }

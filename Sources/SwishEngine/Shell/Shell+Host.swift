@@ -7,12 +7,12 @@ extension Interpreter.Host {
     init(process shell: Shell) {
         self.init(
             output: OutputSink(
-                write: { [unowned shell] in writeAll(shell.stdoutFD, $0) },
-                traits: { [unowned shell] in OutputSink.Traits(fd: shell.stdoutFD) }
+                write: { [unowned shell] in writeAll(shell.runner.stdoutFD, $0) },
+                traits: { [unowned shell] in OutputSink.Traits(fd: shell.runner.stdoutFD) }
             ),
             error: OutputSink(
-                write: { [unowned shell] in writeAll(shell.stderrFD, $0) },
-                traits: { [unowned shell] in OutputSink.Traits(fd: shell.stderrFD) }
+                write: { [unowned shell] in writeAll(shell.runner.stderrFD, $0) },
+                traits: { [unowned shell] in OutputSink.Traits(fd: shell.runner.stderrFD) }
             ),
             shouldStop: { [unowned shell] in
                 // The signal that asked is kept, for the shell to end by once the run has stopped.

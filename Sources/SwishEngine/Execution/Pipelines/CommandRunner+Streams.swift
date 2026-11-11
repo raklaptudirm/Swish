@@ -60,7 +60,7 @@ private final class LineReader {
 /// Writing into a pipe whose reader has gone, as in `… | head -1`.
 private struct BrokenPipe: Error {}
 
-extension Shell {
+extension CommandRunner {
     /// Runs the in-process run of a pipeline: reads `input` (an external
     /// stage's output, or -1 when the run starts the pipeline), and writes
     /// its items as text to `output`, one per line.
@@ -127,7 +127,10 @@ extension Shell {
         do {
             if toExternal {
                 // Records as the rows they'd display as, so `ls | grep x` works.
-                let formatter = DisplayFormatter.forProgram(fd: output, registry: displayRegistry)
+                let formatter = DisplayFormatter.forProgram(
+                    fd: output,
+                    registry: services.displayRegistry
+                )
                 while let item = try stream.next() {
                     if item.kind == .function {
                         throw RuntimeError("can't send a function to an external command")
@@ -137,7 +140,7 @@ extension Shell {
                 guard formatter.finish() else { throw BrokenPipe() }
             } else {
                 // The end of the pipeline: format for a person.
-                let formatter = DisplayFormatter(fd: output, registry: displayRegistry)
+                let formatter = DisplayFormatter(fd: output, registry: services.displayRegistry)
                 while let item = try stream.next() {
                     guard formatter.add(item) else { throw BrokenPipe() }
                 }
@@ -155,8 +158,11 @@ extension Shell {
         single: Value?,
         upstreamIsExternal: Bool
     ) throws -> ValueStream {
-        if helpRequested(args, for: callee) {
-            writeAll(stdoutFD, helpText(for: callee, styled: DisplayStyle.enabled(for: stdoutFD)))
+        if helpRequested(args.map(\.shape), for: callee) {
+            writeAll(
+                stdoutFD,
+                services.helpText(for: callee, styled: DisplayStyle.enabled(for: stdoutFD))
+            )
             return .empty
         }
         if let receiver = callee.receiver {
@@ -296,7 +302,7 @@ extension Shell {
         case .stream:
             // Lazily: the stage reads upstream only as its own reader is asked, and the stream it
             // gives is read as the next stage asks.
-            let flow = stream { try upstream.next() }
+            let flow = preludeTypes.stream { try upstream.next() }
             return self.elements(of: try apply(to: flow))
         }
     }
@@ -314,7 +320,7 @@ extension Shell {
     }
 }
 
-extension Shell {
+extension CommandRunner {
     /// What a value that stands for another (a `Wrapping` one, like parsed JSON) is where it flows
     /// and where it is shown.
     func unwrapped(_ value: Value) -> Value {
@@ -334,7 +340,7 @@ extension Shell {
     func elements(of wrapped: Value) -> ValueStream {
         let value = unwrapped(wrapped)
         if value.kind == .nothing { return .empty }
-        if let read = reader(of: value) { return ValueStream(read) }
+        if let read = preludeTypes.reader(of: value) { return ValueStream(read) }
         var pending: Value? = value
         return ValueStream {
             defer { pending = nil }

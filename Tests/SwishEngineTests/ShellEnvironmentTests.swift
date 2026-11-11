@@ -7,7 +7,7 @@ import Testing
 // the process's own variables, which the tests share, so each uses names no other test does.
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
-    try onLargeStack { try shell.capturing { shell.execute(source) } }
+    try onLargeStack { try shell.runner.capturing { shell.execute(source) } }
 }
 
 @Test func aShellScriptsEnvironmentIsTaken() throws {

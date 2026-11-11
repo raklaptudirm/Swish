@@ -14,16 +14,18 @@ extension Shell {
                 switch value.kind {
                 case .structure, .tuple, .object:
                     guard let name = key.casting(to: String.self) else { return .nothing }
-                    return jsonWrapping(value.field(name))
+                    return preludeTypes.jsonWrapping(value.field(name))
                 case .dictionary:
-                    return jsonWrapping(value.entries?.first { $0.key == key }?.value)
+                    return preludeTypes.jsonWrapping(value.entries?.first { $0.key == key }?.value)
                 case .list:
                     guard let index = key.casting(to: Int.self),
                         let items = value.casting(to: [Value].self)
                     else {
                         return .nothing
                     }
-                    return jsonWrapping(items.indices.contains(index) ? items[index] : nil)
+                    return preludeTypes.jsonWrapping(
+                        items.indices.contains(index) ? items[index] : nil
+                    )
                 default: return .nothing
                 }
             },
@@ -43,7 +45,8 @@ extension Shell {
             "jsonBool": view { $0.kind == .bool ? $0 : .nothing },
             "jsonArray": view { [unowned self] raw in
                 raw.kind == .list
-                    ? Value((raw.casting(to: [Value].self) ?? []).map(jsonWrap)) : .nothing
+                    ? Value((raw.casting(to: [Value].self) ?? []).map(preludeTypes.jsonWrap))
+                    : .nothing
             },
             "jsonObject": view { [unowned self] raw in
                 switch raw.kind {
@@ -51,7 +54,7 @@ extension Shell {
                     raw.entries.map { entries in
                         Value(
                             Dictionary(
-                                entries.map { ($0.key, jsonWrap($0.value)) },
+                                entries.map { ($0.key, preludeTypes.jsonWrap($0.value)) },
                                 uniquingKeysWith: { $1 }
                             )
                         )

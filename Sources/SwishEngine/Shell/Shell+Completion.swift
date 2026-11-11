@@ -65,14 +65,14 @@ extension Shell {
             candidates = commandCandidates(prefix: word, externalOnly: false)
                 .filter { !["variable", "keyword"].contains($0.description) }
         } else if word.hasPrefix("-") && context.quote == nil,
-            let functions = stageCallee(
+            let functions = runner.stageCallee(
                 context.words[0],
-                of: streamType,
+                of: preludeTypes.streamType,
                 receiver: .stream
             )
-                ?? stageCallee(context.words[0], of: .list(.any), receiver: .collected)
-                ?? commandFunctions(named: context.words[0])
-                ?? stageFunctions(named: context.words[0])
+                ?? runner.stageCallee(context.words[0], of: .list(.any), receiver: .collected)
+                ?? runner.commandFunctions(named: context.words[0])
+                ?? runner.stageFunctions(named: context.words[0])
         {
             candidates = flagCandidates(for: functions, prefix: word)
         } else {
@@ -109,12 +109,12 @@ extension Shell {
             for builtin in builtins.values where builtin.works {
                 described[builtin.name] = "shell builtin"
             }
-            for name in stageNames.methods {
+            for name in runner.stageNames.methods {
                 let callee =
-                    stageCallee(name, of: streamType, receiver: .stream)
-                    ?? stageCallee(name, of: .list(.any), receiver: .collected)
+                    runner.stageCallee(name, of: preludeTypes.streamType, receiver: .stream)
+                    ?? runner.stageCallee(name, of: .list(.any), receiver: .collected)
                 guard let callee,
-                    stageNames.streams.contains(name)
+                    runner.stageNames.streams.contains(name)
                         || ScriptType.list(.any).members(named: name, in: interpreter)
                             .contains(where: { $0.function != nil && !$0.belongsToType })
                 else { continue }
@@ -168,7 +168,7 @@ extension Shell {
                 if let short = parameter.shortFlag { add("-\(short)", description) }
             }
         }
-        if !helpClaimed(by: callee) {
+        if !callee.claimsHelp {
             add("--help", "show help")
         }
         return candidates.keys.sorted().map { candidates[$0]! }

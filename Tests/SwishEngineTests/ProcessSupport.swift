@@ -16,10 +16,10 @@ func currentProcessID() -> Int {
 func errorText(_ source: String, in shell: Shell = Shell()) -> String? {
     guard let pipe = makePipe() else { return nil }
     let collector = OutputCollector(reading: pipe.read)
-    let saved = shell.stderrFD
-    shell.stderrFD = pipe.write
-    _ = try? onLargeStack { try shell.capturing { shell.execute(source) } }
-    shell.stderrFD = saved
+    let saved = shell.runner.stderrFD
+    shell.runner.stderrFD = pipe.write
+    _ = try? onLargeStack { try shell.runner.capturing { shell.execute(source) } }
+    shell.runner.stderrFD = saved
     close(pipe.write)
     let text = Interpreter.whileWaiting { collector.finish() }
     return text.isEmpty
@@ -56,10 +56,10 @@ func onLargeStack<T>(_ body: @escaping () throws -> T) throws -> T {
 func errorOutput(of shell: Shell, _ body: () -> Void) -> String {
     guard let pipe = makePipe() else { return "" }
     let collector = OutputCollector(reading: pipe.read)
-    let saved = shell.stderrFD
-    shell.stderrFD = pipe.write
+    let saved = shell.runner.stderrFD
+    shell.runner.stderrFD = pipe.write
     body()
-    shell.stderrFD = saved
+    shell.runner.stderrFD = saved
     close(pipe.write)
     return Interpreter.whileWaiting { collector.finish() }
 }

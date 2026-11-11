@@ -1,6 +1,6 @@
 import Swiit
 
-extension Shell {
+extension CommandRunner {
     /// A word of text as a value of `type`: an enum's case by its name (`directory` or
     /// `.directory`) or raw value, a Swift type by its own initializer from text (`5` for an `Int`,
     /// a path for a `FilePath`), a key path by the field names (`size`, `owner.name`), and anything
@@ -95,7 +95,7 @@ extension Shell {
                 let parameter = function.parameters[0]
                 guard
                     parameter.type == .string
-                        || (parameter.type == Shell.substring && parameter.label == nil)
+                        || (parameter.type == CommandRunner.substring && parameter.label == nil)
                 else {
                     return nil
                 }
@@ -122,6 +122,6 @@ extension Shell {
     }
 }
 
-extension Shell {
+extension CommandRunner {
     fileprivate static let substring = ScriptType.named(Symbol.ID(hostType: "Substring"))
 }

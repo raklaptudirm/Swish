@@ -5,10 +5,12 @@ import Synchronization
 /// Asked of the interpreter once, after the prelude loads: a name the prelude no longer declares
 /// stops the shell at startup, not at a use.
 struct PreludeTypes {
+    let interpreter: Interpreter
     let status, commandFailure, member, memberKind, help, json: Symbol.ID
     let glob, spread, wrapping, stream: Symbol.ID
 
     init(_ interpreter: Interpreter) {
+        self.interpreter = interpreter
         func declared(_ name: String) -> Symbol.ID {
             guard let id = Symbol.ID(named: name, in: interpreter) else {
                 preconditionFailure("the shell's prelude declares no \(name)")
@@ -28,7 +30,7 @@ struct PreludeTypes {
     }
 }
 
-extension Shell {
+extension PreludeTypes {
     /// A value of a type the prelude declares, made by its initializer, with its fields by name.
     func make(_ type: Symbol.ID, _ fields: KeyValuePairs<String, Value>) -> Value {
         do {
@@ -39,7 +41,7 @@ extension Shell {
     }
 
     /// The type of the items as they come.
-    var streamType: ScriptType { .named(preludeTypes.stream, [.any]) }
+    var streamType: ScriptType { .named(stream, [.any]) }
 
     /// A stream that gives what `read` does, one item at a time, until it gives nil.
     func stream(_ source: @escaping () throws -> Value?) -> Value {
@@ -51,7 +53,7 @@ extension Shell {
                 isThrowing: true
             ) { _ in try read().map { Value([$0]) } ?? .nothing }
         )
-        return make(preludeTypes.stream, ["read": function, "source": Value(StreamSource(read))])
+        return make(stream, ["read": function, "source": Value(StreamSource(read))])
     }
 
     /// A stream of `items`.
@@ -68,7 +70,7 @@ extension Shell {
     /// What a value gives one at a time: a prelude stream's, or any sequence a script holds (a
     /// list, a set, a range, a command's output); nil for a value that isn't a sequence.
     func reader(of value: Value) -> (() throws -> Value?)? {
-        if value.isInstance(of: preludeTypes.stream) {
+        if value.isInstance(of: stream) {
             if let held = try? interpreter.value(forMember: "source", of: value),
                 let source = held.casting(to: StreamSource.self)
             {
@@ -90,7 +92,7 @@ extension Shell {
     }
 
     /// The prelude's `JSON` holding `value`.
-    func jsonWrap(_ value: Value) -> Value { make(preludeTypes.json, ["raw": value]) }
+    func jsonWrap(_ value: Value) -> Value { make(json, ["raw": value]) }
 
     /// As `jsonWrap`, and nil for nothing, as a field that is not there.
     func jsonWrapping(_ value: Value?) -> Value {

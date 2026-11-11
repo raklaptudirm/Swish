@@ -7,7 +7,7 @@ import Testing
     let shell = Shell()
     #expect(
         try onLargeStack {
-            try shell.capturing {
+            try shell.runner.capturing {
                 shell.enter(
                     #""x".styled(.red, .bold); let c = true ? TextStyle.green : .red; "y".styled(c) + "!""#
                 )

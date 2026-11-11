@@ -27,7 +27,7 @@ import Testing
         ran += 1
         let shell = Shell()
         let actual =
-            (try? onLargeStack { try shell.capturing { shell.execute(cured) } }) ?? "<threw>"
+            (try? onLargeStack { try shell.runner.capturing { shell.execute(cured) } }) ?? "<threw>"
         if actual == expected {
             matched += 1
         } else {

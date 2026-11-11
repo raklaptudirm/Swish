@@ -3,7 +3,7 @@ import Swiit
 
 // The shell's halves of what the interpreter does with environment and words: a command's words
 // and redirects expanded.
-extension Shell {
+extension CommandRunner {
     /// Sets environment variables around `body`, then puts them back.
     func withEnvironment<T>(_ variables: [(String, String)], _ body: () throws -> T) rethrows -> T {
         // A name given twice is the last one's.
@@ -19,7 +19,7 @@ extension Shell {
                 name: name,
                 overloads: functions,
                 receiver: nil,
-                marks: programKnowledge.scriptMarks
+                marks: services.scriptMarks
             )
     }
 

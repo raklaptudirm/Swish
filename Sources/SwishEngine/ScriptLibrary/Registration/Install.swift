@@ -44,11 +44,12 @@ extension Shell {
             preconditionFailure("the shell's declarations: \(error)")
         }
         preludeTypes = PreludeTypes(interpreter)
+        runner.preludeTypes = preludeTypes
     }
 
     /// The Swift bodies of the declarations, by name.
     private var preludeBodies: [String: @Sendable ([String: Value]) throws -> Value] {
-        var bodies = commandMethods.merging(jobBodies) { _, new in new }
+        var bodies = runner.commandMethods.merging(runner.jobBodies) { _, new in new }
         func add(_ name: String, _ body: @escaping @Sendable ([String: Value]) throws -> Value) {
             bodies[name] = body
         }
@@ -65,10 +66,11 @@ extension Shell {
                 ) -> () throws -> Value?
         ) {
             add("ThrowingStream.\(name)") { [unowned self] arguments in
-                guard let receiver = arguments["self"], let source = reader(of: receiver),
+                guard let receiver = arguments["self"],
+                    let source = preludeTypes.reader(of: receiver),
                     let body = arguments[parameter]
                 else { return .nothing }
-                return stream(make(interpreter, source, body, arguments))
+                return preludeTypes.stream(make(interpreter, source, body, arguments))
             }
         }
         streamOperator("filter", "isIncluded") { interpreter, source, test, _ in
@@ -94,12 +96,13 @@ extension Shell {
             }
         }
         add("ThrowingStream.prefix") { [unowned self] arguments in
-            guard let receiver = arguments["self"], let source = reader(of: receiver) else {
+            guard let receiver = arguments["self"], let source = preludeTypes.reader(of: receiver)
+            else {
                 return .nothing
             }
             let limit = arguments["maxLength"]?.casting(to: Int.self) ?? 1
             nonisolated(unsafe) var taken = 0
-            return stream {
+            return preludeTypes.stream {
                 guard taken < limit else { return nil }
                 taken += 1
                 return try source()
@@ -109,7 +112,7 @@ extension Shell {
         add("from") { [unowned self] arguments in
             guard let text = arguments["text"]?.casting(to: [String].self) else { return .nothing }
             switch try InputFormat(arguments["format"] ?? .nothing) {
-            case .json: return jsonWrap(try JSON.parse(text.joined(separator: "\n")))
+            case .json: return preludeTypes.jsonWrap(try JSON.parse(text.joined(separator: "\n")))
             }
         }
         add("to") { [unowned self] arguments in
@@ -157,7 +160,7 @@ extension Shell {
                 variables[key.description] = value.description
             }
             guard let body = arguments["body"] else { return .nothing }
-            return try with(env: variables) { try callBlock(body) }
+            return try with(env: variables) { try runner.callBlock(body) }
         }
         add("ls") { [unowned self] arguments in
             let paths = try (arguments["paths"]?.casting(to: [Value].self) ?? [])
@@ -187,25 +190,27 @@ extension Shell {
         }
         add("help") { [unowned self] arguments in try helpBody(arguments) }
         add("members") { [unowned self] arguments in try membersBody(arguments) }
-        add("capture") { [unowned self] arguments in try captureBody(arguments) }
-        add("captureThrowing") { [unowned self] arguments in try captureThrowingBody(arguments) }
+        add("capture") { [unowned self] arguments in try runner.captureBody(arguments) }
+        add("captureThrowing") { [unowned self] arguments in
+            try runner.captureThrowingBody(arguments)
+        }
         add("startTask") { [unowned self] arguments in
             guard let source = arguments["source"]?.casting(to: String.self),
                 let body = arguments["body"]
             else {
                 return .nothing
             }
-            return Value(try startTask(source: source) { try self.callBlock(body) })
+            return Value(try runner.startTask(source: source) { try self.runner.callBlock(body) })
         }
         add("displayItems") { [unowned self] arguments in
-            try displayItems(arguments["value"] ?? .nothing)
+            try runner.displayItems(arguments["value"] ?? .nothing)
             return .nothing
         }
         add("exitStatus") { [unowned self] arguments in
-            statusValue(status(of: arguments["value"] ?? .nothing))
+            runner.statusValue(runner.status(of: arguments["value"] ?? .nothing))
         }
         add("exitShell") { [unowned self] arguments in
-            _ = try run([arguments["command"] ?? .nothing], from: nil, display: true)
+            _ = try runner.run([arguments["command"] ?? .nothing], from: nil, display: true)
             throw RuntimeError("exit did not leave")
         }
         add("shellText") { [unowned self] arguments in
@@ -215,7 +220,8 @@ extension Shell {
             Value(Glob.escape(arguments["text"]?.description ?? ""))
         }
         add("environmentValue") { [unowned self] arguments in
-            environment.get(arguments["name"]?.description ?? "").map { Value($0) } ?? .nothing
+            runner.environment.get(arguments["name"]?.description ?? "").map { Value($0) }
+                ?? .nothing
         }
         add("setEnvironmentValue") { [unowned self] arguments in
             let name = arguments["name"]?.description ?? ""
@@ -225,7 +231,7 @@ extension Shell {
                 )
             }
             let value = arguments["value"] ?? .nothing
-            environment.set(name, value.kind == .nothing ? nil : value.description)
+            runner.environment.set(name, value.kind == .nothing ? nil : value.description)
             return .nothing
         }
         add("loadEnvironment") { [unowned self] arguments in

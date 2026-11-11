@@ -9,6 +9,11 @@ enum CommandArgument: CustomStringConvertible {
     /// Swift's rules instead of as a command line.
     case call((label: String?, value: Value))
 
+    /// What binding needs to know of it: whether it is text, and otherwise that it is not.
+    var shape: CommandWordShape {
+        if case .text(let text) = self { .text(text) } else { .closure }
+    }
+
     var description: String {
         switch self {
         case .text(let text): text

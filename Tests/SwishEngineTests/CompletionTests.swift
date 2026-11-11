@@ -54,7 +54,8 @@ private func completion(
 
 @Test func completesPathsEscapingSpaces() throws {
     let shell = Shell()
-    let dir = try shell.capturing { shell.execute("mktemp -d") }.trimmingCharacters(in: .newlines)
+    let dir = try shell.runner.capturing { shell.execute("mktemp -d") }
+        .trimmingCharacters(in: .newlines)
     shell.execute("mkdir '\(dir)/a dir'; touch \(dir)/afile \(dir)/.hidden")
     let result = shell.completions(for: "cat \(dir)/a", cursor: "cat \(dir)/a".count)
     #expect(result?.start == 4)

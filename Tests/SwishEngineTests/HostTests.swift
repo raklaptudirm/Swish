@@ -31,7 +31,7 @@ private func shellWithRecorder() -> (Shell, Recorder) {
         traits: { .plain }
     )
     shell.interpreter.host.shouldStop = { recorder.interrupt() }
-    shell.environment = EnvironmentAccess(
+    shell.runner.environment = EnvironmentAccess(
         get: { recorder.variables[$0] },
         all: {
             recorder.variables.sorted { $0.key < $1.key }

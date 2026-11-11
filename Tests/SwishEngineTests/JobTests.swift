@@ -5,12 +5,12 @@ import Testing
 @testable import SwishEngine
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
-    try onLargeStack { try shell.capturing { shell.enter(source) } }
+    try onLargeStack { try shell.runner.capturing { shell.enter(source) } }
 }
 
 private func status(_ source: String) -> Int32 {
     let shell = Shell()
-    _ = try? onLargeStack { try shell.capturing { shell.execute(source) } }
+    _ = try? onLargeStack { try shell.runner.capturing { shell.execute(source) } }
     return shell.lastStatus.number
 }
 
@@ -125,7 +125,7 @@ private func status(_ source: String) -> Int32 {
 
 private func run(_ source: String) throws -> String {
     let shell = Shell()
-    return try onLargeStack { try shell.capturing { shell.execute(source) } }
+    return try onLargeStack { try shell.runner.capturing { shell.execute(source) } }
 }
 
 @Test func aTaskGivesItsValueToAwait() throws {
@@ -300,9 +300,11 @@ private func run(_ source: String) throws -> String {
     // The prompt is one scope: a task started there outlives the line.
     let shell = Shell()
     _ = try onLargeStack {
-        try shell.capturing { shell.execute("let t = async { $(sleep 0.2); return 5 }") }
+        try shell.runner.capturing { shell.execute("let t = async { $(sleep 0.2); return 5 }") }
     }
-    #expect(try onLargeStack { try shell.capturing { shell.execute("print(await t)") } } == "5\n")
+    #expect(
+        try onLargeStack { try shell.runner.capturing { shell.execute("print(await t)") } } == "5\n"
+    )
 }
 
 // A task in the background reads the input only once it's awaited, and its reads let other tasks

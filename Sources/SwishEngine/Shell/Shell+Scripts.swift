@@ -125,7 +125,11 @@ extension Shell {
         callee.shownName = name
         runState.stoppedBySignal = nil
         do {
-            lastStatus = try callCommand(callee, arguments.map(CommandArgument.text), display: true)
+            lastStatus = try runner.callCommand(
+                callee,
+                arguments.map(CommandArgument.text),
+                display: true
+            )
         } catch let error as Diagnostic {
             report("error: \(error)")
             lastStatus = .exited(error.status)

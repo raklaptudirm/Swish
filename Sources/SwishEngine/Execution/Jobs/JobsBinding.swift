@@ -1,6 +1,6 @@
 import Swiit
 
-extension Shell {
+extension CommandRunner {
     /// `jobs`, the jobs in the background oldest first.
     func installJobs() {
         interpreter.register(computed: "jobs", type: .list(.named(Job.id, [.named(Output.id)]))) {
@@ -11,7 +11,7 @@ extension Shell {
     }
 }
 
-extension Shell {
+extension CommandRunner {
     /// What `await job` is, written out by the front end as `await awaited(job)` (Resources/Prelude.swift):
     /// the latest job, for a bare `await`, and waiting for one.
     var jobBodies: [String: @Sendable ([String: Value]) throws -> Value] {
@@ -40,7 +40,7 @@ extension Shell {
                     throw RuntimeError.commandFailure(
                         "\(job.source) failed with status \(output.status.number)",
                         output: output,
-                        shell: self
+                        runner: self
                     )
                 }
                 return .output(output)

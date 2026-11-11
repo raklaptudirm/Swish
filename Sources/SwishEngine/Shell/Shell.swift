@@ -10,28 +10,18 @@ public final class Shell: @unchecked Sendable {
     /// interface.
     public let interpreter: Interpreter
 
-    /// What the shell keeps for the task running now (`ShellTask`): the one
-    /// holding the lock, or for code that doesn't hold it, the main task's.
-    var task: ShellTask { interpreter.taskState as! ShellTask }
-
     /// How the current task's last statement ended.
     public internal(set) var lastStatus: Status {
-        get { task.lastStatus }
-        set { task.lastStatus = newValue }
+        get { runner.lastStatus }
+        set { runner.lastStatus = newValue }
     }
-    /// Where the current task's output goes.
-    var stdoutFD: Int32 {
-        get { task.stdoutFD }
-        set { task.stdoutFD = newValue }
-    }
-    /// Whether the current task's programs get the terminal: the task in the
-    /// foreground's do, in an interactive shell; a background task's don't.
-    var ownsTerminal: Bool { jobControl.isInteractive && task.inForeground }
-    /// Where the current task's errors go.
-    var stderrFD: Int32 {
-        get { task.stderrFD }
-        set { task.stderrFD = newValue }
-    }
+
+    /// Runs command lines (Execution/).
+    private(set) lazy var runner = CommandRunner(
+        interpreter: interpreter,
+        jobControl: jobControl,
+        services: self
+    )
 
     /// The terminal the shell holds and the jobs it keeps.
     let jobControl = JobControl()
@@ -46,10 +36,6 @@ public final class Shell: @unchecked Sendable {
     var builtins: [String: Builtin] = Shell.standardBuiltins
     /// The lines of a statement that is not finished yet, like the start of an `if` block.
     var unfinishedStatement = ""
-    /// The variables `env` reads and writes: the process's own, unless a host gives others.
-    var environment = EnvironmentAccess.process
-    /// The names a stage could be, known from the types.
-    lazy var stageNames: StageNames = computeStageNames()
 
     /// What the prelude declared that Swift code builds values of; set once, at the end of
     /// `installLibrary`, which is why it is not a `let`.
@@ -73,7 +59,7 @@ public final class Shell: @unchecked Sendable {
         do { try interpreter.evaluate("let env = Environment()") } catch {
             preconditionFailure("the shell's env: \(error)")
         }
-        installJobs()
+        runner.installJobs()
         recordStatuses()
         // Swift's `Task { }` writes where the code that started it writes, as
         // in Swift, but is in the background: it waits for its turn at the
@@ -83,14 +69,14 @@ public final class Shell: @unchecked Sendable {
             guard let self else { return ShellTask() }
             let state = ShellTask()
             state.inForeground = false
-            state.stdoutFD = stdoutFD
-            state.stderrFD = stderrFD
+            state.stdoutFD = runner.stdoutFD
+            state.stderrFD = runner.stderrFD
             return state
         }
         // Awaited from the foreground, a task is in the foreground while it
         // runs: it reads the input, and its programs get the terminal.
         interpreter.host.willAwait = { [weak self] awaited in
-            guard let self, task.inForeground, let state = awaited as? ShellTask,
+            guard let self, runner.task.inForeground, let state = awaited as? ShellTask,
                 !state.inForeground
             else { return {} }
             state.inForeground = true
@@ -99,7 +85,7 @@ public final class Shell: @unchecked Sendable {
         // A task in the background reads the input only once it's awaited
         // from the foreground; reading sooner would take the prompt's.
         interpreter.host.withInputTurn = { [unowned self] read in
-            let state = task
+            let state = runner.task
             if !state.inForeground {
                 let cancellation = interpreter.cancellation
                 let turn = state.turn
@@ -303,63 +289,4 @@ extension Shell {
         lastStatus = .exited(1)
         return false
     }
-}
-
-/// What the shell keeps for each task (the interpreter's task state): where its output and errors
-/// go, and how its last statement went. The prompt's is the main task's; `async` and `Task { }`
-/// make one each (`Interpreter.Host.makeTaskState`).
-final class ShellTask {
-    /// Where builtins, displayed values and the last stage of a pipeline
-    /// write. Redirected while capturing `$(…)`.
-    var stdoutFD = STDOUT_FILENO
-    /// Where errors are reported, and programs' standard error goes, while
-    /// running something with `2>`.
-    var stderrFD = STDERR_FILENO
-    /// Problems with single items reported so far (a file `ls` couldn't read), and how many the
-    /// last statement had seen.
-    var itemErrors = 0
-    var itemErrorsSeen = 0
-    /// How the last statement ended, kept as statements run (`recordStatuses`).
-    var lastStatus = Status.success
-    /// Whether it's the task in the foreground, whose programs get the
-    /// terminal and which reads the input: the prompt's, or a task while it's
-    /// awaited from there. Set from the task awaiting it, on another thread.
-    var inForeground: Bool {
-        get { turn.isForeground }
-        set { turn.isForeground = newValue }
-    }
-    let turn = Turn()
-
-    /// Blocks until it's in the foreground, or `cancellation` is asked
-    /// (false). (Through `suspend`, so the lock is let go.)
-    func waitForForeground(unless cancellation: Interpreter.Cancellation) -> Bool {
-        turn.waitForForeground(unless: cancellation)
-    }
-}
-
-/// Whether a task has its turn at the terminal and the input, which another thread sets and a
-/// waiting one is woken by. A `Mutex` cannot wait, so the flag is kept under the condition that can.
-final class Turn: @unchecked Sendable {  // safe: `foreground` is read and written holding `condition`
-    private var foreground = true
-    private let condition = NSCondition()
-
-    var isForeground: Bool {
-        get { condition.withLock { foreground } }
-        set {
-            condition.withLock {
-                foreground = newValue
-                condition.broadcast()
-            }
-        }
-    }
-
-    func waitForForeground(unless cancellation: Interpreter.Cancellation) -> Bool {
-        condition.withLock {
-            while !foreground && !cancellation.isSet { condition.wait() }
-            return foreground
-        }
-    }
-
-    /// Wakes a wait for the foreground, to look again.
-    func poke() { condition.withLock { condition.broadcast() } }
 }

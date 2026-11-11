@@ -2,7 +2,7 @@ import Foundation
 import Swiit
 import Synchronization
 
-extension Shell {
+extension CommandRunner {
     // MARK: Capturing output
 
     /// Runs `body` with standard output redirected into a string, as `$(…)` does.

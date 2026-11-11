@@ -19,8 +19,10 @@ extension Shell {
         let argv = ["/bin/sh"] + (login ? ["-l"] : []) + ["-c", program]
         // Ours that is also a target is copied out of the way first, as a pipeline's are, so the
         // order the child applies them in can't matter.
-        let wanted = [STDOUT_FILENO: stdoutFD, STDERR_FILENO: stderrFD, 3: pipe.write]
-            .filter { $0.key != $0.value }
+        let wanted = [
+            STDOUT_FILENO: runner.stdoutFD, STDERR_FILENO: runner.stderrFD, 3: pipe.write,
+        ]
+        .filter { $0.key != $0.value }
         var descriptors: [(target: Int32, source: Int32)] = []
         var copies: [Int32] = []
         for (target, source) in wanted {
@@ -72,14 +74,14 @@ extension Shell {
         }
         let own: Set = ["_", "SHLVL", "PWD", "OLDPWD"]
         let before = Dictionary(
-            environment.all().map { ($0.name, $0.value) },
+            runner.environment.all().map { ($0.name, $0.value) },
             uniquingKeysWith: { $1 }
         )
         for (name, value) in after where !own.contains(name) && before[name] != value {
-            environment.set(name, value)
+            runner.environment.set(name, value)
         }
         for name in before.keys where !own.contains(name) && after[name] == nil {
-            environment.set(name, nil)
+            runner.environment.set(name, nil)
         }
     }
 }

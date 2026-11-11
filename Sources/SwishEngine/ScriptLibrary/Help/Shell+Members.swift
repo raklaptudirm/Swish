@@ -19,7 +19,7 @@ extension Shell {
             // The prelude's `MemberKind` has the cases of the Swift one a member can be.
             let kindValue = preludeTypes.memberKind.enumCase(named: "\(kind)", in: interpreter)
             rows.append(
-                make(
+                preludeTypes.make(
                     preludeTypes.member,
                     [
                         "type": Value(type), "name": Value(name),

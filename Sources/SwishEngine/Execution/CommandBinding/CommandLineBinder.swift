@@ -6,7 +6,7 @@ import Swiit
 // alone, with no function, value or scope, so the checker binds a call to a
 // function the program has only just declared as the runtime binds one it is
 // about to run; the runtime then makes the values from what was decided
-// (`Shell.bind(commandLine:)`).
+// (`CommandRunner.bind(commandLine:)`).
 
 /// A word of a command, as binding sees it.
 enum CommandWordShape {
@@ -43,17 +43,18 @@ struct CommandLineBinding {
     }
 }
 
-extension Shell {
+extension Callee {
+    /// Whether a parameter of some overload is `--help` or `-h`, so the shell does not answer them.
+    var claimsHelp: Bool {
+        parameters.contains { $0.contains { $0.label == "help" || $0.shortFlag == "h" } }
+    }
+}
+
+extension CommandRunner {
     /// Whether the shell answers `--help` or `-h` for these overloads, as it does unless one claims
     /// them.
     func helpRequested(_ words: [CommandWordShape], for callee: Callee) -> Bool {
-        guard
-            !callee.parameters.contains(where: {
-                $0.contains { $0.label == "help" || $0.shortFlag == "h" }
-            })
-        else {
-            return false
-        }
+        guard !callee.claimsHelp else { return false }
         for case .text(let arg) in words {
             if arg == "--" { return false }
             if arg == "--help" || arg == "-h" { return true }
@@ -95,7 +96,7 @@ extension Shell {
                 continue
             }
         }
-        func rendered(_ symbol: Symbol) -> String { "  " + signature(of: symbol) }
+        func rendered(_ symbol: Symbol) -> String { "  " + symbol.signature }
         guard let best = matches.map(\.penalty).min() else {
             throw RuntimeError(
                 "\(name): no overload accepts these arguments; candidates:\n"
@@ -159,7 +160,7 @@ extension Shell {
         }
         var collected: [String: [Piece]] = [:]
         func assign(_ parameter: CommandParameter, word: Int, text: String?, flag: String) throws {
-            if let (element, _) = Shell.collection(parameter.type) {
+            if let (element, _) = CommandRunner.collection(parameter.type) {
                 collected[parameter.name, default: []]
                     .append(try take(word, text: text, as: element, for: flag))
             } else {
@@ -259,7 +260,7 @@ extension Shell {
             if parameter.picksFields {
                 bound[parameter.name] = .words(
                     try remaining.map { word in
-                        guard let text = textOf(word), Shell.isFieldName(text) else {
+                        guard let text = textOf(word), CommandRunner.isFieldName(text) else {
                             throw RuntimeError("\(name): \(what) takes field names")
                         }
                         return Piece(word: word, text: text)
@@ -276,7 +277,7 @@ extension Shell {
                     }
                 )
                 remaining = []
-            } else if let (element, _) = Shell.collection(parameter.type) {
+            } else if let (element, _) = CommandRunner.collection(parameter.type) {
                 bound[parameter.name] = .words(
                     try remaining.map { try take($0, text: textOf($0), as: element, for: what) }
                 )
@@ -304,7 +305,7 @@ extension Shell {
                 bound[parameter.name] = .defaulted
             } else if parameter.type.isBool && parameter.label != nil {
                 bound[parameter.name] = .omitted
-            } else if parameter.label != nil, Shell.collection(parameter.type) != nil {
+            } else if parameter.label != nil, CommandRunner.collection(parameter.type) != nil {
                 bound[parameter.name] = .omitted
             } else if parameter.type.optionalWrapped != nil {
                 bound[parameter.name] = .omitted

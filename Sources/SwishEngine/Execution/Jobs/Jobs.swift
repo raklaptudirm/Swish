@@ -41,11 +41,11 @@ final class Job: ScriptConvertible, Presentable, Tabular, CustomStringConvertibl
     var relayed = false
     /// Once it's done: its output and how it exited.
     private(set) var output: Output?
-    unowned let shell: Shell
+    unowned let runner: CommandRunner
 
-    init(source: String, shell: Shell) {
+    init(source: String, runner: CommandRunner) {
         self.source = source
-        self.shell = shell
+        self.runner = runner
     }
 
     func finish() {
@@ -79,15 +79,15 @@ final class Job: ScriptConvertible, Presentable, Tabular, CustomStringConvertibl
     /// read, and once the job is done, from what its output has left.
     var lines: Value {
         guard let collector = capture else {
-            return shell.stream(of: (output?.lines ?? []).map { Value($0) })
+            return runner.preludeTypes.stream(of: (output?.lines ?? []).map { Value($0) })
         }
-        return shell.stream { [unowned self] in
+        return runner.preludeTypes.stream { [unowned self] in
             while true {
                 switch Interpreter.whileWaiting({ collector.nextLine(timeout: 0.05) }) {
                 case .line(let line): return Value(line)
                 case .end: return nil
                 // Waiting for a line is where Ctrl-C has to be noticed.
-                case .pending: try shell.interpreter.checkForStop()
+                case .pending: try runner.interpreter.checkForStop()
                 }
             }
         }
@@ -121,8 +121,8 @@ final class Job: ScriptConvertible, Presentable, Tabular, CustomStringConvertibl
         ("output", { $0.output.map { Value.output($0) } ?? .nothing }),
         // A method, as it's not data: a table or `to json` of jobs can't read it.
         ("lines", { job in method("lines") { [unowned job] in job.lines } }),
-        ("resume", { job in method("resume") { [unowned job] in job.shell.resume(job) } }),
-        ("cancel", { job in method("cancel") { [unowned job] in job.shell.cancel(job) } }),
+        ("resume", { job in method("resume") { [unowned job] in job.runner.resume(job) } }),
+        ("cancel", { job in method("cancel") { [unowned job] in job.runner.cancel(job) } }),
     ]
 
     var memberNames: [String]? { Job.members.map(\.name) }
@@ -179,7 +179,7 @@ final class Job: ScriptConvertible, Presentable, Tabular, CustomStringConvertibl
 /// Stopping a job you were awaiting (^Z) leaves the line; it's in `jobs`.
 struct JobSuspended: Error {}
 
-extension Shell {
+extension CommandRunner {
     /// Starts a pipeline of programs in the background (`async`), capturing
     /// its output if asked (`async $(…)`).
     func startJob(_ stages: [Stage], source: String, capture: Bool) throws -> Job {
@@ -192,7 +192,7 @@ extension Shell {
             job.givesOutput = true
             return job
         }
-        let job = Job(source: source, shell: self)
+        let job = Job(source: source, runner: self)
         var output = stdoutFD
         if capture {
             guard let pipe = makePipe() else { throw RuntimeError("pipe: \(errorMessage(errno))") }
@@ -235,7 +235,7 @@ extension Shell {
                 job.running.append(pid)
                 if isLast { job.lastPid = pid }
             case .failure(let failure):
-                report(failure.message)
+                services.report(failure.message)
                 if isLast { job.status = .exited(failure.status) }
             }
         }
@@ -318,12 +318,12 @@ extension Shell {
     }
 }
 
-extension Shell {
+extension CommandRunner {
     /// Starts Swish code as a task of its own (`async f()`, `async { … }`): a
     /// job, whose output is kept for `await`, as `async $(…)`'s is, and whose
     /// value `await` gives.
     func startTask(source: String, _ body: @escaping () throws -> Value) throws -> Job {
-        let job = Job(source: source, shell: self)
+        let job = Job(source: source, runner: self)
         guard let pipe = makePipe() else { throw RuntimeError("pipe: \(errorMessage(errno))") }
         job.capture = OutputCollector(reading: pipe.read)
         let state = ShellTask()

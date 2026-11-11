@@ -170,7 +170,7 @@ extension Shell {
                 return 1
             }
             target = previous
-            writeAll(stdoutFD, previous + "\n")
+            writeAll(runner.stdoutFD, previous + "\n")
         case 1:
             target = args[0]
         default:
@@ -209,7 +209,7 @@ extension Shell {
     /// and the programs it runs create from then on.
     private func umask(_ args: [String]) -> Int32 {
         guard let mask = args.first else {
-            writeAll(stdoutFD, String(format: "%04o", Int(fileCreationMask)) + "\n")
+            writeAll(runner.stdoutFD, String(format: "%04o", Int(fileCreationMask)) + "\n")
             return 0
         }
         guard args.count == 1, let value = mode_t(mask, radix: 8), value <= 0o777 else {
@@ -256,7 +256,7 @@ extension Shell {
                 for limit in ResourceLimit.all {
                     let name = limit.name.padding(toLength: width, withPad: " ", startingAt: 0)
                     writeAll(
-                        stdoutFD,
+                        runner.stdoutFD,
                         "\(name)  (-\(limit.flag))  \(shown(try limit.current(hard: hard)))\n"
                     )
                 }
@@ -264,7 +264,7 @@ extension Shell {
             }
             let chosen = limit ?? ResourceLimit.all.first { $0.flag == "f" }!
             guard let value else {
-                writeAll(stdoutFD, shown(try chosen.current(hard: hard)) + "\n")
+                writeAll(runner.stdoutFD, shown(try chosen.current(hard: hard)) + "\n")
                 return 0
             }
             let units: UInt64?
@@ -290,7 +290,7 @@ extension Shell {
             report("exec: give a program to run in the shell's place")
             return 2
         }
-        guard let path = findExecutable(name) else {
+        guard let path = runner.findExecutable(name) else {
             report("exec: \(name): command not found" + commandNotFoundHint(name))
             return 127
         }
@@ -359,30 +359,30 @@ extension Shell {
     private func which(_ args: [String]) -> Int32 {
         var status: Int32 = 0
         for name in args {
-            if let methods = stageCallee(
+            if let methods = runner.stageCallee(
                 name,
-                of: streamType,
+                of: preludeTypes.streamType,
                 receiver: .stream
             )
-                ?? (stageNames.sequence.contains(name)
-                    ? stageCallee(name, of: .list(.any), receiver: .collected) : nil)
+                ?? (runner.stageNames.sequence.contains(name)
+                    ? runner.stageCallee(name, of: .list(.any), receiver: .collected) : nil)
             {
                 for method in methods.overloads {
-                    writeAll(stdoutFD, "\(name): sequence method \(signature(of: method))\n")
+                    writeAll(runner.stdoutFD, "\(name): sequence method \(method.signature)\n")
                 }
-            } else if let functions = commandFunctions(named: name) {
+            } else if let functions = runner.commandFunctions(named: name) {
                 for function in functions.overloads {
                     let kind = function.isBuiltin ? "builtin function" : "function"
-                    writeAll(stdoutFD, "\(name): \(kind) \(signature(of: function))\n")
+                    writeAll(runner.stdoutFD, "\(name): \(kind) \(function.signature)\n")
                 }
             } else if let builtin = builtins[name] {
                 if case .notSwish(let instead) = builtin.action {
-                    writeAll(stdoutFD, "\(name): not Swish; \(instead)\n")
+                    writeAll(runner.stdoutFD, "\(name): not Swish; \(instead)\n")
                 } else {
-                    writeAll(stdoutFD, "\(name): shell builtin\n")
+                    writeAll(runner.stdoutFD, "\(name): shell builtin\n")
                 }
-            } else if let path = findExecutable(name) {
-                writeAll(stdoutFD, path + "\n")
+            } else if let path = runner.findExecutable(name) {
+                writeAll(runner.stdoutFD, path + "\n")
             } else {
                 report("which: \(name) not found")
                 status = 1

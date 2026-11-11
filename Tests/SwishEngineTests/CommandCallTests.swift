@@ -7,12 +7,12 @@ import Testing
 
 /// Runs `source` in `shell`, returning what it wrote to standard output.
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
-    try onLargeStack { try shell.capturing { shell.enter(source) } }
+    try onLargeStack { try shell.runner.capturing { shell.enter(source) } }
 }
 
 private func status(_ source: String) -> Int32 {
     let shell = Shell()
-    _ = try? onLargeStack { try shell.capturing { shell.execute(source) } }
+    _ = try? onLargeStack { try shell.runner.capturing { shell.execute(source) } }
     return shell.lastStatus.number
 }
 

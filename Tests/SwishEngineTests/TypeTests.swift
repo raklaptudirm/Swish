@@ -4,7 +4,7 @@ import Testing
 @testable import SwishEngine
 
 private func output(_ source: String, in shell: Shell = Shell()) throws -> String {
-    try onLargeStack { try shell.capturing { shell.enter(source) } }
+    try onLargeStack { try shell.runner.capturing { shell.enter(source) } }
 }
 
 /// The type error `source` has, or nil if it checks.
@@ -123,7 +123,9 @@ private func typeError(_ source: String, in shell: Shell = Shell()) -> String? {
     shell.execute(#"printf '%s\n' 'echo one' '' 'let x: Int = "a"' > \#(path)"#)
     // A fresh shell runs the file: the error on line 3 stops line 1 too.
     let script = Shell()
-    let printed = try onLargeStack { try script.capturing { _ = script.runScript(at: path) } }
+    let printed = try onLargeStack {
+        try script.runner.capturing { _ = script.runScript(at: path) }
+    }
     #expect(printed == "")  // `echo one` didn't run
     #expect(script.lastStatus.number == 2)
 }

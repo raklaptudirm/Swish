@@ -16,7 +16,7 @@ import Testing
 
 @Test func aCommandThatIsNotFoundSaysWhatIsNear() throws {
     let shell = Shell()
-    _ = try onLargeStack { try shell.capturing { shell.execute("func deployment() {}") } }
+    _ = try onLargeStack { try shell.runner.capturing { shell.execute("func deployment() {}") } }
     #expect(shell.commands(near: "deploymnet") == ["deployment"])
     #expect(shell.commands(near: "zzqqxxyy").isEmpty)
     // A short name is allowed one edit only: `ab` is not a mistyped `cd`, nor `env.X` `env`.
