@@ -3,6 +3,26 @@ import Swiit
 
 // What a descriptor is to show values on: a terminal of some size, or a file or pipe.
 
+/// What a client asks of the terminal it draws on.
+public enum Terminal {
+    /// The width of the terminal `descriptor` is, in columns, if it is one.
+    public static func width(of descriptor: Int32) -> Int? {
+        terminalWidth(descriptor)
+    }
+
+    /// The height of the terminal `descriptor` is, in rows, if it is one.
+    public static func height(of descriptor: Int32) -> Int? {
+        terminalHeight(descriptor)
+    }
+
+    /// Writes unbuffered, so output from the shell and its children never interleaves out of
+    /// order. Says whether the write worked: not when the reader of a pipe has exited.
+    @discardableResult
+    public static func write(_ text: String, to descriptor: Int32) -> Bool {
+        writeAll(descriptor, text)
+    }
+}
+
 extension OutputSink.Traits {
     /// What the descriptor is: a terminal of some width, or a file or pipe.
     init(fd: Int32) {

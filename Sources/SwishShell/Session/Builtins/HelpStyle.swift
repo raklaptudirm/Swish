@@ -62,7 +62,7 @@ extension DisplayStyle {
 
     /// Whether to style what's written to `fd`: only for a terminal, and
     /// not with `NO_COLOR` set or `TERM=dumb`.
-    static func enabled(for fd: Int32) -> Bool {
+    public static func enabled(for fd: Int32) -> Bool {
         func variable(_ name: String) -> String? { getenv(name).map { String(cString: $0) } }
         return isatty(fd) != 0 && variable("NO_COLOR").map(\.isEmpty) != false
             && variable("TERM") != "dumb"

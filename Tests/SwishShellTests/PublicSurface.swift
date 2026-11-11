@@ -7,7 +7,9 @@ import Testing
 
 enum PublicSurface {
     /// The top-level types.
-    static let types: Set<String> = ["Shell", "Status", "HighlightKind", "HighlightSpan"]
+    static let types: Set<String> = [
+        "Shell", "Status", "HighlightKind", "HighlightSpan", "Terminal",
+    ]
 
     /// The public members, by the type that has them.
     static let members: Set<String> = [
@@ -38,6 +40,11 @@ enum PublicSurface {
         "Status.encode",
         "HighlightKind.displayStyle", "HighlightSpan.range", "HighlightSpan.kind",
         "HighlightSpan.init",
+        // A retroactive conformance is as public as the type and the protocol: `Date` is a
+        // `LosslessStringConvertible`, so a word of ISO 8601 text is a date on a command line.
+        "Date.init",
+        // The terminal a client draws on, and where a descriptor may be styled
+        "Terminal.width", "Terminal.height", "Terminal.write", "DisplayStyle.enabled",
     ]
 
     private static let sources = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
@@ -58,6 +65,7 @@ enum PublicSurface {
     /// types (a member of an extension counts for the type it extends).
     static func current() throws -> (types: Set<String>, members: Set<String>) {
         var types: Set<String> = []
+        var localTypes: Set<String> = []
         var members: Set<String> = []
         var parsed: [(lines: [String], file: String)] = []
         let files = FileManager.default.enumerator(atPath: sources.path)!
@@ -78,10 +86,9 @@ enum PublicSurface {
         }
         for (lines, _) in parsed {
             for line in lines {
-                if let g = groups(container, line), g[0].isEmpty, g[3] != "",
-                    g[1].hasPrefix("public"), g[2] != "extension"
-                {
-                    types.insert(g[3])
+                if let g = groups(container, line), g[3] != "", g[2] != "extension" {
+                    localTypes.insert(g[3])
+                    if g[0].isEmpty, g[1].hasPrefix("public") { types.insert(g[3]) }
                 }
             }
         }
@@ -95,7 +102,8 @@ enum PublicSurface {
                     let explicit = g[1].trimmingCharacters(in: .whitespaces)
                     let isPublic: Bool =
                         g[2] == "extension"
-                        ? (stack.last?.isPublic ?? types.contains(g[3]))
+                        ? (stack.last?.isPublic
+                            ?? (types.contains(g[3]) || !localTypes.contains(g[3])))
                             && explicit != "private" && explicit != "fileprivate"
                         : explicit == "public" && (stack.last?.isPublic ?? true)
                     stack.append((indent, g[3], isPublic))
