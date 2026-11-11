@@ -34,7 +34,7 @@ for file in files { echo "doc: \(file)" }   // command output iterates by line
 echo "on \($(git branch --show-current))"
 ```
 
-### Every function is also a command
+### Functions as commands
 
 A `func` gets a command-line interface derived from its signature: argument
 labels become `--flags`, `Bool`s become switches, and `///` doc comments
@@ -125,7 +125,7 @@ p.move(by: 1)
 [p, Point(x: 1)] | filter { $0.lengthSquared > 1 }   // a table: x, y
 ```
 
-### Failure is a value until you `try`
+### Command failures and `try`
 
 `$(…)` gives the command's output and how it exited. It only throws when
 you say `try`, and Swift's `try?`, `try!` and `do`/`catch` mean what you'd
@@ -144,7 +144,7 @@ do {
 }
 ```
 
-### Background jobs are values
+### Background jobs
 
 There's no `&`: `async` starts a job and hands it to you, and `await`
 waits for it, bringing it to the foreground as `fg` would.
@@ -162,7 +162,7 @@ jobs                              // background jobs, including ones you ^Z'd
 await                             // bring back the most recent: the ^Z'd vim, say
 ```
 
-### The rest of a shell, a little tidier
+### Environment, redirects, globs and line editing
 
 ```swift
 EDITOR=nano git commit            // environment for one command
