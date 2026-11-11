@@ -10,13 +10,28 @@ extension Shell {
     /// it's then called with them as its command line, so a script gets
     /// flags, `--help` and completion from `main`'s signature.
     public func runScript(at path: String, arguments: [String] = []) -> Int32 {
+        runScript(at: path, arguments: arguments) { file in
+            // `main` stands for the script, so its help and errors use the script's name.
+            file.call(
+                "main",
+                as: FilePath(path).lastComponent?.string ?? path,
+                arguments: arguments
+            )
+        }
+    }
+
+    /// Runs a script's top level, then `finish` with what it declared, unless a `try!` stopped it:
+    /// for a client that runs a function of the script, as a task runner does.
+    public func runScript(
+        at path: String,
+        arguments: [String],
+        then finish: @escaping (ScriptFile) -> Void
+    ) -> Int32 {
         // ^C, kill and hangup stop the script at the next statement, so its
         // defers run; then it ends by the signal (see `endBySignal`).
         catchInterrupts([SIGINT, SIGTERM, SIGHUP])
         return runFile(at: path, arguments: arguments) { [self] reading in
-            guard let main = topLevelFunction("main", in: reading) else { return }
-            // `main` stands for the script, so its help and errors use the script's name.
-            callAsCommand(main, named: FilePath(path).lastComponent?.string ?? path, arguments)
+            finish(ScriptFile(shell: self, reading: reading))
         }
     }
 
@@ -31,6 +46,25 @@ extension Shell {
 }
 
 extension Shell {
+    /// A script that has run its top level: what it declared, and a way to run a function of it as
+    /// a command.
+    public struct ScriptFile {
+        unowned let shell: Shell
+        let reading: Shell.Reading
+
+        /// The functions the script declared at its top level.
+        public var functions: [Symbol] { reading.declared.symbols.filter { $0.function != nil } }
+
+        /// Runs the function `name` the script declared as a command with `arguments`, under
+        /// `shownName` for its help and errors. Says whether there is one.
+        @discardableResult
+        public func call(_ name: String, as shownName: String, arguments: [String]) -> Bool {
+            guard let function = shell.topLevelFunction(name, in: reading) else { return false }
+            shell.callAsCommand(function, named: shownName, arguments)
+            return true
+        }
+    }
+
     /// Reads, checks and runs a file's top level, then `finish`, unless a
     /// `try!` stopped it. A top-level `defer` runs when it's all over.
     func runFile(

@@ -3,7 +3,7 @@ import Swiit
 
 extension Shell {
     /// Reports an error, to wherever standard error is redirected.
-    func report(_ message: String) {
+    public func report(_ message: String) {
         let output = interpreter.host.error
         let styled = output.traits().isStyled
         if message.hasPrefix("error: ") {

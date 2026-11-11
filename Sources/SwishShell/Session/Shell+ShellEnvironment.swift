@@ -12,7 +12,7 @@ extension Shell {
     /// What the script prints goes where the shell's output and errors go now. The environment
     /// comes back on a descriptor of its own, so that output can't be mistaken for it. What sh sets
     /// for itself (its `$_`, `$SHLVL` and working directory) is not taken.
-    func loadEnvironment(fromShell script: String, login: Bool = false) throws {
+    public func loadEnvironment(fromShell script: String, login: Bool = false) throws {
         guard let pipe = makePipe() else { throw LibraryError("can't make a pipe for /bin/sh") }
         // The environment is written once the script is done; one that exits first gives none.
         let program = script + "\nexec /usr/bin/env -0 >&3\n"

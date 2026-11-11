@@ -326,7 +326,7 @@ extension Shell {
 
     /// What's changed with background jobs, for the notices before the next
     /// prompt. Finished jobs leave `jobs` once they've been reported.
-    func announceJobs(styled: Bool = false) -> [String] {
+    public func jobNotices(styled: Bool = false) -> [String] {
         updateJobs()
         var notices: [String] = []
         for job in jobs where job.state != .running && !job.reported {

@@ -3,11 +3,11 @@ import Swiit
 
 /// How a command ended: it exited with a code, or a signal ended it. It is what `$?` reads, what a
 /// command statement gives (the prelude's `Status`), and an `Output`'s.
-enum Status: Hashable, Sendable {
+public enum Status: Hashable, Sendable {
     case exited(Int32)
     case signaled(Int32)
 
-    static let success = Status.exited(0)
+    public static let success = Status.exited(0)
 
     /// How a child ended, from `waitpid`'s status; one that neither exited nor was signaled (which
     /// `waitpid` without `WUNTRACED` doesn't give) failed.
@@ -21,11 +21,11 @@ enum Status: Hashable, Sendable {
         }
     }
 
-    var succeeded: Bool { self == .success }
+    public var succeeded: Bool { self == .success }
 
     /// The status as a process gives it, and as the shell exits with: the code, or 128 and the
     /// signal.
-    var number: Int32 {
+    public var number: Int32 {
         switch self {
         case .exited(let code): code
         case .signaled(let signal): 128 + signal
@@ -33,12 +33,12 @@ enum Status: Hashable, Sendable {
     }
 
     /// The exit code, or nil when a signal ended the command.
-    var code: Int? {
+    public var code: Int? {
         if case .exited(let code) = self { Int(code) } else { nil }
     }
 
     /// The signal that ended the command, if one did.
-    var signal: Int? {
+    public var signal: Int? {
         if case .signaled(let signal) = self { Int(signal) } else { nil }
     }
 }
@@ -49,7 +49,7 @@ enum Status: Hashable, Sendable {
 extension Status: Encodable {
     private enum CodingKeys: String, CodingKey { case code, signal, succeeded }
 
-    func encode(to encoder: any Encoder) throws {
+    public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(code, forKey: .code)
         try container.encode(signal, forKey: .signal)

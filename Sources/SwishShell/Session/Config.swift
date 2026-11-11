@@ -26,8 +26,7 @@ extension Shell {
         guard let path = Shell.configPath(environment: ProcessInfo.processInfo.environment) else {
             return
         }
-        _ = sourceFile(path, arguments: [])
-        lastStatus = .exited(0)
+        keepingStatus { _ = source(fileAt: path) }
     }
 
     /// What the `prompt` function gives, or nil if there isn't one. It's
@@ -47,11 +46,12 @@ extension Shell {
             )
         }
         let status = lastStatus
-        defer { lastStatus = status }  // Drawing the prompt isn't a command.
-        let value = try invoke(
-            Callee(name: "prompt", overloads: [], receiver: nil),
-            withStatus != nil ? [("status", Value(Int(status.number)))] : []
-        )
+        let value = try keepingStatus {  // Drawing the prompt isn't a command.
+            try invoke(
+                Callee(name: "prompt", overloads: [], receiver: nil),
+                withStatus != nil ? [("status", Value(Int(status.number)))] : []
+            )
+        }
         guard let text = value.casting(to: String.self) else {
             throw RuntimeError("it gave \(value.typeName), not a String")
         }

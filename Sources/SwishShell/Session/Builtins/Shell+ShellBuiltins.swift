@@ -315,12 +315,12 @@ extension Shell {
             )
             return 2
         }
-        return sourceFile(resolved, arguments: Array(args.dropFirst()))
+        return source(fileAt: resolved, arguments: Array(args.dropFirst()))
     }
 
     /// Runs a file's top level in this shell, then puts back what running a
     /// file changes: `args`, `#filePath`, and whether a script stopped.
-    func sourceFile(_ path: String, arguments: [String]) -> Int32 {
+    public func source(fileAt path: String, arguments: [String] = []) -> Int32 {
         let saved = (interpreter.file, scriptDirectory, interpreter["args"], scriptStopped)
         defer {
             (interpreter.file, scriptDirectory) = (saved.0, saved.1)

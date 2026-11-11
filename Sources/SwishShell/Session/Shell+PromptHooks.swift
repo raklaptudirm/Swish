@@ -31,9 +31,11 @@ extension Shell {
     }
 
     private func runHook(_ action: Value, _ name: String, _ arguments: [Value]) {
-        let status = lastStatus
-        defer { lastStatus = status }  // An action before the prompt isn't a command.
-        do { _ = try interpreter.call(action, with: arguments) } catch {
+        do {
+            _ = try keepingStatus {  // An action before the prompt isn't a command.
+                try interpreter.call(action, with: arguments)
+            }
+        } catch {
             report("\(name): \(error)")
         }
     }

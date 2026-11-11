@@ -6,15 +6,16 @@ import Swiit
 /// none of that. It is the interpreter's host (the process), and declares the shell's own types and
 /// functions in Swift for it (Resources/Prelude.swift).
 public final class Shell: @unchecked Sendable {
-    /// The language.
-    let interpreter: Interpreter
+    /// The language underneath. A client adds its own functions to it through Swiit's public
+    /// interface.
+    public let interpreter: Interpreter
 
     /// What the shell keeps for the task running now (`ShellTask`): the one
     /// holding the lock, or for code that doesn't hold it, the main task's.
     var task: ShellTask { interpreter.taskState as! ShellTask }
 
     /// How the current task's last statement ended.
-    var lastStatus: Status {
+    public internal(set) var lastStatus: Status {
         get { task.lastStatus }
         set { task.lastStatus = newValue }
     }
@@ -47,6 +48,8 @@ public final class Shell: @unchecked Sendable {
     var warnedAboutJobs = false
     /// A `try!` failed in a script, which stops it.
     var scriptStopped = false
+    /// The lines of a statement that is not finished yet, like the start of an `if` block.
+    var unfinishedStatement = ""
     /// The variables `env` reads and writes: the process's own, unless a host gives others.
     var environment = EnvironmentAccess.process
     /// The source being run, so an error can show the line it is in (and the file it is from, if it
@@ -166,6 +169,14 @@ extension Shell {
         run(source, atPrompt: true)
     }
 
+    /// Runs `body`, then puts `lastStatus` back as it was: what runs a prompt, a hook or a config
+    /// file is not a command, and must not change `$?`.
+    public func keepingStatus<Result>(_ body: () throws -> Result) rethrows -> Result {
+        let status = lastStatus
+        defer { lastStatus = status }
+        return try body()
+    }
+
     /// Reports what went wrong the way a compiler does: the message, and the line it is in with the
     /// place marked.
     func reportDiagnostic(_ diagnostic: Diagnostic) {
@@ -188,7 +199,7 @@ extension Shell {
         report(diagnostic.rendered(in: text, path: path, style: style))
     }
 
-    private func run(_ source: String, atPrompt: Bool) -> Int32 {
+    func run(_ source: String, atPrompt: Bool) -> Int32 {
         diagnosticSource = (source, nil)
         switch prepare(source) {
         case .failure(let diagnostic):

@@ -4,50 +4,34 @@ import Swiit
 extension Shell {
     /// Runs the read-eval loop until EOF or `exit`.
     public func runInteractive() -> Int32 {
-        takeTerminal()
-        if !interactive {
+        guard takeTerminal() else {
             return runScript { [unowned self] in Interpreter.whileWaiting { Swift.readLine() } }
         }
         editor.history = History(path: History.defaultPath)
         editor.continuationPrompt = "…".styled(DisplayStyle.dim) + " "
         // These run while a line is read, when nothing else runs.
-        editor.isComplete = { [unowned self] text in
-            if case .failure(let error) = prepare(text), error.isIncomplete { return false }
-            return true
-        }
+        editor.isComplete = { [unowned self] text in !isUnfinished(text) }
         editor.highlight = { [unowned self] text in highlightStyles(text) }
         editor.complete = { [unowned self] text, cursor in completions(for: text, cursor: cursor) }
         loadConfig()
-        // Lines of a statement that isn't finished yet, like an open `if` block.
-        var pending = ""
+
         while true {
             // Finished and stopped background jobs, before the prompt.
-            if pending.isEmpty {
-                for notice in announceJobs(styled: DisplayStyle.enabled(for: STDERR_FILENO)) {
+            if !hasUnfinishedStatement {
+                for notice in jobNotices(styled: DisplayStyle.enabled(for: STDERR_FILENO)) {
                     writeAll(STDERR_FILENO, notice + "\n")
                 }
+                willPrompt()
             }
-            if pending.isEmpty { willPrompt() }
-            let prompt = pending.isEmpty ? prompt() : "…".styled(DisplayStyle.dim) + " "
+
+            let prompt = hasUnfinishedStatement ? "…".styled(DisplayStyle.dim) + " " : prompt()
             switch Interpreter.whileWaiting({ editor.readLine(prompt: prompt) }) {
             case .eof:
-                if !pending.isEmpty { enter(pending) }
-                return lastStatus.number
+                return finishInput(atPrompt: true)
             case .interrupted:
-                pending = ""
+                discardUnfinishedStatement()
             case .line(let line):
-                pending = pending.isEmpty ? line : pending + "\n" + line
-                diagnosticSource = (pending, nil)
-                switch prepare(pending) {
-                case .failure(let error) where error.isIncomplete:
-                    continue
-                case .failure(let error):
-                    reportReadingFailure(error)
-                case .success(let reading):
-                    // Checked first, as everywhere else: a type error runs nothing.
-                    runReportingErrors(reading, atPrompt: true)
-                }
-                pending = ""
+                accept(line: line, atPrompt: true)
             }
         }
     }
@@ -56,29 +40,21 @@ extension Shell {
 extension Shell {
     /// Runs lines as they come, grouping those of an unfinished statement.
     private func runScript(nextLine: () -> String?) -> Int32 {
-        var pending = ""
         while let line = nextLine() {
-            pending = pending.isEmpty ? line : pending + "\n" + line
-            diagnosticSource = (pending, nil)
-            switch prepare(pending) {
-            case .failure(let error) where error.isIncomplete:
-                continue
-            case .failure(let error):
-                reportReadingFailure(error)
-            case .success(let reading):
-                runReportingErrors(reading)
-                if scriptStopped { return lastStatus.number }
+            if case .ran(_, let shouldStop) = accept(line: line, atPrompt: false), shouldStop {
+                return lastStatus.number
             }
-            pending = ""
         }
-        if !pending.isEmpty { execute(pending) }
-        return lastStatus.number
+        return finishInput(atPrompt: false)
     }
 }
 
 extension Shell {
-    private func takeTerminal() {
-        guard isatty(terminal) != 0 else { return }
+    /// Takes the terminal as a job-control shell does, when standard input is one: waits to be in
+    /// the foreground, ignores the job-control signals, and leads a process group of its own.
+    /// Says whether it is a terminal.
+    public func takeTerminal() -> Bool {
+        guard isatty(terminal) != 0 else { return false }
         // If we were started in the background, wait until we're brought forward.
         while tcgetpgrp(terminal) != getpgrp() {
             kill(-getpgrp(), SIGTTIN)
@@ -92,6 +68,7 @@ extension Shell {
         tcsetpgrp(terminal, shellPgid)
         tcgetattr(terminal, &shellModes)
         interactive = true
+        return true
     }
 
     /// The prompt: what the config's `prompt` function gives, or the

@@ -98,8 +98,8 @@ private func status(_ source: String) -> Int32 {
     // Listing jobs shows finished ones as done, without dropping them…
     #expect(try output("jobs.count", in: shell) == "2\n")
     // …and the prompt's announcement reports each once, then drops them.
-    #expect(shell.announceJobs() == ["[1] done  sleep 0.1", "[2] failed (2)  sh -c 'exit 2'"])
-    #expect(shell.announceJobs().isEmpty)
+    #expect(shell.jobNotices() == ["[1] done  sleep 0.1", "[2] failed (2)  sh -c 'exit 2'"])
+    #expect(shell.jobNotices().isEmpty)
     #expect(shell.jobs.isEmpty)
 }
 
