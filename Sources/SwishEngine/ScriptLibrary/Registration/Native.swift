@@ -5,7 +5,7 @@ import Swiit
 // command's output.
 
 extension FileSize {
-    static let native = HostTypeBuilder<FileSize>("FileSize")
+    static let native = HostType.Builder<FileSize>("FileSize")
         .property("bytes", \.bytes)
         .property("description", \.description)
         .initializer(labels: ["bytes"]) { (bytes: Int) in FileSize(bytes: bytes) }
@@ -65,7 +65,7 @@ extension Record {
 }
 
 extension FileEntry {
-    static let native = HostTypeBuilder<FileEntry>("FileEntry")
+    static let native = HostType.Builder<FileEntry>("FileEntry")
         .property("name", \.name)
         .property("type", \.type)
         .property("size", \.size)
@@ -79,7 +79,7 @@ extension FileEntry {
 }
 
 extension ProcessEntry {
-    static let native = HostTypeBuilder<ProcessEntry>("ProcessEntry")
+    static let native = HostType.Builder<ProcessEntry>("ProcessEntry")
         .property("pid", \.pid)
         .property("ppid", \.ppid)
         .property("name", \.name)
@@ -90,13 +90,13 @@ extension ProcessEntry {
 }
 
 extension DisplayColumn {
-    static let native = HostTypeBuilder<DisplayColumn>("DisplayColumn")
+    static let native = HostType.Builder<DisplayColumn>("DisplayColumn")
         .property("name", \.name)
         .property("styledBy", \.styledBy)
 }
 
 extension Output {
-    static let native = HostTypeBuilder<Output>("Output")
+    static let native = HostType.Builder<Output>("Output")
         .property("text", \.text)
         .property("lines", \.lines)
         .property("code", \.status.code)

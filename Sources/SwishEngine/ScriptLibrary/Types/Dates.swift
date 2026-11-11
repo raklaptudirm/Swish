@@ -28,7 +28,7 @@ extension Date {
 
     var shown: String { Date.formatter.string(from: self) }
 
-    static let native = HostTypeBuilder<Date>("Date")
+    static let native = HostType.Builder<Date>("Date")
         .property("description", \.shown)
         .property("debugDescription", \.shown)
         .failableInitializer { (text: String) in Date(isoText: text) }
