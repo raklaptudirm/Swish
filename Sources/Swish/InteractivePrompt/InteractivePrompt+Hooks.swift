@@ -1,6 +1,6 @@
 import Foundation
 import Swiit
-import SwishShell
+import SwishEngine
 import SystemPackage
 
 // What happens as each prompt is drawn: the actions the config added (`beforePrompt`,

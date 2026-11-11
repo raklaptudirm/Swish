@@ -1,0 +1,78 @@
+import Swiit
+import Testing
+
+@testable import SwishEngine
+
+private let wide = PrettyPrinter(width: .max)
+
+/// A case of the shell's `FileType`, as scripts hold it.
+private func fileType(_ name: String) -> Value {
+    FileType(rawValue: name)!.value
+}
+
+@Test func onOneLineItIsTheDebugDescription() throws {
+    let status = Output(text: "hi", status: .success)
+    let values: [Value] = [
+        .nothing, Value(3), Value("tab\there"), Value([Value(1), Value("x"), .nothing]),
+        try Interpreter().evaluate(#"(k: "v")"#),
+        try Interpreter().evaluate("()"),
+        .output(status), status.statusFields, fileType("directory"),
+    ]
+    for value in values {
+        #expect(wide.format(value) == value.debugDescription)
+    }
+}
+
+@Test func whatDoesNotFitBreaksOverLines() {
+    let value = Value(
+        [
+            Value("name"): Value("swish"),
+            Value("tags"): Value([Value("shell"), Value("swift")]),
+        ] as [Value: Value]
+    )
+    #expect(
+        PrettyPrinter(width: 30).format(value) == """
+            [
+              "name": "swish",
+              "tags": ["shell", "swift"]
+            ]
+            """
+    )
+    #expect(
+        PrettyPrinter(width: 20).format(value) == """
+            [
+              "name": "swish",
+              "tags": [
+                "shell",
+                "swift"
+              ]
+            ]
+            """
+    )
+}
+
+@Test func multiLineStringsInsideAreBlocks() {
+    let output = Value.output(Output(text: "one\ntwo \"\"\" \\ \u{1B}[1m", status: .success))
+    #expect(
+        wide.format(output) == #"""
+            Output(
+              text: """
+                one
+                two \""" \\ \u{1B}[1m
+                """,
+              status: Status(code: 0, signal: nil, succeeded: true)
+            )
+            """#
+    )
+    // On its own, a string is a literal on one line.
+    #expect(wide.format(Value("a\nb")) == #""a\nb""#)
+}
+
+@Test func colorsFollowTheHighlighter() {
+    let styled = PrettyPrinter(width: .max, styled: true)
+    #expect(
+        styled.format(Value([Value(1), Value("x")]))
+            == "[\u{1B}[95m1\u{1B}[0m, \u{1B}[33m\"x\"\u{1B}[0m]"
+    )
+    #expect(styled.format(fileType("file")) == "\u{1B}[93mFileType\u{1B}[0m.file")
+}

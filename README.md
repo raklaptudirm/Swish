@@ -191,7 +191,7 @@ over lines when they're wide.
 ## Getting started
 
 Swish needs Swift 6 on macOS or Linux. It's all Swift: what differs between the two (starting
-programs) is in `Sources/SwishShell/Runtime/Platform`.
+programs) is in `Sources/SwishEngine/Runtime/Platform`.
 
 The interpreter, [Swiit](https://github.com/raklaptudirm/Swiit), is a repository of its
 own, which the build looks for beside this one, at the version in `.swiit-version`:
@@ -287,14 +287,14 @@ request, on a macOS runner and on Linux (the `swift:6.2` image).
 | Path | What |
 |---|---|
 | [`Swiit`](https://github.com/raklaptudirm/Swiit) | The interpreter, in a repository of its own, which knows nothing of the shell; the shell is a client of it, built against the version in `.swiit-version`. It is looked for beside this checkout (`../Swiit`; CI clones the tag), so work on both together by editing there. It holds the language, the bridges, the host API, `SwiitKit` (`Value`, and what a host converts through, a module of its own) and the bridge generator. |
-| `Sources/SwishShell` | The shell: the language, running commands, the library scripts get, and showing values. A client of Swiit through its public interface alone, and offered to a program through its own (`Tests/SwishShellTests/PublicSurface.swift` lists it): |
+| `Sources/SwishEngine` | The shell: the language, running commands, the library scripts get, and showing values. A client of Swiit through its public interface alone, and offered to a program through its own (`Tests/SwishEngineTests/PublicSurface.swift` lists it): |
 | `…/ShellSyntax` | The shell's syntax: `Reader` reads its forms (commands, pipelines, `$(…)`, redirects) out of Swift text and writes the Swift calls they mean, with `Lexical` and `SwiftProbe` finding where Swift ends. |
 | `…/Execution` | Running a command line: `CommandBinding` (a command's words, `--flag` and values, bound to a function's parameters), `Pipelines` (stages, value streams, redirects, statuses), `Jobs` (the terminal the shell holds and its background jobs), `WordExpansion` (globs) and `ProcessSpawning` (`posix_spawn` with process groups and terminal handoff, the environment, what differs between macOS and Linux). |
 | `…/ScriptLibrary` | What scripts get: `Types` (`FileSize`, `FileEntry`, `Output`, `JSON`, `Date`…), `Functions`, `Prelude` (`Prelude.swift`, what the shell declares in Swift, read by the interpreter and not compiled, its bodiless functions' bodies found by name), `Registration` (telling the interpreter, through its public interface) and `Help`. |
 | `…/ValueDisplay` | Showing values: tables, key/value lists, pretty-printed values and the prompt's echo of each value (the interpreter only tells it what a statement gave), fitted to the terminal. |
 | `…/Shell` | The `Shell` itself: the host it is for the interpreter, running lines, files and scripts, answering what an editor asks (highlighting and completion), and its builtins. |
-| `Sources/Swish` | The program, a client of `SwishShell`'s public interface: the command line, the `InteractivePrompt` (the line editor, history, config and prompt hooks), the `TaskRunner` behind `run`, and the login shell. |
-| `Tests/SwishShellTests`, `Tests/SwishTests` | The shell's tests, and the program's. |
+| `Sources/Swish` | The program, a client of `SwishEngine`'s public interface: the command line, the `InteractivePrompt` (the line editor, history, config and prompt hooks), the `TaskRunner` behind `run`, and the login shell. |
+| `Tests/SwishEngineTests`, `Tests/SwishTests` | The shell's tests, and the program's. |
 | `Tests/Interactive` | `expect` scripts that drive the shell through a real terminal. |
 
 </details>

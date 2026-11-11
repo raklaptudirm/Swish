@@ -1,5 +1,5 @@
 import Swiit
-import SwishShell
+import SwishEngine
 import Testing
 
 @testable import Swish

@@ -16,14 +16,14 @@ let package = Package(
     ],
     targets: [
         .executableTarget(name: "Swish", dependencies: [
-            "SwishShell",
+            "SwishEngine",
             .product(name: "Swiit", package: "Swiit"),
             .product(name: "SystemPackage", package: "swift-system"),
         ]),
         // The shell: commands, pipelines, jobs, the line editor and the process
         // it runs in, built on the interpreter.
         .target(
-            name: "SwishShell",
+            name: "SwishEngine",
             dependencies: [
                 .product(name: "Swiit", package: "Swiit"),
                 .product(name: "SystemPackage", package: "swift-system"),
@@ -35,10 +35,10 @@ let package = Package(
         ),
         // The client: the prompt, the editor, the config and the task runner, as a program uses the shell.
         .testTarget(name: "SwishTests", dependencies: [
-            "Swish", "SwishShell", .product(name: "Swiit", package: "Swiit"),
+            "Swish", "SwishEngine", .product(name: "Swiit", package: "Swiit"),
         ]),
-        .testTarget(name: "SwishShellTests", dependencies: [
-            "SwishShell", .product(name: "Swiit", package: "Swiit"),
+        .testTarget(name: "SwishEngineTests", dependencies: [
+            "SwishEngine", .product(name: "Swiit", package: "Swiit"),
         ], exclude: ["Goldens", "programs.txt"]),
     ]
 )

@@ -1,4 +1,4 @@
-import SwishShell
+import SwishEngine
 
 /// Sets the shell up as a login shell: the environment the system's login profile makes. A
 /// terminal starts the login shell with little more than `HOME` and `USER` set, so without it the

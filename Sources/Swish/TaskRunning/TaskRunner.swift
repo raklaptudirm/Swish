@@ -1,6 +1,6 @@
 import Foundation
 import Swiit
-import SwishShell
+import SwishEngine
 
 /// Running a task: a function in a `Tasks.swish`, started by `run` as a Swish of its own so that a
 /// task's `cd` or variables don't touch the shell it was run from.

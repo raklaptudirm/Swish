@@ -1,6 +1,6 @@
 import Foundation
 import Swiit
-import SwishShell
+import SwishEngine
 
 // Drawing the prompt and the input in place, and finding the terminal's size.
 

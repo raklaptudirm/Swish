@@ -1,6 +1,6 @@
 import Foundation
 import Swiit
-import SwishShell
+import SwishEngine
 
 // What the prompt adds to the language: the actions a config hooks in, and the history.
 
