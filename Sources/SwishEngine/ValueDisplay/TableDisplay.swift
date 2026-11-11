@@ -49,9 +49,11 @@ struct DisplayRegistry: Sendable {
 
     /// Adds a Swift enum that says how its cases are styled, under the name its values show as.
     mutating func add<Type: DisplayStyled & CaseIterable>(_ type: Type.Type) {
-        enumStyles[String(describing: type)] = { name in
-            type.allCases.first { "\($0)" == name }?.displayStyle
-        }
+        let styles = Dictionary(
+            type.allCases.map { ("\($0)", $0.displayStyle) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        enumStyles[String(describing: type)] = { name in styles[name] ?? nil }
     }
 
     /// The columns a table of `typeName` starts with, if the type says.
