@@ -180,13 +180,6 @@ final class Job: ScriptConvertible, Presentable, CustomStringConvertible,
 struct JobSuspended: Error {}
 
 extension Shell {
-    /// Puts a job in `jobs`, giving it the next free number.
-    func adopt(_ job: Job) {
-        guard job.id == 0 else { return }
-        job.id = (jobs.map(\.id).max() ?? 0) + 1
-        jobs.append(job)
-    }
-
     /// Starts a pipeline of programs in the background (`async`), capturing
     /// its output if asked (`async $(…)`).
     func startJob(_ stages: [Stage], source: String, capture: Bool) throws -> Job {
@@ -230,7 +223,7 @@ extension Shell {
                 environment: environment,
                 input: input,
                 output: next?.write ?? output,
-                pgid: interactive ? job.pgid : -1,
+                pgid: jobControl.isInteractive ? job.pgid : -1,
                 foreground: false
             )
             if input >= 0 { close(input) }
@@ -238,7 +231,7 @@ extension Shell {
             input = next?.read ?? -1
             switch result {
             case .success(let pid):
-                if interactive && job.pgid == 0 { job.pgid = pid }
+                if jobControl.isInteractive && job.pgid == 0 { job.pgid = pid }
                 job.running.append(pid)
                 if isLast { job.lastPid = pid }
             case .failure(let failure):
@@ -249,7 +242,7 @@ extension Shell {
         if job.running.isEmpty {
             job.finish()
         } else {
-            adopt(job)
+            jobControl.adopt(job)
         }
         return job
     }
@@ -274,7 +267,7 @@ extension Shell {
             job.finish()
             relay?.stop()
             relay?.wait()
-            jobs.removeAll { $0 === job }
+            jobControl.jobs.removeAll { $0 === job }
             if case .failure(let error) = result, !job.givesOutput {
                 // How it ended is the awaiting task's error, not a reason for it to stop too.
                 if error.isRuntime {
@@ -286,14 +279,14 @@ extension Shell {
             return job.output!
         }
         if job.state != .done {
-            if ownsTerminal && job.pgid > 0, var modes = job.modes {
-                tcsetattr(terminal, TCSANOW, &modes)
+            if ownsTerminal && job.pgid > 0, let modes = job.modes {
+                jobControl.setModes(modes)
             }
             // It may have stopped for the terminal without our having noticed
             // yet, so always hand the terminal over and continue it; for a
             // job that's running, that changes nothing.
             job.state = .running
-            if ownsTerminal && job.pgid > 0 { tcsetpgrp(terminal, job.pgid) }
+            if ownsTerminal && job.pgid > 0 { jobControl.give(terminalTo: job.pgid) }
             job.send(SIGCONT)
             _ = waitForeground(job)
             if job.state == .stopped {
@@ -301,7 +294,7 @@ extension Shell {
             }
             job.finish()
         }
-        jobs.removeAll { $0 === job }
+        jobControl.jobs.removeAll { $0 === job }
         return job.output!
     }
 
@@ -321,54 +314,6 @@ extension Shell {
         if job.state == .stopped {
             job.send(SIGCONT)  // So it can act on the SIGTERM.
             job.state = .running
-        }
-    }
-
-    /// What's changed with background jobs, for the notices before the next
-    /// prompt. Finished jobs leave `jobs` once they've been reported.
-    public func jobNotices(styled: Bool = false) -> [String] {
-        updateJobs()
-        var notices: [String] = []
-        for job in jobs where job.state != .running && !job.reported {
-            job.reported = true
-            notices.append(
-                job.state == .stopped
-                    ? job.line(styled: styled)
-                        + "  (waiting for the terminal: await it)".styled(DisplayStyle.dim, styled)
-                    : job.line(styled: styled)
-            )
-        }
-        jobs.removeAll { $0.state == .done }
-        return notices
-    }
-
-    /// Checks on background jobs without waiting, noting which finished or
-    /// stopped. Finished jobs stay in `jobs`, shown as done, until they're
-    /// announced or awaited.
-    func updateJobs() {
-        for job in jobs where job.state == .running {
-            if let task = job.task {
-                if task.isFinished { job.finish() }
-                continue
-            }
-            var stopped = false
-            for pid in job.running {
-                var raw: Int32 = 0
-                guard waitpid(pid, &raw, WNOHANG | WUNTRACED) == pid else { continue }
-                if WaitStatus(raw).stopped {
-                    stopped = true
-                    continue
-                }
-                job.running.removeAll { $0 == pid }
-                if pid == job.lastPid {
-                    job.status = Status(WaitStatus(raw))
-                }
-            }
-            if job.running.isEmpty {
-                job.finish()
-            } else if stopped {
-                job.state = .stopped
-            }
         }
     }
 }
@@ -395,7 +340,7 @@ extension Shell {
             close(pipe.write)
             throw error
         }
-        adopt(job)
+        jobControl.adopt(job)
         return job
     }
 }

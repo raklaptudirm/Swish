@@ -197,8 +197,8 @@ extension Shell {
             }
             code = parsed
         }
-        if !jobs.isEmpty && !warnedAboutJobs {
-            warnedAboutJobs = true
+        if !jobControl.jobs.isEmpty && !jobControl.hasWarnedAboutJobs {
+            jobControl.hasWarnedAboutJobs = true
             report("there are jobs in the background (see `jobs`); exit again to leave anyway")
             return 1
         }
@@ -294,7 +294,7 @@ extension Shell {
             report("exec: \(name): command not found" + commandNotFoundHint(name))
             return 127
         }
-        if interactive { tcsetattr(terminal, TCSANOW, &shellModes) }
+        jobControl.restoreShellModes()
         let error = replaceProcess(with: path, args)
         report("exec: \(name): \(errorMessage(error.code).lowercased())")
         return 126

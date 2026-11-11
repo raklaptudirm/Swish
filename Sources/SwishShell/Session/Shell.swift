@@ -26,7 +26,7 @@ public final class Shell: @unchecked Sendable {
     }
     /// Whether the current task's programs get the terminal: the task in the
     /// foreground's do, in an interactive shell; a background task's don't.
-    var ownsTerminal: Bool { interactive && task.inForeground }
+    var ownsTerminal: Bool { jobControl.isInteractive && task.inForeground }
     /// Where the current task's errors go.
     var stderrFD: Int32 {
         get { task.stderrFD }
@@ -38,14 +38,8 @@ public final class Shell: @unchecked Sendable {
     /// name.
     var commandUses: [Front.CommandUse] = []
 
-    let terminal = STDIN_FILENO
-    /// Whether the shell owns the terminal and does job control.
-    var interactive = false
-    var shellPgid = getpgrp()
-    var shellModes = termios()
-    /// Jobs in the background: started with `async`, or stopped with ^Z.
-    var jobs: [Job] = []
-    var warnedAboutJobs = false
+    /// The terminal the shell holds and the jobs it keeps.
+    let jobControl = JobControl()
     /// A `try!` failed in a script, which stops it.
     var scriptStopped = false
     /// The builtins by name: the shell's own, and a client's (`register(_:)`).
@@ -264,7 +258,7 @@ extension Shell {
         then finish: (() -> Void)? = nil
     ) {
         // Drop a stale ^C from while the prompt was up; a script's stops it.
-        if interactive && interpreter.file == nil { _ = takeInterrupt() }
+        if jobControl.isInteractive && interpreter.file == nil { _ = takeInterrupt() }
         stoppedBySignal = nil
         var handled = false
         // Only the prompt shows values; running code prints what it prints. A script goes on with
@@ -298,7 +292,7 @@ extension Shell {
         }
         if diagnostic.isCancelled, let signal = stoppedBySignal {
             stoppedBySignal = nil
-            if interactive && interpreter.file == nil {
+            if jobControl.isInteractive && interpreter.file == nil {
                 writeAll(STDERR_FILENO, "\n")
                 lastStatus = .signaled(SIGINT)
             } else {
@@ -314,7 +308,7 @@ extension Shell {
             lastStatus = .exited(diagnostic.status)
             // At the prompt, stopping would mean exiting your shell; the
             // config file stops, as a script does.
-            scriptStopped = !interactive || interpreter.file != nil
+            scriptStopped = !jobControl.isInteractive || interpreter.file != nil
             return false
         }
         if diagnostic.isRuntime {

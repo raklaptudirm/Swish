@@ -137,7 +137,7 @@ extension Shell {
                 environment: environment,
                 input: input,
                 output: next?.write ?? stdoutFD,
-                pgid: interactive ? job.pgid : -1,
+                pgid: jobControl.isInteractive ? job.pgid : -1,
                 foreground: ownsTerminal
             )
             if input >= 0 { close(input) }
@@ -145,7 +145,7 @@ extension Shell {
 
             switch result {
             case .success(let pid):
-                if interactive && job.pgid == 0 { job.pgid = pid }
+                if jobControl.isInteractive && job.pgid == 0 { job.pgid = pid }
                 job.running.append(pid)
                 if isLast { job.lastPid = pid }
             case .failure(let failure):
@@ -227,13 +227,10 @@ extension Shell {
         // A task in the background waits for its programs without the terminal.
         let ownsTerminal = ownsTerminal
         if ownsTerminal && job.pgid > 0 {
-            tcsetpgrp(terminal, job.pgid)
+            jobControl.give(terminalTo: job.pgid)
         }
         defer {
-            if ownsTerminal {
-                tcsetpgrp(terminal, shellPgid)
-                tcsetattr(terminal, TCSANOW, &shellModes)
-            }
+            if ownsTerminal { jobControl.takeTerminalBack() }
         }
 
         while let pid = job.running.first {
@@ -248,14 +245,10 @@ extension Shell {
                 continue
             }
             if WaitStatus(raw).stopped {
-                if ownsTerminal {
-                    var modes = termios()
-                    tcgetattr(terminal, &modes)
-                    job.modes = modes
-                }
+                if ownsTerminal { job.modes = jobControl.currentModes() }
                 job.state = .stopped
                 job.reported = true
-                adopt(job)
+                jobControl.adopt(job)
                 writeAll(
                     STDERR_FILENO,
                     "\n" + job.line(styled: DisplayStyle.enabled(for: STDERR_FILENO)) + "\n"
@@ -276,7 +269,7 @@ extension Shell {
         let status = Status(WaitStatus(raw))
         if case .signaled(let signal) = status {
             switch signal {
-            case SIGINT: if interactive { writeAll(STDERR_FILENO, "\n") }
+            case SIGINT: if jobControl.isInteractive { writeAll(STDERR_FILENO, "\n") }
             case SIGPIPE: break
             default: if !quiet { report(String(cString: strsignal(signal))) }
             }
@@ -322,7 +315,7 @@ extension Shell {
             argv,
             pgid: pgid,
             descriptors: mapped,
-            terminal: interactive && foreground ? terminal : nil
+            terminal: jobControl.isInteractive && foreground ? jobControl.terminal : nil
         ) {
         case .success(let pid): return .success(pid)
         case .failure(let error): code = error.code

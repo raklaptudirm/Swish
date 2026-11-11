@@ -5,8 +5,8 @@ extension Shell {
     func installJobs() {
         interpreter.register(computed: "jobs", type: .list(.named(Job.id, [.named(Output.id)]))) {
             [unowned self] in
-            updateJobs()  // So their states are current.
-            return Value(jobs.map { Value($0) })
+            jobControl.updateJobs()  // So their states are current.
+            return Value(jobControl.jobs.map { Value($0) })
         }
     }
 }
@@ -17,7 +17,7 @@ extension Shell {
     var jobBodies: [String: @Sendable ([String: Value]) throws -> Value] {
         [
             "latestJob": { [unowned self] _ in
-                guard let latest = jobs.last else {
+                guard let latest = jobControl.jobs.last else {
                     throw RuntimeError("there are no jobs to await")
                 }
                 return Value(latest)

@@ -100,7 +100,7 @@ private func status(_ source: String) -> Int32 {
     // …and the prompt's announcement reports each once, then drops them.
     #expect(shell.jobNotices() == ["[1] done  sleep 0.1", "[2] failed (2)  sh -c 'exit 2'"])
     #expect(shell.jobNotices().isEmpty)
-    #expect(shell.jobs.isEmpty)
+    #expect(shell.jobControl.jobs.isEmpty)
 }
 
 @Test func jobMembers() throws {
