@@ -42,6 +42,18 @@ struct DisplayRegistry: Sendable {
         self.enumStyles = enumStyles
     }
 
+    /// Adds a Swift type that says its columns, under the name its values show as.
+    mutating func add<Type: Tabular>(_ type: Type.Type) {
+        columns[String(describing: type)] = type.columns
+    }
+
+    /// Adds a Swift enum that says how its cases are styled, under the name its values show as.
+    mutating func add<Type: DisplayStyled & CaseIterable>(_ type: Type.Type) {
+        enumStyles[String(describing: type)] = { name in
+            type.allCases.first { "\($0)" == name }?.displayStyle
+        }
+    }
+
     /// The columns a table of `typeName` starts with, if the type says.
     func columns(for typeName: String) -> [DisplayColumn]? {
         columns[typeName] ?? declared?(typeName)

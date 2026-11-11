@@ -32,14 +32,12 @@ extension Shell {
 
     func tableRegistry() -> DisplayRegistry {
         var registry = DisplayRegistry()
-        registry.columns = [
-            "FileEntry": FileEntry.columns, "ProcessEntry": ProcessEntry.columns,
-            "Job": Job.columns, "Help": Shell.helpColumns,
-        ]
-        registry.enumStyles = [
-            "FileType": { name in FileType.allCases.first { "\($0)" == name }?.displayStyle },
-            "JobState": { name in JobState.allCases.first { "\($0)" == name }?.displayStyle },
-        ]
+        registry.add(FileEntry.self)
+        registry.add(ProcessEntry.self)
+        registry.add(Job.self)
+        registry.columns["Help"] = Shell.helpColumns
+        registry.add(FileType.self)
+        registry.add(JobState.self)
         // Called holding the interpreter lock, as every table is laid out.
         nonisolated(unsafe) let shell = self
         registry.declared = { typeName in shell.declaredColumns(of: typeName) }
