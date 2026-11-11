@@ -13,6 +13,8 @@ enum StageReceiver: Equatable, Sendable {
     case collected, stream, each, value
 }
 
+/// A stage whose name may be a method of what flows in, kept until the first item arrives to tell.
+
 struct DeferredStage {
     var name: String
     var arguments: [CommandArgument]
@@ -21,6 +23,10 @@ struct DeferredStage {
     /// What it is if no form of a method fits: a function, or a program.
     var fallback: () throws -> Stage
 }
+
+/// A method whose generic constraint the items do not meet, which reads as an error and not as
+
+/// a method that does not fit.
 
 private struct ConstraintFailure: Error { var message: String }
 

@@ -21,6 +21,8 @@ final class ValueStream: @unchecked Sendable {  // safe: a stream is read by one
     }
 }
 
+/// Reads a descriptor a line at a time, keeping what it has read past the line for the next.
+
 private final class LineReader {
     private let fd: Int32
     private var buffer: [UInt8] = []
@@ -256,12 +258,14 @@ extension CommandRunner {
         single: Value?
     ) throws -> ValueStream {
         let call = try bind(commandLine: args, to: callee, excludingInput: true)
+
         let overload = callee.overloads[call.overload]
         if case .method(let method) = overload.kind, method.isMutating {
             throw RuntimeError(
                 "\(callee.name) is mutating, and a piped value can't change: call it on a variable"
             )
         }
+
         // A stage written as a call, with arguments, is a method.
         let isProperty = overload.function == nil && (call.written ?? []).isEmpty
         func apply(to value: Value) throws -> Value {
@@ -269,6 +273,7 @@ extension CommandRunner {
                 ? try interpreter.value(forMember: callee.name, of: value)
                 : try invoke(callee, call.arguments(), on: value)
         }
+
         switch receiver {
         case .each:
             return ValueStream {
@@ -278,6 +283,7 @@ extension CommandRunner {
                 }
                 return nil
             }
+
         case .collected:
             var output: ValueStream?
             return ValueStream {
@@ -288,6 +294,7 @@ extension CommandRunner {
                 }
                 return try output!.next()
             }
+
         case .value:
             var output: ValueStream?
             return ValueStream {
@@ -299,6 +306,7 @@ extension CommandRunner {
                 }
                 return try output!.next()
             }
+
         case .stream:
             // Lazily: the stage reads upstream only as its own reader is asked, and the stream it
             // gives is read as the next stage asks.

@@ -1,10 +1,14 @@
 import Foundation
 import Swiit
 
+/// A program that could not be started: what to report, and the status to end with.
+
 struct SpawnFailure: Error {
     let message: String
     let status: Int32
 }
+
+/// What a pipeline's stage is, decided before anything runs.
 
 enum Stage {
     case external(

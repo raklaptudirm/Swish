@@ -21,6 +21,8 @@ struct CommandLineBinding {
     /// flag's word).
     struct Piece { var word: Int; var text: String? }
 
+    /// What one parameter was given.
+
     enum Assigned {
         /// Words: a positional, a flag's value, or the rest for a variadic or a collection.
         case words([Piece])
@@ -80,6 +82,7 @@ extension CommandRunner {
                 excludingInput: excludingInput
             )
         }
+
         var matches: [CommandLineBinding] = []
         for (position, parameters) in overloads.enumerated() {
             do {
@@ -96,6 +99,7 @@ extension CommandRunner {
                 continue
             }
         }
+
         func rendered(_ symbol: Symbol) -> String { "  " + symbol.signature }
         guard let best = matches.map(\.penalty).min() else {
             throw RuntimeError(
@@ -103,6 +107,7 @@ extension CommandRunner {
                     + callee.overloads.map(rendered).joined(separator: "\n")
             )
         }
+
         var bestMatches = matches.filter { $0.penalty == best }
         if bestMatches.count > 1 {
             // Of equals, a function that takes a type itself beats one that takes anything, as in
@@ -113,6 +118,7 @@ extension CommandRunner {
             let fewest = bestMatches.map(generic).min()!
             bestMatches = bestMatches.filter { generic($0) == fewest }
         }
+
         guard bestMatches.count == 1 else {
             throw RuntimeError(
                 "\(name): ambiguous call; these overloads all match:\n"

@@ -8,6 +8,7 @@ import Swiit
 final class Job: ScriptConvertible, Presentable, Tabular, CustomStringConvertible,
     CustomDebugStringConvertible, @unchecked Sendable
 {
+    /// Where a job is in its life.
     enum State: String {
         case running, stopped, done
     }
@@ -263,11 +264,14 @@ extension CommandRunner {
                     writeAll(stdoutFD, text + "\n")
                 }
             }
+
             let result = Result { () throws(Diagnostic) -> Value in try interpreter.join(task) }
             job.finish()
             relay?.stop()
             relay?.wait()
+
             jobControl.jobs.removeAll { $0 === job }
+
             if case .failure(let error) = result, !job.givesOutput {
                 // How it ended is the awaiting task's error, not a reason for it to stop too.
                 if error.isRuntime {
@@ -276,17 +280,21 @@ extension CommandRunner {
                 if error.isCancelled { throw RuntimeError("\(job.source) was cancelled") }
                 throw RuntimeError("\(job.source) stopped: \(error)")
             }
+
             return job.output!
         }
+
         if job.state != .done {
             if ownsTerminal && job.pgid > 0, let modes = job.modes {
                 jobControl.setModes(modes)
             }
+
             // It may have stopped for the terminal without our having noticed
             // yet, so always hand the terminal over and continue it; for a
             // job that's running, that changes nothing.
             job.state = .running
             if ownsTerminal && job.pgid > 0 { jobControl.give(terminalTo: job.pgid) }
+
             job.send(SIGCONT)
             _ = waitForeground(job)
             if job.state == .stopped {
@@ -294,6 +302,7 @@ extension CommandRunner {
             }
             job.finish()
         }
+
         jobControl.jobs.removeAll { $0 === job }
         return job.output!
     }

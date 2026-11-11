@@ -1,10 +1,12 @@
 import Foundation
 import Swiit
 
-/// A redirect with its file name worked out.
+/// How a redirect opens its file.
 enum RedirectMode: Equatable, Sendable { case read, write, append }
 
+/// A redirect of one descriptor, with its file name worked out.
 struct ResolvedRedirect {
+    /// What it does to the descriptor.
     enum Action {
         case open(String, RedirectMode)
         /// Whatever the command's descriptor `n` is at this point, as in `2>&1`.

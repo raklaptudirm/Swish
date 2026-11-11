@@ -6,6 +6,8 @@ import Synchronization
 // a value in hand, for highlighting and completion, and for telling a method's name from a
 // program's.
 
+/// The names a stage after `|` could be, by what each is a member of.
+
 struct StageNames {
     /// Every member of Swift's own types a stage could call: one that reads its receiver without
     /// changing it.
@@ -43,6 +45,7 @@ extension CommandRunner {
 
     private func findStageNames() -> StageNames {
         var names = StageNames()
+
         func add(_ symbol: Symbol) {
             // What a value of the type has, not what the type itself does.
             switch symbol.kind {
@@ -54,15 +57,18 @@ extension CommandRunner {
             default: break
             }
         }
+
         for type in interpreter.types where type.isBuiltin {
             type.id.map { ScriptType.named($0).members(in: interpreter).forEach(add) }
         }
+
         // What every sequence has.
         ScriptType.list(.any).members(in: interpreter).forEach(add)
         names.sequence = Set(
             ScriptType.named(.sequence).members(in: interpreter).filter { $0.function != nil }
                 .map(\.name)
         )
+
         // The stream's operators: what `for` reads it with is not one.
         let reading: Set = ["makeIterator", "makeAsyncIterator", "next", "read"]
         for symbol in preludeTypes.streamType.members(in: interpreter)
@@ -72,6 +78,7 @@ extension CommandRunner {
                 names.streams.insert(symbol.name)
             }
         }
+
         return names
     }
 

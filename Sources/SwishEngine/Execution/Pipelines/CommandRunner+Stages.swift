@@ -17,32 +17,38 @@ extension CommandRunner {
     func stages(input: Value?, commands: [CommandSpec]) throws -> [Stage] {
         var stages: [Stage] = []
         if let input { stages.append(.value(input)) }
+
         for command in commands {
             var arguments = command.arguments
             guard case .text(let name)? = arguments.first else {
                 throw RuntimeError("a closure can't be a command name")
             }
+
             if let call = command.call {
                 guard !command.external else {
                     throw RuntimeError("a program can't be called with (…)")
                 }
                 arguments += call.map(CommandArgument.call)
             }
+
             let redirects = command.redirects
             let environment = command.environment
             let rest = Array(arguments.dropFirst())
+
             // A function if one has that name, else a program; or a method of what flows in, which
             // is found when the first item arrives (Shell+Resolving.swift).
             func function(_ callee: Callee?) throws -> Stage {
                 guard let callee else { throw RuntimeError("\(name): not found") }
                 return .function(callee, rest, redirects: redirects, environment: environment)
             }
+
             func fallback() throws -> Stage {
                 if !command.external, let callee = commandFunctions(named: name) {
                     return try function(callee)
                 }
                 return try program(arguments, name, command, redirects, environment)
             }
+
             if !command.external, (input != nil || !stages.isEmpty),
                 isMemberName(name) || isStageMethod(name)
             {
@@ -61,6 +67,7 @@ extension CommandRunner {
                 stages.append(try fallback())
             }
         }
+
         return stages
     }
 
@@ -80,6 +87,7 @@ extension CommandRunner {
             }
             return text
         }
+
         // A builtin that becomes a program, as `run` becomes Swish on a task file.
         if !command.external,
             let program = try services.program(ofBuiltin: name, arguments: Array(argv.dropFirst()))
@@ -91,6 +99,7 @@ extension CommandRunner {
                 environment: environment
             )
         }
+
         return .external(
             argv,
             skipBuiltins: command.external,
