@@ -3,6 +3,7 @@ import Foundation
 // The forms the reader reads: the pieces of a command line, before they are written out as Swift.
 
 extension Reader {
+    /// A form that could not be read, and whether more input could finish it.
     struct Failure: Error, CustomStringConvertible {
         var message: String
         var incomplete: Bool
@@ -14,6 +15,7 @@ extension Reader {
         var description: String { message }
     }
 
+    /// How a command line is tried: plain, `try?` or `try!`.
     enum Attempt: Equatable {
         case plain, optional, forced
 
@@ -37,12 +39,14 @@ extension Reader {
         case spread(String)
     }
 
+    /// One word of a command: text made of pieces, or a closure.
     enum Word: Equatable {
         case text([Piece])
         /// A closure passed as an argument: Swift.
         case closure(String)
     }
 
+    /// A redirect of one descriptor, to a file or to another descriptor.
     struct Redirect: Equatable {
         enum Target: Equatable {
             case file([Piece], Mode)
@@ -53,6 +57,7 @@ extension Reader {
         var target: Target
     }
 
+    /// One command of a pipeline: its words, redirects and environment.
     struct Command {
         var words: [Word]
         var external = false
@@ -61,6 +66,7 @@ extension Reader {
         var call: String?
     }
 
+    /// Commands joined by `|`, with the source they were read from.
     struct Pipeline {
         var commands: [Command]
         var source: String
@@ -68,6 +74,7 @@ extension Reader {
         var throwing: Attempt?
     }
 
+    /// One side of `&&` or `||`: a pipeline, or a Swift expression.
     enum Operand {
         case command(Pipeline)
         case expression(String)
@@ -77,6 +84,7 @@ extension Reader {
         }
     }
 
+    /// Operands joined by `&&` and `||`.
     struct Chain {
         var first: Operand
         var links: [(isAnd: Bool, operand: Operand)] = []
@@ -84,6 +92,7 @@ extension Reader {
         var operands: [Operand] { [first] + links.map(\.operand) }
     }
 
+    /// What a statement starts as: an expression, or a command (and why it is not an expression).
     enum UnitStart {
         case expression
         case command(notAnExpression: String?)

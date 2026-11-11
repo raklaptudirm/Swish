@@ -105,6 +105,7 @@ private func runningProcesses() throws(SystemPackage.Errno) -> [ProcessEntry] {
     } catch {
         throw SystemPackage.Errno(rawValue: ENOENT)
     }
+
     let pageSize = Int64(sysconf(Int32(_SC_PAGESIZE)))
     let ticksPerSecond = Double(sysconf(Int32(_SC_CLK_TCK)))
     return names.compactMap(Int32.init).sorted()

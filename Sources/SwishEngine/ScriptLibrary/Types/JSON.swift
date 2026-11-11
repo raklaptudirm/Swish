@@ -54,11 +54,14 @@ struct JSON {
         case .nothing: return "null"
         case .bool: return String(value.casting(to: Bool.self)!)
         case .int: return String(value.casting(to: Int.self)!)
+
         case .double:
             let double = value.casting(to: Double.self)!
             guard double.isFinite else { throw LibraryError("to json: \(double) isn't valid JSON") }
             return String(double)
+
         case .string: return quoted(value.description)
+
         case .enumeration:
             // A raw value, or the case's name; with associated values, a
             // struct of them under the case's name.
@@ -74,6 +77,7 @@ struct JSON {
                 rawValue: rawValue
             )
             return "{\n" + inner + quoted(name) + ": " + carried + "\n\(indent)}"
+
         case .list:
             let items = value.casting(to: [Value].self) ?? []
             guard !items.isEmpty else { return "[]" }
@@ -81,12 +85,14 @@ struct JSON {
                 + (try items.map { inner + (try text($0, indent: inner, rawValue: rawValue)) })
                 .joined(separator: ",\n")
                 + "\n\(indent)]"
+
         case .structure, .tuple:
             return try objectText(
                 (value.fields?.entries ?? []).map { (name: $0.key, value: $0.value) },
                 indent: indent,
                 rawValue: rawValue
             )
+
         case .dictionary:
             guard let dictionary = value.entries, dictionary.count > 0 else { return "{}" }
             let fields = try dictionary.sortedForDisplay.map { key, value in
@@ -99,8 +105,10 @@ struct JSON {
                     + (try text(value, indent: inner, rawValue: rawValue))
             }
             return "{\n" + fields.joined(separator: ",\n") + "\n\(indent)}"
+
         case .function:
             throw LibraryError("to json: a function has no JSON form")
+
         case .object:
             if let fields = value.fields {
                 return try objectText(
@@ -144,6 +152,7 @@ struct JSON {
         return "{\n" + lines.joined(separator: ",\n") + "\n\(indent)}"
     }
 
+    /// Any `Encodable`, encoded through a container so the encoder's strategies apply to it.
     private struct AnyEncodable: Encodable {
         let value: any Encodable
         // Through a container, which is what applies the encoder's strategy for dates.
@@ -170,6 +179,7 @@ struct JSON {
     }
 }
 
+/// Reads JSON text into values, reporting where it stops making sense.
 private struct JSONParser {
     let bytes: [UInt8]
     var index = 0
@@ -205,10 +215,12 @@ private struct JSONParser {
         index += 1
         var fields: [(name: String, value: Value)] = []
         skipWhitespace()
+
         if index < bytes.count && bytes[index] == UInt8(ascii: "}") {
             index += 1
             return Value(JSONObject(fields))
         }
+
         while true {
             skipWhitespace()
             guard index < bytes.count, bytes[index] == UInt8(ascii: "\"") else {
@@ -263,6 +275,7 @@ private struct JSONParser {
             scalars.append(contentsOf: String(decoding: run, as: UTF8.self).unicodeScalars)
             run = []
         }
+
         while index < bytes.count {
             let byte = bytes[index]
             index += 1
@@ -298,6 +311,7 @@ private struct JSONParser {
                 run.append(byte)
             }
         }
+
         throw error("unterminated string")
     }
 

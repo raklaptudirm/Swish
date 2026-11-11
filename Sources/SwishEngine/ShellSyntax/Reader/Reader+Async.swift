@@ -8,6 +8,7 @@ extension Reader {
         mark(.keyword, from: pos, to: pos + "async".count)
         pos += "async".count
         skipSpaces()
+
         if peek() == "$" && peek(1) == "(" {
             let open = pos
             mark(.punctuation, from: open, to: open + 2)
@@ -42,12 +43,15 @@ extension Reader {
             }
             return "\(emit(pipeline)).startCapturing()"
         }
+
         guard peek() != nil else {
             throw Failure.incomplete("expected a command or an expression after 'async'")
         }
+
         if commandAhead(boolIsCommand: true).isCommand {
             return "\(emit(try parsePipeline())).start()"
         }
+
         // `async f(x)`, `async { … }`: Swish code, as a task of its own.
         let exprStart = pos
         guard let probe = swiftExpression(logical: false) else {

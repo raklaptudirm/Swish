@@ -6,6 +6,7 @@ extension Reader {
     mutating func parsePipeline(from start: Int? = nil, input: String? = nil) throws -> Pipeline {
         let start = start ?? pos
         var commands = [try parseCommand()]
+
         // A method with nothing piped in, and no function or program by that name, has nothing to
         // work on.
         if input == nil, !commands[0].external, case .text(let pieces)? = commands[0].words.first,
@@ -17,6 +18,7 @@ extension Reader {
                 "\(name) is a method: pipe something into it, as in `ls | \(name)`, or call it on a value, as in `xs.\(name)(…)`"
             )
         }
+
         var end = pos
         while true {
             skipSpaces()
@@ -26,8 +28,10 @@ extension Reader {
             commands.append(try parseCommand())
             end = pos
         }
+
         let source = text.slice(start..<end).trimmingCharacters(in: .whitespacesAndNewlines)
         front.record(.pipeline, source)
+
         for (index, command) in commands.enumerated()
         where !command.external && command.call == nil && command.redirects.isEmpty {
             guard case .text(let first)? = command.words.first, first.count == 1,
@@ -51,6 +55,7 @@ extension Reader {
                 )
             }
         }
+
         return Pipeline(commands: commands, source: source, input: input, throwing: nil)
     }
 
@@ -59,12 +64,14 @@ extension Reader {
         let nameStart = pos
         var external = consume("^")
         let caretStart: Int? = external ? nameStart : nil
+
         if !external, identifier() == "foreign", peek(7) == " " || peek(7) == "\t" {
             mark(.keyword, from: pos, to: pos + 7)
             pos += 7
             skipSpaces()
             external = true
         }
+
         var command = Command(words: [], external: external)
         while true {
             skipSpaces()
@@ -127,6 +134,7 @@ extension Reader {
             }
             command.words.append(.text(word))
         }
+
         guard !command.words.isEmpty else {
             if let assignment = command.environment.first {
                 throw Failure(
@@ -138,6 +146,7 @@ extension Reader {
             }
             throw Failure.incomplete("expected a command")
         }
+
         return command
     }
 

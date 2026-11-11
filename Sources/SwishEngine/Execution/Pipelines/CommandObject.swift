@@ -75,9 +75,11 @@ extension CommandRunner {
         guard let body = arguments["body"], body.kind == .function else {
             throw RuntimeError("capture needs a block")
         }
+
         // What runs in it leaves the status it ends with.
         let before = lastStatus
         lastStatus = .success
+
         // Its statements run as statements, which say how they went.
         let text = try capturing {
             let result = try self.callBlock(body)
@@ -85,9 +87,11 @@ extension CommandRunner {
             // its status here.
             if result.kind != .nothing { self.lastStatus = self.status(of: result) }
         }
+
         let status = lastStatus
         lastStatus = before
         let output = output(text, status: status)
+
         // Without `try`, failing is just what `.status` says.
         if arguments["throwing"]?.casting(to: Bool.self) == true && !status.succeeded {
             throw RuntimeError.commandFailure(
@@ -96,6 +100,7 @@ extension CommandRunner {
                 runner: self
             )
         }
+
         return .output(output)
     }
 
@@ -202,15 +207,19 @@ extension CommandRunner {
         else {
             throw RuntimeError("\(command.typeName) isn't a Command")
         }
+
         var spec = CommandSpec(arguments: try words.flatMap(arguments))
         spec.external = command.field("isExternal")?.casting(to: Bool.self) == true
+
         if let redirections = command.field("redirections")?.casting(to: [Value].self) {
             spec.redirects = try redirections.map(redirect)
         }
+
         if let variables = command.field("variables")?.entries {
             spec.environment = variables.map { ($0.key.description, $0.value.description) }
                 .sorted { $0.0 < $1.0 }
         }
+
         // `(by: "size")`: the tuple's elements, as arguments; a position is no label.
         if let call = command.field("arguments"), call.kind != .nothing {
             if call.kind == .tuple, let tuple = call.fields {
@@ -222,6 +231,7 @@ extension CommandRunner {
                 spec.call = [(label: nil, value: call)]
             }
         }
+
         return spec
     }
 

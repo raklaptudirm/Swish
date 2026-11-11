@@ -18,6 +18,7 @@ extension Shell {
             interpreter.globals().map { ($0.name, Names.Role($0.kind)) },
             uniquingKeysWith: { first, _ in first }
         )
+
         let front = Front(bound: Names(roles: roles))
         front.closureArity = { [unowned self] (name: String) -> Int? in
             for overload in runner.commandFunctions(named: name)?.overloads ?? [] {
@@ -29,12 +30,15 @@ extension Shell {
             }
             return nil
         }
+
         front.isMethodWithoutInput = { [unowned self] name in
             runner.isStageMethod(name) && runner.commandFunctions(named: name) == nil
                 && builtins[name] == nil
                 && runner.findExecutable(name) == nil
         }
+
         front.recovering = recovering
+
         front.swiftHighlight = { [unowned self] source in
             self.interpreter.highlighting(source)
                 .map { span in
@@ -53,6 +57,7 @@ extension Shell {
                     return HighlightSpan(range: span.range, kind: kind)
                 }
         }
+
         return front
     }
 
@@ -113,6 +118,7 @@ extension Shell {
                 return "\(error)"
             }
         }
+
         return nil
     }
 }

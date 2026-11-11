@@ -64,10 +64,13 @@ extension Shell {
         switch value.kind {
         case .nothing:
             return
+
         case .tuple where fields?.count == 0:
             return  // `()`: what a Void call gives as a value.
+
         case .object where value.displayShape.isEmpty && !debug:
             return
+
         case .structure where !debug, .tuple where !debug:
             for line in DisplayFormatter.keyValueLines(
                 fields!,
@@ -76,6 +79,7 @@ extension Shell {
             ) {
                 output.write(line + "\n")
             }
+
         // A command's list reads as a pipeline's output would: records as a
         // table, anything else an item per line. A bare list is a value.
         case .list
@@ -86,9 +90,11 @@ extension Shell {
             }
             for item in value.casting(to: [Value].self) ?? [] { formatter.add(item) }
             formatter.finish()
+
         case _ where debug:
             let printer = PrettyPrinter(width: traits.width ?? 80, styled: traits.isStyled)
             output.write(printer.format(value) + "\n")
+
         default:
             output.write(value.description + "\n")
         }

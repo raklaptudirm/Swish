@@ -31,41 +31,50 @@ extension Reader {
             }
             throw error
         }
+
         var chain = Chain(first: operands[0], isCondition: condition)
         chain.links = zip(joins, operands.dropFirst()).map { (isAnd: $0, operand: $1) }
+
         let isShells = chain.operands.contains { operand in
             switch operand {
             case .command: true
             case .expression: condition && operand.isOptionalAttempt
             }
         }
+
         guard isShells else {
             self = start
             return nil
         }
+
         return chain
     }
 
     private mutating func parseChainOperand(_ sawCommand: inout Bool) throws -> Operand {
         skipSpaces()
         guard peek() != nil else { throw Failure.incomplete("expected a command") }
+
         if let word = identifier(), Reader.reservedStarts.contains(word) {
             throw Failure("'\(word)' must start a statement")
         }
+
         if identifier() == "try" {
             let before = sawCommand
             sawCommand = true
             if let command = try parseThrowingCommand() { return .command(command) }
             sawCommand = before
         }
+
         // `async …` is an expression whichever way it goes.
         if identifier() == "async" {
             return .expression(try parseAsync())
         }
+
         if commandAhead().isCommand {
             sawCommand = true
             return .command(try parsePipeline())
         }
+
         let start = pos
         let probe = swiftExpression(logical: true) ?? swiftExpression(logical: false)
         guard let probe, probe.failure == nil else {
@@ -131,9 +140,11 @@ extension Reader {
         defer { self = saved }
         skipSpaces()
         guard let c = peek() else { return .expression }
+
         if c == "^" || (c == "$" && peek(1).map(Lex.isIdentifierStart) ?? false) {
             return .command(notAnExpression: nil)
         }
+
         // `'raw'` is a string, which Swift has no spelling of: an expression if it is the whole
         // unit.
         if c == "'", let close = chars[(pos + 1)...].firstIndex(of: "'") {
@@ -141,6 +152,7 @@ extension Reader {
             skipSpaces()
             return endsUnit() ? .expression : .command(notAnExpression: nil)
         }
+
         if let word = identifier() {
             let after = peek(word.count)
             if boolIsCommand && (word == "true" || word == "false")
@@ -153,8 +165,10 @@ extension Reader {
                 return after != "." && after != "[" ? .command(notAnExpression: nil) : .expression
             }
         }
+
         var wordEnd = pos
         while wordEnd < chars.count, !isWordBoundary(chars[wordEnd]) { wordEnd += 1 }
+
         let probe = SwiftProbe.expression(
             in: blanked,
             at: pos,
@@ -162,10 +176,12 @@ extension Reader {
             names: names,
             inCondition: conditionDepth > 0
         )
+
         if let failure = probe.failure {
             guard failure <= wordEnd else { return .expression }
             return .command(notAnExpression: nil)
         }
+
         pos = probe.end
         skipSpaces()
         guard endsUnit() else { return .command(notAnExpression: nil) }

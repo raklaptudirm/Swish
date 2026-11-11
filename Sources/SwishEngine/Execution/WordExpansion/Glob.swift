@@ -43,8 +43,10 @@ enum Glob {
     /// match a leading dot, and `**` doesn't enter hidden directories.
     static func expand(_ pattern: String) -> [String] {
         let wantsDirectories = pattern.hasSuffix("/")
+
         let segments = pattern.split(separator: "/", omittingEmptySubsequences: true)
             .map(String.init)
+
         var paths = [pattern.hasPrefix("/") ? "/" : ""]
         for (index, segment) in segments.enumerated() {
             let isLast = index == segments.count - 1
@@ -68,6 +70,7 @@ enum Glob {
             }
             paths = next
         }
+
         let results = Array(Set(paths)).sorted()
         return wantsDirectories ? results.map { $0 + "/" } : results
     }
@@ -115,6 +118,7 @@ enum Glob {
         {
             return false
         }
+
         // Where to go back to after a mismatch: just after the last `*`,
         // with it taking one more character.
         var p = 0, n = 0
@@ -138,6 +142,7 @@ enum Glob {
             p = back.pattern
             n = back.name + 1
         }
+
         while p < pattern.count, pattern[p] == "*" { p += 1 }
         return p == pattern.count
     }
@@ -152,6 +157,7 @@ enum Glob {
         switch pattern[index] {
         case "\\" where index + 1 < pattern.count:
             return (pattern[index + 1] == character, index + 2)
+
         case "[":
             var i = index + 1
             let negated = i < pattern.count && (pattern[i] == "!" || pattern[i] == "^")
@@ -173,6 +179,7 @@ enum Glob {
             // An unclosed `[` is just a bracket.
             guard i < pattern.count else { return (character == "[", index + 1) }
             return (matched != negated, i + 1)
+
         default:
             return (pattern[index] == character, index + 1)
         }

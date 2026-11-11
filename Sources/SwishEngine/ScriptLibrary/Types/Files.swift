@@ -78,6 +78,7 @@ func ls(_ paths: [FilePath] = [], all: Bool = false) -> Partial<[FileEntry]> {
             entry(named: name, at: fullPath, into: &entries, errors: &errors)
         }
     }
+
     return Partial(entries, errors: errors)
 }
 
@@ -103,14 +104,17 @@ private func entry(
         )
         return
     }
+
     let (type, letter): (FileType, String) =
         status.isDirectory
         ? (.directory, "d")
         : status.isSymlink
             ? (.symlink, "l")
             : status.isFile ? (.file, "-") : (.other, "?")
+
     let target =
         status.isSymlink ? try? FileManager.default.destinationOfSymbolicLink(atPath: path) : nil
+
     entries.append(
         FileEntry(
             name: name,

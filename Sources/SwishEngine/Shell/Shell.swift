@@ -187,6 +187,7 @@ extension Shell {
         } catch {
             return .failure(Diagnostic(kind: .syntax(isIncomplete: false), message: "\(error)"))
         }
+
         do {
             let declared = try interpreter.check(swift)
             if let message = firstCommandLineError(programKnowledge.commandUses, declared: declared)
@@ -230,10 +231,12 @@ extension Shell {
         if jobControl.isInteractive && interpreter.file == nil { _ = takeInterrupt() }
         runState.stoppedBySignal = nil
         var handled = false
+
         // Only the prompt shows values; running code prints what it prints. A script goes on with
         // the next statement after an error in one.
         let observer: ((_ value: Value, _ callee: Symbol?) throws -> Void)? =
             atPrompt ? { [unowned self] value, callee in present(value, from: callee) } : nil
+
         let onError: ((Diagnostic) -> Bool)? =
             atPrompt
             ? nil
@@ -241,6 +244,7 @@ extension Shell {
                 handled = true
                 return handleRunFailure(diagnostic)
             }
+
         do {
             try interpreter.evaluate(
                 reading.swift,
@@ -259,6 +263,7 @@ extension Shell {
             lastStatus = .exited(128 + SIGTSTP)  // Already announced; the job is in `jobs`.
             return false
         }
+
         if diagnostic.isCancelled, let signal = runState.stoppedBySignal {
             runState.stoppedBySignal = nil
             if jobControl.isInteractive && interpreter.file == nil {
@@ -272,6 +277,7 @@ extension Shell {
             }
             return false
         }
+
         if diagnostic.isFatal {
             reportDiagnostic(diagnostic)
             lastStatus = .exited(diagnostic.status)
@@ -280,11 +286,13 @@ extension Shell {
             runState.scriptStopped = !jobControl.isInteractive || interpreter.file != nil
             return false
         }
+
         if diagnostic.isRuntime {
             reportDiagnostic(diagnostic)
             lastStatus = .exited(diagnostic.status)
             return true
         }
+
         report("error: \(diagnostic.message)")
         lastStatus = .exited(1)
         return false

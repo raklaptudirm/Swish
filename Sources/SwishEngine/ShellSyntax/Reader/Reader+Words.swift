@@ -12,10 +12,12 @@ extension Reader {
             literal = ""
             wildcard = false
         }
+
         if peek() == "~", peek(1).map({ $0 == "/" || isWordBoundary($0) }) ?? true {
             parts.append(.expression(environment("HOME")))
             pos += 1
         }
+
         while let c = peek() {
             if c == "{" && peek(1) == "}" {
                 literal += "{}"
@@ -61,6 +63,7 @@ extension Reader {
                 pos += 1
             }
         }
+
         flush()
         return parts
     }
@@ -81,11 +84,13 @@ extension Reader {
         pos += 1
         var parts: [Piece] = []
         var literal = ""
+
         while true {
             guard let c = peek() else {
                 mark(.string, from: start, to: chars.count)
                 throw Failure.incomplete("unterminated string")
             }
+
             switch c {
             case "\"":
                 pos += 1

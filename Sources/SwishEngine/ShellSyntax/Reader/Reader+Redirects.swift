@@ -7,16 +7,19 @@ extension Reader {
         let start = pos
         try rejectPosixRedirect()
         func touchesBoundary(after count: Int) -> Bool { peek(count).map(isWordBoundary) ?? true }
+
         if startsWith("e>o") && touchesBoundary(after: 3) {
             pos += 3
             mark(.punctuation, from: start)
             return [Redirect(fd: 2, target: .descriptor(1))]
         }
+
         if startsWith("o>e") && touchesBoundary(after: 3) {
             pos += 3
             mark(.punctuation, from: start)
             return [Redirect(fd: 1, target: .descriptor(2))]
         }
+
         let fds: [Int]
         if consume("o+e>") {
             fds = [1, 2]
@@ -29,13 +32,16 @@ extension Reader {
         } else {
             return nil
         }
+
         let append = fds != [0] && consume(">")
         mark(.punctuation, from: start)
         skipSpaces()
+
         guard let c = peek(), !isWordBoundary(c) else {
             if peek() == nil { throw Failure.incomplete("expected a file to redirect to") }
             throw expected("a file to redirect to")
         }
+
         let file = try parseWord()
         let mode: Redirect.Mode = fds == [0] ? .read : append ? .append : .write
         if fds == [1, 2] {
@@ -44,6 +50,7 @@ extension Reader {
                 Redirect(fd: 2, target: .descriptor(1)),
             ]
         }
+
         return [Redirect(fd: fds[0], target: .file(file, mode))]
     }
 

@@ -127,6 +127,7 @@ extension Shell {
                 described[keyword] = "keyword"
             }
         }
+
         var candidates: [String: Shell.Completions.Candidate] = [:]
         for name in executableNames() where name.hasPrefix(prefix) {
             candidates[name] = Shell.Completions.Candidate(
@@ -134,6 +135,7 @@ extension Shell {
                 display: name
             )
         }
+
         for (name, description) in described where name.hasPrefix(prefix) {
             candidates[name] = Shell.Completions.Candidate(
                 replacement: escaped(name),
@@ -141,6 +143,7 @@ extension Shell {
                 description: description
             )
         }
+
         return candidates.keys.sorted().map { candidates[$0]! }
     }
 
@@ -155,6 +158,7 @@ extension Shell {
                 description: description
             )
         }
+
         for parameters in callee.parameters {
             for parameter in parameters {
                 guard let label = parameter.label else { continue }
@@ -168,9 +172,11 @@ extension Shell {
                 if let short = parameter.shortFlag { add("-\(short)", description) }
             }
         }
+
         if !callee.claimsHelp {
             add("--help", "show help")
         }
+
         return candidates.keys.sorted().map { candidates[$0]! }
     }
 

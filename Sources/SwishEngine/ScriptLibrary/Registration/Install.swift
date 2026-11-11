@@ -13,14 +13,17 @@ extension Shell {
         interpreter.register(FileSize.native)
         interpreter.register(Date.native)
         interpreter.register(DisplayColumn.native)
+
         // What `ls` and `ps` give, with the enums their fields are (`FileType`).
         interpreter.register(FileEntry.native)
         interpreter.register(ProcessEntry.native)
+
         // The enums the declarations below name, which nothing registered gives.
         interpreter.register(InputFormat.self)
         interpreter.register(OutputFormat.self)
         interpreter.register(TextStyle.self)
         interpreter.register(JobState.self)
+
         // `output.status` is a struct of the prelude's `Status`, which the Swift type cannot name
         // (host types are process-wide, and the prelude's are each interpreter's), so it is one
         // by name: a value of the Swift type `Status`, which stands for the prelude's.
@@ -38,11 +41,13 @@ extension Shell {
                 }
             )
         )
+
         do {
             try interpreter.declare(Shell.prelude, bodies: preludeBodies)
         } catch {
             preconditionFailure("the shell's declarations: \(error)")
         }
+
         preludeTypes = PreludeTypes(interpreter)
         runner.preludeTypes = preludeTypes
     }

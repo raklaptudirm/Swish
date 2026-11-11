@@ -33,6 +33,7 @@ extension Reader {
                 return "exitStatus(of: \(value))"
             }
         }
+
         // `exit 1` alone leaves the program, which a `guard` knows when it is a call that never
         // returns.
         if chain.links.isEmpty, !chain.isCondition, case .command(let pipeline) = chain.first,
@@ -44,10 +45,12 @@ extension Reader {
         {
             return "exitShell(\(emit(pipeline)))"
         }
+
         var result = status(chain.first)
         for link in chain.links {
             result += ".\(link.isAnd ? "and" : "or") { \(status(link.operand)) }"
         }
+
         return chain.isCondition ? "(\(result)).succeeded" : result
     }
 
@@ -69,7 +72,9 @@ extension Reader {
                 }
             }
             .joined(separator: ", ") + ")"
+
         if command.external { out += ".external()" }
+
         if !command.environment.isEmpty {
             out +=
                 ".environment(["
@@ -77,6 +82,7 @@ extension Reader {
                 .map { "\(Reader.string(literal: $0.name)): \(emit(text: $0.value))" }
                 .joined(separator: ", ") + "])"
         }
+
         for redirect in command.redirects {
             switch redirect.target {
             case .file(let pieces, .read):
@@ -88,6 +94,7 @@ extension Reader {
             case .descriptor(let other): out += ".sending(\(redirect.fd), to: \(other))"
             }
         }
+
         if let call = command.call { out += ".calling((\(call)))" }
         return out
     }

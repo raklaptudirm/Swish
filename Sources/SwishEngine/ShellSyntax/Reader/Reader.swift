@@ -1,11 +1,10 @@
 import Foundation
 
-// The shell's grammar, read by the shell. A `Reader` stands on the text of one source at the start
-// of a form of the shell's (a command, a pipeline, `$(…)`, `$name`, `async …`) and reads it as
-// characters; where the form holds Swift (an argument, `\(…)`, a closure, the program in `$(…)`) it
-// finds the extent with the lexical scanner and has the front end cure that text in turn. What it
-// gives back is Swift: the form as the calls it means, which a plain Swift front end reads.
-
+/// The shell's grammar, read by the shell. A `Reader` stands on the text of one source at the start
+/// of a form of the shell's (a command, a pipeline, `$(…)`, `$name`, `async …`) and reads it as
+/// characters; where the form holds Swift (an argument, `\(…)`, a closure, the program in `$(…)`) it
+/// finds the extent with the lexical scanner and has the front end cure that text in turn. What it
+/// gives back is Swift: the form as the calls it means, which a plain Swift front end reads.
 struct Reader {
     unowned let front: Front
     let text: Text

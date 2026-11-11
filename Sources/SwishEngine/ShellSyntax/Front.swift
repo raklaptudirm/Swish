@@ -2,14 +2,14 @@ import Foundation
 import SwiftParser
 import SwiftSyntax
 
-// The front end the shell owns. Source text that is Swift's with the shell's in it goes in; Swift
-// comes out, which a plain Swift front end reads. The loop: parse the text as Swift (with the
-// insides of `$(…)` blanked), take the first place at or after the cursor where a form of the
-// shell's may start, and read it; if it is one, replace it with the Swift it means, move the cursor
-// past that, and parse again, so that everything before the cursor is Swift by the time anything
-// after it is asked about.
-
+/// The front end the shell owns. Source text that is Swift's with the shell's in it goes in; Swift
+/// comes out, which a plain Swift front end reads. The loop: parse the text as Swift (with the
+/// insides of `$(…)` blanked), take the first place at or after the cursor where a form of the
+/// shell's may start, and read it; if it is one, replace it with the Swift it means, move the cursor
+/// past that, and parse again, so that everything before the cursor is Swift by the time anything
+/// after it is asked about.
 final class Front {
+    /// What a form the shell read was: a command line, or `$(…)`.
     enum UnitKind { case pipeline, dollar }
 
     /// What the names the interpreter has are.
@@ -34,12 +34,15 @@ final class Front {
 
     func record(_ kind: UnitKind, _ source: String) { units.append((kind, source)) }
 
+    /// What a statement's place in the tree says of a form that starts it: a labeled statement, an
+    /// assignment, or an `async` declaration is not a command.
     struct StatementInfo {
         var isLabeled = false
         var isAssignment = false
         var isAsyncDeclaration = false
     }
 
+    /// Where in the tree a form of the shell's may start, and what the place allows.
     enum SiteKind {
         case statement(StatementInfo)
         case condition(isGuard: Bool)
@@ -58,6 +61,7 @@ final class Front {
         }
     }
 
+    /// A place a form of the shell's may start: the byte it is at, and the kind of place.
     struct Site {
         var byte: Int
         var kind: SiteKind
@@ -73,6 +77,7 @@ final class Front {
     /// it.
     var recovering = false
 
+    /// Source with the shell's forms replaced by the Swift they mean.
     struct Cured {
         var text: String
         /// What the source is, for coloring it: the shell's forms and the Swift between them, in
@@ -100,6 +105,7 @@ final class Front {
         var cursor = 0
         let base = inherited ?? bound
         var names = base
+
         /// How much longer the text is than the source, before the cursor.
         var delta = 0
         var spans: [HighlightSpan] = []
@@ -115,6 +121,7 @@ final class Front {
             let swift = swiftHighlight(String(blank))
             return Cured(text: Front.desugaringAwaits(String(chars)), spans: spans + swift)
         }
+
         for _ in 0...(chars.count + 1000) {
             let blanked = Text(Lex.blankingSubstitutions(chars))
             let text = Text(chars)
@@ -183,6 +190,7 @@ final class Front {
             delta += found.replacement.count - (found.end - found.start)
             cursor = found.start + found.replacement.count
         }
+
         throw Reader.Failure("the front end did not settle")
     }
 
@@ -196,12 +204,15 @@ final class Front {
     ) throws -> (end: Int, replacement: String, spans: [HighlightSpan])? {
         var reader = Reader(front: self, text: text, blanked: blanked, names: names, at: start)
         defer { partial = (reader.pos, reader.spans) }
+
         func isStarting(_ info: StatementInfo?) -> Bool {
             // `$0` is a closure's parameter, found where Swift reads one.
             if reader.peek() == "$", let next = reader.peek(1), Lex.isDigit(next) { return false }
+
             // `@dynamicMemberLookup struct …`: an attribute on a declaration.
             if reader.peek() == "@" { return false }
             let word = reader.identifier()
+
             // `final class …`: a modifier on a declaration.
             if let word, Reader.declarationModifiers.contains(word),
                 let next = reader.wordAfter(word),
@@ -210,12 +221,14 @@ final class Front {
             {
                 return false
             }
+
             if let word, word != "try",
                 Reader.statementKeywords.union(["if", "for", "while", "switch", "let", "var"])
                     .contains(word)
             {
                 return false
             }
+
             if let info {
                 if info.isLabeled { return false }
                 if word == "_", info.isAssignment { return false }
@@ -228,13 +241,16 @@ final class Front {
                     return false
                 }
             }
+
             return true
         }
+
         switch site.kind {
         case .statement(let info):
             guard isStarting(info), let chain = try reader.parseCommandChain(condition: false)
             else { return nil }
             return (reader.pos, reader.emit(chain, statement: true), reader.spans)
+
         case .condition(let isGuard):
             reader.conditionDepth = 1
             reader.guardCondition = isGuard
@@ -242,10 +258,12 @@ final class Front {
                 return nil
             }
             return (reader.pos, reader.emit(chain, statement: false), reader.spans)
+
         case .substitution(let underTry), .dollarName(let underTry):
             reader.tryDepth = underTry ? 1 : 0
             guard let expression = try reader.parseShellDollar() else { return nil }
             return (reader.pos, expression, reader.spans)
+
         case .rawString(let end):
             let content = text.slice((start + 1)..<max(start + 1, end - 1))
             var hashes = "#"
@@ -254,6 +272,7 @@ final class Front {
                 end, hashes + "\"" + content + "\"" + hashes,
                 [HighlightSpan(range: start..<end, kind: .string)]
             )
+
         case .async(let underTry):
             reader.tryDepth = underTry ? 1 : 0
             let expression = try reader.parseAsync()
@@ -270,6 +289,7 @@ final class Front {
     }
 }
 
+/// Finds the places in a tree where a form of the shell's may start.
 private final class SiteFinder: SyntaxVisitor {
     var sites: [Front.Site] = []
 
@@ -310,6 +330,7 @@ private final class SiteFinder: SyntaxVisitor {
                     )
                 )
             }
+
         case .dollarIdentifier:
             let text = token.text
             if text == "$" {
@@ -325,6 +346,7 @@ private final class SiteFinder: SyntaxVisitor {
                     )
                 }
             }
+
         case .identifier(let text):
             if text == "async" {
                 if token.parent?.is(DeclReferenceExprSyntax.self) == true {
@@ -337,8 +359,10 @@ private final class SiteFinder: SyntaxVisitor {
                     Front.Site(byte: byte, kind: .dollarName(underTry: SiteFinder.underTry(token)))
                 )
             }
+
         default: break
         }
+
         return .skipChildren
     }
 

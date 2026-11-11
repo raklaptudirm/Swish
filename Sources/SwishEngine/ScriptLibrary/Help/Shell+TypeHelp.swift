@@ -93,6 +93,7 @@ extension Shell {
             flush()
             return AttributedString(joining: pieces)
         }
+
         func parameters(_ parameters: [Symbol.Parameter]) -> [AttributedString] {
             parameters.enumerated()
                 .flatMap { index, parameter -> [AttributedString] in
@@ -110,6 +111,7 @@ extension Shell {
                     return pieces
                 }
         }
+
         func call(
             _ name: AttributedString,
             _ function: Symbol.Function,
@@ -125,15 +127,18 @@ extension Shell {
             }
             return pieces
         }
+
         let name = AttributedString(symbol.name, DisplayStyle.function)
         switch symbol.kind {
         case .function(let function):
             return AttributedString(joining: call(name, function))
+
         case .method(let method):
             let mutating =
                 method.isMutating
                 ? [AttributedString("mutating", DisplayStyle.keyword), .init(" ")] : []
             return AttributedString(joining: mutating + call(name, method.function))
+
         case .initializer(let function):
             return AttributedString(
                 joining: call(
@@ -142,6 +147,7 @@ extension Shell {
                     showsResult: false
                 )
             )
+
         case .variable, .property:
             let variable = symbol.variable!
             var pieces = [name, .init(": "), type(variable.type)]
@@ -152,6 +158,7 @@ extension Shell {
                 ]
             }
             return AttributedString(joining: pieces)
+
         case .enumCase(let carried, let raw):
             var pieces = [AttributedString("case", DisplayStyle.keyword), .init(" "), name]
             if !carried.isEmpty {
@@ -168,6 +175,7 @@ extension Shell {
             }
             if let raw { pieces += [.init(" = "), .init(raw.debugDescription)] }
             return AttributedString(joining: pieces)
+
         case .structure, .enumeration, .class, .actor, .protocol:
             return name
         }

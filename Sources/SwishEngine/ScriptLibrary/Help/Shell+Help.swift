@@ -147,6 +147,7 @@ extension Shell {
                 [.init(" ")] + (optional ? [.init("[")] : []) + [.init(flag, .flag)]
                 + valuePlaceholder(for: parameter) + (optional ? [.init("]")] : [])
         }
+
         for parameter in parameters where parameter.label == nil {
             let argument = AttributedString("<\(parameter.name)>", .variable)
             if parameter.picksFields {
@@ -161,6 +162,7 @@ extension Shell {
                 parts += [.init(" "), argument]
             }
         }
+
         return parts
     }
 
@@ -209,10 +211,12 @@ extension Shell {
     func helpIndex() -> [Value] {
         var rows: [(String, Value)] = []
         var seen: Set<String> = []
+
         let functions = Dictionary(
             grouping: interpreter.globals().filter { $0.function != nil },
             by: \.name
         )
+
         for (name, candidates) in functions where seen.insert(name).inserted {
             // A name you can't write, like `$json`, is the shell's own.
             guard Lex.isIdentifier(name), let first = candidates.first else { continue }
@@ -235,6 +239,7 @@ extension Shell {
                 )
             )
         }
+
         for builtin in builtins.values
         where builtin.works && !seen.contains(builtin.name) {
             rows.append(
@@ -249,6 +254,7 @@ extension Shell {
                 )
             )
         }
+
         return rows.sorted { $0.0 < $1.0 }.map(\.1)
     }
 
@@ -302,6 +308,7 @@ extension Shell {
                 )
             ]
         }
+
         throw RuntimeError(
             "help: no function, shell builtin, type or program named '\(name)'; `help` lists them all"
         )
@@ -316,12 +323,14 @@ extension Shell {
                 .init(kind, DisplayStyle.keyword), .init(" "), .init(name, DisplayStyle.type),
             ])
         ]
+
         let groups = Dictionary(
             grouping: members.compactMap { symbol in
                 symbol.memberKind.map { ($0, symbol) }
             },
             by: \.0
         )
+
         for kind in MemberKind.allCases {
             guard let members = groups[kind]?.map(\.1), !members.isEmpty else { continue }
             lines += [AttributedString(""), HelpStyle.heading("\(kind.heading):")]
@@ -338,6 +347,7 @@ extension Shell {
                 }
             }
         }
+
         return lines
     }
 }

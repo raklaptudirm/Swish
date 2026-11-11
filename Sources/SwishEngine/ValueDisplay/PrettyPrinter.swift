@@ -34,11 +34,14 @@ struct PrettyPrinter: Sendable {
         case .bool, .int, .double: return .segments([(value.description, DisplayStyle.constant)])
         case .function: return .segments([(value.description, nil)])
         case .string: return .string(value.description)
+
         case .list:
             let items = value.casting(to: [Value].self) ?? []
             return .group(open: [("[", nil)], items: items.map { ([], node(for: $0)) }, close: "]")
+
         case .structure, .tuple:
             return value.fields.map { node(for: $0) } ?? .segments([(value.debugDescription, nil)])
+
         case .dictionary:
             let dictionary = value.entries ?? []
             return dictionary.isEmpty
@@ -50,9 +53,11 @@ struct PrettyPrinter: Sendable {
                     },
                     close: "]"
                 )
+
         case .enumeration:
             return value.enumCaseName.map { node(forCase: $0, of: value) }
                 ?? .segments([(value.debugDescription, nil)])
+
         case .object:
             // A command's output is laid out as the struct it is; any other Swift value as its type
             // says it looks, in a style.
@@ -115,9 +120,11 @@ struct PrettyPrinter: Sendable {
         if !mustBreak(node, indent: indent), used + line.plain.count + trailing <= width {
             return line.styled
         }
+
         switch node {
         case .segments:
             return line.styled  // Can't be broken.
+
         case .string(let text):
             guard text.contains("\n") else { return line.styled }
             let inner = String(repeating: " ", count: indent + 2)
@@ -131,6 +138,7 @@ struct PrettyPrinter: Sendable {
                 }
             let quotes = "\"\"\"".styled(DisplayStyle.string, styled)
             return quotes + "\n" + body.joined(separator: "\n") + "\n" + inner + quotes
+
         case .group(let open, let items, let close):
             guard !items.isEmpty else { return line.styled }
             let inner = String(repeating: " ", count: indent + 2)

@@ -19,6 +19,7 @@ final class DisplayFormatter {
     /// Some columns didn't fit and aren't shown.
     private var droppedColumns = false
 
+    /// A column of a table being laid out: its field, how wide it is and which side it aligns to.
     private struct Column {
         let key: String
         let width: Int

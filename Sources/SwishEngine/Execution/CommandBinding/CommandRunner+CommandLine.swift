@@ -214,14 +214,18 @@ extension CommandRunner {
             }
             return Value(text)
         }
+
         if let value = word(text, as: type) { return value }
+
         // A command's output, which is text, is what a word is for it.
         if type == .named(Output.id) { return .output(Output(text: text, status: .success)) }
+
         guard takesWords(type) else {
             throw RuntimeError(
                 "\(function): \(what) is \(type), which a word can't be: call it with parentheses, as in \(function)(…)"
             )
         }
+
         throw RuntimeError("\(function): \(what) must be \(type), got '\(text)'")
     }
 

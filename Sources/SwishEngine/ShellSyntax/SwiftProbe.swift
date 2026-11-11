@@ -86,6 +86,7 @@ extension Names {
     }
 }
 
+/// Finds what a source declares, with the stretch each name is visible in.
 private final class DeclarationFinder: SyntaxVisitor {
     var found: [Names.Declaration] = []
     var staticBodies: [Range<Int>] = []
@@ -148,6 +149,7 @@ private final class DeclarationFinder: SyntaxVisitor {
             from: outer.lowerBound,
             staticOnly: staticFunction
         )
+
         for parameter in node.signature.parameterClause.parameters {
             var type = parameter.type
             if let attributed = type.as(AttributedTypeSyntax.self) { type = attributed.baseType }
@@ -155,6 +157,7 @@ private final class DeclarationFinder: SyntaxVisitor {
                 closureArities[node.name.text] = function.parameters.count; break
             }
         }
+
         if let body = node.body {
             if staticFunction { staticBodies.append(range(body)) }
             for parameter in node.signature.parameterClause.parameters {
@@ -166,6 +169,7 @@ private final class DeclarationFinder: SyntaxVisitor {
                 )
             }
         }
+
         return .visitChildren
     }
 
@@ -297,6 +301,7 @@ private final class DeclarationFinder: SyntaxVisitor {
             }
             current = candidate.parent
         }
+
         return .visitChildren
     }
 
@@ -331,6 +336,8 @@ private final class DeclarationFinder: SyntaxVisitor {
     }
 }
 
+/// Asks the Swift parser how far an expression reads from a position, and where Swift stops being
+/// Swift there.
 enum SwiftProbe {
     /// How far Swift reads from a position.
     struct Extent {
@@ -361,10 +368,12 @@ enum SwiftProbe {
             return Extent(end: 0, failure: 0)
         }
         var endByte = expr.endPositionBeforeTrailingTrivia.utf8Offset
+
         // A sequence of operands and operators, as SwiftParser leaves it unfolded: cut at the first
         // operator that is the shell's.
         var sequenceOwner: ExprSyntax = expr
         if let attempt = expr.as(TryExprSyntax.self) { sequenceOwner = attempt.expression }
+
         if let sequence = sequenceOwner.as(SequenceExprSyntax.self) {
             let elements = Array(sequence.elements)
             for (index, element) in elements.enumerated() where index > 0 {
@@ -377,8 +386,10 @@ enum SwiftProbe {
                 }
             }
         }
+
         let problems = Problems(names: names, limit: endByte, checkNames: strictNames)
         problems.walk(tree)
+
         // Statement-level tokens left over after the item are not the expression's.
         return Extent(
             end: rest.character(atByte: endByte) + start,

@@ -40,6 +40,8 @@ struct Text {
     }
 }
 
+/// What a character can be in a name, and where a form's text ends: the lexical scanner's rules,
+/// which ask no parser.
 enum Lex {
     static func isIdentifierStart(_ c: Character) -> Bool { c == "_" || c.isLetter }
     static func isIdentifierPart(_ c: Character) -> Bool { isIdentifierStart(c) || isDigit(c) }
@@ -183,6 +185,7 @@ enum Lex {
                 default: i += 1
                 }
             }
+
             return n
         }
 

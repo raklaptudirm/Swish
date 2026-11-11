@@ -25,6 +25,8 @@ extension Shell {
     }
 }
 
+/// Finds the `@input` and `@flag` marks on parameters, and the stretches of source to blank so
+/// Swift does not see them.
 private final class MarkFinder: SyntaxVisitor {
     var marks: [String: CommandMarks.Marks] = [:]
     var blanks: [Range<Int>] = []
@@ -55,6 +57,7 @@ private final class MarkFinder: SyntaxVisitor {
                 )
             }
         }
+
         return .visitChildren
     }
 }

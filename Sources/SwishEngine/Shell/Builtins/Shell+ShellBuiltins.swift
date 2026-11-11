@@ -249,7 +249,9 @@ extension Shell {
                 return 2
             }
         }
+
         func shown(_ units: UInt64?) -> String { units.map(String.init) ?? "unlimited" }
+
         do throws(Errno) {
             if all {
                 let width = ResourceLimit.all.map(\.name.count).max()!
@@ -262,11 +264,13 @@ extension Shell {
                 }
                 return 0
             }
+
             let chosen = limit ?? ResourceLimit.all.first { $0.flag == "f" }!
             guard let value else {
                 writeAll(runner.stdoutFD, shown(try chosen.current(hard: hard)) + "\n")
                 return 0
             }
+
             let units: UInt64?
             if value == "unlimited" {
                 units = nil
@@ -276,6 +280,7 @@ extension Shell {
                 report("ulimit: \(value): not a number or `unlimited`")
                 return 2
             }
+
             try chosen.set(units, soft: soft || !hard, hard: hard || !soft)
             return 0
         } catch {
@@ -388,6 +393,7 @@ extension Shell {
                 status = 1
             }
         }
+
         return status
     }
 }

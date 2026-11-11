@@ -26,6 +26,7 @@ extension Reader {
         let sourceStart = pos
         pos = close + 1
         let cured = try cureSlice(source, from: sourceStart)
+
         // A closure word takes what its stage gives it; Swift's closure without parameters or `$0`
         // takes none.
         if SwiftProbe.isParameterlessClosure(source),
@@ -45,6 +46,7 @@ extension Reader {
                     + body + " }"
             }
         }
+
         return cured
     }
 
@@ -91,10 +93,12 @@ extension Reader {
             pos = close + 1
             let program = try cureSlice(inner, from: innerStart, asExpression: false)
             return throwing ? "captureThrowing({ \(program) })" : "capture({ \(program) })"
+
         case "?":
             throw Failure(
                 "$? isn't Swish: a captured command has its own .status, and `try` makes a failure throw"
             )
+
         case let c? where Lex.isIdentifierStart(c):
             let start = pos
             pos += 1
@@ -103,6 +107,7 @@ extension Reader {
             mark(.variable, from: start)
             front.record(.dollar, "$" + name)
             return dollar(name)
+
         default:
             return nil
         }

@@ -26,11 +26,15 @@ extension Front {
     }
 }
 
+/// A stretch of source to replace, by byte: where `await` is made explicit.
+
 private struct AwaitRewrite {
     var start: Int
     var end: Int
     var text: String
 }
+
+/// Finds the calls that need an `await` written in front of them.
 
 private final class AwaitFinder: SyntaxVisitor {
     var rewrites: [AwaitRewrite] = []

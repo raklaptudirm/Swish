@@ -76,14 +76,18 @@ extension Shell {
             report("\(path): \(errorMessage(errno).lowercased())")
             return 127
         }
+
         interpreter["args"] = Value(arguments.map { Value($0) })
         interpreter.file = URL(fileURLWithPath: path).standardizedFileURL.path
+
         runState.scriptDirectory =
             URL(fileURLWithPath: path).standardizedFileURL.deletingLastPathComponent().path
+
         // Read and checked whole, so doc comments reach their functions and a mistake anywhere
         // stops the script before any of it runs; then run a statement at a time, so a runtime
         // error only abandons its own.
         var source = String(decoding: data, as: UTF8.self)
+
         // `#!/usr/bin/env swish`, so it runs as a program; the line stays,
         // blank, so line numbers do too.
         if source.hasPrefix("#!") { source = String(source.drop { $0 != "\n" }) }
@@ -93,15 +97,18 @@ extension Shell {
         case .failure(let diagnostic):
             reportReadingFailure(diagnostic, file: path)
             return lastStatus.number
+
         case .success(let read):
             reading = read
         }
+
         // What the script is for (`main`, a task) runs after its statements, and before its
         // top-level defers.
         runReportingErrors(
             reading,
             then: { [unowned self] in if !runState.scriptStopped { finish(reading) } }
         )
+
         return lastStatus.number
     }
 

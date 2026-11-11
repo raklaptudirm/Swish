@@ -22,6 +22,7 @@ struct InlineMarkdown {
         func flush() {
             if !plain.isEmpty { result.append(AttributedString(plain, style)); plain = "" }
         }
+
         var i = range.lowerBound
         while i < range.upperBound {
             let c = chars[i]
@@ -48,6 +49,7 @@ struct InlineMarkdown {
                 i += 1
             }
         }
+
         flush()
         return result
     }
@@ -91,9 +93,11 @@ struct InlineMarkdown {
         let c = chars[i]
         let n = run(of: c, at: i, before: range.upperBound)
         guard n <= 2, i + n < range.upperBound, !chars[i + n].isWhitespace else { return nil }
+
         if c == "_", i > range.lowerBound, chars[i - 1].isLetter || chars[i - 1].isNumber {
             return nil
         }
+
         var j = i + n
         while j < range.upperBound {
             if chars[j] == "\\" {
@@ -114,6 +118,7 @@ struct InlineMarkdown {
                 j += 1
             }
         }
+
         return nil
     }
 
