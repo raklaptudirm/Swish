@@ -1,0 +1,25 @@
+#!/bin/bash
+# Regenerates the bridges in Sources/SwishEngine/ScriptLibrary/Types/Generated from the symbol graph
+# of SwishEngine, with Swiit's generator (the checkout beside this one). Run it after changing a
+# bridged type (FileSize), the generator or the Swift toolchain.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+generated=Sources/SwishEngine/ScriptLibrary/Types/Generated
+mkdir -p "$generated"
+
+# The glue being made may be what stops the module from building: it is read from an empty one.
+cat > "$generated/FileSizeBridge.swift" <<'STUB'
+import Swiit
+
+internal enum FileSizeBridge {
+    internal static let types: [HostType] = []
+}
+STUB
+
+# Internal declarations are in the graph too, as the types bridged are internal.
+swift package dump-symbol-graph --minimum-access-level internal --skip-synthesized-members
+swift build -c release --package-path ../Swiit --product swiit-bridge
+"$(swift build -c release --package-path ../Swiit --show-bin-path)/swiit-bridge" \
+    .build/out/symbolgraph/SwishEngine.symbols.json "$generated/FileSizeBridge.swift" \
+    --name FileSize --type FileSize --access internal --in-module SwishEngine

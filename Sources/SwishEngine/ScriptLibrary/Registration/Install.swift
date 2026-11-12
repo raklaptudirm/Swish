@@ -10,7 +10,7 @@ extension Shell {
     /// Teaches the interpreter the shell's own: `ls`, `ps`, `pwd`, `from`, `to`, `help`, and the
     /// types they use.
     func installLibrary() {
-        interpreter.register(FileSize.native)
+        for type in FileSizeBridge.types { interpreter.register(type) }
         interpreter.register(Date.native)
         interpreter.register(DisplayColumn.native)
 

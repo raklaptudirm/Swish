@@ -4,49 +4,6 @@ import Swiit
 // The Swift types the shell gives scripts, described to the interpreter: a size, a column, a
 // command's output.
 
-extension FileSize {
-    static let native = HostType.Builder<FileSize>("FileSize")
-        .property("bytes", \.bytes)
-        .property("description", \.description)
-        .initializer(labels: ["bytes"]) { (bytes: Int) in FileSize(bytes: bytes) }
-        .initializer(labels: [nil, "multiplier"]) { (amount: Double, multiplier: Int) in
-            FileSize(amount, multiplier: multiplier)
-        }
-        .failableInitializer(labels: [nil, "unit"]) { (amount: Double, unit: String) in
-            FileSize(amount, unit: unit)
-        }
-        .failableInitializer { (text: String) in FileSize(text) }
-        .static("+", labels: [nil, nil], throwing: true) {
-            (a: FileSize, b: FileSize) throws -> FileSize in try a + b
-        }
-        .static("-", labels: [nil, nil], throwing: true) {
-            (a: FileSize, b: FileSize) throws -> FileSize in try a - b
-        }
-        .static("-", labels: [nil], throwing: true) { (a: FileSize) throws -> FileSize in try -a }
-        .static("*", labels: [nil, nil], throwing: true) {
-            (a: FileSize, b: Int) throws -> FileSize in
-            try a * b
-        }
-        .static("*", labels: [nil, nil], throwing: true) {
-            (a: FileSize, b: Double) throws -> FileSize in try a * b
-        }
-        .static("*", labels: [nil, nil], throwing: true) {
-            (a: Int, b: FileSize) throws -> FileSize in
-            try a * b
-        }
-        .static("*", labels: [nil, nil], throwing: true) {
-            (a: Double, b: FileSize) throws -> FileSize in try a * b
-        }
-        .static("/", labels: [nil, nil], throwing: true) {
-            (a: FileSize, b: Int) throws -> FileSize in
-            try a / b
-        }
-        .static("/", labels: [nil, nil], throwing: true) {
-            (a: FileSize, b: Double) throws -> FileSize in try a / b
-        }
-        .static("/", labels: [nil, nil]) { (a: FileSize, b: FileSize) -> Double in a / b }
-}
-
 /// A Swift struct scripts hold as data, as `ls` gives `FileEntry`s: its stored properties are its
 /// fields, in the order they are declared, wherever its fields are laid out (a table, `to json`,
 /// `select`), as a struct a script declares has. Its type registers the same properties for the
