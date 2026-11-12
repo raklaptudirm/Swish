@@ -5,19 +5,37 @@ import Swiit
 // table starts with and what stands out in them. The core knows none of it (the styles themselves,
 // `DisplayStyle`, are its).
 
-/// A column a table shows, and what styles it: the value of another field
-/// (or of itself), if that is a `DisplayStyled` enum, as a file's name is
-/// styled by its type: `DisplayColumn("name", styledBy: "type")`; or one
-/// style for all of it: `DisplayColumn("name", style: .green)`.
+/// A column a table shows, and what styles it: the value of another field (or of itself), if that
+/// is a `DisplayStyled` enum, as a file's name is styled by its type:
+/// `DisplayColumn("name", styledBy: "type")`; or one style for all of it:
+/// `DisplayColumn("name", style: .green)`.
 struct DisplayColumn: ScriptConvertible, Sendable, ExpressibleByStringLiteral {
-    public let name: String
-    public let styledBy: String?
-    public let style: DisplayStyle?
+    /// What styles a column's cells.
+    enum Styling: Sendable, Hashable {
+        /// They are shown plain.
+        case none
+        /// By the `DisplayStyled` enum that another field of the same item holds.
+        case byField(String)
+        /// All in one style.
+        case fixed(DisplayStyle)
+    }
 
-    public init(_ name: String, styledBy: String? = nil, style: DisplayStyle? = nil) {
+    public let name: String
+    public let styling: Styling
+
+    public init(_ name: String, styling: Styling = .none) {
         self.name = name
-        self.styledBy = styledBy
-        self.style = style
+        self.styling = styling
+    }
+
+    /// A column styled by the value of the field `field`.
+    public init(_ name: String, styledBy field: String) {
+        self.init(name, styling: .byField(field))
+    }
+
+    /// A column all in one style.
+    public init(_ name: String, style: DisplayStyle) {
+        self.init(name, styling: .fixed(style))
     }
 
     public init(stringLiteral name: String) {

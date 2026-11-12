@@ -23,11 +23,10 @@ let receiver: DisplayColumn = try selfValue.unboxing(DisplayColumn.self)
                 return result.value
 })
 
-    private static let member1: HostSymbol = HostSymbol.property("styledBy", summary: "", type: .optional(.string), get: { selfValue in
-let receiver: DisplayColumn = try selfValue.unboxing(DisplayColumn.self)
-                let result = receiver.styledBy
-                return (result.map { $0.value } ?? .nothing)
-})
+    private static let member1: HostSymbol = HostSymbol.initializer(summary: "A column styled by the value of the field `field`.", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "name", type: .string), Symbol.Parameter(label: "styledBy", name: "field", type: .string)], returns: .named(.init(hostType: "DisplayColumn")), throwing: .no, isAsync: false, generics: [])) { arguments in
+let result = DisplayColumn(try String(arguments[0]), styledBy: try String(arguments[1]))
+                return Value(boxing: result, as: .init(hostType: "DisplayColumn"))
+}
 
     private static let member2: HostSymbol = HostSymbol.initializer(summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: "stringLiteral", name: "name", type: .string)], returns: .named(.init(hostType: "DisplayColumn")), throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = DisplayColumn(stringLiteral: try String(arguments[0]))
