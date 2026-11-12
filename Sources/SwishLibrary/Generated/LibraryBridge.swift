@@ -590,8 +590,8 @@ let result = try with(env: try Dictionary(uniqueKeysWithValues: Value.Bridging.d
                 return result
 })
 
-    private static let member94: HostSymbol = HostSymbol.function(name: "listFiles", summary: "Lists directory contents; a path it can't read is reported and left out. It is `ls`: the prelude's `ls` takes its paths as arguments, which Swift cannot pass on as an array.", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "paths", type: .list(.named(.init(hostType: "FilePath")))), Symbol.Parameter(label: "all", name: "all", type: .bool)], returns: .list(.named(.init(hostType: "FileEntry"))), throwing: .no, isAsync: false, generics: []), body: { arguments in
-let result: [FileEntry] = listFiles(try Value.Bridging.list(arguments[0]).map { try $0.unboxing(FilePath.self) }, all: try Bool(arguments[1]))
+    private static let member94: HostSymbol = HostSymbol.function(name: "ls", summary: "Lists directory contents; a path it can't read is reported and left out.", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "paths", type: .named(.init(hostType: "FilePath")), arity: .variadic), Symbol.Parameter(label: "all", name: "all", type: .bool, arity: .defaulted(.value(false)))], returns: .list(.named(.init(hostType: "FileEntry"))), throwing: .no, isAsync: false, generics: []), body: { arguments in
+let result: [FileEntry] = ls(try Value.Bridging.list(arguments[0]).map { try $0.unboxing(FilePath.self) }, all: try Bool(arguments[1]))
                 return Value(list: result.map { Value(boxing: $0, as: .init(hostType: "FileEntry")) })
 })
 

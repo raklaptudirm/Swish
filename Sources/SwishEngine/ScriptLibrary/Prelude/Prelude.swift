@@ -412,13 +412,6 @@ func table(_ items: [Any]) -> [String]
 /// Shows each record as a list of fields.
 func list(_ items: [Any]) -> [String]
 
-/// Lists directory contents.
-/// - Parameter paths: files or directories to list (default: the current directory)
-/// - Parameter all: include hidden files
-func ls(_ paths: FilePath..., all: Bool = false) -> [FileEntry] {
-    listFiles(paths, all: all)
-}
-
 /// A line of standard input, or nil at its end.
 /// - Parameter strippingNewline: leave the line's newline off
 func readLine(strippingNewline: Bool = true) -> String? {

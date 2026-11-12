@@ -51,11 +51,18 @@ extension FileEntry: Tabular {
     ]
 }
 
-/// Lists directory contents; a path it can't read is reported and left out. It is `ls`: the prelude's
-/// `ls` takes its paths as arguments, which Swift cannot pass on as an array.
+/// Lists directory contents; a path it can't read is reported and left out.
 /// - Parameter paths: files or directories to list (default: the current directory)
 /// - Parameter all: include hidden files
-public func listFiles(_ paths: [FilePath], all: Bool) -> [FileEntry] {
+public func ls(_ paths: FilePath..., all: Bool = false) -> [FileEntry] {
+    ls(paths, all: all)
+}
+
+/// Lists directory contents, from paths held in an array: what `ls` calls, since Swift cannot pass
+/// an array on as arguments.
+/// - Parameter paths: files or directories to list (default: the current directory)
+/// - Parameter all: include hidden files
+package func ls(_ paths: [FilePath], all: Bool = false) -> [FileEntry] {
     var entries: [FileEntry] = []
     var errors: [any Error] = []
     for path in (paths.isEmpty ? [FilePath(".")] : paths).map(\.string) {

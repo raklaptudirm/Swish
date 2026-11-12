@@ -21,7 +21,7 @@ package func writeReport(_ message: String, to output: OutputSink) {
     }
 }
 
-/// Reports a problem with one item, like a file `listFiles` couldn't read, without stopping; the
+/// Reports a problem with one item, like a file `ls` couldn't read, without stopping; the
 /// statement's status becomes a failure. For a function that goes on past an error in one of its
 /// items, to the standard error of the task running it.
 package func reportItemError(_ message: String) {
