@@ -1,0 +1,25 @@
+{
+  "name": "ShellTypes",
+  "access": "internal",
+  "inModule": "SwishEngine",
+  "convertible": [
+    "Status"
+  ],
+  "boxed": [
+    "FilePath"
+  ],
+  "imports": [
+    "SystemPackage"
+  ],
+  "rename": {
+    "Date.shown": "description"
+  },
+  "types": [
+    "Date"
+  ],
+  "functions": [
+    "pwd",
+    "ps",
+    "listFiles"
+  ]
+}

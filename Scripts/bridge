@@ -1,32 +1,12 @@
 #!/bin/bash
-# Regenerates the bridges in Sources/SwishEngine/ScriptLibrary/Types/Generated from the symbol graph
-# of SwishEngine, with Swiit's generator (the checkout beside this one). Run it after changing a
-# bridged type (FileSize, FileEntry), the generator or the Swift toolchain.
+# Regenerates Sources/SwishEngine/ScriptLibrary/Types/Generated/ShellTypesBridge.swift: the types
+# and functions of SwishEngine that scripts get, from its public members (swiit-bridge.json says
+# the rest), with Swiit's generator (the checkout beside this one). Run it after changing a
+# bridged type, the generator or the Swift toolchain.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-generated=Sources/SwishEngine/ScriptLibrary/Types/Generated
-mkdir -p "$generated"
-
-# The glue being made may be what stops the module from building: it is read from an empty one.
-cat > "$generated/ShellTypesBridge.swift" <<'STUB'
-import Swiit
-
-internal enum ShellTypesBridge {
-    internal static let types: [HostType] = []
-    internal static let functions: [HostSymbol] = []
-}
-STUB
-
-# Internal declarations are in the graph too, as the types bridged are internal. What the module adds
-# to Foundation's `Date` is in the graph of its extensions.
-swift package dump-symbol-graph --minimum-access-level internal --skip-synthesized-members
 swift build -c release --package-path ../Swiit --product swiit-bridge
 "$(swift build -c release --package-path ../Swiit --show-bin-path)/swiit-bridge" \
-    .build/out/symbolgraph/SwishEngine.symbols.json "$generated/ShellTypesBridge.swift" \
-    .build/out/symbolgraph/SwishEngine@Foundation.symbols.json \
-    --name ShellTypes --access internal --in-module SwishEngine \
-    --type FileSize --type FileEntry --type ProcessEntry --type DisplayColumn --type Output --type Date \
-    --function pwd --function ps --function listFiles \
-    --boxed FilePath --convertible FileType --convertible Status \
-    --rename Date.shown=description --import SystemPackage
+    --package . --module SwishEngine --config swiit-bridge.json \
+    --output Sources/SwishEngine/ScriptLibrary/Types/Generated/ShellTypesBridge.swift
