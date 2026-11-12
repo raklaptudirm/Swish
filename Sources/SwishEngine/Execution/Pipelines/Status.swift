@@ -62,7 +62,9 @@ extension Status: ScriptConvertible {
         throw LibraryError("expected a Status, not \(value)")
     }
 
-    public var value: Value { (try? Value(encoding: StatusFields(self), as: Status.id)) ?? .nothing }
+    public var value: Value {
+        (try? Value(encoding: StatusFields(self), as: Status.id)) ?? .nothing
+    }
 }
 
 /// A status as its fields, which encode as the struct they are. (A status that encodes itself
