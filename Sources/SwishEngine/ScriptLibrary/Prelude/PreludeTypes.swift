@@ -103,7 +103,7 @@ extension PreludeTypes {
 
 // safe: read by one stage at a time
 /// What the shell's own streams read with: held by the stream, so a stage reads it without a call.
-final class StreamSource: @unchecked Sendable, ScriptConvertible {
+final class StreamSource: @unchecked Sendable, BridgedType {
     let read: () throws -> Value?
     init(_ read: @escaping () throws -> Value?) { self.read = read }
 }

@@ -126,7 +126,7 @@ extension FileSize: Presentable {
     public var shape: DisplayShape { DisplayShape(role: .constant, isNumeric: true) }
 }
 
-extension FileSize: ScriptConvertible {
+extension FileSize: BridgedType {
     static let id = Symbol.ID(hostType: "FileSize")
     public static var scriptType: ScriptType { .named(id) }
     public init(_ swiitValue: Value) throws {

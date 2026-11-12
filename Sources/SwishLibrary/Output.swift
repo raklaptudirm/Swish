@@ -90,7 +90,7 @@ extension Output {
     }
 }
 
-extension Output: ScriptConvertible {
+extension Output: BridgedType {
     package static let id = Symbol.ID(hostType: "Output")
 }
 

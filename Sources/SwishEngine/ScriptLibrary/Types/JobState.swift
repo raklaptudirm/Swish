@@ -2,7 +2,7 @@ import Swiit
 import SwishLibrary
 
 /// How a job is going: its `state`.
-enum JobState: Comparable, CaseIterable, DisplayStyled, ScriptConvertible {
+enum JobState: Comparable, CaseIterable, DisplayStyled, BridgedType {
     case running, stopped, done, cancelled
 
     public var displayStyle: DisplayStyle? {

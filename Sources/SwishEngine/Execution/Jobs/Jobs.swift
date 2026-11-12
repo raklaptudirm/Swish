@@ -6,7 +6,7 @@ import SwishLibrary
 /// background (from `async` or ^Z), or Swish code running as a task of its
 /// own (`async f()`). Jobs in the background are values: `await` brings one
 /// to the foreground and waits for it, and `resume()` and `cancel()` act on it.
-final class Job: ScriptConvertible, Presentable, Tabular, CustomStringConvertible,
+final class Job: BridgedType, Presentable, Tabular, CustomStringConvertible,
     CustomDebugStringConvertible, @unchecked Sendable
 {
     /// Where a job is in its life.

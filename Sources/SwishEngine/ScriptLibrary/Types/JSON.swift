@@ -7,7 +7,7 @@ import SwishLibrary
 /// says its members at run time: shown, selected, filtered on and encoded as any record is, and a
 /// field is read by name. Two are equal when they hold the same fields in the same order, as a
 /// struct's are.
-struct JSONObject: ScriptConvertible, Hashable, Sendable, CustomStringConvertible,
+struct JSONObject: BridgedType, Hashable, Sendable, CustomStringConvertible,
     CustomDebugStringConvertible
 {
     let keys: [String]

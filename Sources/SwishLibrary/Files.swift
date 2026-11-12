@@ -12,7 +12,7 @@ import Musl
 
 /// What kind of entry `ls` found: `ls | filter { $0.type == .directory }`.
 /// In this order, so `ls | sorted --by type` puts files first.
-public enum FileType: String, CaseIterable, Comparable, Codable, Sendable, ScriptConvertible {
+public enum FileType: String, CaseIterable, Comparable, Codable, Sendable, BridgedType {
     case file, directory, symlink, other
 
     public static func < (lhs: FileType, rhs: FileType) -> Bool {

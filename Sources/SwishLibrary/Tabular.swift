@@ -9,7 +9,7 @@ import Swiit
 /// is a `DisplayStyled` enum, as a file's name is styled by its type:
 /// `DisplayColumn("name", styledBy: "type")`; or one style for all of it:
 /// `DisplayColumn("name", style: .green)`.
-public struct DisplayColumn: ScriptConvertible, Sendable, ExpressibleByStringLiteral {
+public struct DisplayColumn: BridgedType, Sendable, ExpressibleByStringLiteral {
     /// What styles a column's cells.
     public enum Styling: Sendable, Hashable {
         /// They are shown plain.

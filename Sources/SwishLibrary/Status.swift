@@ -41,7 +41,7 @@ extension Status: Encodable {
 }
 
 /// A status crosses as the fields of the prelude's `Status`, by its name.
-extension Status: ScriptConvertible {
+extension Status: BridgedType {
     package static let id = Symbol.ID(hostType: "Status")
     public static var scriptType: ScriptType { .named(id) }
 

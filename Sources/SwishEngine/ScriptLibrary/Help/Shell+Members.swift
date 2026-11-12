@@ -42,7 +42,7 @@ extension Shell {
             case .structure, .tuple:
                 held = item.fields?.map { (name: $0.key, value: $0.value) } ?? []
             case .object:
-                if let object = item.casting(toExistential: (any ScriptConvertible).self),
+                if let object = item.casting(toExistential: (any BridgedType).self),
                     let names = object.memberNames
                 {
                     held = names.compactMap { name in object.member(name).map { (name, $0) } }
