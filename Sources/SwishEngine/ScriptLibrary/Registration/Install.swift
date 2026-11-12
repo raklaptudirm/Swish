@@ -10,15 +10,12 @@ extension Shell {
     /// Teaches the interpreter the shell's own: `ls`, `ps`, `pwd`, `from`, `to`, `help`, and the
     /// types they use.
     func installLibrary() {
-        for type in FileSizeBridge.types { interpreter.register(type) }
+        for type in ShellTypesBridge.types { interpreter.register(type) }
         interpreter.register(Date.native)
-        interpreter.register(DisplayColumn.native)
 
-        // What `ls` and `ps` give, with the enums their fields are (`FileType`).
-        interpreter.register(FileEntry.native)
-        interpreter.register(ProcessEntry.native)
-
-        // The enums the declarations below name, which nothing registered gives.
+        // The enums the types above and the declarations below name, which nothing registered
+        // gives.
+        interpreter.register(FileType.self)
         interpreter.register(InputFormat.self)
         interpreter.register(OutputFormat.self)
         interpreter.register(TextStyle.self)

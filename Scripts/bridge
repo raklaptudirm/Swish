@@ -1,7 +1,7 @@
 #!/bin/bash
 # Regenerates the bridges in Sources/SwishEngine/ScriptLibrary/Types/Generated from the symbol graph
 # of SwishEngine, with Swiit's generator (the checkout beside this one). Run it after changing a
-# bridged type (FileSize), the generator or the Swift toolchain.
+# bridged type (FileSize, FileEntry), the generator or the Swift toolchain.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -9,10 +9,10 @@ generated=Sources/SwishEngine/ScriptLibrary/Types/Generated
 mkdir -p "$generated"
 
 # The glue being made may be what stops the module from building: it is read from an empty one.
-cat > "$generated/FileSizeBridge.swift" <<'STUB'
+cat > "$generated/ShellTypesBridge.swift" <<'STUB'
 import Swiit
 
-internal enum FileSizeBridge {
+internal enum ShellTypesBridge {
     internal static let types: [HostType] = []
 }
 STUB
@@ -21,5 +21,7 @@ STUB
 swift package dump-symbol-graph --minimum-access-level internal --skip-synthesized-members
 swift build -c release --package-path ../Swiit --product swiit-bridge
 "$(swift build -c release --package-path ../Swiit --show-bin-path)/swiit-bridge" \
-    .build/out/symbolgraph/SwishEngine.symbols.json "$generated/FileSizeBridge.swift" \
-    --name FileSize --type FileSize --access internal --in-module SwishEngine
+    .build/out/symbolgraph/SwishEngine.symbols.json "$generated/ShellTypesBridge.swift" \
+    --name ShellTypes --access internal --in-module SwishEngine \
+    --type FileSize --type FileEntry --type ProcessEntry --type DisplayColumn \
+    --boxed Date --boxed FilePath --convertible FileType

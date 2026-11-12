@@ -1,8 +1,8 @@
 import Foundation
 import Swiit
 
-// The Swift types the shell gives scripts, described to the interpreter: a size, a column, a
-// command's output.
+// The Swift types the shell gives scripts that the generator cannot describe (Scripts/bridge makes
+// the rest): a command's output, which has the members of a collection and of its text.
 
 /// A Swift struct scripts hold as data, as `ls` gives `FileEntry`s: its stored properties are its
 /// fields, in the order they are declared, wherever its fields are laid out (a table, `to json`,
@@ -19,37 +19,6 @@ extension Record {
         let field = Mirror(reflecting: self).children.first { $0.label == name }
         return field.map { ($0.value as? any ScriptConvertible)?.value ?? .nothing }
     }
-}
-
-extension FileEntry {
-    static let native = HostType.Builder<FileEntry>("FileEntry")
-        .property("name", \.name)
-        .property("type", \.type)
-        .property("size", \.size)
-        .property("modified", \.modified)
-        .property("permissions", \.permissions)
-        .property("owner", \.owner)
-        .property("created", \.created)
-        .property("accessed", \.accessed)
-        .property("path", \.path)
-        .property("target", \.target)
-}
-
-extension ProcessEntry {
-    static let native = HostType.Builder<ProcessEntry>("ProcessEntry")
-        .property("pid", \.pid)
-        .property("ppid", \.ppid)
-        .property("name", \.name)
-        .property("user", \.user)
-        .property("memory", \.memory)
-        .property("cpuTime", \.cpuTime)
-        .property("threads", \.threads)
-}
-
-extension DisplayColumn {
-    static let native = HostType.Builder<DisplayColumn>("DisplayColumn")
-        .property("name", \.name)
-        .property("styledBy", \.styledBy)
 }
 
 extension Output {

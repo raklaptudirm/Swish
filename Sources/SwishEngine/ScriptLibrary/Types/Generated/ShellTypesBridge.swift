@@ -5,10 +5,13 @@ import Foundation
 
 import Swiit
 
-internal enum FileSizeBridge {
+internal enum ShellTypesBridge {
     internal static let types: [HostType] = [
 
         type18,
+        type29,
+        type37,
+        type41,
     ]
     private static let member0: HostSymbol = HostSymbol.property("bytes", summary: "How many bytes.", type: .int, get: { selfValue in
 let receiver: FileSize = try selfValue.unboxing(FileSize.self)
@@ -109,6 +112,158 @@ let result = (try arguments[0].unboxing(FileSize.self)) / (try arguments[1].unbo
         type.associatedTypes = [:]
         type.parse = { FileSize($0).map { Value(boxing: $0, as: .init(hostType: "FileSize")) } }
         type.literal = nil
+        type.arrayLiteral = nil
+        return type
+    }()
+
+    private static let member19: HostSymbol = HostSymbol.property("name", summary: "", type: .string, get: { selfValue in
+let receiver: FileEntry = try selfValue.unboxing(FileEntry.self)
+                let result = receiver.name
+                return result.value
+})
+
+    private static let member20: HostSymbol = HostSymbol.property("type", summary: "", type: .named(.init(hostType: "FileType")), get: { selfValue in
+let receiver: FileEntry = try selfValue.unboxing(FileEntry.self)
+                let result = receiver.type
+                return result.value
+})
+
+    private static let member21: HostSymbol = HostSymbol.property("size", summary: "", type: .named(.init(hostType: "FileSize")), get: { selfValue in
+let receiver: FileEntry = try selfValue.unboxing(FileEntry.self)
+                let result = receiver.size
+                return Value(boxing: result, as: .init(hostType: "FileSize"))
+})
+
+    private static let member22: HostSymbol = HostSymbol.property("modified", summary: "", type: .named(.init(hostType: "Date")), get: { selfValue in
+let receiver: FileEntry = try selfValue.unboxing(FileEntry.self)
+                let result = receiver.modified
+                return Value(boxing: result, as: .init(hostType: "Date"))
+})
+
+    private static let member23: HostSymbol = HostSymbol.property("permissions", summary: "", type: .string, get: { selfValue in
+let receiver: FileEntry = try selfValue.unboxing(FileEntry.self)
+                let result = receiver.permissions
+                return result.value
+})
+
+    private static let member24: HostSymbol = HostSymbol.property("owner", summary: "", type: .string, get: { selfValue in
+let receiver: FileEntry = try selfValue.unboxing(FileEntry.self)
+                let result = receiver.owner
+                return result.value
+})
+
+    private static let member25: HostSymbol = HostSymbol.property("created", summary: "", type: .named(.init(hostType: "Date")), get: { selfValue in
+let receiver: FileEntry = try selfValue.unboxing(FileEntry.self)
+                let result = receiver.created
+                return Value(boxing: result, as: .init(hostType: "Date"))
+})
+
+    private static let member26: HostSymbol = HostSymbol.property("accessed", summary: "", type: .named(.init(hostType: "Date")), get: { selfValue in
+let receiver: FileEntry = try selfValue.unboxing(FileEntry.self)
+                let result = receiver.accessed
+                return Value(boxing: result, as: .init(hostType: "Date"))
+})
+
+    private static let member27: HostSymbol = HostSymbol.property("path", summary: "", type: .named(.init(hostType: "FilePath")), get: { selfValue in
+let receiver: FileEntry = try selfValue.unboxing(FileEntry.self)
+                let result = receiver.path
+                return Value(boxing: result, as: .init(hostType: "FilePath"))
+})
+
+    private static let member28: HostSymbol = HostSymbol.property("target", summary: "", type: .optional(.named(.init(hostType: "FilePath"))), get: { selfValue in
+let receiver: FileEntry = try selfValue.unboxing(FileEntry.self)
+                let result = receiver.target
+                return (result.map { Value(boxing: $0, as: .init(hostType: "FilePath")) } ?? .nothing)
+})
+
+    private static let type29: HostType = {
+        var type = HostType(name: "FileEntry", members: [member19, member20, member21, member22, member23, member24, member25, member26, member27, member28])
+        type.genericParameters = []
+        type.conformances = ["Encodable": [], "Equatable": [], "Hashable": []]
+        type.associatedTypes = [:]
+        type.parse = nil
+        type.literal = nil
+        type.arrayLiteral = nil
+        return type
+    }()
+
+    private static let member30: HostSymbol = HostSymbol.property("pid", summary: "", type: .int, get: { selfValue in
+let receiver: ProcessEntry = try selfValue.unboxing(ProcessEntry.self)
+                let result = receiver.pid
+                return result.value
+})
+
+    private static let member31: HostSymbol = HostSymbol.property("ppid", summary: "", type: .int, get: { selfValue in
+let receiver: ProcessEntry = try selfValue.unboxing(ProcessEntry.self)
+                let result = receiver.ppid
+                return result.value
+})
+
+    private static let member32: HostSymbol = HostSymbol.property("name", summary: "", type: .string, get: { selfValue in
+let receiver: ProcessEntry = try selfValue.unboxing(ProcessEntry.self)
+                let result = receiver.name
+                return result.value
+})
+
+    private static let member33: HostSymbol = HostSymbol.property("user", summary: "", type: .string, get: { selfValue in
+let receiver: ProcessEntry = try selfValue.unboxing(ProcessEntry.self)
+                let result = receiver.user
+                return result.value
+})
+
+    private static let member34: HostSymbol = HostSymbol.property("memory", summary: "", type: .optional(.named(.init(hostType: "FileSize"))), get: { selfValue in
+let receiver: ProcessEntry = try selfValue.unboxing(ProcessEntry.self)
+                let result = receiver.memory
+                return (result.map { Value(boxing: $0, as: .init(hostType: "FileSize")) } ?? .nothing)
+})
+
+    private static let member35: HostSymbol = HostSymbol.property("cpuTime", summary: "Seconds.", type: .optional(.double), get: { selfValue in
+let receiver: ProcessEntry = try selfValue.unboxing(ProcessEntry.self)
+                let result = receiver.cpuTime
+                return (result.map { $0.value } ?? .nothing)
+})
+
+    private static let member36: HostSymbol = HostSymbol.property("threads", summary: "", type: .optional(.int), get: { selfValue in
+let receiver: ProcessEntry = try selfValue.unboxing(ProcessEntry.self)
+                let result = receiver.threads
+                return (result.map { $0.value } ?? .nothing)
+})
+
+    private static let type37: HostType = {
+        var type = HostType(name: "ProcessEntry", members: [member30, member31, member32, member33, member34, member35, member36])
+        type.genericParameters = []
+        type.conformances = ["Encodable": [], "Equatable": [], "Hashable": []]
+        type.associatedTypes = [:]
+        type.parse = nil
+        type.literal = nil
+        type.arrayLiteral = nil
+        return type
+    }()
+
+    private static let member38: HostSymbol = HostSymbol.property("name", summary: "", type: .string, get: { selfValue in
+let receiver: DisplayColumn = try selfValue.unboxing(DisplayColumn.self)
+                let result = receiver.name
+                return result.value
+})
+
+    private static let member39: HostSymbol = HostSymbol.property("styledBy", summary: "", type: .optional(.string), get: { selfValue in
+let receiver: DisplayColumn = try selfValue.unboxing(DisplayColumn.self)
+                let result = receiver.styledBy
+                return (result.map { $0.value } ?? .nothing)
+})
+
+    private static let member40: HostSymbol = HostSymbol.initializer(summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: "stringLiteral", name: "name", type: .string)], returns: .named(.init(hostType: "DisplayColumn")), throwing: .no, isAsync: false, generics: [])) { arguments in
+let result = DisplayColumn(stringLiteral: try String(arguments[0]))
+                return Value(boxing: result, as: .init(hostType: "DisplayColumn"))
+}
+
+    private static let type41: HostType = {
+        var type = HostType(name: "DisplayColumn", members: [member38, member39, member40])
+        type.genericParameters = []
+        type.conformances = ["ExpressibleByStringLiteral": []]
+        type.associatedTypes = [:]
+        type.parse = nil
+        type.literal = { Value.Bridging.textLiteral(DisplayColumn.self, $0).map { Value(boxing: $0, as: .init(hostType: "DisplayColumn")) } }
         type.arrayLiteral = nil
         return type
     }()
