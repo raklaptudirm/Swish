@@ -20,10 +20,14 @@ env:
   # The terminal tests expect a color terminal, as a person's would be.
   TERM: xterm-256color
 
+# The jobs on macOS (format, the macOS tests) run only when the repository variable MACOS_RUNNERS is
+# 'true': they are off for now, as the hosted macOS runners are scarce, and the same checks are run
+# locally. Linux runs always.
 jobs:
   # The code is as `swift format` writes it (.swift-format): formatting it again changes nothing.
   format:
     name: Format
+    if: ${{ vars.MACOS_RUNNERS == 'true' }}
     runs-on: macos-15
     timeout-minutes: 10
     steps:
@@ -40,6 +44,7 @@ jobs:
 
   macos:
     name: macOS
+    if: ${{ vars.MACOS_RUNNERS == 'true' }}
     runs-on: macos-15
     timeout-minutes: 60
     steps:
