@@ -12,11 +12,13 @@ extension Date {
     }
 
     /// How many seconds apart two dates are: `later - earlier`.
-    static func - (lhs: Date, rhs: Date) -> TimeInterval { lhs.timeIntervalSince(rhs) }
+    public static func - (lhs: Date, rhs: Date) -> Double { lhs.timeIntervalSince(rhs) }
 
     /// A date some whole seconds later or earlier, as `date + 60`.
-    static func + (lhs: Date, rhs: Int) -> Date { lhs.addingTimeInterval(TimeInterval(rhs)) }
-    static func - (lhs: Date, rhs: Int) -> Date { lhs.addingTimeInterval(-TimeInterval(rhs)) }
+    public static func + (lhs: Date, rhs: Int) -> Date { lhs.addingTimeInterval(TimeInterval(rhs)) }
+    public static func - (lhs: Date, rhs: Int) -> Date {
+        lhs.addingTimeInterval(-TimeInterval(rhs))
+    }
 
     /// To the second, in local time; a table shows it to the minute.
     private static let formatter: DateFormatter = {
@@ -26,15 +28,8 @@ extension Date {
         return formatter
     }()
 
-    var shown: String { Date.formatter.string(from: self) }
-
-    static let native = HostType.Builder<Date>("Date")
-        .property("description", \.shown)
-        .property("debugDescription", \.shown)
-        .failableInitializer { (text: String) in Date(isoText: text) }
-        .static("-", labels: [nil, nil]) { (a: Date, b: Date) -> Double in a - b }
-        .static("+", labels: [nil, nil]) { (a: Date, b: Int) -> Date in a + b }
-        .static("-", labels: [nil, nil]) { (a: Date, b: Int) -> Date in a - b }
+    /// How scripts write it (its `description`): to the second, in local time.
+    public var shown: String { Date.formatter.string(from: self) }
 }
 
 /// A word that is ISO 8601 text is a date, which is how `Date` takes one on a command line.

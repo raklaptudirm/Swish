@@ -12,7 +12,6 @@ extension Shell {
     func installLibrary() {
         for type in ShellTypesBridge.types { interpreter.register(type) }
         for function in ShellTypesBridge.functions { interpreter.register(function) }
-        interpreter.register(Date.native)
 
         // The enums the types above and the declarations below name, which nothing registered
         // gives.

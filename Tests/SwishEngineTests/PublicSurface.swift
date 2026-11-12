@@ -35,7 +35,8 @@ enum PublicSurface {
         "Shell.report",
         // How a statement ended, and what the spans of a source say
         "Status.success", "Status.succeeded", "Status.number", "Status.code", "Status.signal",
-        "Status.encode", "Status.init", "Status.scriptType", "Status.value",
+        "Status.encode", "Date.func", "Date.shown", "Status.init", "Status.scriptType",
+        "Status.value",
         "HighlightKind.displayStyle", "HighlightSpan.range", "HighlightSpan.kind",
         "HighlightSpan.init",
         // A retroactive conformance is as public as the type and the protocol: `Date` is a
