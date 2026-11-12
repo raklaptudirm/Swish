@@ -412,11 +412,6 @@ func table(_ items: [Any]) -> [String]
 /// Shows each record as a list of fields.
 func list(_ items: [Any]) -> [String]
 
-/// Runs a closure with environment variables set, then puts them back.
-/// - Parameter variables: the variables to set, as in with(env: ["EDITOR": "vim"]) { git commit }
-/// - Parameter body: what to run with them set
-func with<T>(env variables: [String: String], _ body: () throws -> T) rethrows -> T
-
 /// Lists directory contents.
 /// - Parameter paths: files or directories to list (default: the current directory)
 /// - Parameter all: include hidden files

@@ -9,7 +9,7 @@ public func pwd() -> FilePath {
 /// Runs a closure with environment variables set, then puts them back.
 /// - Parameter variables: the variables to set, as in with(env: ["EDITOR": "vim"]) { git commit }
 /// - Parameter body: what to run with them set
-package func with<T>(env variables: [String: String], _ body: () throws -> T) rethrows -> T {
+public func with<T>(env variables: [String: String], _ body: () throws -> T) rethrows -> T {
     let saved = variables.keys.map { ($0, getenv($0).map { String(cString: $0) }) }
     for (name, value) in variables { setenv(name, value, 1) }
     defer {

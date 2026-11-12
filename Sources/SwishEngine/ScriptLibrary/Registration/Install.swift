@@ -138,14 +138,6 @@ extension Shell {
             }
             return Value(lines.map { Value($0) })
         }
-        add("with") { [unowned self] arguments in
-            var variables: [String: String] = [:]
-            for (key, value) in arguments["variables"]?.entries ?? [] {
-                variables[key.description] = value.description
-            }
-            guard let body = arguments["body"] else { return .nothing }
-            return try with(env: variables) { try runner.callBlock(body) }
-        }
         add("shellStyled") { [unowned self] arguments in
             let text = arguments["text"]?.description ?? ""
             let styles = try (arguments["styles"]?.casting(to: [Value].self) ?? [])

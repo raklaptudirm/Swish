@@ -19,7 +19,7 @@ public enum LibraryBridge {
         type84,
         type91,
     ]
-    public static let functions: [HostSymbol] = [member92, member93, member94, member95]
+    public static let functions: [HostSymbol] = [member92, member93, member94, member95, member96]
     private static let member0: HostSymbol = HostSymbol.property("name", summary: "", type: .string, get: { selfValue in
 let receiver: DisplayColumn = try selfValue.unboxing(DisplayColumn.self)
                 let result = receiver.name
@@ -579,22 +579,28 @@ let receiver: Date = try selfValue.unboxing(Date.self)
         return type
     }()
 
-    private static let member92: HostSymbol = HostSymbol.function(name: "pwd", summary: "The working directory.", parameters: [], returns: .named(.init(hostType: "FilePath")), isThrowing: false, generics: [], body: { arguments in
+    private static let member92: HostSymbol = HostSymbol.function(name: "pwd", summary: "The working directory.", signature: Symbol.Function(parameters: [], returns: .named(.init(hostType: "FilePath")), throwing: .no, isAsync: false, generics: []), body: { arguments in
 let result = pwd()
                 return Value(boxing: result, as: .init(hostType: "FilePath"))
 })
 
-    private static let member93: HostSymbol = HostSymbol.function(name: "listFiles", summary: "Lists directory contents; a path it can't read is reported and left out. It is `ls`: the prelude's `ls` takes its paths as arguments, which Swift cannot pass on as an array.", parameters: [Symbol.Parameter(label: nil, name: "paths", type: .list(.named(.init(hostType: "FilePath")))), Symbol.Parameter(label: "all", name: "all", type: .bool)], returns: .list(.named(.init(hostType: "FileEntry"))), isThrowing: false, generics: [], body: { arguments in
+    private static let member93: HostSymbol = HostSymbol.function(name: "with", summary: "Runs a closure with environment variables set, then puts them back.", signature: Symbol.Function(parameters: [Symbol.Parameter(label: "env", name: "variables", type: .dictionary(.string, .string)), Symbol.Parameter(label: nil, name: "body", type: .function(parameters: [], returns: .parameter("T"), isThrowing: true, isAsync: false))], returns: .parameter("T"), throwing: .rethrowing, isAsync: false, generics: ["T"]), body: { arguments in
+let interpreter = Interpreter.running!
+let result = try with(env: try Dictionary(uniqueKeysWithValues: Value.Bridging.dictionary(arguments[0]).map { (try String($0.key), try String($0.value)) }), { () throws -> Value in try Value.Bridging.closure(interpreter, arguments[1])([]) })
+                return result
+})
+
+    private static let member94: HostSymbol = HostSymbol.function(name: "listFiles", summary: "Lists directory contents; a path it can't read is reported and left out. It is `ls`: the prelude's `ls` takes its paths as arguments, which Swift cannot pass on as an array.", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "paths", type: .list(.named(.init(hostType: "FilePath")))), Symbol.Parameter(label: "all", name: "all", type: .bool)], returns: .list(.named(.init(hostType: "FileEntry"))), throwing: .no, isAsync: false, generics: []), body: { arguments in
 let result: [FileEntry] = listFiles(try Value.Bridging.list(arguments[0]).map { try $0.unboxing(FilePath.self) }, all: try Bool(arguments[1]))
                 return Value(list: result.map { Value(boxing: $0, as: .init(hostType: "FileEntry")) })
 })
 
-    private static let member94: HostSymbol = HostSymbol.function(name: "readInputLine", summary: "A line of standard input, or nil at its end.", parameters: [Symbol.Parameter(label: "strippingNewline", name: "strippingNewline", type: .bool, arity: .defaulted(.value(true)))], returns: .optional(.string), isThrowing: false, generics: [], body: { arguments in
+    private static let member95: HostSymbol = HostSymbol.function(name: "readInputLine", summary: "A line of standard input, or nil at its end.", signature: Symbol.Function(parameters: [Symbol.Parameter(label: "strippingNewline", name: "strippingNewline", type: .bool, arity: .defaulted(.value(true)))], returns: .optional(.string), throwing: .no, isAsync: false, generics: []), body: { arguments in
 let result = readInputLine(strippingNewline: try Bool(arguments[0]))
                 return (result.map { $0.value } ?? .nothing)
 })
 
-    private static let member95: HostSymbol = HostSymbol.function(name: "ps", summary: "Lists running processes. Memory and CPU time are only known for your own processes.", parameters: [], returns: .list(.named(.init(hostType: "ProcessEntry"))), isThrowing: false, generics: [], body: { arguments in
+    private static let member96: HostSymbol = HostSymbol.function(name: "ps", summary: "Lists running processes. Memory and CPU time are only known for your own processes.", signature: Symbol.Function(parameters: [], returns: .list(.named(.init(hostType: "ProcessEntry"))), throwing: .no, isAsync: false, generics: []), body: { arguments in
 let result: [ProcessEntry] = ps()
                 return Value(list: result.map { Value(boxing: $0, as: .init(hostType: "ProcessEntry")) })
 })
