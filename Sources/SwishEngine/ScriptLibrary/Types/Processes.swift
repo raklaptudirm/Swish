@@ -15,8 +15,10 @@ func userName(_ uid: uid_t) -> String {
     getpwuid(uid).map { String(cString: $0.pointee.pw_name) } ?? String(uid)
 }
 
-/// A process `ps` lists.
-struct ProcessEntry: Encodable, Equatable, Hashable, Record {
+/// A process `ps` lists. Its memory, CPU time and thread count are known together, for the
+/// processes the user may inspect, and unknown (nil) together for the others; they are fields of
+/// their own, not one optional group, so a table and `to json` lay each out as a column.
+struct ProcessEntry: Encodable, Equatable, Hashable, RecordRepresentable {
     public var pid: Int
     public var ppid: Int
     public var name: String

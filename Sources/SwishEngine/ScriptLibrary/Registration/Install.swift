@@ -145,13 +145,6 @@ extension Shell {
             guard let body = arguments["body"] else { return .nothing }
             return try with(env: variables) { try runner.callBlock(body) }
         }
-        add("readLine") { arguments in
-            readLine(
-                strippingNewline: arguments["strippingNewline"]?.casting(to: Bool.self) ?? true
-            )
-            .map { Value($0) }
-                ?? .nothing
-        }
         add("shellStyled") { [unowned self] arguments in
             let text = arguments["text"]?.description ?? ""
             let styles = try (arguments["styles"]?.casting(to: [Value].self) ?? [])

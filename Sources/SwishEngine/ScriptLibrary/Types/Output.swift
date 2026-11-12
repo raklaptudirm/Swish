@@ -9,7 +9,8 @@ struct Output: Sendable, Hashable, RandomAccessCollection {
     public let text: String
     /// How the command ended.
     public let status: Status
-    /// One String for each line.
+    /// One String for each line: always `text` split at its newlines, kept so that indexing and
+    /// counting do not split it again.
     public let lines: [String]
 
     init(text: String, status: Status) {
@@ -27,13 +28,6 @@ struct Output: Sendable, Hashable, RandomAccessCollection {
             status: signal.map { Status.signaled(Int32($0)) } ?? .exited(Int32(code ?? 0))
         )
     }
-
-    /// The exit code, or nil when a signal ended the command.
-    public var code: Int? { status.code }
-    /// The signal that ended the command, if one did.
-    public var signal: Int? { status.signal }
-    /// Whether it exited with code 0.
-    public var succeeded: Bool { status.succeeded }
 
     // MARK: Collection of lines
 

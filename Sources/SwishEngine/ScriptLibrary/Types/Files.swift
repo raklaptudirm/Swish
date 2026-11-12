@@ -31,14 +31,15 @@ extension FileType: DisplayStyled {
 }
 
 /// An entry `ls` lists.
-struct FileEntry: Encodable, Equatable, Hashable, Record {
+struct FileEntry: Encodable, Equatable, Hashable, RecordRepresentable {
     public let name: String
     public let type: FileType
     public let size: FileSize
     public let modified: Date
     public let permissions: String
     public let owner: String
-    public let created: Date
+    /// When it was made, if the system keeps that.
+    public let created: Date?
     public let accessed: Date
     public let path: FilePath
     public let target: FilePath?
@@ -50,7 +51,8 @@ extension FileEntry: Tabular {
     ]
 }
 
-/// Lists directory contents; a path it can't read is reported and left out.
+/// Lists directory contents; a path it can't read is reported and left out. It is `ls`: the prelude's
+/// `ls` takes its paths as arguments, which Swift cannot pass on as an array.
 /// - Parameter paths: files or directories to list (default: the current directory)
 /// - Parameter all: include hidden files
 func listFiles(_ paths: [FilePath], all: Bool) -> [FileEntry] {
@@ -124,7 +126,7 @@ private func entry(
             modified: status.modified,
             permissions: letter + status.permissions,
             owner: userName(status.owner),
-            created: status.created ?? status.modified,
+            created: status.created,
             accessed: status.accessed,
             path: FilePath(path),
             target: target.map { FilePath($0) }

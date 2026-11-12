@@ -426,7 +426,9 @@ func ls(_ paths: FilePath..., all: Bool = false) -> [FileEntry] {
 
 /// A line of standard input, or nil at its end.
 /// - Parameter strippingNewline: leave the line's newline off
-func readLine(strippingNewline: Bool = true) -> String?
+func readLine(strippingNewline: Bool = true) -> String? {
+    readInputLine(strippingNewline: strippingNewline)
+}
 
 func shellStyled(_ text: String, _ styles: [TextStyle]) -> String
 extension String {
