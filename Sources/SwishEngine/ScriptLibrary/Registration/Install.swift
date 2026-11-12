@@ -11,6 +11,7 @@ extension Shell {
     /// types they use.
     func installLibrary() {
         for type in ShellTypesBridge.types { interpreter.register(type) }
+        for function in ShellTypesBridge.functions { interpreter.register(function) }
         interpreter.register(Date.native)
 
         // The enums the types above and the declarations below name, which nothing registered
@@ -155,7 +156,6 @@ extension Shell {
             }
             return Value(lines.map { Value($0) })
         }
-        add("pwd") { _ in Value(pwd()) }
         add("with") { [unowned self] arguments in
             var variables: [String: String] = [:]
             for (key, value) in arguments["variables"]?.entries ?? [] {
@@ -171,7 +171,6 @@ extension Shell {
             for error in partial.errors { reportItemError("ls: \(error)") }
             return Value(partial.value.map(\.value))
         }
-        add("ps") { _ in Value(ps().map(\.value)) }
         add("readLine") { arguments in
             readLine(
                 strippingNewline: arguments["strippingNewline"]?.casting(to: Bool.self) ?? true

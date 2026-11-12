@@ -14,6 +14,7 @@ import Swiit
 
 internal enum ShellTypesBridge {
     internal static let types: [HostType] = []
+    internal static let functions: [HostSymbol] = []
 }
 STUB
 
@@ -24,4 +25,5 @@ swift build -c release --package-path ../Swiit --product swiit-bridge
     .build/out/symbolgraph/SwishEngine.symbols.json "$generated/ShellTypesBridge.swift" \
     --name ShellTypes --access internal --in-module SwishEngine \
     --type FileSize --type FileEntry --type ProcessEntry --type DisplayColumn \
+    --function pwd --function ps \
     --boxed Date --boxed FilePath --convertible FileType

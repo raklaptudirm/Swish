@@ -13,6 +13,7 @@ internal enum ShellTypesBridge {
         type37,
         type41,
     ]
+    internal static let functions: [HostSymbol] = [member42, member43]
     private static let member0: HostSymbol = HostSymbol.property("bytes", summary: "How many bytes.", type: .int, get: { selfValue in
 let receiver: FileSize = try selfValue.unboxing(FileSize.self)
                 let result = receiver.bytes
@@ -267,4 +268,14 @@ let result = DisplayColumn(stringLiteral: try String(arguments[0]))
         type.arrayLiteral = nil
         return type
     }()
+
+    private static let member42: HostSymbol = HostSymbol.function(name: "pwd", summary: "The working directory.", parameters: [], returns: .named(.init(hostType: "FilePath")), isThrowing: false, generics: [], body: { arguments in
+let result = pwd()
+                return Value(boxing: result, as: .init(hostType: "FilePath"))
+})
+
+    private static let member43: HostSymbol = HostSymbol.function(name: "ps", summary: "Lists running processes. Memory and CPU time are only known for your own processes.", parameters: [], returns: .list(.named(.init(hostType: "ProcessEntry"))), isThrowing: false, generics: [], body: { arguments in
+let result: [ProcessEntry] = ps()
+                return Value(list: result.map { Value(boxing: $0, as: .init(hostType: "ProcessEntry")) })
+})
 }

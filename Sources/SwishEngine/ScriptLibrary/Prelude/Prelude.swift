@@ -412,9 +412,6 @@ func table(_ items: [Any]) -> [String]
 /// Shows each record as a list of fields.
 func list(_ items: [Any]) -> [String]
 
-/// The working directory.
-func pwd() -> FilePath
-
 /// Runs a closure with environment variables set, then puts them back.
 /// - Parameter variables: the variables to set, as in with(env: ["EDITOR": "vim"]) { git commit }
 /// - Parameter body: what to run with them set
@@ -428,9 +425,6 @@ func ls(_ paths: FilePath..., all: Bool = false) -> [FileEntry]
 /// A line of standard input, or nil at its end.
 /// - Parameter strippingNewline: leave the line's newline off
 func readLine(strippingNewline: Bool = true) -> String?
-
-/// Lists running processes. Memory and CPU time are only known for your own processes.
-func ps() -> [ProcessEntry]
 
 func shellStyled(_ text: String, _ styles: [TextStyle]) -> String
 extension String {
