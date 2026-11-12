@@ -24,6 +24,6 @@ swift build -c release --package-path ../Swiit --product swiit-bridge
 "$(swift build -c release --package-path ../Swiit --show-bin-path)/swiit-bridge" \
     .build/out/symbolgraph/SwishEngine.symbols.json "$generated/ShellTypesBridge.swift" \
     --name ShellTypes --access internal --in-module SwishEngine \
-    --type FileSize --type FileEntry --type ProcessEntry --type DisplayColumn \
+    --type FileSize --type FileEntry --type ProcessEntry --type DisplayColumn --type Output \
     --function pwd --function ps \
-    --boxed Date --boxed FilePath --convertible FileType
+    --boxed Date --boxed FilePath --convertible FileType --convertible Status

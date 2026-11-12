@@ -47,9 +47,38 @@ public enum Status: Hashable, Sendable {
 /// this way, as host types are process-wide and can't make a type an interpreter declares. Every
 /// field is there, and `nil` is a field.
 extension Status: Encodable {
+    public func encode(to encoder: any Encoder) throws {
+        try StatusFields(self).encode(to: encoder)
+    }
+}
+
+/// A status crosses as the fields of the prelude's `Status`, by its name.
+extension Status: ScriptConvertible {
+    static let id = Symbol.ID(hostType: "Status")
+    public static var scriptType: ScriptType { .named(id) }
+
+    /// A script's status is read as its fields; nothing takes one as a parameter.
+    public init(_ value: Value) throws {
+        throw LibraryError("expected a Status, not \(value)")
+    }
+
+    public var value: Value { (try? Value(encoding: StatusFields(self), as: Status.id)) ?? .nothing }
+}
+
+/// A status as its fields, which encode as the struct they are. (A status that encodes itself
+/// would be converted by `value`, which encodes it.)
+private struct StatusFields: Encodable {
+    let code: Int?
+    let signal: Int?
+    let succeeded: Bool
+
+    init(_ status: Status) {
+        (code, signal, succeeded) = (status.code, status.signal, status.succeeded)
+    }
+
     private enum CodingKeys: String, CodingKey { case code, signal, succeeded }
 
-    public func encode(to encoder: any Encoder) throws {
+    func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(code, forKey: .code)
         try container.encode(signal, forKey: .signal)

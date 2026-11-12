@@ -12,8 +12,9 @@ internal enum ShellTypesBridge {
         type29,
         type37,
         type41,
+        type69,
     ]
-    internal static let functions: [HostSymbol] = [member42, member43]
+    internal static let functions: [HostSymbol] = [member70, member71]
     private static let member0: HostSymbol = HostSymbol.property("bytes", summary: "How many bytes.", type: .int, get: { selfValue in
 let receiver: FileSize = try selfValue.unboxing(FileSize.self)
                 let result = receiver.bytes
@@ -269,12 +270,172 @@ let result = DisplayColumn(stringLiteral: try String(arguments[0]))
         return type
     }()
 
-    private static let member42: HostSymbol = HostSymbol.function(name: "pwd", summary: "The working directory.", parameters: [], returns: .named(.init(hostType: "FilePath")), isThrowing: false, generics: [], body: { arguments in
+    private static let member42: HostSymbol = HostSymbol.property("text", summary: "All of it, as one String.", type: .string, get: { selfValue in
+let receiver: Output = try selfValue.unboxing(Output.self)
+                let result = receiver.text
+                return result.value
+})
+
+    private static let member43: HostSymbol = HostSymbol.property("status", summary: "How the command ended.", type: .named(.init(hostType: "Status")), get: { selfValue in
+let receiver: Output = try selfValue.unboxing(Output.self)
+                let result = receiver.status
+                return result.value
+})
+
+    private static let member44: HostSymbol = HostSymbol.property("lines", summary: "One String for each line.", type: .list(.string), get: { selfValue in
+let receiver: Output = try selfValue.unboxing(Output.self)
+                let result: [String] = receiver.lines
+                return Value(list: result.map { $0.value })
+})
+
+    private static let member45: HostSymbol = HostSymbol.initializer(summary: "An output of this text that ended as a command with this code, or this signal, would.", signature: Symbol.Function(parameters: [Symbol.Parameter(label: "text", name: "text", type: .string), Symbol.Parameter(label: "code", name: "code", type: .optional(.int)), Symbol.Parameter(label: "signal", name: "signal", type: .optional(.int))], returns: .named(.init(hostType: "Output")), throwing: .no, isAsync: false, generics: [])) { arguments in
+let result = Output(text: try String(arguments[0]), code: (arguments[1] == .nothing ? nil : try Int(arguments[1])), signal: (arguments[2] == .nothing ? nil : try Int(arguments[2])))
+                return Value(boxing: result, as: .init(hostType: "Output"))
+}
+
+    private static let member46: HostSymbol = HostSymbol.property("code", summary: "The exit code, or nil when a signal ended the command.", type: .optional(.int), get: { selfValue in
+let receiver: Output = try selfValue.unboxing(Output.self)
+                let result = receiver.code
+                return (result.map { $0.value } ?? .nothing)
+})
+
+    private static let member47: HostSymbol = HostSymbol.property("signal", summary: "The signal that ended the command, if one did.", type: .optional(.int), get: { selfValue in
+let receiver: Output = try selfValue.unboxing(Output.self)
+                let result = receiver.signal
+                return (result.map { $0.value } ?? .nothing)
+})
+
+    private static let member48: HostSymbol = HostSymbol.property("succeeded", summary: "Whether it exited with code 0.", type: .bool, get: { selfValue in
+let receiver: Output = try selfValue.unboxing(Output.self)
+                let result = receiver.succeeded
+                return result.value
+})
+
+    private static let member49: HostSymbol = HostSymbol.property("startIndex", summary: "", type: .int, get: { selfValue in
+let receiver: Output = try selfValue.unboxing(Output.self)
+                let result = receiver.startIndex
+                return result.value
+})
+
+    private static let member50: HostSymbol = HostSymbol.property("endIndex", summary: "", type: .int, get: { selfValue in
+let receiver: Output = try selfValue.unboxing(Output.self)
+                let result = receiver.endIndex
+                return result.value
+})
+
+    private static let member51: HostSymbol = HostSymbol.property("count", summary: "", type: .int, get: { selfValue in
+let receiver: Output = try selfValue.unboxing(Output.self)
+                let result = receiver.count
+                return result.value
+})
+
+    private static let member52: HostSymbol = HostSymbol.property("isEmpty", summary: "", type: .bool, get: { selfValue in
+let receiver: Output = try selfValue.unboxing(Output.self)
+                let result = receiver.isEmpty
+                return result.value
+})
+
+    private static let member53: HostSymbol = HostSymbol.property("first", summary: "", type: .optional(.string), get: { selfValue in
+let receiver: Output = try selfValue.unboxing(Output.self)
+                let result = receiver.first
+                return (result.map { $0.value } ?? .nothing)
+})
+
+    private static let member54: HostSymbol = HostSymbol.property("last", summary: "", type: .optional(.string), get: { selfValue in
+let receiver: Output = try selfValue.unboxing(Output.self)
+                let result = receiver.last
+                return (result.map { $0.value } ?? .nothing)
+})
+
+    private static let member55: HostSymbol = HostSymbol.staticMethod("==", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(hostType: "Output"))), Symbol.Parameter(label: nil, name: "rhs", type: .string)], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+let result = (try arguments[0].unboxing(Output.self)) == (try String(arguments[1]))
+                return result.value
+}
+
+    private static let member56: HostSymbol = HostSymbol.staticMethod("==", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .string), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(hostType: "Output")))], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+let result = (try String(arguments[0])) == (try arguments[1].unboxing(Output.self))
+                return result.value
+}
+
+    private static let member57: HostSymbol = HostSymbol.staticMethod("!=", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(hostType: "Output"))), Symbol.Parameter(label: nil, name: "rhs", type: .string)], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+let result = (try arguments[0].unboxing(Output.self)) != (try String(arguments[1]))
+                return result.value
+}
+
+    private static let member58: HostSymbol = HostSymbol.staticMethod("!=", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .string), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(hostType: "Output")))], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+let result = (try String(arguments[0])) != (try arguments[1].unboxing(Output.self))
+                return result.value
+}
+
+    private static let member59: HostSymbol = HostSymbol.staticMethod("<", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(hostType: "Output"))), Symbol.Parameter(label: nil, name: "rhs", type: .string)], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+let result = (try arguments[0].unboxing(Output.self)) < (try String(arguments[1]))
+                return result.value
+}
+
+    private static let member60: HostSymbol = HostSymbol.staticMethod("<", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .string), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(hostType: "Output")))], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+let result = (try String(arguments[0])) < (try arguments[1].unboxing(Output.self))
+                return result.value
+}
+
+    private static let member61: HostSymbol = HostSymbol.staticMethod(">", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(hostType: "Output"))), Symbol.Parameter(label: nil, name: "rhs", type: .string)], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+let result = (try arguments[0].unboxing(Output.self)) > (try String(arguments[1]))
+                return result.value
+}
+
+    private static let member62: HostSymbol = HostSymbol.staticMethod(">", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .string), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(hostType: "Output")))], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+let result = (try String(arguments[0])) > (try arguments[1].unboxing(Output.self))
+                return result.value
+}
+
+    private static let member63: HostSymbol = HostSymbol.staticMethod("<=", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(hostType: "Output"))), Symbol.Parameter(label: nil, name: "rhs", type: .string)], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+let result = (try arguments[0].unboxing(Output.self)) <= (try String(arguments[1]))
+                return result.value
+}
+
+    private static let member64: HostSymbol = HostSymbol.staticMethod("<=", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .string), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(hostType: "Output")))], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+let result = (try String(arguments[0])) <= (try arguments[1].unboxing(Output.self))
+                return result.value
+}
+
+    private static let member65: HostSymbol = HostSymbol.staticMethod(">=", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(hostType: "Output"))), Symbol.Parameter(label: nil, name: "rhs", type: .string)], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+let result = (try arguments[0].unboxing(Output.self)) >= (try String(arguments[1]))
+                return result.value
+}
+
+    private static let member66: HostSymbol = HostSymbol.staticMethod(">=", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .string), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(hostType: "Output")))], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+let result = (try String(arguments[0])) >= (try arguments[1].unboxing(Output.self))
+                return result.value
+}
+
+    private static let member67: HostSymbol = HostSymbol.property("description", summary: "", type: .string, get: { selfValue in
+let receiver: Output = try selfValue.unboxing(Output.self)
+                let result = receiver.description
+                return result.value
+})
+
+    private static let member68: HostSymbol = HostSymbol.property("debugDescription", summary: "", type: .string, get: { selfValue in
+let receiver: Output = try selfValue.unboxing(Output.self)
+                let result = receiver.debugDescription
+                return result.value
+})
+
+    private static let type69: HostType = {
+        var type = HostType(name: "Output", members: [member42, member43, member44, member45, member46, member47, member48, member49, member50, member51, member52, member53, member54, member55, member56, member57, member58, member59, member60, member61, member62, member63, member64, member65, member66, member67, member68])
+        type.genericParameters = []
+        type.conformances = ["CustomStringConvertible": [], "Equatable": [], "Hashable": [], "Sequence": []]
+        type.associatedTypes = ["Element": .string, "Index": .int]
+        type.parse = nil
+        type.literal = nil
+        type.arrayLiteral = nil
+        return type
+    }()
+
+    private static let member70: HostSymbol = HostSymbol.function(name: "pwd", summary: "The working directory.", parameters: [], returns: .named(.init(hostType: "FilePath")), isThrowing: false, generics: [], body: { arguments in
 let result = pwd()
                 return Value(boxing: result, as: .init(hostType: "FilePath"))
 })
 
-    private static let member43: HostSymbol = HostSymbol.function(name: "ps", summary: "Lists running processes. Memory and CPU time are only known for your own processes.", parameters: [], returns: .list(.named(.init(hostType: "ProcessEntry"))), isThrowing: false, generics: [], body: { arguments in
+    private static let member71: HostSymbol = HostSymbol.function(name: "ps", summary: "Lists running processes. Memory and CPU time are only known for your own processes.", parameters: [], returns: .list(.named(.init(hostType: "ProcessEntry"))), isThrowing: false, generics: [], body: { arguments in
 let result: [ProcessEntry] = ps()
                 return Value(list: result.map { Value(boxing: $0, as: .init(hostType: "ProcessEntry")) })
 })

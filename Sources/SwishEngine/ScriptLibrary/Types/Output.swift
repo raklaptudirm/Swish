@@ -12,13 +12,28 @@ struct Output: Sendable, Hashable, RandomAccessCollection {
     /// One String for each line.
     public let lines: [String]
 
-    public init(text: String, status: Status) {
+    init(text: String, status: Status) {
         self.text = text
         self.status = status
         lines =
             text.isEmpty
             ? [] : text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
     }
+
+    /// An output of this text that ended as a command with this code, or this signal, would.
+    public init(text: String, code: Int?, signal: Int?) {
+        self.init(
+            text: text,
+            status: signal.map { Status.signaled(Int32($0)) } ?? .exited(Int32(code ?? 0))
+        )
+    }
+
+    /// The exit code, or nil when a signal ended the command.
+    public var code: Int? { status.code }
+    /// The signal that ended the command, if one did.
+    public var signal: Int? { status.signal }
+    /// Whether it exited with code 0.
+    public var succeeded: Bool { status.succeeded }
 
     // MARK: Collection of lines
 
@@ -28,15 +43,37 @@ struct Output: Sendable, Hashable, RandomAccessCollection {
     public var startIndex: Int { lines.startIndex }
     public var endIndex: Int { lines.endIndex }
     public subscript(position: Int) -> String { lines[position] }
+
+    // The collection's own, which scripts read as members of a list.
+    public var count: Int { lines.count }
+    public var isEmpty: Bool { lines.isEmpty }
+    public var first: String? { lines.first }
+    public var last: String? { lines.last }
+}
+
+/// A command's output compares with text as its text does, on either side.
+extension Output {
+    public static func == (lhs: Output, rhs: String) -> Bool { lhs.text == rhs }
+    public static func == (lhs: String, rhs: Output) -> Bool { lhs == rhs.text }
+    public static func != (lhs: Output, rhs: String) -> Bool { lhs.text != rhs }
+    public static func != (lhs: String, rhs: Output) -> Bool { lhs != rhs.text }
+    public static func < (lhs: Output, rhs: String) -> Bool { lhs.text < rhs }
+    public static func < (lhs: String, rhs: Output) -> Bool { lhs < rhs.text }
+    public static func > (lhs: Output, rhs: String) -> Bool { lhs.text > rhs }
+    public static func > (lhs: String, rhs: Output) -> Bool { lhs > rhs.text }
+    public static func <= (lhs: Output, rhs: String) -> Bool { lhs.text <= rhs }
+    public static func <= (lhs: String, rhs: Output) -> Bool { lhs <= rhs.text }
+    public static func >= (lhs: Output, rhs: String) -> Bool { lhs.text >= rhs }
+    public static func >= (lhs: String, rhs: Output) -> Bool { lhs >= rhs.text }
 }
 
 extension Output: CustomStringConvertible, CustomDebugStringConvertible, Presentable {
-    var description: String { text }
+    public var description: String { text }
     /// Shown as its text and status, and nothing at all if it's empty.
     var shape: DisplayShape { DisplayShape(isEmpty: text.isEmpty) }
     /// One line in a table: its newlines shown as ↵.
     var cell: String { text.replacingOccurrences(of: "\n", with: "↵") }
-    var debugDescription: String {
+    public var debugDescription: String {
         "Output(text: \(Value(text).debugDescription), status: \(statusFields.debugDescription))"
     }
 }

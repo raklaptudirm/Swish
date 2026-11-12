@@ -20,38 +20,3 @@ extension Record {
         return field.map { ($0.value as? any ScriptConvertible)?.value ?? .nothing }
     }
 }
-
-extension Output {
-    static let native = HostType.Builder<Output>("Output")
-        .property("text", \.text)
-        .property("lines", \.lines)
-        .property("code", \.status.code)
-        .property("signal", \.status.signal)
-        .property("succeeded", \.status.succeeded)
-        .property("count", \.count)
-        .property("isEmpty", \.isEmpty)
-        .property("first", \.first)
-        .property("last", \.last)
-        .property("startIndex", \.startIndex)
-        .property("endIndex", \.endIndex)
-        .property("description", \.description)
-        .property("debugDescription", \.debugDescription)
-        .initializer(labels: ["text", "code", "signal"]) {
-            (text: String, code: Int?, signal: Int?) in
-            let status = signal.map { Status.signaled(Int32($0)) } ?? .exited(Int32(code ?? 0))
-            return Output(text: text, status: status)
-        }
-        // A command's output compares with text as its text does, on either side.
-        .static("==", labels: [nil, nil]) { (a: Output, b: String) -> Bool in a.text == b }
-        .static("==", labels: [nil, nil]) { (a: String, b: Output) -> Bool in a == b.text }
-        .static("!=", labels: [nil, nil]) { (a: Output, b: String) -> Bool in a.text != b }
-        .static("!=", labels: [nil, nil]) { (a: String, b: Output) -> Bool in a != b.text }
-        .static("<", labels: [nil, nil]) { (a: Output, b: String) -> Bool in a.text < b }
-        .static("<", labels: [nil, nil]) { (a: String, b: Output) -> Bool in a < b.text }
-        .static(">", labels: [nil, nil]) { (a: Output, b: String) -> Bool in a.text > b }
-        .static(">", labels: [nil, nil]) { (a: String, b: Output) -> Bool in a > b.text }
-        .static("<=", labels: [nil, nil]) { (a: Output, b: String) -> Bool in a.text <= b }
-        .static("<=", labels: [nil, nil]) { (a: String, b: Output) -> Bool in a <= b.text }
-        .static(">=", labels: [nil, nil]) { (a: Output, b: String) -> Bool in a.text >= b }
-        .static(">=", labels: [nil, nil]) { (a: String, b: Output) -> Bool in a >= b.text }
-}
