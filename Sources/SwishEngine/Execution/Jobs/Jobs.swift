@@ -162,7 +162,9 @@ final class Job: ScriptConvertible, Presentable, Tabular, CustomStringConvertibl
                     )
                 }
             }
-        return [("[\(id)]", DisplayStyle.dim), (" ", nil), (label, style), ("  " + source, nil)]
+        return [
+            Segment("[\(id)]", .dim), Segment(" "), Segment(label, style), Segment("  " + source),
+        ]
     }
 
     var styledSegments: [Segment]? { segments }
@@ -170,7 +172,7 @@ final class Job: ScriptConvertible, Presentable, Tabular, CustomStringConvertibl
     var description: String { line(styled: false) }
 
     func line(styled: Bool) -> String {
-        segments.map { $0.text.styled($0.style, styled) }.joined()
+        segments.text(styled: styled)
     }
 
     /// A job on its own reads as `jobs` announces it: `[1] running  make`.

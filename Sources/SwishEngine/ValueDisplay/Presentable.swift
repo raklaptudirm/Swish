@@ -7,22 +7,34 @@ import SystemPackage
 protocol Presentable {
     /// One cell of a table.
     var cell: String { get }
-    /// It with terminal color escapes, if it has colors to show: what is written to a terminal,
-    /// where the text is for a pipe or file.
-    var styledText: String? { get }
     /// What else the printers need to know of how it looks.
     var shape: DisplayShape { get }
-    /// How it prints in the debug form, in pieces to color, if it has a form of its own (a job reads
-    /// `[1] running make`); nil to print as its fields.
+    /// It in pieces to color, if it has colors to show: what is written to a terminal, where the
+    /// text is for a pipe or file. Also how it prints in the debug form, if it has a form of its own
+    /// (a job reads `[1] running make`); nil to print as its fields.
     var styledSegments: [Segment]? { get }
 }
 
+extension Sequence where Element == Segment {
+    /// The text, with the terminal's escapes for each style if `styled`.
+    func text(styled: Bool) -> String {
+        map { $0.text.styled($0.style, styled) }.joined()
+    }
+}
+
 /// A piece of text and the style it is shown in.
-typealias Segment = (text: String, style: DisplayStyle?)
+struct Segment: Sendable, Hashable {
+    public let text: String
+    public let style: DisplayStyle?
+
+    public init(_ text: String, _ style: DisplayStyle? = nil) {
+        self.text = text
+        self.style = style
+    }
+}
 
 extension Presentable {
     var cell: String { "\(self)" }
-    var styledText: String? { nil }
     var shape: DisplayShape { DisplayShape() }
     var styledSegments: [Segment]? { nil }
 }
@@ -54,5 +66,7 @@ extension FilePath.Component: Presentable {
 
 extension AttributedString: Presentable {
     var cell: String { plain }
-    var styledText: String? { rendered(true) }
+    var styledSegments: [Segment]? {
+        runs.map { Segment(String(self[$0.range].characters), $0.swiit.displayStyle) }
+    }
 }

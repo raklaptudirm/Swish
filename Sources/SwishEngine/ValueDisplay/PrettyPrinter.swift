@@ -30,57 +30,65 @@ struct PrettyPrinter: Sendable {
 
     func node(for value: Value) -> Node {
         switch value.kind {
-        case .nothing: return .segments([("nil", DisplayStyle.constant)])
-        case .bool, .int, .double: return .segments([(value.description, DisplayStyle.constant)])
-        case .function: return .segments([(value.description, nil)])
+        case .nothing: return .segments([Segment("nil", .constant)])
+        case .bool, .int, .double: return .segments([Segment(value.description, .constant)])
+        case .function: return .segments([Segment(value.description)])
         case .string: return .string(value.description)
 
         case .list:
             let items = value.casting(to: [Value].self) ?? []
-            return .group(open: [("[", nil)], items: items.map { ([], node(for: $0)) }, close: "]")
+            return .group(
+                open: [Segment("[")],
+                items: items.map { ([], node(for: $0)) },
+                close: "]"
+            )
 
         case .structure, .tuple:
-            return value.fields.map { node(for: $0) } ?? .segments([(value.debugDescription, nil)])
+            return value.fields.map { node(for: $0) }
+                ?? .segments([Segment(value.debugDescription)])
 
         case .dictionary:
             let dictionary = value.entries ?? []
             return dictionary.isEmpty
-                ? .segments([("[:]", nil)])
+                ? .segments([Segment("[:]")])
                 : .group(
-                    open: [("[", nil)],
+                    open: [Segment("[")],
                     items: dictionary.sortedForDisplay.map { key, value in
-                        ([keySegment(key), (": ", nil)], node(for: value))
+                        ([keySegment(key), Segment(": ")], node(for: value))
                     },
                     close: "]"
                 )
 
         case .enumeration:
             return value.enumCaseName.map { node(forCase: $0, of: value) }
-                ?? .segments([(value.debugDescription, nil)])
+                ?? .segments([Segment(value.debugDescription)])
 
         case .object:
             // A command's output is laid out as the struct it is; any other Swift value as its type
             // says it looks, in a style.
             if let output = value.commandOutput { return node(for: output.displayValue) }
-            if let role = value.displayShape.role { return .segments([(value.description, role)]) }
+            if let role = value.displayShape.role {
+                return .segments([Segment(value.description, role)])
+            }
             if let segments = value.casting(toExistential: (any Presentable).self)?.styledSegments {
                 return .segments(segments)
             }
             // A type, not data: it shows as `enum Name`.
             if value.description.hasPrefix("enum ") {
                 return .segments([
-                    ("enum", DisplayStyle.keyword), (" ", nil),
-                    (String(value.description.dropFirst(5)), DisplayStyle.type),
+                    Segment("enum", .keyword), Segment(" "),
+                    Segment(String(value.description.dropFirst(5)), .type),
                 ])
             }
-            return value.fields.map { node(for: $0) } ?? .segments([(value.debugDescription, nil)])
+            return value.fields.map { node(for: $0) }
+                ?? .segments([Segment(value.debugDescription)])
         }
     }
 
     /// A struct's value, `Point(x: 1)`, or a tuple, `(name: "x", 2)`.
     private func node(for record: Fields) -> Node {
         let open: [Segment] =
-            record.typeName.map { [($0, DisplayStyle.type), ("(", nil)] } ?? [("(", nil)]
+            record.typeName.map { [Segment($0, .type), Segment("(")] } ?? [Segment("(")]
         return .group(
             open: open,
             items: record.map { field in
@@ -91,24 +99,24 @@ struct PrettyPrinter: Sendable {
     }
 
     private func keySegment(_ key: Value) -> Segment {
-        if key.kind == .string { return (key.debugDescription, DisplayStyle.string) }
-        return (key.debugDescription, DisplayStyle.constant)
+        if key.kind == .string { return Segment(key.debugDescription, .string) }
+        return Segment(key.debugDescription, .constant)
     }
 
     private func node(forCase name: String, of enumValue: Value) -> Node {
         let head: [Segment] = [
-            (enumValue.typeID?.name ?? "", DisplayStyle.type), ("." + name, nil),
+            Segment(enumValue.typeID?.name ?? "", .type), Segment("." + name),
         ]
         let payload = enumValue.enumPayload
         guard !payload.isEmpty else { return .segments(head) }
         let items = payload.map { field in
             (Fields.isPosition(field.key) ? [] : label(field.key), node(for: field.value))
         }
-        return .group(open: head + [("(", nil)], items: items, close: ")")
+        return .group(open: head + [Segment("(")], items: items, close: ")")
     }
 
     private func label(_ name: String) -> [Segment] {
-        [(name + ": ", nil)]
+        [Segment(name + ": ")]
     }
 
     // MARK: Layout

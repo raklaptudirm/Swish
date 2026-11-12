@@ -63,8 +63,10 @@ final class DisplayFormatter {
         }
         guard flush() else { return false }
         // A Swift value with colors to show (help), on a terminal.
-        if styled, let colored = item.casting(toExistential: (any Presentable).self)?.styledText {
-            return emit(colored)
+        if styled,
+            let segments = item.casting(toExistential: (any Presentable).self)?.styledSegments
+        {
+            return emit(segments.text(styled: true))
         }
         return emit(item.description)
     }
