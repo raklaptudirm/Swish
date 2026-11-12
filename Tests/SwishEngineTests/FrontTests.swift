@@ -285,8 +285,9 @@ private func failure(_ source: String, variables: Set<String> = []) -> Reader.Fa
     #expect(failure("echo $?")?.message.contains("$? isn't Swish") == true)
 }
 
+// The comment is dropped with the command it follows
 @Test func commentsAreSlashes() throws {
-    #expect(try cure("echo hi // note") == #"Command("echo", "hi").run()"#)  // the comment is dropped with the command it follows
+    #expect(try cure("echo hi // note") == #"Command("echo", "hi").run()"#)
     #expect(try cure("echo a#b") == #"Command("echo", "a#b").run()"#)
 }
 

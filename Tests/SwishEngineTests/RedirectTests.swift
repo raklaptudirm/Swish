@@ -31,7 +31,8 @@ private func scratch() throws -> String {
     #expect(Glob.expand("\(d)/?.md").isEmpty)  // `?` is literal: no file is named "?.md"
     #expect(Glob.expand("\(d)/.*") == ["\(d)/.hidden", "\(d)/.secret"])
     #expect(Glob.expand("\(d)/*/") == ["\(d)/src/", "\(d)/with space/"])
-    #expect(Glob.expand("\(d)/**/*.swift") == ["\(d)/src/deep/y.swift", "\(d)/src/x.swift"])  // not .secret
+    // Not .secret
+    #expect(Glob.expand("\(d)/**/*.swift") == ["\(d)/src/deep/y.swift", "\(d)/src/x.swift"])
     #expect(Glob.expand("\(d)/nothing*").isEmpty)
     #expect(Glob.expand(Glob.escape("\(d)/with space") + "/*") == ["\(d)/with space/z.txt"])
 }

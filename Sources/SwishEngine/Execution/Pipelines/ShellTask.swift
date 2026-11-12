@@ -33,9 +33,10 @@ final class ShellTask {
     }
 }
 
+// safe: `foreground` is read and written holding `condition`
 /// Whether a task has its turn at the terminal and the input, which another thread sets and a
 /// waiting one is woken by. A `Mutex` cannot wait, so the flag is kept under the condition that can.
-final class Turn: @unchecked Sendable {  // safe: `foreground` is read and written holding `condition`
+final class Turn: @unchecked Sendable {
     private var foreground = true
     private let condition = NSCondition()
 

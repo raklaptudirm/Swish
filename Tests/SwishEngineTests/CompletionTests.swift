@@ -27,7 +27,8 @@ private func completion(
         ]
     )
     #expect(completion("ech").replacements.contains("echo"))
-    #expect(completion("if tru && ls | filt").replacements.contains("filter"))  // after a pipe: command position
+    // After a pipe: command position
+    #expect(completion("if tru && ls | filt").replacements.contains("filter"))
     #expect(completion("^zzg", in: shell).replacements.isEmpty)  // ^ is externals only
     #expect(completion("foreign ech").replacements.contains("echo"))
     #expect(completion("EDITOR=vim ech").replacements.contains("echo"))

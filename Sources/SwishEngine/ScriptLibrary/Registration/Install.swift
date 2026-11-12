@@ -145,13 +145,6 @@ extension Shell {
             guard let body = arguments["body"] else { return .nothing }
             return try with(env: variables) { try runner.callBlock(body) }
         }
-        add("ls") { [unowned self] arguments in
-            let paths = try (arguments["paths"]?.casting(to: [Value].self) ?? [])
-                .map { try FilePath($0) }
-            let partial = ls(paths, all: arguments["all"]?.casting(to: Bool.self) ?? false)
-            for error in partial.errors { reportItemError("ls: \(error)") }
-            return Value(partial.value.map(\.value))
-        }
         add("readLine") { arguments in
             readLine(
                 strippingNewline: arguments["strippingNewline"]?.casting(to: Bool.self) ?? true

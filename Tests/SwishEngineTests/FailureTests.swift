@@ -71,7 +71,8 @@ private func status(_ source: String) -> Int32 {
         )
             == "second\n"
     )
-    #expect(status("if let h = try? $(false) { }; h") == 127)  // h is only bound inside: here it's a command
+    // H is only bound inside: here it's a command
+    #expect(status("if let h = try? $(false) { }; h") == 127)
     // Any runtime error, not just a failed command.
     #expect(try output("try? [1][5] == nil; try? 1 / 0 == nil") == "")
     #expect(try output("(try? [1][5]) == nil; (try? 1 / 0) == nil") == "true\ntrue\n")

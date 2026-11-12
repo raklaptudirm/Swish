@@ -420,7 +420,9 @@ func with<T>(env variables: [String: String], _ body: () throws -> T) rethrows -
 /// Lists directory contents.
 /// - Parameter paths: files or directories to list (default: the current directory)
 /// - Parameter all: include hidden files
-func ls(_ paths: FilePath..., all: Bool = false) -> [FileEntry]
+func ls(_ paths: FilePath..., all: Bool = false) -> [FileEntry] {
+    listFiles(paths, all: all)
+}
 
 /// A line of standard input, or nil at its end.
 /// - Parameter strippingNewline: leave the line's newline off

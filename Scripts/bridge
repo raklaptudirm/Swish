@@ -27,6 +27,6 @@ swift build -c release --package-path ../Swiit --product swiit-bridge
     .build/out/symbolgraph/SwishEngine@Foundation.symbols.json \
     --name ShellTypes --access internal --in-module SwishEngine \
     --type FileSize --type FileEntry --type ProcessEntry --type DisplayColumn --type Output --type Date \
-    --function pwd --function ps \
+    --function pwd --function ps --function listFiles \
     --boxed FilePath --convertible FileType --convertible Status \
-    --rename Date.shown=description
+    --rename Date.shown=description --import SystemPackage

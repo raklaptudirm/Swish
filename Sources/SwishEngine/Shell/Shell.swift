@@ -137,7 +137,8 @@ extension Shell {
         // it.
         var style: Diagnostic.Style?
         if interpreter.host.error.traits().isStyled {
-            nonisolated(unsafe) let shell = self  // safe: called holding the interpreter lock, as the report is
+            // safe: called holding the interpreter lock, as the report is
+            nonisolated(unsafe) let shell = self
             style = Diagnostic.Style(
                 source: { shell.highlightStyles($0) },
                 frame: { $0.styled(DisplayStyle.boldBlue) },

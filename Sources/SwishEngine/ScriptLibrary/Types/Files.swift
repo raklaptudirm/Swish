@@ -50,10 +50,10 @@ extension FileEntry: Tabular {
     ]
 }
 
-/// Lists directory contents.
+/// Lists directory contents; a path it can't read is reported and left out.
 /// - Parameter paths: files or directories to list (default: the current directory)
 /// - Parameter all: include hidden files
-func ls(_ paths: [FilePath] = [], all: Bool = false) -> Partial<[FileEntry]> {
+func listFiles(_ paths: [FilePath], all: Bool) -> [FileEntry] {
     var entries: [FileEntry] = []
     var errors: [any Error] = []
     for path in (paths.isEmpty ? [FilePath(".")] : paths).map(\.string) {
@@ -79,7 +79,8 @@ func ls(_ paths: [FilePath] = [], all: Bool = false) -> Partial<[FileEntry]> {
         }
     }
 
-    return Partial(entries, errors: errors)
+    for error in errors { reportItemError("ls: \(error)") }
+    return entries
 }
 
 /// What went wrong with a path: `ls: /nope: no such file or directory`.
