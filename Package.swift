@@ -7,7 +7,7 @@ let package = Package(
     platforms: [.macOS(.v15)],
     products: [
         // The command keeps its lowercase name, as Unix programs do.
-        .executable(name: "swish", targets: ["Swish"]),
+        .executable(name: "swish", targets: ["Swish"])
     ],
     dependencies: [
         .package(path: "../Swiit"),
@@ -15,11 +15,14 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-system.git", from: "1.4.0"),
     ],
     targets: [
-        .executableTarget(name: "Swish", dependencies: [
-            "SwishEngine",
-            .product(name: "Swiit", package: "Swiit"),
-            .product(name: "SystemPackage", package: "swift-system"),
-        ]),
+        .executableTarget(
+            name: "Swish",
+            dependencies: [
+                "SwishEngine",
+                .product(name: "Swiit", package: "Swiit"),
+                .product(name: "SystemPackage", package: "swift-system"),
+            ]
+        ),
         // What scripts get: the types and functions the shell gives them, and the display model their
         // types use. All of it is public, and the generator bridges it (swiit-bridge.json).
         .target(
@@ -44,11 +47,25 @@ let package = Package(
             resources: [.embedInCode("ScriptLibrary/Prelude/Prelude.swift")]
         ),
         // The client: the prompt, the editor, the config and the task runner, as a program uses the shell.
-        .testTarget(name: "SwishTests", dependencies: [
-            "Swish", "SwishEngine", .product(name: "Swiit", package: "Swiit"),
-        ]),
-        .testTarget(name: "SwishEngineTests", dependencies: [
-            "SwishEngine", .product(name: "Swiit", package: "Swiit"),
-        ], exclude: ["Goldens", "programs.txt"]),
+        .testTarget(
+            name: "SwishTests",
+            dependencies: [
+                "Swish", "SwishEngine", .product(name: "Swiit", package: "Swiit"),
+            ]
+        ),
+        .testTarget(
+            name: "SwishLibraryTests",
+            dependencies: [
+                "SwishLibrary", .product(name: "Swiit", package: "Swiit"),
+                .product(name: "SystemPackage", package: "swift-system"),
+            ]
+        ),
+        .testTarget(
+            name: "SwishEngineTests",
+            dependencies: [
+                "SwishEngine", .product(name: "Swiit", package: "Swiit"),
+            ],
+            exclude: ["Goldens", "programs.txt"]
+        ),
     ]
 )
