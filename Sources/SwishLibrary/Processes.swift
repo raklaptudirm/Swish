@@ -18,7 +18,7 @@ func userName(_ uid: uid_t) -> String {
 /// A process `ps` lists. Its memory, CPU time and thread count are known together, for the
 /// processes the user may inspect, and unknown (nil) together for the others; they are fields of
 /// their own, not one optional group, so a table and `to json` lay each out as a column.
-struct ProcessEntry: Encodable, Equatable, Hashable, RecordRepresentable {
+public struct ProcessEntry: Encodable, Equatable, Hashable, RecordRepresentable {
     public var pid: Int
     public var ppid: Int
     public var name: String
@@ -30,11 +30,11 @@ struct ProcessEntry: Encodable, Equatable, Hashable, RecordRepresentable {
 }
 
 extension ProcessEntry: Tabular {
-    static let columns: [DisplayColumn] = ["pid", "name", "user", "memory", "cpuTime"]
+    public static let columns: [DisplayColumn] = ["pid", "name", "user", "memory", "cpuTime"]
 }
 
 /// Lists running processes. Memory and CPU time are only known for your own processes.
-func ps() -> [ProcessEntry] {
+public func ps() -> [ProcessEntry] {
     // The system always says; if it somehow doesn't, there's nothing to list.
     (try? runningProcesses()) ?? []
 }

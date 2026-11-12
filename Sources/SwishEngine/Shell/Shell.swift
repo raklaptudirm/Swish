@@ -1,6 +1,7 @@
 import Foundation
 import SwiftSyntax
 import Swiit
+import SwishLibrary
 
 /// The shell: a process with a terminal and jobs, over an `Interpreter` that knows
 /// none of that. It is the interpreter's host (the process), and declares the shell's own types and

@@ -5,14 +5,14 @@ import Swiit
 /// fields, in the order they are declared, wherever its fields are laid out (a table, `to json`,
 /// `select`), as a struct a script declares has. Its type registers the same properties for the
 /// checker.
-protocol RecordRepresentable: ScriptConvertible, Sendable {}
+public protocol RecordRepresentable: ScriptConvertible, Sendable {}
 
 extension RecordRepresentable {
-    var memberNames: [String]? {
+    public var memberNames: [String]? {
         Mirror(reflecting: self).children.compactMap(\.label)
     }
 
-    func member(_ name: String) -> Value? {
+    public func member(_ name: String) -> Value? {
         let field = Mirror(reflecting: self).children.first { $0.label == name }
         return field.map { ($0.value as? any ScriptConvertible)?.value ?? .nothing }
     }

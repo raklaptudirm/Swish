@@ -1,5 +1,6 @@
 import Foundation
 import Swiit
+import SwishLibrary
 
 // The shell's halves of what the interpreter does with environment and words: a command's words
 // and redirects expanded.

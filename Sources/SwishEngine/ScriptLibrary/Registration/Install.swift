@@ -1,5 +1,6 @@
 import Foundation
 import Swiit
+import SwishLibrary
 import SystemPackage
 
 // What the shell adds to the language, told to the interpreter through its public interface: Swift
@@ -10,8 +11,8 @@ extension Shell {
     /// Teaches the interpreter the shell's own: `ls`, `ps`, `pwd`, `from`, `to`, `help`, and the
     /// types they use.
     func installLibrary() {
-        for type in ShellTypesBridge.types { interpreter.register(type) }
-        for function in ShellTypesBridge.functions { interpreter.register(function) }
+        for type in LibraryBridge.types { interpreter.register(type) }
+        for function in LibraryBridge.functions { interpreter.register(function) }
 
         // The enums the types above and the declarations below name, which nothing registered
         // gives.

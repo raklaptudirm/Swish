@@ -1,5 +1,6 @@
 import Foundation
 import Swiit
+import SwishLibrary
 import SystemPackage
 
 extension Shell {

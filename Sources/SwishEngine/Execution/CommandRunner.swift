@@ -1,5 +1,6 @@
 import Foundation
 import Swiit
+import SwishLibrary
 
 /// What Execution asks of whatever runs it: the few things that are the shell's own and not the
 /// running of a command line.

@@ -8,7 +8,7 @@ import Testing
 enum PublicSurface {
     /// The top-level types.
     static let types: Set<String> = [
-        "Shell", "Status", "HighlightKind", "HighlightSpan", "Terminal",
+        "Shell", "HighlightKind", "HighlightSpan", "Terminal",
     ]
 
     /// The public members, by the type that has them.
@@ -33,15 +33,9 @@ enum PublicSurface {
         // What a client adds
         "Shell.register", "Shell.Builtin", "Shell.Builtin.run", "Shell.Builtin.program",
         "Shell.report",
-        // How a statement ended, and what the spans of a source say
-        "Status.success", "Status.succeeded", "Status.number", "Status.code", "Status.signal",
-        "Status.encode", "Date.func", "Date.shown", "Status.init", "Status.scriptType",
-        "Status.value",
+        // What the spans of a source say
         "HighlightKind.displayStyle", "HighlightSpan.range", "HighlightSpan.kind",
         "HighlightSpan.init",
-        // A retroactive conformance is as public as the type and the protocol: `Date` is a
-        // `LosslessStringConvertible`, so a word of ISO 8601 text is a date on a command line.
-        "Date.init",
         // The terminal a client draws on, and where a descriptor may be styled
         "Terminal.width", "Terminal.height", "Terminal.write", "DisplayStyle.enabled",
         // A doc comment's first sentence, which a list of functions shows
@@ -50,10 +44,13 @@ enum PublicSurface {
         "Sequence.paintedStyles",
     ]
 
-    private static let sources = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
-        .deletingLastPathComponent()
-        .deletingLastPathComponent()
-        .appendingPathComponent("Sources/SwishEngine")
+    /// The sources of a module of this package.
+    static func sources(of module: String) -> URL {
+        URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Sources/\(module)")
+    }
 
     private static let container = try! NSRegularExpression(
         pattern:
@@ -66,7 +63,12 @@ enum PublicSurface {
 
     /// The public declarations in the sources: the top-level types, and the members of public
     /// types (a member of an extension counts for the type it extends).
-    static func current() throws -> (types: Set<String>, members: Set<String>) {
+    static func current(
+        of module: String = "SwishEngine"
+    ) throws -> (
+        types: Set<String>, members: Set<String>
+    ) {
+        let sources = sources(of: module)
         var types: Set<String> = []
         var localTypes: Set<String> = []
         var members: Set<String> = []
@@ -144,6 +146,24 @@ enum PublicSurface {
     )
     #expect(
         PublicSurface.members.subtracting(current).sorted() == [],
+        "listed, and not public"
+    )
+}
+
+// What SwishLibrary gives: scripts get all of it (Docs/Design/library-module.md), so a new public
+// declaration there is a change to the language scripts see. Add its name to `LibrarySurface`.
+@Test func theTopLevelPublicTypesOfTheLibraryAreTheOnesListed() throws {
+    #expect(try PublicSurface.current(of: "SwishLibrary").types == LibrarySurface.types)
+}
+
+@Test func theMembersOfTheLibrarysPublicTypesAreTheOnesListed() throws {
+    let current = try PublicSurface.current(of: "SwishLibrary").members
+    #expect(
+        current.subtracting(LibrarySurface.members).sorted() == [],
+        "public, and not listed"
+    )
+    #expect(
+        LibrarySurface.members.subtracting(current).sorted() == [],
         "listed, and not public"
     )
 }

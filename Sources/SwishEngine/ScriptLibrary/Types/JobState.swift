@@ -1,4 +1,5 @@
 import Swiit
+import SwishLibrary
 
 /// How a job is going: its `state`.
 enum JobState: Comparable, CaseIterable, DisplayStyled, ScriptConvertible {

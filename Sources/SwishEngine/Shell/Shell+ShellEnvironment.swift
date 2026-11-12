@@ -1,4 +1,5 @@
 import Foundation
+import SwishLibrary
 
 // The environment other shells set up: a login's, from the system's profile, and a tool's that
 // sets itself up for sh (`eval "$(brew shellenv)"`, a project's `env.sh`).

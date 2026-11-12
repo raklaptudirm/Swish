@@ -1,10 +1,11 @@
 import Foundation
 import Swiit
+import SwishLibrary
 
 /// What the shell keeps for each task (the interpreter's task state): where its output and errors
 /// go, and how its last statement went. The prompt's is the main task's; `async` and `Task { }`
 /// make one each (`Interpreter.Host.makeTaskState`).
-final class ShellTask {
+final class ShellTask: ItemErrors {
     /// Where builtins, displayed values and the last stage of a pipeline
     /// write. Redirected while capturing `$(…)`.
     var stdoutFD = STDOUT_FILENO

@@ -1,7 +1,8 @@
 {
-  "name": "ShellTypes",
-  "access": "internal",
-  "inModule": "SwishEngine",
+  "name": "Library",
+  "access": "public",
+  "inModule": "SwishLibrary",
+  "discover": "public",
   "convertible": [
     "Status"
   ],
@@ -16,11 +17,5 @@
   },
   "types": [
     "Date"
-  ],
-  "functions": [
-    "pwd",
-    "ps",
-    "listFiles",
-    "readInputLine"
   ]
 }

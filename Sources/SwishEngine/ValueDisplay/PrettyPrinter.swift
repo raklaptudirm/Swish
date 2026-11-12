@@ -1,5 +1,6 @@
 import Foundation
 import Swiit
+import SwishLibrary
 
 /// Shows a value as `debugDescription` spells it, but for a person: in the
 /// highlighter's colors, and, when it won't fit on one line, broken over

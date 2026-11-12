@@ -1,5 +1,6 @@
 import Foundation
 import Swiit
+import SwishLibrary
 
 // What a command and a pipeline are in Swift: the prelude's `Command` and
 // `Pipeline` (Library+Shell.swift), built by hand or by the rewrite of the

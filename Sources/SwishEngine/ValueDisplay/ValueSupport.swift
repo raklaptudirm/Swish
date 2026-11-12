@@ -1,5 +1,6 @@
 import Foundation
 import Swiit
+import SwishLibrary
 
 // What the shell's printers read of a value, over Swiit's public inspection: a struct's or an
 // object's fields, and how a value held as a Swift one looks.

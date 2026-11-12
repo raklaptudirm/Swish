@@ -20,11 +20,21 @@ let package = Package(
             .product(name: "Swiit", package: "Swiit"),
             .product(name: "SystemPackage", package: "swift-system"),
         ]),
+        // What scripts get: the types and functions the shell gives them, and the display model their
+        // types use. All of it is public, and the generator bridges it (swiit-bridge.json).
+        .target(
+            name: "SwishLibrary",
+            dependencies: [
+                .product(name: "Swiit", package: "Swiit"),
+                .product(name: "SystemPackage", package: "swift-system"),
+            ]
+        ),
         // The shell: commands, pipelines, jobs, the line editor and the process
-        // it runs in, built on the interpreter.
+        // it runs in, built on the interpreter and the library.
         .target(
             name: "SwishEngine",
             dependencies: [
+                "SwishLibrary",
                 .product(name: "Swiit", package: "Swiit"),
                 .product(name: "SystemPackage", package: "swift-system"),
                 .product(name: "SwiftSyntax", package: "swift-syntax"),

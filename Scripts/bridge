@@ -1,12 +1,12 @@
 #!/bin/bash
-# Regenerates Sources/SwishEngine/ScriptLibrary/Types/Generated/ShellTypesBridge.swift: the types
-# and functions of SwishEngine that scripts get, from its public members (swiit-bridge.json says
-# the rest), with Swiit's generator (the checkout beside this one). Run it after changing a
-# bridged type, the generator or the Swift toolchain.
+# Regenerates Sources/SwishLibrary/Generated/LibraryBridge.swift: the types and functions of
+# SwishLibrary that scripts get, which are all its public ones (swiit-bridge.json says the rest),
+# with Swiit's generator (the checkout beside this one). Run it after changing a bridged type,
+# the generator or the Swift toolchain.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 swift build -c release --package-path ../Swiit --product swiit-bridge
 "$(swift build -c release --package-path ../Swiit --show-bin-path)/swiit-bridge" \
-    --package . --module SwishEngine --config swiit-bridge.json \
-    --output Sources/SwishEngine/ScriptLibrary/Types/Generated/ShellTypesBridge.swift
+    --package . --module SwishLibrary --config swiit-bridge.json \
+    --output Sources/SwishLibrary/Generated/LibraryBridge.swift

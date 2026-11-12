@@ -1,4 +1,5 @@
 import Swiit
+import SwishLibrary
 
 extension CommandRunner {
     /// `jobs`, the jobs in the background oldest first.

@@ -4,7 +4,7 @@ import Swiit
 /// A command's standard output (trailing newlines trimmed) and exit status.
 /// It's a collection of lines: iterating, counting and indexing go by line,
 /// and where a String is wanted it's the whole text.
-struct Output: Sendable, Hashable, RandomAccessCollection {
+public struct Output: Sendable, Hashable, RandomAccessCollection {
     /// All of it, as one String.
     public let text: String
     /// How the command ended.
@@ -13,7 +13,7 @@ struct Output: Sendable, Hashable, RandomAccessCollection {
     /// counting do not split it again.
     public let lines: [String]
 
-    init(text: String, status: Status) {
+    package init(text: String, status: Status) {
         self.text = text
         self.status = status
         lines =
@@ -64,9 +64,9 @@ extension Output {
 extension Output: CustomStringConvertible, CustomDebugStringConvertible, Presentable {
     public var description: String { text }
     /// Shown as its text and status, and nothing at all if it's empty.
-    var shape: DisplayShape { DisplayShape(isEmpty: text.isEmpty) }
+    public var shape: DisplayShape { DisplayShape(isEmpty: text.isEmpty) }
     /// One line in a table: its newlines shown as ↵.
-    var cell: String { text.replacingOccurrences(of: "\n", with: "↵") }
+    public var cell: String { text.replacingOccurrences(of: "\n", with: "↵") }
     public var debugDescription: String {
         "Output(text: \(Value(text).debugDescription), status: \(statusFields.debugDescription))"
     }
@@ -80,30 +80,22 @@ private struct OutputFields: Encodable {
 
 extension Output {
     /// How it exited, as the struct `output.status` is.
-    var statusFields: Value {
+    package var statusFields: Value {
         (try? Value(encoding: status)) ?? .nothing
     }
 
     /// How a debug form lays it out: its text and status as the fields of a struct.
-    var displayValue: Value {
+    package var displayValue: Value {
         (try? Value(encoding: OutputFields(text: text, status: status), as: Output.id)) ?? .nothing
     }
 }
 
-extension Value {
-    /// What `$(…)` gives: a command's output, held as the Swift value it is.
-    static func output(_ output: Output) -> Value { Value(output) }
-
-    /// The command output it holds, if it's one.
-    var commandOutput: Output? { casting(to: Output.self) }
-}
-
 extension Output: ScriptConvertible {
-    static let id = Symbol.ID(hostType: "Output")
+    package static let id = Symbol.ID(hostType: "Output")
 }
 
 /// What a library function says when a value is not what it takes.
-struct LibraryError: Error, CustomStringConvertible {
-    let description: String
-    init(_ description: String) { self.description = description }
+public struct LibraryError: Error, CustomStringConvertible {
+    public let description: String
+    public init(_ description: String) { self.description = description }
 }

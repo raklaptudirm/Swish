@@ -9,7 +9,7 @@ import Swiit
 /// A size made from a number is never out of range: one too large to hold is the largest there is.
 /// A sum, a difference or a product that does not fit is an error, which the number it would have
 /// been could not say. Where a script gives an `Int` for a size, it is that many bytes.
-struct FileSize: Codable, Hashable, Comparable, Sendable, LosslessStringConvertible {
+public struct FileSize: Codable, Hashable, Comparable, Sendable, LosslessStringConvertible {
     /// How many bytes.
     public let bytes: Int
 
@@ -123,13 +123,13 @@ struct FileSize: Codable, Hashable, Comparable, Sendable, LosslessStringConverti
 
 extension FileSize: Presentable {
     /// A number: in the constant color, and a column of them lines up on the right.
-    var shape: DisplayShape { DisplayShape(role: .constant, isNumeric: true) }
+    public var shape: DisplayShape { DisplayShape(role: .constant, isNumeric: true) }
 }
 
 extension FileSize: ScriptConvertible {
     static let id = Symbol.ID(hostType: "FileSize")
-    static var scriptType: ScriptType { .named(id) }
-    init(_ swiitValue: Value) throws {
+    public static var scriptType: ScriptType { .named(id) }
+    public init(_ swiitValue: Value) throws {
         if let size = swiitValue.casting(to: FileSize.self) {
             self = size
         } else if let bytes = swiitValue.casting(to: Int.self) {

@@ -9,18 +9,6 @@ public enum Status: Hashable, Sendable {
 
     public static let success = Status.exited(0)
 
-    /// How a child ended, from `waitpid`'s status; one that neither exited nor was signaled (which
-    /// `waitpid` without `WUNTRACED` doesn't give) failed.
-    init(_ wait: WaitStatus) {
-        if wait.exited {
-            self = .exited(wait.exitCode)
-        } else if wait.signaled {
-            self = .signaled(wait.signal)
-        } else {
-            self = .exited(1)
-        }
-    }
-
     public var succeeded: Bool { self == .success }
 
     /// The status as a process gives it, and as the shell exits with: the code, or 128 and the
@@ -54,7 +42,7 @@ extension Status: Encodable {
 
 /// A status crosses as the fields of the prelude's `Status`, by its name.
 extension Status: ScriptConvertible {
-    static let id = Symbol.ID(hostType: "Status")
+    package static let id = Symbol.ID(hostType: "Status")
     public static var scriptType: ScriptType { .named(id) }
 
     /// A script's status is read as its fields; nothing takes one as a parameter.

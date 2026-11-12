@@ -1,4 +1,5 @@
 import Swiit
+import SwishLibrary
 
 /// What a shell failure carries beyond its message, which the run hands back as the diagnostic's
 /// cause: the status the command line ends with.

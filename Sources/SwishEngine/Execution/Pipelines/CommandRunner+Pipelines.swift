@@ -1,5 +1,6 @@
 import Foundation
 import Swiit
+import SwishLibrary
 
 /// A program that could not be started: what to report, and the status to end with.
 

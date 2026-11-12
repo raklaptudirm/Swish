@@ -1,5 +1,6 @@
 import Foundation
 import Swiit
+import SwishLibrary
 
 /// Lays out a stream of items as it arrives. Records become table rows:
 /// the first 100, or whatever arrives in the first 200ms, decide the

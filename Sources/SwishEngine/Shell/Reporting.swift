@@ -1,26 +1,6 @@
 import Foundation
 import Swiit
-
-/// Writes an error to `output`, as the shell reports one: `swish: message`.
-func writeReport(_ message: String, to output: OutputSink) {
-    let styled = output.traits().isStyled
-    if message.hasPrefix("error: ") {
-        output.write(
-            "swish: error:".styled(DisplayStyle.error, styled) + message.dropFirst(6) + "\n"
-        )
-    } else {
-        output.write("swish:".styled(DisplayStyle.error, styled) + " \(message)\n")
-    }
-}
-
-/// Reports a problem with one item, like a file `listFiles` couldn't read, without stopping; the
-/// statement's status becomes a failure. For a function that goes on past an error in one of its
-/// items, to the standard error of the task running it.
-func reportItemError(_ message: String) {
-    guard let interpreter = Interpreter.running else { return }
-    writeReport(message, to: interpreter.host.error)
-    (interpreter.taskState as? ShellTask)?.itemErrors += 1
-}
+import SwishLibrary
 
 extension Shell {
     /// Reports an error, to wherever standard error is redirected.

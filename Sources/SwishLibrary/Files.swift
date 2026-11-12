@@ -12,7 +12,7 @@ import Musl
 
 /// What kind of entry `ls` found: `ls | filter { $0.type == .directory }`.
 /// In this order, so `ls | sorted --by type` puts files first.
-enum FileType: String, CaseIterable, Comparable, Codable, ScriptConvertible {
+public enum FileType: String, CaseIterable, Comparable, Codable, Sendable, ScriptConvertible {
     case file, directory, symlink, other
 
     public static func < (lhs: FileType, rhs: FileType) -> Bool {
@@ -21,7 +21,7 @@ enum FileType: String, CaseIterable, Comparable, Codable, ScriptConvertible {
 }
 
 extension FileType: DisplayStyled {
-    var displayStyle: DisplayStyle? {
+    public var displayStyle: DisplayStyle? {
         switch self {
         case .directory: .boldBlue
         case .symlink: .cyan
@@ -31,7 +31,7 @@ extension FileType: DisplayStyled {
 }
 
 /// An entry `ls` lists.
-struct FileEntry: Encodable, Equatable, Hashable, RecordRepresentable {
+public struct FileEntry: Encodable, Equatable, Hashable, RecordRepresentable {
     public let name: String
     public let type: FileType
     public let size: FileSize
@@ -46,7 +46,7 @@ struct FileEntry: Encodable, Equatable, Hashable, RecordRepresentable {
 }
 
 extension FileEntry: Tabular {
-    static let columns: [DisplayColumn] = [
+    public static let columns: [DisplayColumn] = [
         DisplayColumn("name", styledBy: "type"), "type", "size", "modified",
     ]
 }
@@ -55,7 +55,7 @@ extension FileEntry: Tabular {
 /// `ls` takes its paths as arguments, which Swift cannot pass on as an array.
 /// - Parameter paths: files or directories to list (default: the current directory)
 /// - Parameter all: include hidden files
-func listFiles(_ paths: [FilePath], all: Bool) -> [FileEntry] {
+public func listFiles(_ paths: [FilePath], all: Bool) -> [FileEntry] {
     var entries: [FileEntry] = []
     var errors: [any Error] = []
     for path in (paths.isEmpty ? [FilePath(".")] : paths).map(\.string) {
