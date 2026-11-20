@@ -135,10 +135,10 @@ let result: [DisplayColumn] = FileEntry.columns
                 return Value(list: result.map { Value(boxing: $0, as: .init(hostType: "DisplayColumn")) })
 })
 
-    private static let member18: ImplementedSymbol = ImplementedSymbol.property("memberNames", summary: "", type: .optional(.list(.string)), get: { selfValue in
+    private static let member18: ImplementedSymbol = ImplementedSymbol.property("memberNames", summary: "", type: .list(.string), get: { selfValue in
 let receiver: FileEntry = try selfValue.unboxing(FileEntry.self)
-                let result = receiver.memberNames
-                return (result.map { Value(list: $0.map { $0.value }) } ?? .nothing)
+                let result: [String] = receiver.memberNames
+                return Value(list: result.map { $0.value })
 })
 
     private static let type19: HostType = {
@@ -508,10 +508,10 @@ let result: [DisplayColumn] = ProcessEntry.columns
                 return Value(list: result.map { Value(boxing: $0, as: .init(hostType: "DisplayColumn")) })
 })
 
-    private static let member82: ImplementedSymbol = ImplementedSymbol.property("memberNames", summary: "", type: .optional(.list(.string)), get: { selfValue in
+    private static let member82: ImplementedSymbol = ImplementedSymbol.property("memberNames", summary: "", type: .list(.string), get: { selfValue in
 let receiver: ProcessEntry = try selfValue.unboxing(ProcessEntry.self)
-                let result = receiver.memberNames
-                return (result.map { Value(list: $0.map { $0.value }) } ?? .nothing)
+                let result: [String] = receiver.memberNames
+                return Value(list: result.map { $0.value })
 })
 
     private static let type83: HostType = {

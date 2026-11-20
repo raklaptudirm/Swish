@@ -5,10 +5,10 @@ import Swiit
 /// fields, in the order they are declared, wherever its fields are laid out (a table, `to json`,
 /// `select`), as a struct a script declares has. Its type registers the same properties for the
 /// checker.
-public protocol RecordRepresentable: BridgedType, Sendable {}
+public protocol RecordRepresentable: BridgedType, DynamicMembers, Sendable {}
 
 extension RecordRepresentable {
-    public var memberNames: [String]? {
+    public var memberNames: [String] {
         Mirror(reflecting: self).children.compactMap(\.label)
     }
 

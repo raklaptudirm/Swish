@@ -7,7 +7,7 @@ import SwishLibrary
 /// says its members at run time: shown, selected, filtered on and encoded as any record is, and a
 /// field is read by name. Two are equal when they hold the same fields in the same order, as a
 /// struct's are.
-struct JSONObject: BridgedType, Hashable, Sendable, CustomStringConvertible,
+struct JSONObject: BridgedType, DynamicMembers, Hashable, Sendable, CustomStringConvertible,
     CustomDebugStringConvertible
 {
     let keys: [String]
@@ -18,7 +18,7 @@ struct JSONObject: BridgedType, Hashable, Sendable, CustomStringConvertible,
         fields = Dictionary(pairs.map { ($0.name, $0.value) }, uniquingKeysWith: { $1 })
     }
 
-    var memberNames: [String]? { keys }
+    var memberNames: [String] { keys }
     func member(_ name: String) -> Value? { fields[name] }
     var description: String { "JSONObject" }
     var debugDescription: String {

@@ -6,7 +6,7 @@ import SwishLibrary
 /// background (from `async` or ^Z), or Swish code running as a task of its
 /// own (`async f()`). Jobs in the background are values: `await` brings one
 /// to the foreground and waits for it, and `resume()` and `cancel()` act on it.
-final class Job: BridgedType, Presentable, Tabular, CustomStringConvertible,
+final class Job: BridgedType, DynamicMembers, Presentable, Tabular, CustomStringConvertible,
     CustomDebugStringConvertible, @unchecked Sendable
 {
     /// Where a job is in its life.
@@ -127,7 +127,7 @@ final class Job: BridgedType, Presentable, Tabular, CustomStringConvertible,
         ("cancel", { job in method("cancel") { [unowned job] in job.runner.cancel(job) } }),
     ]
 
-    var memberNames: [String]? { Job.members.map(\.name) }
+    var memberNames: [String] { Job.members.map(\.name) }
 
     func member(_ name: String) -> Value? {
         Job.members.first { $0.name == name }?.value(self)
