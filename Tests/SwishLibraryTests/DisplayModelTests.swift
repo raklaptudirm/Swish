@@ -49,3 +49,13 @@ import Testing
     #expect(FileType.symlink.displayStyle != nil)
     #expect(FileType.file.displayStyle == nil)
 }
+
+@Test func aGeneratedTypeSaysWhatScriptsSeeOfItAndConvertsLikeAnyBridgedType() throws {
+    // `Segment` never declared the conformance: the bridge generator wrote it.
+    #expect(Segment.hostType.symbol.name == "Segment")
+    #expect(Segment.scriptType == .named(.init(hostType: "Segment")))
+
+    let segment = Segment("a")
+
+    #expect(try Segment(segment.value) == segment)
+}

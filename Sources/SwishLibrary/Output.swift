@@ -90,6 +90,8 @@ extension Output {
     }
 }
 
+/// Hand-written, because the engine converts an `Output` before the generator has run: the generator
+/// reads the module with its own glue stubbed out, which a conformance it writes would be missing.
 extension Output: BridgedType {
     package static let id = Symbol.ID(hostType: "Output")
 }
