@@ -8,8 +8,8 @@ import Testing
     _ = try shell.interpreter.evaluate(
         #"enum Kind { case file, directory }; enum Letter: String { case a = "x", b = "y" }"#
     )
-    let kind = ScriptType.named(Symbol.ID(named: "Kind", in: shell.interpreter)!)
-    let letter = ScriptType.named(Symbol.ID(named: "Letter", in: shell.interpreter)!)
+    let kind = ScriptType.named(TypeRef(named: "Kind", in: shell.interpreter)!)
+    let letter = ScriptType.named(TypeRef(named: "Letter", in: shell.interpreter)!)
 
     #expect(shell.runner.value(forWord: "5", as: .int) == 5)
     #expect(shell.runner.value(forWord: "x", as: .int) == nil)
@@ -27,13 +27,13 @@ import Testing
 
     // A word is a literal first: one letter for a Character, which a longer word is not, and
     // never a trap.
-    let character = ScriptType.named(Symbol.ID(named: "Character", in: shell.interpreter)!)
+    let character = ScriptType.named(TypeRef(named: "Character", in: shell.interpreter)!)
     #expect(shell.runner.value(forWord: "a", as: character) == "a")
     #expect(shell.runner.value(forWord: "ab", as: character) == nil)
     #expect(
         shell.runner.value(
             forWord: "/a/b",
-            as: .named(Symbol.ID(named: "FilePath", in: shell.interpreter)!)
+            as: .named(TypeRef(named: "FilePath", in: shell.interpreter)!)
         )
             != nil
     )
@@ -48,14 +48,14 @@ import Testing
 @Test func aWordCanBeSomeTypesAndNotOthers() throws {
     let shell = Shell()
     _ = try shell.interpreter.evaluate("enum Kind { case file }")
-    let kind = ScriptType.named(Symbol.ID(named: "Kind", in: shell.interpreter)!)
+    let kind = ScriptType.named(TypeRef(named: "Kind", in: shell.interpreter)!)
 
     #expect(shell.runner.acceptsWords(as: .int))
     #expect(shell.runner.acceptsWords(as: .string))
     #expect(shell.runner.acceptsWords(as: .optional(.int)))
     #expect(shell.runner.acceptsWords(as: kind))
     #expect(
-        shell.runner.acceptsWords(as: .named(Symbol.ID(named: "Character", in: shell.interpreter)!))
+        shell.runner.acceptsWords(as: .named(TypeRef(named: "Character", in: shell.interpreter)!))
     )
     #expect(shell.runner.acceptsWords(as: .named(.keyPath)))
     #expect(!shell.runner.acceptsWords(as: .list(.int)))

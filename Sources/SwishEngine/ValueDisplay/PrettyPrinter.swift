@@ -106,7 +106,7 @@ struct PrettyPrinter: Sendable {
 
     private func node(forCase name: String, of enumValue: Value) -> Node {
         let head: [Segment] = [
-            Segment(enumValue.typeID?.name ?? "", .type), Segment("." + name),
+            Segment(enumValue.typeRef?.name ?? "", .type), Segment("." + name),
         ]
         let payload = enumValue.enumPayload
         guard !payload.isEmpty else { return .segments(head) }

@@ -63,7 +63,7 @@ extension Shell {
 
     /// The type a value of `name` is held as: a list is an `Array`.
     private func heldType(named name: String) -> ScriptType {
-        guard let id = Symbol.ID(named: name, in: interpreter) else { return .any }
+        guard let id = TypeRef(named: name, in: interpreter) else { return .any }
         return id == .array ? .list(Symbol.GenericParameter(name: "Element").type) : .named(id)
     }
 

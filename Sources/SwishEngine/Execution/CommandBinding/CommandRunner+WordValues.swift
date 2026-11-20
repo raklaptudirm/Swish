@@ -108,7 +108,7 @@ extension CommandRunner {
 
     /// The case of the enum `id` a word names, by its name or its raw value: `.directory`,
     /// `directory`, or `d` for `case directory = "d"`.
-    private func enumCase(from text: String, of type: ScriptType, id: Symbol.ID) -> Value? {
+    private func enumCase(from text: String, of type: ScriptType, id: TypeRef) -> Value? {
         let name = text.hasPrefix(".") ? String(text.dropFirst()) : text
         let cases = type.members(in: interpreter)
             .compactMap { symbol -> (Symbol, Value?)? in
@@ -127,5 +127,5 @@ extension CommandRunner {
 }
 
 extension CommandRunner {
-    fileprivate static let substring = ScriptType.named(Symbol.ID(hostType: "Substring"))
+    fileprivate static let substring = ScriptType.named(TypeRef(hostType: "Substring"))
 }

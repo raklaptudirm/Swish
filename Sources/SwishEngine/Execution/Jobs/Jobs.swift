@@ -97,7 +97,7 @@ final class Job: BridgedValue, DynamicMembers, Presentable, Tabular, CustomStrin
 
     // MARK: What scripts read of it
 
-    static let id = Symbol.ID(hostType: "Job")
+    static let id = TypeRef(hostType: "Job")
 
     /// What a table of jobs starts with: the state shown as it's going.
     static let columns: [DisplayColumn] = [

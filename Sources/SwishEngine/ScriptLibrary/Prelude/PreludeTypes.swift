@@ -6,13 +6,13 @@ import Synchronization
 /// stops the shell at startup, not at a use.
 struct PreludeTypes {
     let interpreter: Interpreter
-    let status, commandFailure, member, memberKind, help, json: Symbol.ID
-    let glob, spread, wrapping, stream: Symbol.ID
+    let status, commandFailure, member, memberKind, help, json: TypeRef
+    let glob, spread, wrapping, stream: TypeRef
 
     init(_ interpreter: Interpreter) {
         self.interpreter = interpreter
-        func declared(_ name: String) -> Symbol.ID {
-            guard let id = Symbol.ID(named: name, in: interpreter) else {
+        func declared(_ name: String) -> TypeRef {
+            guard let id = TypeRef(named: name, in: interpreter) else {
                 preconditionFailure("the shell's prelude declares no \(name)")
             }
             return id
@@ -32,7 +32,7 @@ struct PreludeTypes {
 
 extension PreludeTypes {
     /// A value of a type the prelude declares, made by its initializer, with its fields by name.
-    func make(_ type: Symbol.ID, _ fields: KeyValuePairs<String, Value>) -> Value {
+    func make(_ type: TypeRef, _ fields: KeyValuePairs<String, Value>) -> Value {
         do {
             return try interpreter.make(type, arguments: fields.map { ($0.key, $0.value) })
         } catch {

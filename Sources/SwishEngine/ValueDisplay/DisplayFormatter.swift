@@ -184,7 +184,7 @@ final class DisplayFormatter {
         case .fixed(let style): return style
         case .byField(let source):
             guard let found = record[source], let name = found.enumCaseName else { return nil }
-            return registry.enumStyles[found.typeID?.name ?? ""]?(name)
+            return registry.enumStyles[found.typeRef?.name ?? ""]?(name)
         }
     }
 
