@@ -616,7 +616,7 @@ extension DisplayColumn {
     public static var hostType: HostType { LibraryBridge.type3 }
 }
 
-extension DisplayShape: BridgedType {
+extension DisplayShape: BridgedValue {
     public static var hostType: HostType { LibraryBridge.type6 }
 }
 
@@ -628,7 +628,7 @@ extension FileSize {
     public static var hostType: HostType { LibraryBridge.type41 }
 }
 
-extension LibraryError: BridgedType {
+extension LibraryError: BridgedValue {
     public static var hostType: HostType { LibraryBridge.type44 }
 }
 
@@ -640,6 +640,6 @@ extension ProcessEntry {
     public static var hostType: HostType { LibraryBridge.type83 }
 }
 
-extension Segment: BridgedType {
+extension Segment: BridgedValue {
     public static var hostType: HostType { LibraryBridge.type85 }
 }

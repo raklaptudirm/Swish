@@ -50,7 +50,7 @@ import Testing
     #expect(FileType.file.displayStyle == nil)
 }
 
-@Test func aGeneratedTypeSaysWhatScriptsSeeOfItAndConvertsLikeAnyBridgedType() throws {
+@Test func aGeneratedTypeSaysWhatScriptsSeeOfItAndConvertsLikeAnyBridgedValue() throws {
     // `Segment` never declared the conformance: the bridge generator wrote it.
     #expect(Segment.hostType.symbol.name == "Segment")
     #expect(Segment.scriptType == .named(.init(hostType: "Segment")))
