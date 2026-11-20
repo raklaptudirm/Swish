@@ -219,7 +219,7 @@ extension CommandRunner {
         if let value = value(forWord: text, as: type) { return value }
 
         // A command's output, which is text, is what a word is for it.
-        if type == .named(Output.id) { return .output(Output(text: text, status: .success)) }
+        if type == .named(Output.typeRef) { return .output(Output(text: text, status: .success)) }
 
         guard takesWords(type) else {
             throw RuntimeError(
@@ -233,6 +233,6 @@ extension CommandRunner {
     /// Whether a word can be a value of `type` at all: a Swift type text can be, an enum, or one of
     /// Swish's own that's read from text.
     func takesWords(_ type: ScriptType) -> Bool {
-        type == .named(Output.id) || acceptsWords(as: type)
+        type == .named(Output.typeRef) || acceptsWords(as: type)
     }
 }

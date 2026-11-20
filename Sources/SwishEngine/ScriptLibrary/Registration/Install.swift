@@ -109,8 +109,8 @@ extension Shell {
                     try JSON.text(
                         items.count == 1 ? items[0] : Value(items),
                         rawValue: { value in
-                            guard let id = value.typeRef,
-                                ScriptType.named(id)
+                            guard let reference = value.typeRef,
+                                ScriptType.named(reference)
                                     .conforms(to: .rawRepresentable, in: interpreter)
                             else { return nil }
                             return try? interpreter.value(forMember: "rawValue", of: value)

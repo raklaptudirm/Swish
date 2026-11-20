@@ -6,16 +6,22 @@ extension CommandRunner {
     /// a path for a `FilePath`), a key path by the field names (`size`, `owner.name`), and anything
     /// else by being text, as `String`, `Any` and a type parameter are. Nil if the word is not one.
     func value(forWord text: String, as type: ScriptType) -> Value? {
-        guard case .named(let id, let arguments) = type else { return nil }
+        guard case .named(let reference, let arguments) = type else { return nil }
 
-        if id == .any { return Value(text) }
-        if id == .keyPath { return Value(keyPath: text.split(separator: ".").map(String.init)) }
-        if id == .optional, arguments.count == 1 { return value(forWord: text, as: arguments[0]) }
+        if reference == .any { return Value(text) }
+        if reference == .keyPath {
+            return Value(keyPath: text.split(separator: ".").map(String.init))
+        }
+        if reference == .optional, arguments.count == 1 {
+            return value(forWord: text, as: arguments[0])
+        }
 
         // A type parameter, which text satisfies.
-        if id.isGenericParameter { return Value(text) }
-        guard let symbol = id.symbol(in: interpreter) else { return nil }
-        if case .type(.enumeration) = symbol.kind { return enumCase(from: text, of: type, id: id) }
+        if reference.isGenericParameter { return Value(text) }
+        guard let symbol = reference.symbol(in: interpreter) else { return nil }
+        if case .type(.enumeration) = symbol.kind {
+            return enumCase(from: text, of: type, reference: reference)
+        }
 
         // A `String`, or a one-letter `Character`, which Swiit holds as one; then an initializer
         // that cannot fail on text.
@@ -27,7 +33,7 @@ extension CommandRunner {
         else { return nil }
 
         let made = try? interpreter.call(
-            id.name,
+            reference.name,
             arguments: [(label: parameter.label, value: argument)]
         )
         return made == .nothing ? nil : made
@@ -36,13 +42,13 @@ extension CommandRunner {
     /// Whether a word can be a value of `type` at all: an enum, a Swift type text can be, a key
     /// path, or anything text satisfies. (`word(_:as:)` says whether one word is.)
     func acceptsWords(as type: ScriptType) -> Bool {
-        guard case .named(let id, let arguments) = type else { return false }
+        guard case .named(let reference, let arguments) = type else { return false }
 
-        if id == .any || id == .keyPath { return true }
-        if id == .optional, arguments.count == 1 { return acceptsWords(as: arguments[0]) }
+        if reference == .any || reference == .keyPath { return true }
+        if reference == .optional, arguments.count == 1 { return acceptsWords(as: arguments[0]) }
 
-        if id.isGenericParameter { return true }
-        guard let symbol = id.symbol(in: interpreter) else { return false }
+        if reference.isGenericParameter { return true }
+        guard let symbol = reference.symbol(in: interpreter) else { return false }
         if case .type(.enumeration) = symbol.kind { return true }
 
         return hasTextInitializer(type)
@@ -106,9 +112,9 @@ extension CommandRunner {
             }
     }
 
-    /// The case of the enum `id` a word names, by its name or its raw value: `.directory`,
+    /// The case of the enum `reference` a word names, by its name or its raw value: `.directory`,
     /// `directory`, or `d` for `case directory = "d"`.
-    private func enumCase(from text: String, of type: ScriptType, id: TypeRef) -> Value? {
+    private func enumCase(from text: String, of type: ScriptType, reference: TypeRef) -> Value? {
         let name = text.hasPrefix(".") ? String(text.dropFirst()) : text
         let cases = type.members(in: interpreter)
             .compactMap { symbol -> (Symbol, Value?)? in
@@ -122,7 +128,7 @@ extension CommandRunner {
 
         let named = cases.first { $0.0.name == name }
         let chosen = named ?? cases.first { $0.1?.description == text }
-        return chosen.flatMap { id.enumCase(named: $0.0.name, in: interpreter) }
+        return chosen.flatMap { reference.enumCase(named: $0.0.name, in: interpreter) }
     }
 }
 

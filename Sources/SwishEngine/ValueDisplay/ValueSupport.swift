@@ -114,7 +114,7 @@ extension Value {
     /// The name of its type, as errors and tables say it: the type's name, `Tuple` or `Function`,
     /// or what a host's object calls itself.
     var typeName: String {
-        if let id = typeRef { return id.name }
+        if let reference = typeRef { return reference.name }
         if mirror.displayStyle == .tuple { return "Tuple" }
         if isInstance(of: .function) { return "Function" }
         return "Object"
@@ -130,17 +130,17 @@ extension Value {
     }
 
     var kind: ValueKind {
-        guard let id = typeRef else {
+        guard let reference = typeRef else {
             if mirror.displayStyle == .tuple { return .tuple }
             return isInstance(of: .function) ? .function : .object
         }
-        if id == .int { return .int }
-        if id == .string { return .string }
-        if id == .bool { return .bool }
-        if id == .double { return .double }
-        if id == .array { return .list }
-        if id == .dictionary { return .dictionary }
-        if id == .optional && self == .nothing { return .nothing }
+        if reference == .int { return .int }
+        if reference == .string { return .string }
+        if reference == .bool { return .bool }
+        if reference == .double { return .double }
+        if reference == .array { return .list }
+        if reference == .dictionary { return .dictionary }
+        if reference == .optional && self == .nothing { return .nothing }
         switch mirror.displayStyle {
         case .struct: return .structure
         case .enum: return .enumeration

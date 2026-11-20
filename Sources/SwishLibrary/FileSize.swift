@@ -127,8 +127,8 @@ extension FileSize: Presentable {
 }
 
 extension FileSize: BridgedValue {
-    static let id = TypeRef(hostType: "FileSize")
-    public static var scriptType: ScriptType { .named(id) }
+    static let typeRef = TypeRef(hostType: "FileSize")
+    public static var scriptType: ScriptType { .named(typeRef) }
     public init(_ swiitValue: Value) throws {
         if let size = swiitValue.casting(to: FileSize.self) {
             self = size

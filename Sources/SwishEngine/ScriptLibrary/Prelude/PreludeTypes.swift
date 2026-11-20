@@ -12,10 +12,10 @@ struct PreludeTypes {
     init(_ interpreter: Interpreter) {
         self.interpreter = interpreter
         func declared(_ name: String) -> TypeRef {
-            guard let id = TypeRef(named: name, in: interpreter) else {
+            guard let reference = TypeRef(named: name, in: interpreter) else {
                 preconditionFailure("the shell's prelude declares no \(name)")
             }
-            return id
+            return reference
         }
         status = declared("Status")
         commandFailure = declared("CommandFailure")

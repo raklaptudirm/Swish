@@ -59,7 +59,7 @@ extension CommandRunner {
         }
 
         for type in interpreter.types where type.isBuiltin {
-            type.id.map { ScriptType.named($0).members(in: interpreter).forEach(add) }
+            type.typeRef.map { ScriptType.named($0).members(in: interpreter).forEach(add) }
         }
 
         // What every sequence has.

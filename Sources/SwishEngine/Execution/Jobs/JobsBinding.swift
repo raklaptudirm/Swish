@@ -4,7 +4,10 @@ import SwishLibrary
 extension CommandRunner {
     /// `jobs`, the jobs in the background oldest first.
     func installJobs() {
-        interpreter.register(computed: "jobs", type: .list(.named(Job.id, [.named(Output.id)]))) {
+        interpreter.register(
+            computed: "jobs",
+            type: .list(.named(Job.typeRef, [.named(Output.typeRef)]))
+        ) {
             [unowned self] in
             jobControl.updateJobs()  // So their states are current.
             return Value(jobControl.jobs.map { Value($0) })

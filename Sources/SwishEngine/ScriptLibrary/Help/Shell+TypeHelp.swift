@@ -63,8 +63,9 @@ extension Shell {
 
     /// The type a value of `name` is held as: a list is an `Array`.
     private func heldType(named name: String) -> ScriptType {
-        guard let id = TypeRef(named: name, in: interpreter) else { return .any }
-        return id == .array ? .list(Symbol.GenericParameter(name: "Element").type) : .named(id)
+        guard let reference = TypeRef(named: name, in: interpreter) else { return .any }
+        return reference == .array
+            ? .list(Symbol.GenericParameter(name: "Element").type) : .named(reference)
     }
 
     /// A member as Swift declares it, in pieces by what each is: `init(_ description: String)`,
