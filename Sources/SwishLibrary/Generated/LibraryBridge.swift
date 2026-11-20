@@ -7,7 +7,7 @@ import SystemPackage
 import Swiit
 
 public enum LibraryBridge {
-    public static let types: [HostType] = [
+    public static let types: [ImplementedType] = [
 
         type3,
         type6,
@@ -36,8 +36,8 @@ let result = DisplayColumn(stringLiteral: try String(arguments[0]))
                 return Value(boxing: result, as: .init(hostType: "DisplayColumn"))
 }
 
-    fileprivate static let type3: HostType = {
-        var type = HostType(name: "DisplayColumn", members: [member0, member1, member2])
+    fileprivate static let type3: ImplementedType = {
+        var type = ImplementedType(name: "DisplayColumn", members: [member0, member1, member2])
         type.genericParameters = []
         type.conformances = ["ExpressibleByStringLiteral": []]
         type.associatedTypes = [:]
@@ -56,8 +56,8 @@ let receiver: DisplayShape = try selfValue.unboxing(DisplayShape.self)
                 return result.value
 })
 
-    fileprivate static let type6: HostType = {
-        var type = HostType(name: "DisplayShape", members: [member4, member5])
+    fileprivate static let type6: ImplementedType = {
+        var type = ImplementedType(name: "DisplayShape", members: [member4, member5])
         type.genericParameters = []
         type.conformances = [:]
         type.associatedTypes = [:]
@@ -135,8 +135,8 @@ let receiver: FileEntry = try selfValue.unboxing(FileEntry.self)
                 return Value(list: result.map { $0.value })
 })
 
-    fileprivate static let type19: HostType = {
-        var type = HostType(name: "FileEntry", members: [member7, member8, member9, member10, member11, member12, member13, member14, member15, member16, member17, member18])
+    fileprivate static let type19: ImplementedType = {
+        var type = ImplementedType(name: "FileEntry", members: [member7, member8, member9, member10, member11, member12, member13, member14, member15, member16, member17, member18])
         type.genericParameters = []
         type.conformances = ["Encodable": [], "Equatable": [], "Hashable": []]
         type.associatedTypes = [:]
@@ -253,8 +253,8 @@ let receiver: FileSize = try selfValue.unboxing(FileSize.self)
                 return (result.map { Value(list: $0.map { Value(boxing: $0, as: .init(hostType: "Segment")) }) } ?? .nothing)
 })
 
-    fileprivate static let type41: HostType = {
-        var type = HostType(name: "FileSize", members: [member20, member21, member22, member23, member24, member25, member26, member27, member28, member29, member30, member31, member32, member33, member34, member35, member36, member37, member38, member39, member40])
+    fileprivate static let type41: ImplementedType = {
+        var type = ImplementedType(name: "FileSize", members: [member20, member21, member22, member23, member24, member25, member26, member27, member28, member29, member30, member31, member32, member33, member34, member35, member36, member37, member38, member39, member40])
         type.genericParameters = []
         type.conformances = ["Comparable": [], "CustomStringConvertible": [], "Encodable": [], "Equatable": [], "Hashable": []]
         type.associatedTypes = [:]
@@ -272,8 +272,8 @@ let result = LibraryError(try String(arguments[0]))
                 return Value(boxing: result, as: .init(hostType: "LibraryError"))
 }
 
-    fileprivate static let type44: HostType = {
-        var type = HostType(name: "LibraryError", members: [member42, member43])
+    fileprivate static let type44: ImplementedType = {
+        var type = ImplementedType(name: "LibraryError", members: [member42, member43])
         type.genericParameters = []
         type.conformances = ["CustomStringConvertible": []]
         type.associatedTypes = [:]
@@ -435,8 +435,8 @@ let receiver: Output = try selfValue.unboxing(Output.self)
                 return (result.map { Value(list: $0.map { Value(boxing: $0, as: .init(hostType: "Segment")) }) } ?? .nothing)
 })
 
-    fileprivate static let type73: HostType = {
-        var type = HostType(name: "Output", members: [member45, member46, member47, member48, member49, member50, member51, member52, member53, member54, member55, member56, member57, member58, member59, member60, member61, member62, member63, member64, member65, member66, member67, member68, member69, member70, member71, member72])
+    fileprivate static let type73: ImplementedType = {
+        var type = ImplementedType(name: "Output", members: [member45, member46, member47, member48, member49, member50, member51, member52, member53, member54, member55, member56, member57, member58, member59, member60, member61, member62, member63, member64, member65, member66, member67, member68, member69, member70, member71, member72])
         type.genericParameters = []
         type.conformances = ["BidirectionalCollection": [], "Collection": [], "CustomStringConvertible": [], "Equatable": [], "Hashable": [], "RandomAccessCollection": [], "Sequence": []]
         type.associatedTypes = ["Element": .string, "Index": .int]
@@ -496,8 +496,8 @@ let receiver: ProcessEntry = try selfValue.unboxing(ProcessEntry.self)
                 return Value(list: result.map { $0.value })
 })
 
-    fileprivate static let type83: HostType = {
-        var type = HostType(name: "ProcessEntry", members: [member74, member75, member76, member77, member78, member79, member80, member81, member82])
+    fileprivate static let type83: ImplementedType = {
+        var type = ImplementedType(name: "ProcessEntry", members: [member74, member75, member76, member77, member78, member79, member80, member81, member82])
         type.genericParameters = []
         type.conformances = ["Encodable": [], "Equatable": [], "Hashable": []]
         type.associatedTypes = [:]
@@ -510,8 +510,8 @@ let receiver: Segment = try selfValue.unboxing(Segment.self)
                 return result.value
 })
 
-    fileprivate static let type85: HostType = {
-        var type = HostType(name: "Segment", members: [member84])
+    fileprivate static let type85: ImplementedType = {
+        var type = ImplementedType(name: "Segment", members: [member84])
         type.genericParameters = []
         type.conformances = ["Equatable": [], "Hashable": []]
         type.associatedTypes = [:]
@@ -550,8 +550,8 @@ let receiver: Date = try selfValue.unboxing(Date.self)
                 return result.value
 })
 
-    fileprivate static let type92: HostType = {
-        var type = HostType(name: "Date", members: [member86, member87, member88, member89, member90, member91])
+    fileprivate static let type92: ImplementedType = {
+        var type = ImplementedType(name: "Date", members: [member86, member87, member88, member89, member90, member91])
         type.genericParameters = []
         type.conformances = [:]
         type.associatedTypes = [:]
@@ -586,33 +586,33 @@ let result: [ProcessEntry] = ps()
 }
 
 extension DisplayColumn {
-    public static var hostType: HostType { LibraryBridge.type3 }
+    public static var implementedType: ImplementedType { LibraryBridge.type3 }
 }
 
 extension DisplayShape: BridgedValue {
-    public static var hostType: HostType { LibraryBridge.type6 }
+    public static var implementedType: ImplementedType { LibraryBridge.type6 }
 }
 
 extension FileEntry {
-    public static var hostType: HostType { LibraryBridge.type19 }
+    public static var implementedType: ImplementedType { LibraryBridge.type19 }
 }
 
 extension FileSize {
-    public static var hostType: HostType { LibraryBridge.type41 }
+    public static var implementedType: ImplementedType { LibraryBridge.type41 }
 }
 
 extension LibraryError: BridgedValue {
-    public static var hostType: HostType { LibraryBridge.type44 }
+    public static var implementedType: ImplementedType { LibraryBridge.type44 }
 }
 
 extension Output {
-    public static var hostType: HostType { LibraryBridge.type73 }
+    public static var implementedType: ImplementedType { LibraryBridge.type73 }
 }
 
 extension ProcessEntry {
-    public static var hostType: HostType { LibraryBridge.type83 }
+    public static var implementedType: ImplementedType { LibraryBridge.type83 }
 }
 
 extension Segment: BridgedValue {
-    public static var hostType: HostType { LibraryBridge.type85 }
+    public static var implementedType: ImplementedType { LibraryBridge.type85 }
 }

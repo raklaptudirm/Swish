@@ -52,7 +52,7 @@ import Testing
 
 @Test func aGeneratedTypeSaysWhatScriptsSeeOfItAndConvertsLikeAnyBridgedValue() throws {
     // `Segment` never declared the conformance: the bridge generator wrote it.
-    #expect(Segment.hostType.symbol.name == "Segment")
+    #expect(Segment.implementedType.symbol.name == "Segment")
     #expect(Segment.scriptType == .named(.init(hostType: "Segment")))
 
     let segment = Segment("a")
