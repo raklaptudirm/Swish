@@ -41,9 +41,6 @@ let result = DisplayColumn(stringLiteral: try String(arguments[0]))
         type.genericParameters = []
         type.conformances = ["ExpressibleByStringLiteral": []]
         type.associatedTypes = [:]
-        type.parse = nil
-        type.literal = { Value.Bridging.textLiteral(DisplayColumn.self, $0).map { Value(boxing: $0, as: .init(hostType: "DisplayColumn")) } }
-        type.arrayLiteral = nil
         return type
     }()
 
@@ -64,9 +61,6 @@ let receiver: DisplayShape = try selfValue.unboxing(DisplayShape.self)
         type.genericParameters = []
         type.conformances = [:]
         type.associatedTypes = [:]
-        type.parse = nil
-        type.literal = nil
-        type.arrayLiteral = nil
         return type
     }()
 
@@ -146,9 +140,6 @@ let receiver: FileEntry = try selfValue.unboxing(FileEntry.self)
         type.genericParameters = []
         type.conformances = ["Encodable": [], "Equatable": [], "Hashable": []]
         type.associatedTypes = [:]
-        type.parse = nil
-        type.literal = nil
-        type.arrayLiteral = nil
         return type
     }()
 
@@ -267,9 +258,6 @@ let receiver: FileSize = try selfValue.unboxing(FileSize.self)
         type.genericParameters = []
         type.conformances = ["Comparable": [], "CustomStringConvertible": [], "Encodable": [], "Equatable": [], "Hashable": []]
         type.associatedTypes = [:]
-        type.parse = { FileSize($0).map { Value(boxing: $0, as: .init(hostType: "FileSize")) } }
-        type.literal = nil
-        type.arrayLiteral = nil
         return type
     }()
 
@@ -289,9 +277,6 @@ let result = LibraryError(try String(arguments[0]))
         type.genericParameters = []
         type.conformances = ["CustomStringConvertible": []]
         type.associatedTypes = [:]
-        type.parse = nil
-        type.literal = nil
-        type.arrayLiteral = nil
         return type
     }()
 
@@ -455,9 +440,6 @@ let receiver: Output = try selfValue.unboxing(Output.self)
         type.genericParameters = []
         type.conformances = ["BidirectionalCollection": [], "Collection": [], "CustomStringConvertible": [], "Equatable": [], "Hashable": [], "RandomAccessCollection": [], "Sequence": []]
         type.associatedTypes = ["Element": .string, "Index": .int]
-        type.parse = nil
-        type.literal = nil
-        type.arrayLiteral = nil
         return type
     }()
 
@@ -519,9 +501,6 @@ let receiver: ProcessEntry = try selfValue.unboxing(ProcessEntry.self)
         type.genericParameters = []
         type.conformances = ["Encodable": [], "Equatable": [], "Hashable": []]
         type.associatedTypes = [:]
-        type.parse = nil
-        type.literal = nil
-        type.arrayLiteral = nil
         return type
     }()
 
@@ -536,9 +515,6 @@ let receiver: Segment = try selfValue.unboxing(Segment.self)
         type.genericParameters = []
         type.conformances = ["Equatable": [], "Hashable": []]
         type.associatedTypes = [:]
-        type.parse = nil
-        type.literal = nil
-        type.arrayLiteral = nil
         return type
     }()
 
@@ -579,9 +555,6 @@ let receiver: Date = try selfValue.unboxing(Date.self)
         type.genericParameters = []
         type.conformances = [:]
         type.associatedTypes = [:]
-        type.parse = { Date($0).map { Value(boxing: $0, as: .init(hostType: "Date")) } }
-        type.literal = nil
-        type.arrayLiteral = nil
         return type
     }()
 
