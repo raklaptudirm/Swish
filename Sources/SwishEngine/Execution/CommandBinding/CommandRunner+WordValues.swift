@@ -15,7 +15,7 @@ extension CommandRunner {
         // A type parameter, which text satisfies.
         if id.isGenericParameter { return Value(text) }
         guard let symbol = id.symbol(in: interpreter) else { return nil }
-        if case .enumeration = symbol.kind { return enumCase(from: text, of: type, id: id) }
+        if case .type(.enumeration) = symbol.kind { return enumCase(from: text, of: type, id: id) }
 
         // A `String`, or a one-letter `Character`, which Swiit holds as one; then an initializer
         // that cannot fail on text.
@@ -43,7 +43,7 @@ extension CommandRunner {
 
         if id.isGenericParameter { return true }
         guard let symbol = id.symbol(in: interpreter) else { return false }
-        if case .enumeration = symbol.kind { return true }
+        if case .type(.enumeration) = symbol.kind { return true }
 
         return hasTextInitializer(type)
     }
@@ -76,7 +76,9 @@ extension CommandRunner {
         textInitializer(of: type) != nil
             || type.members(in: interpreter)
                 .contains { symbol in
-                    guard case .initializer(let function) = symbol.kind else { return false }
+                    guard case .member(.initializer(let function)) = symbol.kind else {
+                        return false
+                    }
                     return function.parameters.count == 1
                         && ["extendedGraphemeClusterLiteral", "unicodeScalarLiteral"]
                             .contains(
@@ -89,7 +91,8 @@ extension CommandRunner {
     private func textInitializers(of type: ScriptType) -> [(Symbol.Function, Symbol.Parameter)] {
         type.members(in: interpreter)
             .compactMap { symbol in
-                guard case .initializer(let function) = symbol.kind, function.parameters.count == 1
+                guard case .member(.initializer(let function)) = symbol.kind,
+                    function.parameters.count == 1
                 else { return nil }
 
                 let parameter = function.parameters[0]
@@ -109,7 +112,8 @@ extension CommandRunner {
         let name = text.hasPrefix(".") ? String(text.dropFirst()) : text
         let cases = type.members(in: interpreter)
             .compactMap { symbol -> (Symbol, Value?)? in
-                guard case .enumCase(let parameters, let raw) = symbol.kind, parameters.isEmpty
+                guard case .member(.enumCase(let parameters, let raw)) = symbol.kind,
+                    parameters.isEmpty
                 else {
                     return nil
                 }

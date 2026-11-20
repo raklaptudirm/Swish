@@ -22,7 +22,7 @@ extension Symbol {
     /// The cases of an enum's members that carry nothing: what a word for the enum can be.
     static func plainCaseNames(of members: [Symbol]) -> [String] {
         members.compactMap { symbol in
-            if case .enumCase(let parameters, _) = symbol.kind, parameters.isEmpty {
+            if case .member(.enumCase(let parameters, _)) = symbol.kind, parameters.isEmpty {
                 return symbol.name
             }
             return nil

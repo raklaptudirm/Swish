@@ -17,10 +17,10 @@ extension Symbol {
     /// The keyword a type is declared with, as `help` heads it: `struct`, `enum`, `protocol`.
     var declarationKeyword: String {
         switch kind {
-        case .structure: "struct"
-        case .enumeration: "enum"
-        case .class: "class"
-        case .actor: "actor"
+        case .type(.structure): "struct"
+        case .type(.enumeration): "enum"
+        case .type(.class): "class"
+        case .type(.actor): "actor"
         default: "protocol"
         }
     }
@@ -28,13 +28,13 @@ extension Symbol {
     /// What a member of a type is, or nil for a symbol that is not one.
     var memberKind: MemberKind? {
         switch kind {
-        case .enumCase: .case
-        case .initializer: .initializer
+        case .member(.enumCase): .case
+        case .member(.initializer): .initializer
         case .variable: .property
-        case .property(let property): property.isStatic ? .staticProperty : .property
+        case .member(.property(let property)): property.isStatic ? .staticProperty : .property
         case .function: .method
-        case .method(let method): method.isStatic ? .staticMethod : .method
-        case .structure, .enumeration, .class, .actor, .protocol: nil
+        case .member(.method(let method)): method.isStatic ? .staticMethod : .method
+        case .type: nil
         }
     }
 
@@ -42,11 +42,11 @@ extension Symbol {
     /// and not to a value of it.
     var belongsToType: Bool {
         switch kind {
-        case .method(let method): method.isStatic
-        case .property(let property): property.isStatic
-        case .initializer, .enumCase: true
+        case .member(.method(let method)): method.isStatic
+        case .member(.property(let property)): property.isStatic
+        case .member(.initializer), .member(.enumCase): true
         case .function, .variable: false
-        case .structure, .enumeration, .class, .actor, .protocol: false
+        case .type: false
         }
     }
 }
@@ -133,13 +133,13 @@ extension Shell {
         case .function(let function):
             return AttributedString(joining: call(name, function))
 
-        case .method(let method):
+        case .member(.method(let method)):
             let mutating =
                 method.isMutating
                 ? [AttributedString("mutating", DisplayStyle.keyword), .init(" ")] : []
             return AttributedString(joining: mutating + call(name, method.function))
 
-        case .initializer(let function):
+        case .member(.initializer(let function)):
             return AttributedString(
                 joining: call(
                     AttributedString("init", DisplayStyle.keyword),
@@ -148,7 +148,7 @@ extension Shell {
                 )
             )
 
-        case .variable, .property:
+        case .variable, .member(.property):
             let variable = symbol.variable!
             var pieces = [name, .init(": "), type(variable.type)]
             if variable.isSettable {
@@ -159,7 +159,7 @@ extension Shell {
             }
             return AttributedString(joining: pieces)
 
-        case .enumCase(let carried, let raw):
+        case .member(.enumCase(let carried, let raw)):
             var pieces = [AttributedString("case", DisplayStyle.keyword), .init(" "), name]
             if !carried.isEmpty {
                 pieces += [.init("(")]
@@ -176,7 +176,7 @@ extension Shell {
             if let raw { pieces += [.init(" = "), .init(raw.debugDescription)] }
             return AttributedString(joining: pieces)
 
-        case .structure, .enumeration, .class, .actor, .protocol:
+        case .type:
             return name
         }
     }

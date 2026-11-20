@@ -4,9 +4,9 @@ import Swiit
 extension Names.Role {
     init(_ kind: Symbol.Kind) {
         switch kind {
-        case .variable, .property, .enumCase: self = .variable
-        case .function, .method, .initializer: self = .function
-        case .structure, .enumeration, .class, .actor, .protocol: self = .type
+        case .variable, .member(.property), .member(.enumCase): self = .variable
+        case .function, .member(.method), .member(.initializer): self = .function
+        case .type: self = .type
         }
     }
 }
@@ -23,8 +23,8 @@ extension Shell {
         front.closureArity = { [unowned self] (name: String) -> Int? in
             for overload in runner.commandFunctions(named: name)?.overloads ?? [] {
                 for parameter in overload.function?.parameters ?? [] {
-                    if case .function(let parameters, _, _, _) = parameter.type {
-                        return parameters.count
+                    if case .function(let function) = parameter.type {
+                        return function.parameters.count
                     }
                 }
             }

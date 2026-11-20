@@ -49,10 +49,10 @@ extension CommandRunner {
         func add(_ symbol: Symbol) {
             // What a value of the type has, not what the type itself does.
             switch symbol.kind {
-            case .method(let method) where !method.isMutating && !method.isStatic:
+            case .member(.method(let method)) where !method.isMutating && !method.isStatic:
                 names.all.insert(symbol.name)
                 names.methods.insert(symbol.name)
-            case .property(let property) where !property.isStatic:
+            case .member(.property(let property)) where !property.isStatic:
                 names.all.insert(symbol.name)
             default: break
             }
@@ -113,9 +113,9 @@ extension CommandRunner {
         let members = type.members(named: name, in: interpreter)
             .filter { symbol in
                 switch symbol.kind {
-                case .method(let method):
+                case .member(.method(let method)):
                     !method.isStatic && (includingMutating || !method.isMutating)
-                case .property(let property): !property.isStatic
+                case .member(.property(let property)): !property.isStatic
                 default: false
                 }
             }

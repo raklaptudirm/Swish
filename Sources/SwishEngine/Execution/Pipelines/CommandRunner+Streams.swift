@@ -260,7 +260,7 @@ extension CommandRunner {
         let call = try bind(commandLine: args, to: callee, excludingInput: true)
 
         let overload = callee.overloads[call.overload]
-        if case .method(let method) = overload.kind, method.isMutating {
+        if case .member(.method(let method)) = overload.kind, method.isMutating {
             throw RuntimeError(
                 "\(callee.name) is mutating, and a piped value can't change: call it on a variable"
             )

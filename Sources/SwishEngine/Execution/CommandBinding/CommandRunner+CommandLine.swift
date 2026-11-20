@@ -208,7 +208,7 @@ extension CommandRunner {
         {
             let bare = text.hasPrefix(".") ? String(text.dropFirst()) : text
             let hasRawValues = declared.contains { symbol in
-                if case .enumCase(_, let raw) = symbol.kind { raw != nil } else { false }
+                if case .member(.enumCase(_, let raw)) = symbol.kind { raw != nil } else { false }
             }
             guard Symbol.plainCaseNames(of: declared).contains(bare) || hasRawValues else {
                 throw RuntimeError("\(function): \(what) must be \(type), got '\(text)'")
