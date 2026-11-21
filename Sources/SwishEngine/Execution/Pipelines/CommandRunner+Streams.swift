@@ -1,5 +1,6 @@
 import Foundation
 import Swiit
+import SwishLibrary
 
 /// Items read one at a time, as the stages of a pipeline pass them on.
 final class ValueStream: @unchecked Sendable {  // safe: a stream is read by one stage at a time

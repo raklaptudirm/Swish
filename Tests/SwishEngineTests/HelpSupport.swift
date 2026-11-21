@@ -1,5 +1,6 @@
 import Foundation
 import Swiit
+import SwishLibrary
 
 @testable import SwishEngine
 
@@ -20,7 +21,7 @@ func runStyle(
             .first(where: { $0.plain == signature })
     else { return nil }
     return text.runs.first { String(text[$0.range].characters) == word }
-        .map { $0.swiit.displayStyle }
+        .map { $0.swish.displayStyle }
 }
 
 /// `ls [--all]` with the command in its style, as plain text and as colored.

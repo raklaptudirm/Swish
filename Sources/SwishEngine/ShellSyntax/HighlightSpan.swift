@@ -1,4 +1,5 @@
 import Swiit
+import SwishLibrary
 
 /// What a stretch of source is, for coloring it as it is typed.
 public enum HighlightKind: Equatable, Sendable {

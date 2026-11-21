@@ -1,4 +1,5 @@
 import Foundation
+import SwishLibrary
 import Testing
 
 // What SwishEngine offers a client, as a list. A client of the shell uses this interface and nothing

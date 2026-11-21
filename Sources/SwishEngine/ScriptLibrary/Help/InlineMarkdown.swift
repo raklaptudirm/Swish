@@ -1,5 +1,6 @@
 import Foundation
 import Swiit
+import SwishLibrary
 
 /// Markdown's inline syntax, as a description is written in: `code`,
 /// **strong**, _emphasis_ and [links](url), with a backslash to write one of

@@ -17,5 +17,8 @@
   },
   "types": [
     "Date"
+  ],
+  "skip": [
+    "DisplayStyle"
   ]
 }

@@ -1,10 +1,13 @@
+import SwishLibrary
+
 // What SwishLibrary offers: the types and functions scripts get, and the display model their types
 // use. See PublicSurface.swift for how it is checked.
 
 enum LibrarySurface {
     /// The top-level types and protocols.
     static let types: Set<String> = [
-        "DisplayColumn", "DisplayShape", "DisplayStyled", "FileEntry", "FileSize", "FileType",
+        "DisplayColumn", "DisplayShape", "DisplayStyle", "DisplayStyled", "FileEntry", "FileSize",
+        "FileType",
         "ItemErrors", "LibraryBridge", "LibraryError", "Output", "Presentable", "ProcessEntry",
         "RecordRepresentable", "Segment", "Status", "Tabular",
     ]
@@ -12,6 +15,15 @@ enum LibrarySurface {
     /// The public members, by the type that has them; `Date.func` is the operators the library adds to
     /// Foundation's `Date`.
     static let members: Set<String> = [
+        "AttributeDynamicLookup.subscript", "AttributeScopes.SwishAttributes",
+        "AttributeScopes.SwishAttributes.displayStyle", "AttributeScopes.swish",
+        "AttributedString.colored", "AttributedString.init", "AttributedString.plain",
+        "AttributedString.rendered", "DisplayStyle.Attribute", "DisplayStyle.Attribute.Value",
+        "DisplayStyle.Attribute.name", "DisplayStyle.comment", "DisplayStyle.constant",
+        "DisplayStyle.error", "DisplayStyle.escape", "DisplayStyle.function",
+        "DisplayStyle.keyword",
+        "DisplayStyle.label", "DisplayStyle.path", "DisplayStyle.reset", "DisplayStyle.string",
+        "DisplayStyle.type", "DisplayStyle.variable", "String.styled",
         "AttributedString.cell", "AttributedString.styledSegments", "Date.cell", "Date.func",
         "Date.init", "Date.shown", "DisplayColumn.Styling", "DisplayColumn.init",
         "DisplayColumn.name", "DisplayColumn.styling", "DisplayShape.init", "DisplayShape.isEmpty",

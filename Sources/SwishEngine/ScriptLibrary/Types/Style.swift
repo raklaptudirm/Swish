@@ -1,4 +1,5 @@
 import Swiit
+import SwishLibrary
 
 /// What `String.styled` can make text (the shell's: the core knows only `DisplayStyle`), each with
 /// its terminal code as its raw value.

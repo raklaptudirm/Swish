@@ -73,6 +73,6 @@ extension FilePath.Component: Presentable {
 extension AttributedString: Presentable {
     public var cell: String { plain }
     public var styledSegments: [Segment]? {
-        runs.map { Segment(String(self[$0.range].characters), $0.swiit.displayStyle) }
+        runs.map { Segment(String(self[$0.range].characters), $0.swish.displayStyle) }
     }
 }

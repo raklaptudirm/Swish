@@ -1,6 +1,7 @@
 import Foundation
 import Swiit
 import SwishEngine
+import SwishLibrary
 
 /// The shell at a prompt: a line editor over a `Shell`, which reads a line, runs it and draws the
 /// next prompt until the input ends. The shell knows nothing of the editor; they meet through the

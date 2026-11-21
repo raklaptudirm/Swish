@@ -21,6 +21,17 @@ extension Shell {
         interpreter.register(OutputFormat.self)
         interpreter.register(TextStyle.self)
         interpreter.register(JobState.self)
+
+        // What a script can read of styled text: its words, and how they show (plain, or with the
+        // terminal's escapes for each style).
+        interpreter.register(
+            BridgedType<AttributedString>("AttributedString")
+                .property("text", \.plain)
+                .property("plain", \.plain)
+                .property("description", \.plain)
+                .property("debugDescription", \.plain)
+                .property("colored", \.colored)
+        )
         interpreter.register(Job.typeImplementation)
 
         do {

@@ -1,6 +1,7 @@
 import Foundation
 import Swiit
 import SwishEngine
+import SwishLibrary
 
 // The prompt: what the config's `prompt` function gives, or the default.
 

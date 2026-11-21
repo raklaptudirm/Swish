@@ -1,5 +1,6 @@
 import Foundation
 import Swiit
+import SwishLibrary
 
 /// What `help Type` and `members` list a type's members under, in the order they are shown.
 enum MemberKind: String, CaseIterable {
@@ -67,7 +68,7 @@ extension Shell {
     func typeMembers(named name: String) -> (type: Symbol, members: [Symbol])? {
         // A type a script declared or the shell does, or one of Swift's that the core bridges.
         let named = interpreter.globals(named: name) + interpreter.types.filter { $0.name == name }
-        guard let type = named.first(where: \.isType) else { return nil }
+        guard let type = named.first(where: { $0.nominal != nil }) else { return nil }
         let members = heldType(named: name).members(in: interpreter)
         return (type, type.isBuiltin ? members.filter { !$0.isLayoutPlumbing } : members)
     }
