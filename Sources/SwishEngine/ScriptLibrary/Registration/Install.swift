@@ -25,7 +25,7 @@ extension Shell {
         // What a script can read of styled text: its words, and how they show (plain, or with the
         // terminal's escapes for each style).
         interpreter.register(
-            BridgedType<AttributedString>("AttributedString")
+            BridgedType<AttributedString>(named: "AttributedString")
                 .property("text", \.plain)
                 .property("plain", \.plain)
                 .property("description", \.plain)
