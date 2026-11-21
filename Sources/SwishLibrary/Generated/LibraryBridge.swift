@@ -26,12 +26,12 @@ let receiver: DisplayColumn = try selfValue.unboxing(DisplayColumn.self)
                 return result.value
 })
 
-    private static let member1: ImplementedSymbol = ImplementedSymbol.initializer(summary: "A column styled by the value of the field `field`.", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "name", type: .string), Symbol.Parameter(label: "styledBy", name: "field", type: .string)], returns: .named(.init(nativeType: "DisplayColumn")), throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member1: ImplementedSymbol = ImplementedSymbol.initializer(summary: "A column styled by the value of the field `field`.", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "name", type: .string), Symbol.Parameter(label: "styledBy", name: "field", type: .string)], returns: .named(.init(nativeType: "DisplayColumn")), throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = DisplayColumn(try String(arguments[0]), styledBy: try String(arguments[1]))
                 return Value(boxing: result, as: .init(nativeType: "DisplayColumn"))
 }
 
-    private static let member2: ImplementedSymbol = ImplementedSymbol.initializer(summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: "stringLiteral", name: "name", type: .string)], returns: .named(.init(nativeType: "DisplayColumn")), throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member2: ImplementedSymbol = ImplementedSymbol.initializer(summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: "stringLiteral", name: "name", type: .string)], returns: .named(.init(nativeType: "DisplayColumn")), throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = DisplayColumn(stringLiteral: try String(arguments[0]))
                 return Value(boxing: result, as: .init(nativeType: "DisplayColumn"))
 }
@@ -140,7 +140,7 @@ let receiver: FileSize = try selfValue.unboxing(FileSize.self)
                 return result.value
 })
 
-    private static let member20: ImplementedSymbol = ImplementedSymbol.initializer(summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: "bytes", name: "bytes", type: .int)], returns: .named(.init(nativeType: "FileSize")), throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member20: ImplementedSymbol = ImplementedSymbol.initializer(summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: "bytes", name: "bytes", type: .int)], returns: .named(.init(nativeType: "FileSize")), throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = FileSize(bytes: try Int(arguments[0]))
                 return Value(boxing: result, as: .init(nativeType: "FileSize"))
 }
@@ -150,17 +150,17 @@ let result = FileSize.units
                 return Value.Bridging.dictionary(Dictionary(uniqueKeysWithValues: result.map { ($0.key.value, $0.value.value) }))
 })
 
-    private static let member22: ImplementedSymbol = ImplementedSymbol.initializer(summary: "`amount` of a unit worth `multiplier` bytes, which `2.mb` is. A size too large to hold is the largest there is, the one rule for making a size from a number.", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "amount", type: .double), Symbol.Parameter(label: "multiplier", name: "multiplier", type: .int)], returns: .named(.init(nativeType: "FileSize")), throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member22: ImplementedSymbol = ImplementedSymbol.initializer(summary: "`amount` of a unit worth `multiplier` bytes, which `2.mb` is. A size too large to hold is the largest there is, the one rule for making a size from a number.", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "amount", type: .double), Symbol.Parameter(label: "multiplier", name: "multiplier", type: .int)], returns: .named(.init(nativeType: "FileSize")), throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = FileSize(try Double(arguments[0]), multiplier: try Int(arguments[1]))
                 return Value(boxing: result, as: .init(nativeType: "FileSize"))
 }
 
-    private static let member23: ImplementedSymbol = ImplementedSymbol.initializer(summary: "`1.5` of a unit (`mb`), or nil if there's no such unit.", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "amount", type: .double), Symbol.Parameter(label: "unit", name: "unit", type: .string)], returns: .optional(.named(.init(nativeType: "FileSize"))), throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member23: ImplementedSymbol = ImplementedSymbol.initializer(summary: "`1.5` of a unit (`mb`), or nil if there's no such unit.", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "amount", type: .double), Symbol.Parameter(label: "unit", name: "unit", type: .string)], returns: .optional(.named(.init(nativeType: "FileSize"))), throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = FileSize(try Double(arguments[0]), unit: try String(arguments[1]))
                 return (result.map { Value(boxing: $0, as: .init(nativeType: "FileSize")) } ?? .nothing)
 }
 
-    private static let member24: ImplementedSymbol = ImplementedSymbol.initializer(summary: "`1024`, `1.5mb`, `1.5 MB`, `2kib`; nil for anything else.", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "text", type: .string)], returns: .optional(.named(.init(nativeType: "FileSize"))), throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member24: ImplementedSymbol = ImplementedSymbol.initializer(summary: "`1024`, `1.5mb`, `1.5 MB`, `2kib`; nil for anything else.", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "text", type: .string)], returns: .optional(.named(.init(nativeType: "FileSize"))), throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = FileSize(try String(arguments[0]))
                 return (result.map { Value(boxing: $0, as: .init(nativeType: "FileSize")) } ?? .nothing)
 }
@@ -171,57 +171,57 @@ let receiver: FileSize = try selfValue.unboxing(FileSize.self)
                 return result.value
 })
 
-    private static let member26: ImplementedSymbol = ImplementedSymbol.staticMethod("<", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "FileSize"))), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "FileSize")))], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member26: ImplementedSymbol = ImplementedSymbol.staticMethod("<", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "FileSize"))), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "FileSize")))], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = (try arguments[0].unboxing(FileSize.self)) < (try arguments[1].unboxing(FileSize.self))
                 return result.value
 }
 
-    private static let member27: ImplementedSymbol = ImplementedSymbol.staticMethod("+", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "FileSize"))), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "FileSize")))], returns: .named(.init(nativeType: "FileSize")), throwing: .any, isAsync: false, generics: [])) { arguments in
+    private static let member27: ImplementedSymbol = ImplementedSymbol.staticMethod("+", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "FileSize"))), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "FileSize")))], returns: .named(.init(nativeType: "FileSize")), throwing: .any, isAsync: false, generics: [])) { arguments in
 let result = try (try arguments[0].unboxing(FileSize.self)) + (try arguments[1].unboxing(FileSize.self))
                 return Value(boxing: result, as: .init(nativeType: "FileSize"))
 }
 
-    private static let member28: ImplementedSymbol = ImplementedSymbol.staticMethod("-", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "FileSize"))), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "FileSize")))], returns: .named(.init(nativeType: "FileSize")), throwing: .any, isAsync: false, generics: [])) { arguments in
+    private static let member28: ImplementedSymbol = ImplementedSymbol.staticMethod("-", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "FileSize"))), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "FileSize")))], returns: .named(.init(nativeType: "FileSize")), throwing: .any, isAsync: false, generics: [])) { arguments in
 let result = try (try arguments[0].unboxing(FileSize.self)) - (try arguments[1].unboxing(FileSize.self))
                 return Value(boxing: result, as: .init(nativeType: "FileSize"))
 }
 
-    private static let member29: ImplementedSymbol = ImplementedSymbol.staticMethod("-", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "operand", type: .named(.init(nativeType: "FileSize")))], returns: .named(.init(nativeType: "FileSize")), throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member29: ImplementedSymbol = ImplementedSymbol.staticMethod("-", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "operand", type: .named(.init(nativeType: "FileSize")))], returns: .named(.init(nativeType: "FileSize")), throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = -(try arguments[0].unboxing(FileSize.self))
                 return Value(boxing: result, as: .init(nativeType: "FileSize"))
 }
 
-    private static let member30: ImplementedSymbol = ImplementedSymbol.staticMethod("*", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "FileSize"))), Symbol.Parameter(label: nil, name: "rhs", type: .int)], returns: .named(.init(nativeType: "FileSize")), throwing: .any, isAsync: false, generics: [])) { arguments in
+    private static let member30: ImplementedSymbol = ImplementedSymbol.staticMethod("*", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "FileSize"))), Symbol.Parameter(label: nil, name: "rhs", type: .int)], returns: .named(.init(nativeType: "FileSize")), throwing: .any, isAsync: false, generics: [])) { arguments in
 let result = try (try arguments[0].unboxing(FileSize.self)) * (try Int(arguments[1]))
                 return Value(boxing: result, as: .init(nativeType: "FileSize"))
 }
 
-    private static let member31: ImplementedSymbol = ImplementedSymbol.staticMethod("*", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "FileSize"))), Symbol.Parameter(label: nil, name: "rhs", type: .double)], returns: .named(.init(nativeType: "FileSize")), throwing: .any, isAsync: false, generics: [])) { arguments in
+    private static let member31: ImplementedSymbol = ImplementedSymbol.staticMethod("*", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "FileSize"))), Symbol.Parameter(label: nil, name: "rhs", type: .double)], returns: .named(.init(nativeType: "FileSize")), throwing: .any, isAsync: false, generics: [])) { arguments in
 let result = try (try arguments[0].unboxing(FileSize.self)) * (try Double(arguments[1]))
                 return Value(boxing: result, as: .init(nativeType: "FileSize"))
 }
 
-    private static let member32: ImplementedSymbol = ImplementedSymbol.staticMethod("*", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .int), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "FileSize")))], returns: .named(.init(nativeType: "FileSize")), throwing: .any, isAsync: false, generics: [])) { arguments in
+    private static let member32: ImplementedSymbol = ImplementedSymbol.staticMethod("*", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .int), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "FileSize")))], returns: .named(.init(nativeType: "FileSize")), throwing: .any, isAsync: false, generics: [])) { arguments in
 let result = try (try Int(arguments[0])) * (try arguments[1].unboxing(FileSize.self))
                 return Value(boxing: result, as: .init(nativeType: "FileSize"))
 }
 
-    private static let member33: ImplementedSymbol = ImplementedSymbol.staticMethod("*", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .double), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "FileSize")))], returns: .named(.init(nativeType: "FileSize")), throwing: .any, isAsync: false, generics: [])) { arguments in
+    private static let member33: ImplementedSymbol = ImplementedSymbol.staticMethod("*", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .double), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "FileSize")))], returns: .named(.init(nativeType: "FileSize")), throwing: .any, isAsync: false, generics: [])) { arguments in
 let result = try (try Double(arguments[0])) * (try arguments[1].unboxing(FileSize.self))
                 return Value(boxing: result, as: .init(nativeType: "FileSize"))
 }
 
-    private static let member34: ImplementedSymbol = ImplementedSymbol.staticMethod("/", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "FileSize"))), Symbol.Parameter(label: nil, name: "rhs", type: .int)], returns: .named(.init(nativeType: "FileSize")), throwing: .any, isAsync: false, generics: [])) { arguments in
+    private static let member34: ImplementedSymbol = ImplementedSymbol.staticMethod("/", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "FileSize"))), Symbol.Parameter(label: nil, name: "rhs", type: .int)], returns: .named(.init(nativeType: "FileSize")), throwing: .any, isAsync: false, generics: [])) { arguments in
 let result = try (try arguments[0].unboxing(FileSize.self)) / (try Int(arguments[1]))
                 return Value(boxing: result, as: .init(nativeType: "FileSize"))
 }
 
-    private static let member35: ImplementedSymbol = ImplementedSymbol.staticMethod("/", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "FileSize"))), Symbol.Parameter(label: nil, name: "rhs", type: .double)], returns: .named(.init(nativeType: "FileSize")), throwing: .any, isAsync: false, generics: [])) { arguments in
+    private static let member35: ImplementedSymbol = ImplementedSymbol.staticMethod("/", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "FileSize"))), Symbol.Parameter(label: nil, name: "rhs", type: .double)], returns: .named(.init(nativeType: "FileSize")), throwing: .any, isAsync: false, generics: [])) { arguments in
 let result = try (try arguments[0].unboxing(FileSize.self)) / (try Double(arguments[1]))
                 return Value(boxing: result, as: .init(nativeType: "FileSize"))
 }
 
-    private static let member36: ImplementedSymbol = ImplementedSymbol.staticMethod("/", summary: "How many of one fit in the other.", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "FileSize"))), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "FileSize")))], returns: .double, throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member36: ImplementedSymbol = ImplementedSymbol.staticMethod("/", summary: "How many of one fit in the other.", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "FileSize"))), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "FileSize")))], returns: .double, throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = (try arguments[0].unboxing(FileSize.self)) / (try arguments[1].unboxing(FileSize.self))
                 return result.value
 }
@@ -257,7 +257,7 @@ let receiver: LibraryError = try selfValue.unboxing(LibraryError.self)
                 return result.value
 })
 
-    private static let member42: ImplementedSymbol = ImplementedSymbol.initializer(summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "description", type: .string)], returns: .named(.init(nativeType: "LibraryError")), throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member42: ImplementedSymbol = ImplementedSymbol.initializer(summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "description", type: .string)], returns: .named(.init(nativeType: "LibraryError")), throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = LibraryError(try String(arguments[0]))
                 return Value(boxing: result, as: .init(nativeType: "LibraryError"))
 }
@@ -287,7 +287,7 @@ let receiver: Output = try selfValue.unboxing(Output.self)
                 return Value(list: result.map { $0.value })
 })
 
-    private static let member47: ImplementedSymbol = ImplementedSymbol.initializer(summary: "An output of this text that ended as a command with this code, or this signal, would.", signature: Symbol.Function(parameters: [Symbol.Parameter(label: "text", name: "text", type: .string), Symbol.Parameter(label: "code", name: "code", type: .optional(.int)), Symbol.Parameter(label: "signal", name: "signal", type: .optional(.int))], returns: .named(.init(nativeType: "Output")), throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member47: ImplementedSymbol = ImplementedSymbol.initializer(summary: "An output of this text that ended as a command with this code, or this signal, would.", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: "text", name: "text", type: .string), Symbol.Parameter(label: "code", name: "code", type: .optional(.int)), Symbol.Parameter(label: "signal", name: "signal", type: .optional(.int))], returns: .named(.init(nativeType: "Output")), throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = Output(text: try String(arguments[0]), code: (arguments[1] == .nothing ? nil : try Int(arguments[1])), signal: (arguments[2] == .nothing ? nil : try Int(arguments[2])))
                 return Value(boxing: result, as: .init(nativeType: "Output"))
 }
@@ -304,7 +304,7 @@ let receiver: Output = try selfValue.unboxing(Output.self)
                 return result.value
 })
 
-    private static let member50: ImplementedSymbol = ImplementedSymbol.method("subscript", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "position", type: .int)], returns: .string, throwing: .no, isAsync: false, generics: [])) { selfValue, arguments in
+    private static let member50: ImplementedSymbol = ImplementedSymbol.method("subscript", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "position", type: .int)], returns: .string, throwing: .no, isAsync: false, generics: [])) { selfValue, arguments in
 let receiver: Output = try selfValue.unboxing(Output.self)
                 let result = receiver[try Int(arguments[0])]
                 return result.value
@@ -334,62 +334,62 @@ let receiver: Output = try selfValue.unboxing(Output.self)
                 return (result.map { $0.value } ?? .nothing)
 })
 
-    private static let member55: ImplementedSymbol = ImplementedSymbol.staticMethod("==", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "Output"))), Symbol.Parameter(label: nil, name: "rhs", type: .string)], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member55: ImplementedSymbol = ImplementedSymbol.staticMethod("==", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "Output"))), Symbol.Parameter(label: nil, name: "rhs", type: .string)], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = (try arguments[0].unboxing(Output.self)) == (try String(arguments[1]))
                 return result.value
 }
 
-    private static let member56: ImplementedSymbol = ImplementedSymbol.staticMethod("==", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .string), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "Output")))], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member56: ImplementedSymbol = ImplementedSymbol.staticMethod("==", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .string), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "Output")))], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = (try String(arguments[0])) == (try arguments[1].unboxing(Output.self))
                 return result.value
 }
 
-    private static let member57: ImplementedSymbol = ImplementedSymbol.staticMethod("!=", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "Output"))), Symbol.Parameter(label: nil, name: "rhs", type: .string)], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member57: ImplementedSymbol = ImplementedSymbol.staticMethod("!=", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "Output"))), Symbol.Parameter(label: nil, name: "rhs", type: .string)], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = (try arguments[0].unboxing(Output.self)) != (try String(arguments[1]))
                 return result.value
 }
 
-    private static let member58: ImplementedSymbol = ImplementedSymbol.staticMethod("!=", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .string), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "Output")))], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member58: ImplementedSymbol = ImplementedSymbol.staticMethod("!=", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .string), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "Output")))], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = (try String(arguments[0])) != (try arguments[1].unboxing(Output.self))
                 return result.value
 }
 
-    private static let member59: ImplementedSymbol = ImplementedSymbol.staticMethod("<", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "Output"))), Symbol.Parameter(label: nil, name: "rhs", type: .string)], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member59: ImplementedSymbol = ImplementedSymbol.staticMethod("<", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "Output"))), Symbol.Parameter(label: nil, name: "rhs", type: .string)], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = (try arguments[0].unboxing(Output.self)) < (try String(arguments[1]))
                 return result.value
 }
 
-    private static let member60: ImplementedSymbol = ImplementedSymbol.staticMethod("<", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .string), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "Output")))], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member60: ImplementedSymbol = ImplementedSymbol.staticMethod("<", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .string), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "Output")))], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = (try String(arguments[0])) < (try arguments[1].unboxing(Output.self))
                 return result.value
 }
 
-    private static let member61: ImplementedSymbol = ImplementedSymbol.staticMethod(">", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "Output"))), Symbol.Parameter(label: nil, name: "rhs", type: .string)], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member61: ImplementedSymbol = ImplementedSymbol.staticMethod(">", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "Output"))), Symbol.Parameter(label: nil, name: "rhs", type: .string)], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = (try arguments[0].unboxing(Output.self)) > (try String(arguments[1]))
                 return result.value
 }
 
-    private static let member62: ImplementedSymbol = ImplementedSymbol.staticMethod(">", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .string), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "Output")))], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member62: ImplementedSymbol = ImplementedSymbol.staticMethod(">", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .string), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "Output")))], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = (try String(arguments[0])) > (try arguments[1].unboxing(Output.self))
                 return result.value
 }
 
-    private static let member63: ImplementedSymbol = ImplementedSymbol.staticMethod("<=", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "Output"))), Symbol.Parameter(label: nil, name: "rhs", type: .string)], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member63: ImplementedSymbol = ImplementedSymbol.staticMethod("<=", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "Output"))), Symbol.Parameter(label: nil, name: "rhs", type: .string)], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = (try arguments[0].unboxing(Output.self)) <= (try String(arguments[1]))
                 return result.value
 }
 
-    private static let member64: ImplementedSymbol = ImplementedSymbol.staticMethod("<=", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .string), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "Output")))], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member64: ImplementedSymbol = ImplementedSymbol.staticMethod("<=", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .string), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "Output")))], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = (try String(arguments[0])) <= (try arguments[1].unboxing(Output.self))
                 return result.value
 }
 
-    private static let member65: ImplementedSymbol = ImplementedSymbol.staticMethod(">=", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "Output"))), Symbol.Parameter(label: nil, name: "rhs", type: .string)], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member65: ImplementedSymbol = ImplementedSymbol.staticMethod(">=", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "Output"))), Symbol.Parameter(label: nil, name: "rhs", type: .string)], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = (try arguments[0].unboxing(Output.self)) >= (try String(arguments[1]))
                 return result.value
 }
 
-    private static let member66: ImplementedSymbol = ImplementedSymbol.staticMethod(">=", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .string), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "Output")))], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member66: ImplementedSymbol = ImplementedSymbol.staticMethod(">=", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .string), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "Output")))], returns: .bool, throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = (try String(arguments[0])) >= (try arguments[1].unboxing(Output.self))
                 return result.value
 }
@@ -498,17 +498,17 @@ let receiver: Segment = try selfValue.unboxing(Segment.self)
         return type
     }()
 
-    private static let member84: ImplementedSymbol = ImplementedSymbol.staticMethod("-", summary: "How many seconds apart two dates are: `later - earlier`.", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "Date"))), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "Date")))], returns: .double, throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member84: ImplementedSymbol = ImplementedSymbol.staticMethod("-", summary: "How many seconds apart two dates are: `later - earlier`.", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "Date"))), Symbol.Parameter(label: nil, name: "rhs", type: .named(.init(nativeType: "Date")))], returns: .double, throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = (try arguments[0].unboxing(Date.self)) - (try arguments[1].unboxing(Date.self))
                 return result.value
 }
 
-    private static let member85: ImplementedSymbol = ImplementedSymbol.staticMethod("+", summary: "A date some whole seconds later or earlier, as `date + 60`.", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "Date"))), Symbol.Parameter(label: nil, name: "rhs", type: .int)], returns: .named(.init(nativeType: "Date")), throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member85: ImplementedSymbol = ImplementedSymbol.staticMethod("+", summary: "A date some whole seconds later or earlier, as `date + 60`.", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "Date"))), Symbol.Parameter(label: nil, name: "rhs", type: .int)], returns: .named(.init(nativeType: "Date")), throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = (try arguments[0].unboxing(Date.self)) + (try Int(arguments[1]))
                 return Value(boxing: result, as: .init(nativeType: "Date"))
 }
 
-    private static let member86: ImplementedSymbol = ImplementedSymbol.staticMethod("-", summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "Date"))), Symbol.Parameter(label: nil, name: "rhs", type: .int)], returns: .named(.init(nativeType: "Date")), throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member86: ImplementedSymbol = ImplementedSymbol.staticMethod("-", summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "lhs", type: .named(.init(nativeType: "Date"))), Symbol.Parameter(label: nil, name: "rhs", type: .int)], returns: .named(.init(nativeType: "Date")), throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = (try arguments[0].unboxing(Date.self)) - (try Int(arguments[1]))
                 return Value(boxing: result, as: .init(nativeType: "Date"))
 }
@@ -519,7 +519,7 @@ let receiver: Date = try selfValue.unboxing(Date.self)
                 return result.value
 })
 
-    private static let member88: ImplementedSymbol = ImplementedSymbol.initializer(summary: "", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "description", type: .string)], returns: .optional(.named(.init(nativeType: "Date"))), throwing: .no, isAsync: false, generics: [])) { arguments in
+    private static let member88: ImplementedSymbol = ImplementedSymbol.initializer(summary: "", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "description", type: .string)], returns: .optional(.named(.init(nativeType: "Date"))), throwing: .no, isAsync: false, generics: [])) { arguments in
 let result = Date(try String(arguments[0]))
                 return (result.map { Value(boxing: $0, as: .init(nativeType: "Date")) } ?? .nothing)
 }
@@ -537,28 +537,28 @@ let receiver: Date = try selfValue.unboxing(Date.self)
         return type
     }()
 
-    private static let member91: ImplementedSymbol = ImplementedSymbol.function(name: "pwd", summary: "The working directory.", signature: Symbol.Function(parameters: [], returns: .named(.init(nativeType: "FilePath")), throwing: .no, isAsync: false, generics: []), body: { arguments in
+    private static let member91: ImplementedSymbol = ImplementedSymbol.function(name: "pwd", summary: "The working directory.", signature: Symbol.Signature(parameters: [], returns: .named(.init(nativeType: "FilePath")), throwing: .no, isAsync: false, generics: []), body: { arguments in
 let result = pwd()
                 return Value(boxing: result, as: .init(nativeType: "FilePath"))
 })
 
-    private static let member92: ImplementedSymbol = ImplementedSymbol.function(name: "with", summary: "Runs a closure with environment variables set, then puts them back.", signature: Symbol.Function(parameters: [Symbol.Parameter(label: "env", name: "variables", type: .dictionary(.string, .string)), Symbol.Parameter(label: nil, name: "body", type: .function(parameters: [], returns: .parameter("T"), isThrowing: true, isAsync: false))], returns: .parameter("T"), throwing: .rethrowing, isAsync: false, generics: [.genericParameter("T")]), body: { arguments in
+    private static let member92: ImplementedSymbol = ImplementedSymbol.function(name: "with", summary: "Runs a closure with environment variables set, then puts them back.", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: "env", name: "variables", type: .dictionary(.string, .string)), Symbol.Parameter(label: nil, name: "body", type: .function(parameters: [], returns: .parameter("T"), isThrowing: true, isAsync: false))], returns: .parameter("T"), throwing: .rethrowing, isAsync: false, generics: [Symbol.GenericParameter(name: "T")]), body: { arguments in
 let interpreter = Interpreter.running!
 let result = try with(env: try Dictionary(uniqueKeysWithValues: Value.Bridging.dictionary(arguments[0]).map { (try String($0.key), try String($0.value)) }), { () throws -> Value in try Value.Bridging.closure(for: arguments[1], in: interpreter)([]) })
                 return result
 })
 
-    private static let member93: ImplementedSymbol = ImplementedSymbol.function(name: "ls", summary: "Lists directory contents; a path it can't read is reported and left out.", signature: Symbol.Function(parameters: [Symbol.Parameter(label: nil, name: "paths", type: .named(.init(nativeType: "FilePath")), arity: .variadic), Symbol.Parameter(label: "all", name: "all", type: .bool, arity: .defaulted(.value(false)))], returns: .list(.named(.init(nativeType: "FileEntry"))), throwing: .no, isAsync: false, generics: []), body: { arguments in
+    private static let member93: ImplementedSymbol = ImplementedSymbol.function(name: "ls", summary: "Lists directory contents; a path it can't read is reported and left out.", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: nil, name: "paths", type: .named(.init(nativeType: "FilePath")), arity: .variadic), Symbol.Parameter(label: "all", name: "all", type: .bool, arity: .defaulted(.value(false)))], returns: .list(.named(.init(nativeType: "FileEntry"))), throwing: .no, isAsync: false, generics: []), body: { arguments in
 let result: [FileEntry] = ls(try Value.Bridging.list(arguments[0]).map { try $0.unboxing(FilePath.self) }, all: try Bool(arguments[1]))
                 return Value(list: result.map { Value(boxing: $0, as: .init(nativeType: "FileEntry")) })
 })
 
-    private static let member94: ImplementedSymbol = ImplementedSymbol.function(name: "readInputLine", summary: "A line of standard input, or nil at its end.", signature: Symbol.Function(parameters: [Symbol.Parameter(label: "strippingNewline", name: "strippingNewline", type: .bool, arity: .defaulted(.value(true)))], returns: .optional(.string), throwing: .no, isAsync: false, generics: []), body: { arguments in
+    private static let member94: ImplementedSymbol = ImplementedSymbol.function(name: "readInputLine", summary: "A line of standard input, or nil at its end.", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: "strippingNewline", name: "strippingNewline", type: .bool, arity: .defaulted(.value(true)))], returns: .optional(.string), throwing: .no, isAsync: false, generics: []), body: { arguments in
 let result = readInputLine(strippingNewline: try Bool(arguments[0]))
                 return (result.map { $0.value } ?? .nothing)
 })
 
-    private static let member95: ImplementedSymbol = ImplementedSymbol.function(name: "ps", summary: "Lists running processes. Memory and CPU time are only known for your own processes.", signature: Symbol.Function(parameters: [], returns: .list(.named(.init(nativeType: "ProcessEntry"))), throwing: .no, isAsync: false, generics: []), body: { arguments in
+    private static let member95: ImplementedSymbol = ImplementedSymbol.function(name: "ps", summary: "Lists running processes. Memory and CPU time are only known for your own processes.", signature: Symbol.Signature(parameters: [], returns: .list(.named(.init(nativeType: "ProcessEntry"))), throwing: .no, isAsync: false, generics: []), body: { arguments in
 let result: [ProcessEntry] = ps()
                 return Value(list: result.map { Value(boxing: $0, as: .init(nativeType: "ProcessEntry")) })
 })

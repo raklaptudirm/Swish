@@ -170,7 +170,7 @@ final class Job: RecordRepresentable, Presentable, Tabular, CustomStringConverti
                 },
             ]
         )
-        type.genericParameters = [.genericParameter("Result")]
+        type.genericParameters = [Symbol.GenericParameter(name: "Result")]
         return type
     }
 

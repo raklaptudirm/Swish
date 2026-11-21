@@ -19,7 +19,7 @@ extension CommandRunner {
         }
 
         guard let symbol = reference.symbol(in: interpreter) else { return nil }
-        if symbol.typeKind == .enumeration {
+        if symbol.kind == .enumeration {
             return enumCase(from: text, of: type, reference: reference)
         }
 
@@ -49,7 +49,7 @@ extension CommandRunner {
         if reference == .optional, arguments.count == 1 { return acceptsWords(as: arguments[0]) }
 
         guard let symbol = reference.symbol(in: interpreter) else { return false }
-        if symbol.typeKind == .enumeration { return true }
+        if symbol.kind == .enumeration { return true }
 
         return hasTextInitializer(type)
     }
@@ -60,9 +60,11 @@ extension CommandRunner {
     /// traps, and a word is tried against many parameters before one takes it.)
     private func textInitializer(of type: TypeExpression) -> Symbol.Parameter? {
         let candidates = textInitializers(of: type)
-            .filter { function, parameter in
+            .filter { initializer, parameter in
                 if parameter.label == "stringLiteral" { return true }
-                guard parameter.label == nil, case .named(let result, _) = function.returns else {
+                guard parameter.label == nil,
+                    case .named(let result, _) = initializer.signature.returns
+                else {
                     return false
                 }
                 return result == .optional
@@ -82,34 +84,32 @@ extension CommandRunner {
         textInitializer(of: type) != nil
             || type.members(in: interpreter)
                 .contains { symbol in
-                    guard case .member(.initializer(let function)) = symbol.kind else {
-                        return false
-                    }
-                    return function.parameters.count == 1
+                    guard case .initializer(let initializer) = symbol else { return false }
+                    let parameters = initializer.signature.parameters
+                    return parameters.count == 1
                         && ["extendedGraphemeClusterLiteral", "unicodeScalarLiteral"]
-                            .contains(
-                                function.parameters[0].label
-                            )
+                            .contains(parameters[0].label)
                 }
     }
 
     /// The initializers of a Swift type that take one `String` or `Substring`, or its literal.
-    private func textInitializers(of type: TypeExpression) -> [(Symbol.Function, Symbol.Parameter)]
-    {
+    private func textInitializers(
+        of type: TypeExpression
+    ) -> [(Symbol.Initializer, Symbol.Parameter)] {
         type.members(in: interpreter)
             .compactMap { symbol in
-                guard case .member(.initializer(let function)) = symbol.kind,
-                    function.parameters.count == 1
+                guard case .initializer(let initializer) = symbol,
+                    initializer.signature.parameters.count == 1
                 else { return nil }
 
-                let parameter = function.parameters[0]
+                let parameter = initializer.signature.parameters[0]
                 guard
                     parameter.type == .string
                         || (parameter.type == CommandRunner.substring && parameter.label == nil)
                 else {
                     return nil
                 }
-                return (function, parameter)
+                return (initializer, parameter)
             }
     }
 
@@ -119,13 +119,11 @@ extension CommandRunner {
     {
         let name = text.hasPrefix(".") ? String(text.dropFirst()) : text
         let cases = type.members(in: interpreter)
-            .compactMap { symbol -> (Symbol, Value?)? in
-                guard case .member(.enumCase(let parameters, let raw)) = symbol.kind,
-                    parameters.isEmpty
-                else {
+            .compactMap { symbol -> (Symbol.EnumCase, Value?)? in
+                guard case .enumCase(let enumCase) = symbol, enumCase.payload.isEmpty else {
                     return nil
                 }
-                return (symbol, raw)
+                return (enumCase, enumCase.rawValue)
             }
 
         let named = cases.first { $0.0.name == name }

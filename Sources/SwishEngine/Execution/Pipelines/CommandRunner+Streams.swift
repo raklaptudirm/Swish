@@ -261,7 +261,7 @@ extension CommandRunner {
         let call = try bind(commandLine: args, to: callee, excludingInput: true)
 
         let overload = callee.overloads[call.overload]
-        if case .member(.method(let method)) = overload.kind, method.isMutating {
+        if case .method(let method) = overload, method.isMutating {
             throw RuntimeError(
                 "\(callee.name) is mutating, and a piped value can't change: call it on a variable"
             )
@@ -278,7 +278,7 @@ extension CommandRunner {
         }
 
         // A stage written as a call, with arguments, is a method.
-        let isProperty = overload.function == nil && (call.written ?? []).isEmpty
+        let isProperty = overload.callable == nil && (call.written ?? []).isEmpty
         func apply(to value: Value) throws -> Value {
             isProperty
                 ? try property(callee.name, of: value)

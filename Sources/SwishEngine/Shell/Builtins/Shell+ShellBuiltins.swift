@@ -373,12 +373,12 @@ extension Shell {
                     ? runner.stageCallee(name, of: .list(.any), receiver: .collected) : nil)
             {
                 for method in methods.overloads {
-                    writeAll(runner.stdoutFD, "\(name): sequence method \(method.signature)\n")
+                    writeAll(runner.stdoutFD, "\(name): sequence method \(method.usage)\n")
                 }
             } else if let functions = runner.commandFunctions(named: name) {
                 for function in functions.overloads {
                     let kind = function.isBuiltin ? "builtin function" : "function"
-                    writeAll(runner.stdoutFD, "\(name): \(kind) \(function.signature)\n")
+                    writeAll(runner.stdoutFD, "\(name): \(kind) \(function.usage)\n")
                 }
             } else if let builtin = builtins[name] {
                 if case .notSwish(let instead) = builtin.action {

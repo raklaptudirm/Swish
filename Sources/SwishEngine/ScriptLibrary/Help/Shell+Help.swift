@@ -179,7 +179,7 @@ extension Shell {
     /// A type as `--help` shows it: an enum as its choices.
     private func placeholder(_ type: TypeExpression) -> String {
         if case .named(let name, _) = type, let found = typeMembers(named: name.description),
-            found.type.typeKind == .enumeration
+            found.type.kind == .enumeration
         {
             return Symbol.plainCaseNames(of: found.members).joined(separator: "|")
         }
@@ -214,7 +214,7 @@ extension Shell {
         var seen: Set<String> = []
 
         let functions = Dictionary(
-            grouping: interpreter.globals().filter { $0.function != nil },
+            grouping: interpreter.globals().functions,
             by: \.name
         )
 
@@ -234,7 +234,7 @@ extension Shell {
                     helpRecord(
                         name,
                         source: source,
-                        usage: candidates.map(\.signature).joined(separator: " or "),
+                        usage: candidates.map(\.usage).joined(separator: " or "),
                         descriptions: summaries
                     )
                 )

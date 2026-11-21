@@ -48,24 +48,24 @@ extension CommandRunner {
 
         func add(_ symbol: Symbol) {
             // What a value of the type has, not what the type itself does.
-            switch symbol.kind {
-            case .member(.method(let method)) where !method.isMutating && !method.isStatic:
+            switch symbol {
+            case .method(let method) where !method.isMutating && !method.isStatic:
                 names.all.insert(symbol.name)
                 names.methods.insert(symbol.name)
-            case .member(.property(let property)) where !property.isStatic:
+            case .property(let property) where !property.isStatic:
                 names.all.insert(symbol.name)
             default: break
             }
         }
 
         for type in interpreter.types where type.isBuiltin {
-            type.typeRef.map { TypeExpression.named($0).members(in: interpreter).forEach(add) }
+            TypeExpression.named(type.typeRef).members(in: interpreter).forEach(add)
         }
 
         // What every sequence has.
         TypeExpression.list(.any).members(in: interpreter).forEach(add)
         names.sequence = Set(
-            TypeExpression.named(.sequence).members(in: interpreter).filter { $0.function != nil }
+            TypeExpression.named(.sequence).members(in: interpreter).filter { $0.callable != nil }
                 .map(\.name)
         )
 
@@ -74,7 +74,7 @@ extension CommandRunner {
         for symbol in preludeTypes.streamType.members(in: interpreter)
         where !reading.contains(symbol.name) {
             add(symbol)
-            if case .named(preludeTypes.stream, _)? = symbol.function?.returns {
+            if case .named(preludeTypes.stream, _)? = symbol.callable?.signature.returns {
                 names.streams.insert(symbol.name)
             }
         }
@@ -92,7 +92,7 @@ extension CommandRunner {
             .contains { type in
                 !type.isBuiltin
                     && type.typeExpression.members(named: name, in: interpreter)
-                        .contains { $0.function != nil && !$0.belongsToType }
+                        .contains { $0.callable != nil && !$0.belongsToType }
             }
     }
 
@@ -112,10 +112,10 @@ extension CommandRunner {
     ) -> Callee? {
         let members = type.members(named: name, in: interpreter)
             .filter { symbol in
-                switch symbol.kind {
-                case .member(.method(let method)):
+                switch symbol {
+                case .method(let method):
                     !method.isStatic && (includingMutating || !method.isMutating)
-                case .member(.property(let property)): !property.isStatic
+                case .property(let property): !property.isStatic
                 default: false
                 }
             }

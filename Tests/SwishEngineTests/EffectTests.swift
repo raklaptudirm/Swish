@@ -10,7 +10,10 @@ import Testing
 private func effect(of name: String, after source: String) throws -> Bool? {
     let shell = Shell()
     _ = try onLargeStack { try shell.runner.capturing { shell.execute(source) } }
-    return shell.interpreter.globals(named: name).first?.function?.isAsync
+    guard case .function(let function)? = shell.interpreter.globals(named: name).first else {
+        return nil
+    }
+    return function.signature.isAsync
 }
 
 private func run(

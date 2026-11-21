@@ -53,7 +53,7 @@ extension Shell {
         let reading: Shell.Reading
 
         /// The functions the script declared at its top level.
-        public var functions: [Symbol] { reading.declared.symbols.filter { $0.function != nil } }
+        public var functions: [Symbol.Function] { reading.declared.symbols.functions }
 
         /// Runs the function `name` the script declared as a command with `arguments`, under
         /// `shownName` for its help and errors. Says whether there is one.
@@ -114,12 +114,12 @@ extension Shell {
 
     /// A function the file declared at its top level.
     func topLevelFunction(_ name: String, in reading: Reading) -> Callee? {
-        let functions = reading.declared.symbols.filter { $0.name == name && $0.function != nil }
+        let functions = reading.declared.symbols.functions.filter { $0.name == name }
         return functions.isEmpty
             ? nil
             : Callee(
                 name: name,
-                overloads: functions,
+                overloads: functions.map(Symbol.function),
                 receiver: nil,
                 marks: programKnowledge.scriptMarks
             )

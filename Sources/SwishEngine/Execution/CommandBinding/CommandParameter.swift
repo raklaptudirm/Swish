@@ -123,7 +123,10 @@ struct Callee {
 
     var parameters: [[CommandParameter]] {
         overloads.map { symbol in
-            (symbol.function?.parameters ?? []).map { CommandParameter($0, of: name, marks: marks) }
+            (symbol.callable?.signature.parameters ?? [])
+                .map {
+                    CommandParameter($0, of: name, marks: marks)
+                }
         }
     }
 }

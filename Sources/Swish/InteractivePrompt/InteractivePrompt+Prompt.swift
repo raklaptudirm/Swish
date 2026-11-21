@@ -20,7 +20,10 @@ extension InteractivePrompt {
     /// What the `prompt` function gives, or nil if there isn't one. It's `prompt() -> String`, or
     /// `prompt(status: Int) -> String` to be told how the last command exited.
     func customPrompt() throws -> String? {
-        let overloads = shell.interpreter.globals(named: "prompt").compactMap { $0.function }
+        let overloads = shell.interpreter.globals(named: "prompt")
+            .compactMap { symbol in
+                if case .function(let function) = symbol { function.signature } else { nil }
+            }
         guard !overloads.isEmpty else { return nil }
 
         let withStatus = overloads.first {

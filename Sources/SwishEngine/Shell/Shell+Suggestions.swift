@@ -8,9 +8,7 @@ extension Shell {
     /// left out, changed, or two swapped): one for a name of five characters or fewer.
     func commands(near name: String) -> [String] {
         var names = executableNames()
-        for symbol in interpreter.globals() where symbol.function != nil {
-            names.insert(symbol.name)
-        }
+        for function in interpreter.globals().functions { names.insert(function.name) }
         for builtin in builtins.values where builtin.works { names.insert(builtin.name) }
         let allowed = name.count <= 5 ? 1 : 2
         return

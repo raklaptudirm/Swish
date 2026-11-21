@@ -2,11 +2,11 @@ import Foundation
 import Swiit
 
 extension Names.Role {
-    init(_ kind: Symbol.Kind) {
-        switch kind {
-        case .variable, .member(.property), .member(.enumCase): self = .variable
-        case .function, .member(.method), .member(.initializer): self = .function
-        case .type, .genericParameter, .member(.associatedType): self = .type
+    init(_ symbol: Symbol) {
+        switch symbol {
+        case .variable, .property, .enumCase: self = .variable
+        case .function, .method, .initializer: self = .function
+        case .type, .genericParameter, .associatedType: self = .type
         }
     }
 }
@@ -15,14 +15,14 @@ extension Shell {
     /// The shell's front end for this shell's names.
     func makeFront(recovering: Bool = false) -> Front {
         let roles = Dictionary(
-            interpreter.globals().map { ($0.name, Names.Role($0.kind)) },
+            interpreter.globals().map { ($0.name, Names.Role($0)) },
             uniquingKeysWith: { first, _ in first }
         )
 
         let front = Front(bound: Names(roles: roles))
         front.closureArity = { [unowned self] (name: String) -> Int? in
             for overload in runner.commandFunctions(named: name)?.overloads ?? [] {
-                for parameter in overload.function?.parameters ?? [] {
+                for parameter in overload.callable?.signature.parameters ?? [] {
                     if case .function(let function) = parameter.type {
                         return function.parameters.count
                     }
@@ -94,13 +94,13 @@ extension Shell {
         defer { programKnowledge.staticMembers = [:] }
         let declared = declarations.symbols
         for use in uses {
-            let functions = declared.filter { $0.name == use.name && $0.function != nil }
+            let functions = declared.functions.filter { $0.name == use.name }
             guard
                 let callee = functions.isEmpty
                     ? runner.commandFunctions(named: use.name)
                     : Callee(
                         name: use.name,
-                        overloads: functions,
+                        overloads: functions.map(Symbol.function),
                         receiver: nil,
                         marks: programKnowledge.scriptMarks
                     )

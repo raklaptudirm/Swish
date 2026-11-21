@@ -15,10 +15,10 @@ enum MemberKind: String, CaseIterable {
     }
 }
 
-extension Symbol {
+extension Symbol.Nominal {
     /// The keyword a type is declared with, as `help` heads it: `struct`, `enum`, `protocol`.
     var declarationKeyword: String {
-        switch typeKind {
+        switch kind {
         case .structure: "struct"
         case .enumeration: "enum"
         case .class: "class"
@@ -26,17 +26,19 @@ extension Symbol {
         default: "protocol"
         }
     }
+}
 
+extension Symbol {
     /// What a member of a type is, or nil for a symbol that is not one.
     var memberKind: MemberKind? {
-        switch kind {
-        case .member(.enumCase): .case
-        case .member(.initializer): .initializer
+        switch self {
+        case .enumCase: .case
+        case .initializer: .initializer
         case .variable: .property
-        case .member(.property(let property)): property.isStatic ? .staticProperty : .property
+        case .property(let property): property.isStatic ? .staticProperty : .property
         case .function: .method
-        case .member(.method(let method)): method.isStatic ? .staticMethod : .method
-        case .member(.associatedType): .associatedType
+        case .method(let method): method.isStatic ? .staticMethod : .method
+        case .associatedType: .associatedType
         case .type, .genericParameter: nil
         }
     }
@@ -44,12 +46,11 @@ extension Symbol {
     /// Whether it belongs to the type itself (a static member, an initializer, a case of an enum)
     /// and not to a value of it.
     var belongsToType: Bool {
-        switch kind {
-        case .member(.method(let method)): method.isStatic
-        case .member(.property(let property)): property.isStatic
-        case .member(.initializer), .member(.enumCase), .member(.associatedType): true
-        case .function, .variable: false
-        case .type, .genericParameter: false
+        switch self {
+        case .method(let method): method.isStatic
+        case .property(let property): property.isStatic
+        case .initializer, .enumCase, .associatedType: true
+        case .function, .variable, .type, .genericParameter: false
         }
     }
 }
@@ -65,10 +66,11 @@ extension Symbol {
 extension Shell {
     /// What the type called `name` is and has: "struct", "enum", and its members as symbols. Nil
     /// when nothing by that name is a type.
-    func typeMembers(named name: String) -> (type: Symbol, members: [Symbol])? {
+    func typeMembers(named name: String) -> (type: Symbol.Nominal, members: [Symbol])? {
         // A type a script declared or the shell does, or one of Swift's that the core bridges.
-        let named = interpreter.globals(named: name) + interpreter.types.filter { $0.name == name }
-        guard let type = named.first(where: { $0.nominal != nil }) else { return nil }
+        guard let type = TypeRef(named: name, in: interpreter)?.symbol(in: interpreter) else {
+            return nil
+        }
         let members = heldType(named: name).members(in: interpreter)
         return (type, type.isBuiltin ? members.filter { !$0.isLayoutPlumbing } : members)
     }
@@ -127,7 +129,7 @@ extension Shell {
 
         func call(
             _ name: AttributedString,
-            _ function: Symbol.Function,
+            _ function: Symbol.Signature,
             showsResult: Bool = true
         ) -> [AttributedString] {
             var pieces = [name, .init("(")] + parameters(function.parameters) + [.init(")")]
@@ -142,58 +144,74 @@ extension Shell {
         }
 
         let name = AttributedString(symbol.name, DisplayStyle.function)
-        switch symbol.kind {
-        case .function(let function):
-            return AttributedString(joining: call(name, function))
-
-        case .member(.method(let method)):
-            let mutating =
-                method.isMutating
-                ? [AttributedString("mutating", DisplayStyle.keyword), .init(" ")] : []
-            return AttributedString(joining: mutating + call(name, method.function))
-
-        case .member(.initializer(let function)):
-            return AttributedString(
-                joining: call(
-                    AttributedString("init", DisplayStyle.keyword),
-                    function,
-                    showsResult: false
-                )
-            )
-
-        case .variable, .member(.property):
-            let variable = symbol.variable!
-            var pieces = [name, .init(": "), type(variable.type)]
-            if variable.isSettable {
+        func variableDeclaration(
+            _ variableType: TypeExpression,
+            _ isSettable: Bool
+        )
+            -> [AttributedString]
+        {
+            var pieces = [name, .init(": "), type(variableType)]
+            if isSettable {
                 pieces += [
                     .init(" { "), .init("get", DisplayStyle.keyword), .init(" "),
                     .init("set", DisplayStyle.keyword), .init(" }"),
                 ]
             }
-            return AttributedString(joining: pieces)
+            return pieces
+        }
+        switch symbol {
+        case .function(let function):
+            return AttributedString(joining: call(name, function.signature))
 
-        case .member(.enumCase(let carried, let raw)):
+        case .method(let method):
+            let mutating =
+                method.isMutating
+                ? [AttributedString("mutating", DisplayStyle.keyword), .init(" ")] : []
+            return AttributedString(joining: mutating + call(name, method.signature))
+
+        case .initializer(let initializer):
+            return AttributedString(
+                joining: call(
+                    AttributedString("init", DisplayStyle.keyword),
+                    initializer.signature,
+                    showsResult: false
+                )
+            )
+
+        case .variable(let variable):
+            return AttributedString(
+                joining: variableDeclaration(variable.type, variable.isSettable)
+            )
+
+        case .property(let property):
+            return AttributedString(
+                joining: variableDeclaration(property.type, property.isSettable)
+            )
+
+        case .enumCase(let enumCase):
             var pieces = [AttributedString("case", DisplayStyle.keyword), .init(" "), name]
-            if !carried.isEmpty {
+            if !enumCase.payload.isEmpty {
                 pieces += [.init("(")]
-                pieces += carried.enumerated()
-                    .flatMap { index, parameter -> [AttributedString] in
+                pieces += enumCase.payload.enumerated()
+                    .flatMap { index, element -> [AttributedString] in
                         (index > 0 ? [.init(", ")] : [])
-                            + (parameter.label.map {
+                            + (element.label.map {
                                 [.init($0, DisplayStyle.variable), .init(": ")]
                             }
-                                ?? []) + [type(parameter.type)]
+                                ?? []) + [type(element.type)]
                     }
                 pieces += [.init(")")]
             }
-            if let raw { pieces += [.init(" = "), .init(raw.debugDescription)] }
+            if let raw = enumCase.rawValue {
+                pieces += [.init(" = "), .init(raw.debugDescription)]
+            }
             return AttributedString(joining: pieces)
 
-        case .member(.associatedType(let associatedType)):
+        case .associatedType(let associatedType):
             var pieces = [
                 AttributedString("associatedtype", DisplayStyle.keyword), .init(" "), name,
             ]
-            if case .binding(let bound) = associatedType {
+            if case .binding(let bound) = associatedType.role {
                 pieces += [.init(" = "), type(bound)]
             }
             return AttributedString(joining: pieces)

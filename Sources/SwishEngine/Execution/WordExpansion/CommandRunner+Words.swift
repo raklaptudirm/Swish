@@ -13,12 +13,12 @@ extension CommandRunner {
 
     /// The functions a command name refers to, if it was declared with `func`.
     func commandFunctions(named name: String) -> Callee? {
-        let functions = interpreter.globals(named: name).filter { $0.function != nil }
+        let functions = interpreter.globals(named: name).functions
         return functions.isEmpty
             ? nil
             : Callee(
                 name: name,
-                overloads: functions,
+                overloads: functions.map(Symbol.function),
                 receiver: nil,
                 marks: services.scriptMarks
             )

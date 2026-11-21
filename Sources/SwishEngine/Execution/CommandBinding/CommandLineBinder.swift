@@ -100,7 +100,7 @@ extension CommandRunner {
             }
         }
 
-        func rendered(_ symbol: Symbol) -> String { "  " + symbol.signature }
+        func rendered(_ symbol: Symbol) -> String { "  " + symbol.usage }
         guard let best = matches.map(\.penalty).min() else {
             throw RuntimeError(
                 "\(name): no overload accepts these arguments; candidates:\n"

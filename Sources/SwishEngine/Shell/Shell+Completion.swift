@@ -83,7 +83,7 @@ extension Shell {
 
     private func variableCandidates(prefix: String) -> [Shell.Completions.Candidate] {
         var names = Set(ProcessInfo.processInfo.environment.keys)
-        for symbol in interpreter.globals() where symbol.function == nil {
+        for symbol in interpreter.globals() where symbol.callable == nil {
             names.insert(symbol.name)
         }
         return names.filter { $0.hasPrefix(prefix) }.sorted()
@@ -100,7 +100,7 @@ extension Shell {
         if !externalOnly {
             for symbol in interpreter.globals() { described[symbol.name] = "variable" }
             for (name, symbols) in Dictionary(
-                grouping: interpreter.globals().filter { $0.function != nil },
+                grouping: interpreter.globals().functions,
                 by: \.name
             ) {
                 let summary = symbols.compactMap(\.summary).first { !$0.isEmpty }
@@ -116,7 +116,7 @@ extension Shell {
                 guard let callee,
                     runner.stageNames.streams.contains(name)
                         || TypeExpression.list(.any).members(named: name, in: interpreter)
-                            .contains(where: { $0.function != nil && !$0.belongsToType })
+                            .contains(where: { $0.callable != nil && !$0.belongsToType })
                 else { continue }
                 described[name] =
                     callee.overloads.compactMap(\.summary).first

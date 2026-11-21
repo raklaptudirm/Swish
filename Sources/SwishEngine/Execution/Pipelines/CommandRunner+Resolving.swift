@@ -115,7 +115,7 @@ extension CommandRunner {
                     // `[K.a] | sorted` needs its Element to be Comparable.
                     if first != nil, !element.isUnknown,
                         let missing =
-                            (callee.overloads[binding.overload].function?.generics
+                            (callee.overloads[binding.overload].callable?.signature.generics
                             .first(where: { $0.name == "Element" })?
                             .constraints ?? [])
                             .compactMap({ constraint -> String? in
@@ -159,7 +159,7 @@ extension CommandRunner {
     /// Whether a call with these arguments could mean the function: by their labels, and whether
     /// each converts to the type its parameter has (a one-letter text to a `Character`).
     func accepts(_ symbol: Symbol, _ arguments: [(label: String?, value: Value)]) -> Bool {
-        guard let parameters = symbol.function?.parameters else { return false }
+        guard let parameters = symbol.callable?.signature.parameters else { return false }
         var next = 0
         var given: Set<String> = []
         for argument in arguments {
