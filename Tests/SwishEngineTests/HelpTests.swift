@@ -86,6 +86,17 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
     #expect(try output("help K", in: shell) == "enum K\n\nCases:\n  case a\n\n  case b(n: Int)\n")
 }
 
+@Test func helpListsAssociatedTypesAsRequirementsAndBindings() throws {
+    let shell = Shell()
+    _ = try output("protocol Box { associatedtype Item }", in: shell)
+
+    #expect(
+        try output("help Box", in: shell)
+            == "protocol Box\n\nAssociated types:\n  associatedtype Item\n"
+    )
+    #expect(try output("help Substring").contains("  associatedtype Element = Character"))
+}
+
 @Test func membersDescribesEachItemsType() throws {
     // Its own fields, then what its type has, as `help` shows it.
     #expect(

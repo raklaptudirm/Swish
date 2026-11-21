@@ -293,7 +293,7 @@ struct Member: Equatable, Hashable, Encodable {
 
 /// What kind of member a `Member` is.
 enum MemberKind: Equatable, Hashable, Encodable {
-    case `case`, property, method, staticProperty, staticMethod
+    case `case`, property, method, staticProperty, staticMethod, associatedType
 }
 
 /// Describes the input: each type's fields and members.

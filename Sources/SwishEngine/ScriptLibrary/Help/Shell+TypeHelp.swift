@@ -5,6 +5,7 @@ import Swiit
 enum MemberKind: String, CaseIterable {
     case `case`, initializer, property, method
     case staticProperty = "static property", staticMethod = "static method"
+    case associatedType = "associated type"
 
     /// The heading `help` lists them under: "Properties", "Static methods".
     var heading: String {
@@ -34,6 +35,7 @@ extension Symbol {
         case .member(.property(let property)): property.isStatic ? .staticProperty : .property
         case .function: .method
         case .member(.method(let method)): method.isStatic ? .staticMethod : .method
+        case .member(.associatedType): .associatedType
         case .type, .genericParameter: nil
         }
     }
@@ -44,7 +46,7 @@ extension Symbol {
         switch kind {
         case .member(.method(let method)): method.isStatic
         case .member(.property(let property)): property.isStatic
-        case .member(.initializer), .member(.enumCase): true
+        case .member(.initializer), .member(.enumCase), .member(.associatedType): true
         case .function, .variable: false
         case .type, .genericParameter: false
         }
@@ -175,6 +177,15 @@ extension Shell {
                 pieces += [.init(")")]
             }
             if let raw { pieces += [.init(" = "), .init(raw.debugDescription)] }
+            return AttributedString(joining: pieces)
+
+        case .member(.associatedType(let associatedType)):
+            var pieces = [
+                AttributedString("associatedtype", DisplayStyle.keyword), .init(" "), name,
+            ]
+            if case .binding(let bound) = associatedType {
+                pieces += [.init(" = "), type(bound)]
+            }
             return AttributedString(joining: pieces)
 
         case .type, .genericParameter:

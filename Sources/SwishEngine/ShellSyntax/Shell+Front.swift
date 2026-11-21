@@ -6,7 +6,7 @@ extension Names.Role {
         switch kind {
         case .variable, .member(.property), .member(.enumCase): self = .variable
         case .function, .member(.method), .member(.initializer): self = .function
-        case .type, .genericParameter: self = .type
+        case .type, .genericParameter, .member(.associatedType): self = .type
         }
     }
 }

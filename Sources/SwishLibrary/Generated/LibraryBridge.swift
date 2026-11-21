@@ -40,7 +40,6 @@ let result = DisplayColumn(stringLiteral: try String(arguments[0]))
         var type = TypeImplementation(name: "DisplayColumn", members: [member0, member1, member2])
         type.genericParameters = []
         type.conformances = ["ExpressibleByStringLiteral": []]
-        type.associatedTypes = [:]
         return type
     }()
 
@@ -60,7 +59,6 @@ let receiver: DisplayShape = try selfValue.unboxing(DisplayShape.self)
         var type = TypeImplementation(name: "DisplayShape", members: [member4, member5])
         type.genericParameters = []
         type.conformances = [:]
-        type.associatedTypes = [:]
         return type
     }()
 
@@ -139,7 +137,6 @@ let receiver: FileEntry = try selfValue.unboxing(FileEntry.self)
         var type = TypeImplementation(name: "FileEntry", members: [member7, member8, member9, member10, member11, member12, member13, member14, member15, member16, member17, member18])
         type.genericParameters = []
         type.conformances = ["Encodable": [], "Equatable": [], "Hashable": []]
-        type.associatedTypes = [:]
         return type
     }()
 
@@ -257,7 +254,6 @@ let receiver: FileSize = try selfValue.unboxing(FileSize.self)
         var type = TypeImplementation(name: "FileSize", members: [member20, member21, member22, member23, member24, member25, member26, member27, member28, member29, member30, member31, member32, member33, member34, member35, member36, member37, member38, member39, member40])
         type.genericParameters = []
         type.conformances = ["Comparable": [], "CustomStringConvertible": [], "Encodable": [], "Equatable": [], "Hashable": []]
-        type.associatedTypes = [:]
         return type
     }()
 
@@ -276,7 +272,6 @@ let result = LibraryError(try String(arguments[0]))
         var type = TypeImplementation(name: "LibraryError", members: [member42, member43])
         type.genericParameters = []
         type.conformances = ["CustomStringConvertible": []]
-        type.associatedTypes = [:]
         return type
     }()
 
@@ -436,10 +431,9 @@ let receiver: Output = try selfValue.unboxing(Output.self)
 })
 
     fileprivate static let type73: TypeImplementation = {
-        var type = TypeImplementation(name: "Output", members: [member45, member46, member47, member48, member49, member50, member51, member52, member53, member54, member55, member56, member57, member58, member59, member60, member61, member62, member63, member64, member65, member66, member67, member68, member69, member70, member71, member72])
+        var type = TypeImplementation(name: "Output", members: [member45, member46, member47, member48, member49, member50, member51, member52, member53, member54, member55, member56, member57, member58, member59, member60, member61, member62, member63, member64, member65, member66, member67, member68, member69, member70, member71, member72, .associatedType("Element", binding: .string), .associatedType("Index", binding: .int)])
         type.genericParameters = []
         type.conformances = ["BidirectionalCollection": [], "Collection": [], "CustomStringConvertible": [], "Equatable": [], "Hashable": [], "RandomAccessCollection": [], "Sequence": []]
-        type.associatedTypes = ["Element": .string, "Index": .int]
         return type
     }()
 
@@ -500,7 +494,6 @@ let receiver: ProcessEntry = try selfValue.unboxing(ProcessEntry.self)
         var type = TypeImplementation(name: "ProcessEntry", members: [member74, member75, member76, member77, member78, member79, member80, member81, member82])
         type.genericParameters = []
         type.conformances = ["Encodable": [], "Equatable": [], "Hashable": []]
-        type.associatedTypes = [:]
         return type
     }()
 
@@ -514,7 +507,6 @@ let receiver: Segment = try selfValue.unboxing(Segment.self)
         var type = TypeImplementation(name: "Segment", members: [member84])
         type.genericParameters = []
         type.conformances = ["Equatable": [], "Hashable": []]
-        type.associatedTypes = [:]
         return type
     }()
 
@@ -554,7 +546,6 @@ let receiver: Date = try selfValue.unboxing(Date.self)
         var type = TypeImplementation(name: "Date", members: [member86, member87, member88, member89, member90, member91])
         type.genericParameters = []
         type.conformances = [:]
-        type.associatedTypes = [:]
         return type
     }()
 
