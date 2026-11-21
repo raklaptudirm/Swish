@@ -94,7 +94,7 @@ extension Output {
 /// Hand-written, because the engine converts an `Output` before the generator has run: the generator
 /// reads the module with its own glue stubbed out, which a conformance it writes would be missing.
 extension Output: BridgedValue {
-    package static let typeRef = TypeRef(hostType: "Output")
+    package static let typeRef = TypeRef(nativeType: "Output")
 }
 
 /// What a library function says when a value is not what it takes.

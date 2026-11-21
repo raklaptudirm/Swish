@@ -6,6 +6,8 @@ extension CommandRunner {
     /// a path for a `FilePath`), a key path by the field names (`size`, `owner.name`), and anything
     /// else by being text, as `String`, `Any` and a type parameter are. Nil if the word is not one.
     func value(forWord text: String, as type: ScriptType) -> Value? {
+        // A type parameter, which text satisfies.
+        if case .parameter = type { return Value(text) }
         guard case .named(let reference, let arguments) = type else { return nil }
 
         if reference == .any { return Value(text) }
@@ -16,8 +18,6 @@ extension CommandRunner {
             return value(forWord: text, as: arguments[0])
         }
 
-        // A type parameter, which text satisfies.
-        if reference.isGenericParameter { return Value(text) }
         guard let symbol = reference.symbol(in: interpreter) else { return nil }
         if case .type(.enumeration) = symbol.kind {
             return enumCase(from: text, of: type, reference: reference)
@@ -42,12 +42,12 @@ extension CommandRunner {
     /// Whether a word can be a value of `type` at all: an enum, a Swift type text can be, a key
     /// path, or anything text satisfies. (`word(_:as:)` says whether one word is.)
     func acceptsWords(as type: ScriptType) -> Bool {
+        if case .parameter = type { return true }
         guard case .named(let reference, let arguments) = type else { return false }
 
         if reference == .any || reference == .keyPath { return true }
         if reference == .optional, arguments.count == 1 { return acceptsWords(as: arguments[0]) }
 
-        if reference.isGenericParameter { return true }
         guard let symbol = reference.symbol(in: interpreter) else { return false }
         if case .type(.enumeration) = symbol.kind { return true }
 
@@ -133,5 +133,5 @@ extension CommandRunner {
 }
 
 extension CommandRunner {
-    fileprivate static let substring = ScriptType.named(TypeRef(hostType: "Substring"))
+    fileprivate static let substring = ScriptType.named(TypeRef(nativeType: "Substring"))
 }
