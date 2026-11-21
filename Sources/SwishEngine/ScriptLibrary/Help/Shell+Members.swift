@@ -31,7 +31,7 @@ extension Shell {
 
         for item in items {
             let type = item.typeName
-            let listed = interpreter.scriptType(of: item).members(in: interpreter)
+            let listed = interpreter.typeExpression(of: item).members(in: interpreter)
                 .filter { $0.memberKind != nil && $0.memberKind != .initializer }
                 .filter { item.kind != .object || !$0.isLayoutPlumbing }
 

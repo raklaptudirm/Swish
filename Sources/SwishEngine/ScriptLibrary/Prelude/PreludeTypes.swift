@@ -41,7 +41,7 @@ extension PreludeTypes {
     }
 
     /// The type of the items as they come.
-    var streamType: ScriptType { .named(stream, [.any]) }
+    var streamType: TypeExpression { .named(stream, [.any]) }
 
     /// A stream that gives what `read` does, one item at a time, until it gives nil.
     func stream(_ source: @escaping () throws -> Value?) -> Value {

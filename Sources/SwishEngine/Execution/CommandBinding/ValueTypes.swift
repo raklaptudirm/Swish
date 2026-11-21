@@ -3,11 +3,11 @@ import Swiit
 // What the shell asks of a type a parameter has: whether a word can be one, what a list of them
 // holds.
 
-extension ScriptType {
+extension TypeExpression {
     var isBool: Bool { self == .bool }
 
     /// `T` for `[T]`.
-    var listElement: ScriptType? {
+    var listElement: TypeExpression? {
         if case .named(.array, let arguments) = self, arguments.count == 1 {
             arguments[0]
         } else {
@@ -18,7 +18,7 @@ extension ScriptType {
     var isList: Bool { listElement != nil }
 
     /// `T` for `T?`.
-    var optionalWrapped: ScriptType? {
+    var optionalWrapped: TypeExpression? {
         if case .named(.optional, let arguments) = self, arguments.count == 1 {
             arguments[0]
         } else {

@@ -115,7 +115,7 @@ extension Shell {
                     ?? runner.stageCallee(name, of: .list(.any), receiver: .collected)
                 guard let callee,
                     runner.stageNames.streams.contains(name)
-                        || ScriptType.list(.any).members(named: name, in: interpreter)
+                        || TypeExpression.list(.any).members(named: name, in: interpreter)
                             .contains(where: { $0.function != nil && !$0.belongsToType })
                 else { continue }
                 described[name] =

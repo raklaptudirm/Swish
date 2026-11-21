@@ -40,7 +40,9 @@ extension InteractivePrompt {
             try shell.interpreter.call("prompt", arguments: arguments)
         }
         guard let text = value.casting(to: String.self) else {
-            throw PromptError("it gave \(shell.interpreter.scriptType(of: value)), not a String")
+            throw PromptError(
+                "it gave \(shell.interpreter.typeExpression(of: value)), not a String"
+            )
         }
         return text
     }

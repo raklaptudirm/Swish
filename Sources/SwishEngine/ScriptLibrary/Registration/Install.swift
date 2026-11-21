@@ -110,7 +110,7 @@ extension Shell {
                         items.count == 1 ? items[0] : Value(items),
                         rawValue: { value in
                             guard let reference = value.typeRef,
-                                ScriptType.named(reference)
+                                TypeExpression.named(reference)
                                     .conforms(to: .rawRepresentable, in: interpreter)
                             else { return nil }
                             return try? interpreter.value(forMember: "rawValue", of: value)

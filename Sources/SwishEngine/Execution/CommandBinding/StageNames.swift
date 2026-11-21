@@ -59,13 +59,13 @@ extension CommandRunner {
         }
 
         for type in interpreter.types where type.isBuiltin {
-            type.typeRef.map { ScriptType.named($0).members(in: interpreter).forEach(add) }
+            type.typeRef.map { TypeExpression.named($0).members(in: interpreter).forEach(add) }
         }
 
         // What every sequence has.
-        ScriptType.list(.any).members(in: interpreter).forEach(add)
+        TypeExpression.list(.any).members(in: interpreter).forEach(add)
         names.sequence = Set(
-            ScriptType.named(.sequence).members(in: interpreter).filter { $0.function != nil }
+            TypeExpression.named(.sequence).members(in: interpreter).filter { $0.function != nil }
                 .map(\.name)
         )
 
@@ -91,7 +91,7 @@ extension CommandRunner {
         return interpreter.types
             .contains { type in
                 !type.isBuiltin
-                    && type.scriptType.members(named: name, in: interpreter)
+                    && type.typeExpression.members(named: name, in: interpreter)
                         .contains { $0.function != nil && !$0.belongsToType }
             }
     }
@@ -106,7 +106,7 @@ extension CommandRunner {
     /// `receiver` says.
     func stageCallee(
         _ name: String,
-        of type: ScriptType,
+        of type: TypeExpression,
         receiver: StageReceiver,
         includingMutating: Bool = false
     ) -> Callee? {
@@ -136,7 +136,7 @@ extension CommandRunner {
     func stageFunctions(named name: String) -> Callee? {
         let candidates = interpreter.types.filter(\.isBuiltin).sorted { $0.name < $1.name }
             .flatMap {
-                stageCallee(name, of: $0.scriptType, receiver: .collected)?.overloads ?? []
+                stageCallee(name, of: $0.typeExpression, receiver: .collected)?.overloads ?? []
             }
         return candidates.isEmpty
             ? nil : Callee(name: name, overloads: candidates, receiver: .collected)

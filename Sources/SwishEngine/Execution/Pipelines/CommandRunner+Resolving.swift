@@ -48,7 +48,7 @@ extension CommandRunner {
             return try upstream.next()
         }
         let name = deferred.name
-        let element = first.map(interpreter.scriptType(of:)) ?? .any
+        let element = first.map(interpreter.typeExpression(of:)) ?? .any
 
         func function(_ callee: Callee) -> Stage {
             .function(
@@ -65,7 +65,7 @@ extension CommandRunner {
             candidates.append {
                 self.stageCallee(
                     name,
-                    of: self.interpreter.scriptType(of: single),
+                    of: self.interpreter.typeExpression(of: single),
                     receiver: .value
                 )
                 .map(function)

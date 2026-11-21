@@ -170,14 +170,14 @@ extension Shell {
     /// ` <Int>` after a flag that takes a value; a list flag takes one
     /// element per use.
     private func valuePlaceholder(for parameter: CommandParameter) -> [AttributedString] {
-        let type: ScriptType
+        let type: TypeExpression
         if parameter.type.isBool { return [] }
         type = parameter.type.listElement ?? parameter.type
         return [.init(" <"), .init(placeholder(type), DisplayStyle.type), .init(">")]
     }
 
     /// A type as `--help` shows it: an enum as its choices.
-    private func placeholder(_ type: ScriptType) -> String {
+    private func placeholder(_ type: TypeExpression) -> String {
         if case .named(let name, _) = type, let found = typeMembers(named: name.description),
             case .type(.enumeration) = found.type.kind
         {

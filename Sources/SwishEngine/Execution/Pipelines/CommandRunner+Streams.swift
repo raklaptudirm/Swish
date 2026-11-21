@@ -317,7 +317,8 @@ extension CommandRunner {
 
     /// Input items as the parameter's type. Lines from external programs
     /// are text, so they're converted like command-line arguments.
-    private func inputValue(_ item: Value, as type: ScriptType, of name: String) throws -> Value {
+    private func inputValue(_ item: Value, as type: TypeExpression, of name: String) throws -> Value
+    {
         if let value = interpreter.converted(item, to: type) { return value }
         if item.kind == .string,
             let value = try? converted(item.description, to: type, for: "input", of: name)
@@ -334,7 +335,8 @@ extension CommandRunner {
     func unwrapped(_ value: Value) -> Value {
         var value = value
         while value.kind == .structure,
-            interpreter.scriptType(of: value).conforms(to: preludeTypes.wrapping, in: interpreter),
+            interpreter.typeExpression(of: value)
+                .conforms(to: preludeTypes.wrapping, in: interpreter),
             let inner = try? interpreter.value(forMember: "wrapped", of: value)
         {
             value = inner

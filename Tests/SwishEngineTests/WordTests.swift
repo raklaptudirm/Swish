@@ -8,8 +8,8 @@ import Testing
     _ = try shell.interpreter.evaluate(
         #"enum Kind { case file, directory }; enum Letter: String { case a = "x", b = "y" }"#
     )
-    let kind = ScriptType.named(TypeRef(named: "Kind", in: shell.interpreter)!)
-    let letter = ScriptType.named(TypeRef(named: "Letter", in: shell.interpreter)!)
+    let kind = TypeExpression.named(TypeRef(named: "Kind", in: shell.interpreter)!)
+    let letter = TypeExpression.named(TypeRef(named: "Letter", in: shell.interpreter)!)
 
     #expect(shell.runner.value(forWord: "5", as: .int) == 5)
     #expect(shell.runner.value(forWord: "x", as: .int) == nil)
@@ -17,7 +17,7 @@ import Testing
     #expect(shell.runner.value(forWord: "x", as: .any) == "x")
     #expect(shell.runner.value(forWord: "x", as: .optional(.string)) == "x")
     #expect(
-        shell.runner.value(forWord: "x", as: ScriptType.parameter("Element")) == "x"
+        shell.runner.value(forWord: "x", as: TypeExpression.parameter("Element")) == "x"
     )
 
     #expect(shell.runner.value(forWord: ".directory", as: kind)?.description == "directory")
@@ -27,7 +27,7 @@ import Testing
 
     // A word is a literal first: one letter for a Character, which a longer word is not, and
     // never a trap.
-    let character = ScriptType.named(TypeRef(named: "Character", in: shell.interpreter)!)
+    let character = TypeExpression.named(TypeRef(named: "Character", in: shell.interpreter)!)
     #expect(shell.runner.value(forWord: "a", as: character) == "a")
     #expect(shell.runner.value(forWord: "ab", as: character) == nil)
     #expect(
@@ -48,7 +48,7 @@ import Testing
 @Test func aWordCanBeSomeTypesAndNotOthers() throws {
     let shell = Shell()
     _ = try shell.interpreter.evaluate("enum Kind { case file }")
-    let kind = ScriptType.named(TypeRef(named: "Kind", in: shell.interpreter)!)
+    let kind = TypeExpression.named(TypeRef(named: "Kind", in: shell.interpreter)!)
 
     #expect(shell.runner.acceptsWords(as: .int))
     #expect(shell.runner.acceptsWords(as: .string))

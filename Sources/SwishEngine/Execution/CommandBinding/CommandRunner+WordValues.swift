@@ -5,7 +5,7 @@ extension CommandRunner {
     /// `.directory`) or raw value, a Swift type by its own initializer from text (`5` for an `Int`,
     /// a path for a `FilePath`), a key path by the field names (`size`, `owner.name`), and anything
     /// else by being text, as `String`, `Any` and a type parameter are. Nil if the word is not one.
-    func value(forWord text: String, as type: ScriptType) -> Value? {
+    func value(forWord text: String, as type: TypeExpression) -> Value? {
         // A type parameter, which text satisfies.
         if case .parameter = type { return Value(text) }
         guard case .named(let reference, let arguments) = type else { return nil }
@@ -41,7 +41,7 @@ extension CommandRunner {
 
     /// Whether a word can be a value of `type` at all: an enum, a Swift type text can be, a key
     /// path, or anything text satisfies. (`word(_:as:)` says whether one word is.)
-    func acceptsWords(as type: ScriptType) -> Bool {
+    func acceptsWords(as type: TypeExpression) -> Bool {
         if case .parameter = type { return true }
         guard case .named(let reference, let arguments) = type else { return false }
 
@@ -58,7 +58,7 @@ extension CommandRunner {
     /// any text: a failable one taking an unlabeled `String` or `Substring`, or Swift's
     /// `init(stringLiteral:)`, for which every text is valid. (`Character("ab")`, not failable,
     /// traps, and a word is tried against many parameters before one takes it.)
-    private func textInitializer(of type: ScriptType) -> Symbol.Parameter? {
+    private func textInitializer(of type: TypeExpression) -> Symbol.Parameter? {
         let candidates = textInitializers(of: type)
             .filter { function, parameter in
                 if parameter.label == "stringLiteral" { return true }
@@ -78,7 +78,7 @@ extension CommandRunner {
     /// is a type Swift writes as a single-character literal (`Character`), which `converted` checks.
     /// The literal protocols are told by their requirements, the initializers named here, as
     /// `conforms(to:)` doesn't yet tell them apart for a Swift type.
-    private func hasTextInitializer(_ type: ScriptType) -> Bool {
+    private func hasTextInitializer(_ type: TypeExpression) -> Bool {
         textInitializer(of: type) != nil
             || type.members(in: interpreter)
                 .contains { symbol in
@@ -94,7 +94,8 @@ extension CommandRunner {
     }
 
     /// The initializers of a Swift type that take one `String` or `Substring`, or its literal.
-    private func textInitializers(of type: ScriptType) -> [(Symbol.Function, Symbol.Parameter)] {
+    private func textInitializers(of type: TypeExpression) -> [(Symbol.Function, Symbol.Parameter)]
+    {
         type.members(in: interpreter)
             .compactMap { symbol in
                 guard case .member(.initializer(let function)) = symbol.kind,
@@ -114,7 +115,8 @@ extension CommandRunner {
 
     /// The case of the enum `reference` a word names, by its name or its raw value: `.directory`,
     /// `directory`, or `d` for `case directory = "d"`.
-    private func enumCase(from text: String, of type: ScriptType, reference: TypeRef) -> Value? {
+    private func enumCase(from text: String, of type: TypeExpression, reference: TypeRef) -> Value?
+    {
         let name = text.hasPrefix(".") ? String(text.dropFirst()) : text
         let cases = type.members(in: interpreter)
             .compactMap { symbol -> (Symbol, Value?)? in
@@ -133,5 +135,5 @@ extension CommandRunner {
 }
 
 extension CommandRunner {
-    fileprivate static let substring = ScriptType.named(TypeRef(nativeType: "Substring"))
+    fileprivate static let substring = TypeExpression.named(TypeRef(nativeType: "Substring"))
 }

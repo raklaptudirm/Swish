@@ -73,10 +73,10 @@ extension Shell {
     }
 
     /// The type a value of `name` is held as: a list is an `Array`.
-    private func heldType(named name: String) -> ScriptType {
+    private func heldType(named name: String) -> TypeExpression {
         guard let reference = TypeRef(named: name, in: interpreter) else { return .any }
         return reference == .array
-            ? .list(ScriptType.parameter("Element")) : .named(reference)
+            ? .list(TypeExpression.parameter("Element")) : .named(reference)
     }
 
     /// A member as Swift declares it, in pieces by what each is: `init(_ description: String)`,
@@ -84,7 +84,7 @@ extension Shell {
     func declaration(of symbol: Symbol) -> AttributedString {
         // A type as Swift writes it: its names are types, `throws` and `async` keywords, and
         // brackets and arrows plain.
-        func type(_ type: ScriptType) -> AttributedString {
+        func type(_ type: TypeExpression) -> AttributedString {
             var pieces: [AttributedString] = []
             var word = ""
             func flush() {

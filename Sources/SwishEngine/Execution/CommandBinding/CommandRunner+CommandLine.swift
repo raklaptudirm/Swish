@@ -105,8 +105,12 @@ extension CommandRunner {
         let parameters = callee.parameters[binding.overload]
             .filter { !(excludingInput && $0.isInput) }
 
-        func take(_ word: Int, text: String?, as type: ScriptType, for what: String) throws -> Value
-        {
+        func take(
+            _ word: Int,
+            text: String?,
+            as type: TypeExpression,
+            for what: String
+        ) throws -> Value {
             if let text { return try converted(text, to: type, for: what, of: name) }
             guard case .value(let value) = args[word],
                 let conforming = interpreter.converted(value, to: type)
@@ -180,7 +184,9 @@ extension CommandRunner {
 
     /// What a parameter given several words is made of, and how: a
     /// collection an array literal can be (`[Int]`, `Set<String>`).
-    static func collection(_ type: ScriptType) -> (element: ScriptType, make: ([Value]) -> Value)? {
+    static func collection(
+        _ type: TypeExpression
+    ) -> (element: TypeExpression, make: ([Value]) -> Value)? {
         switch type {
         case .named(.array, let arguments) where arguments.count == 1:
             return (arguments[0], { Value($0) })
@@ -196,7 +202,7 @@ extension CommandRunner {
     /// `text` as a value of `type`, or the error that says why it can't be.
     func converted(
         _ text: String,
-        to type: ScriptType,
+        to type: TypeExpression,
         for what: String,
         of function: String
     ) throws -> Value {
@@ -232,7 +238,7 @@ extension CommandRunner {
 
     /// Whether a word can be a value of `type` at all: a Swift type text can be, an enum, or one of
     /// Swish's own that's read from text.
-    func takesWords(_ type: ScriptType) -> Bool {
+    func takesWords(_ type: TypeExpression) -> Bool {
         type == .named(Output.typeRef) || acceptsWords(as: type)
     }
 }

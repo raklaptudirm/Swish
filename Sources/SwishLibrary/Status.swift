@@ -43,7 +43,7 @@ extension Status: Encodable {
 /// A status crosses as the fields of the prelude's `Status`, by its name.
 extension Status: BridgedValue {
     package static let typeRef = TypeRef(nativeType: "Status")
-    public static var scriptType: ScriptType { .named(typeRef) }
+    public static var typeExpression: TypeExpression { .named(typeRef) }
 
     /// A script's status is read as its fields; nothing takes one as a parameter.
     public init(_ value: Value) throws {
