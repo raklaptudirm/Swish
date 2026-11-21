@@ -141,7 +141,7 @@ final class Job: BridgedValue, DynamicMembers, Presentable, Tabular, CustomStrin
     }
 
     private static func method(_ name: String, _ body: @escaping @Sendable () -> Value) -> Value {
-        Value(ImplementedSymbol.function(name: name) { _ in body() })
+        Value(SymbolImplementation.function(name: name) { _ in body() })
     }
 
     /// `[1] running  make`, in pieces to color: the number dim, the state

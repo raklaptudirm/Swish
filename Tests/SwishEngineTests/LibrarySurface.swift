@@ -33,10 +33,11 @@ enum LibrarySurface {
         "RecordRepresentable.memberNames", "Segment.init", "Segment.style", "Segment.text",
         "Sequence.text", "Status.code", "Status.encode", "Status.init", "Status.number",
         "Status.scriptType", "Status.signal", "Status.succeeded", "Status.success", "Status.value",
-        "DisplayColumn.implementedType", "DisplayShape.implementedType",
-        "FileEntry.implementedType",
-        "FileSize.implementedType", "LibraryError.implementedType", "Output.implementedType",
-        "ProcessEntry.implementedType",
-        "Segment.implementedType",
+        "DisplayColumn.typeImplementation", "DisplayShape.typeImplementation",
+        "FileEntry.typeImplementation",
+        "FileSize.typeImplementation", "LibraryError.typeImplementation",
+        "Output.typeImplementation",
+        "ProcessEntry.typeImplementation",
+        "Segment.typeImplementation",
     ]
 }

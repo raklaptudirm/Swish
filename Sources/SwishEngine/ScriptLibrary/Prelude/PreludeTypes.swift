@@ -47,7 +47,7 @@ extension PreludeTypes {
     func stream(_ source: @escaping () throws -> Value?) -> Value {
         nonisolated(unsafe) let read = source  // safe: a stream is read by one stage at a time
         let function = Value(
-            ImplementedSymbol.function(
+            SymbolImplementation.function(
                 name: "read",
                 returns: .named(.optional, [.any]),
                 isThrowing: true
