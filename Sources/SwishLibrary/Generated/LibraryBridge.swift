@@ -565,33 +565,33 @@ let result: [ProcessEntry] = ps()
 }
 
 extension DisplayColumn {
-    public static var implementedType: ImplementedType { LibraryBridge.type3 }
+    public static var implementation: ImplementedType { LibraryBridge.type3 }
 }
 
 extension DisplayShape: BridgedValue {
-    public static var implementedType: ImplementedType { LibraryBridge.type6 }
+    public static var implementation: ImplementedType { LibraryBridge.type6 }
 }
 
 extension FileEntry {
-    public static var implementedType: ImplementedType { LibraryBridge.type18 }
+    public static var implementation: ImplementedType { LibraryBridge.type18 }
 }
 
 extension FileSize {
-    public static var implementedType: ImplementedType { LibraryBridge.type40 }
+    public static var implementation: ImplementedType { LibraryBridge.type40 }
 }
 
 extension LibraryError: BridgedValue {
-    public static var implementedType: ImplementedType { LibraryBridge.type43 }
+    public static var implementation: ImplementedType { LibraryBridge.type43 }
 }
 
 extension Output {
-    public static var implementedType: ImplementedType { LibraryBridge.type72 }
+    public static var implementation: ImplementedType { LibraryBridge.type72 }
 }
 
 extension ProcessEntry {
-    public static var implementedType: ImplementedType { LibraryBridge.type81 }
+    public static var implementation: ImplementedType { LibraryBridge.type81 }
 }
 
 extension Segment: BridgedValue {
-    public static var implementedType: ImplementedType { LibraryBridge.type83 }
+    public static var implementation: ImplementedType { LibraryBridge.type83 }
 }

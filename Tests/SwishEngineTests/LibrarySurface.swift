@@ -46,11 +46,11 @@ enum LibrarySurface {
         "Sequence.text", "Status.code", "Status.encode", "Status.init", "Status.number",
         "Status.typeExpression", "Status.signal", "Status.succeeded", "Status.success",
         "Status.value",
-        "DisplayColumn.implementedType", "DisplayShape.implementedType",
-        "FileEntry.implementedType",
-        "FileSize.implementedType", "LibraryError.implementedType",
-        "Output.implementedType",
-        "ProcessEntry.implementedType",
-        "Segment.implementedType",
+        "DisplayColumn.implementation", "DisplayShape.implementation",
+        "FileEntry.implementation",
+        "FileSize.implementation", "LibraryError.implementation",
+        "Output.implementation",
+        "ProcessEntry.implementation",
+        "Segment.implementation",
     ]
 }

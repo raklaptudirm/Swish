@@ -128,11 +128,11 @@ final class Job: RecordRepresentable, Presentable, Tabular, CustomStringConverti
 
     /// The names of a job's members, `lines` too.
     static let memberNames: Set<String> =
-        Set(implementedType.members.map(\.symbol.name)).union(["lines"])
+        Set(implementation.members.map(\.symbol.name)).union(["lines"])
 
     /// What a script has of a job, as a type of the host's. A job's result is the type it is generic
     /// over (`Job<Output>`, `Job<Int>`). `lines()` is in the prelude, which declares the stream it gives.
-    static var implementedType: ImplementedType {
+    static var implementation: ImplementedType {
         @Sendable func job(_ receiver: Value) throws -> Job { try receiver.unboxing(Job.self) }
         var type = ImplementedType(
             name: "Job",
