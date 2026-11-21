@@ -25,11 +25,11 @@
     "swiit": {
       "flake": false,
       "locked": {
-        "lastModified": 1795206213,
-        "narHash": "sha256-mL6ANscnGti3DJYyiTpWFoma9dA2kmfDGO0tDkByG7Y=",
+        "lastModified": 1795241247,
+        "narHash": "sha256-krQFu6jeNg/ILifQmW8tzwtrZkUznJ4V4KCJ5Ah1g90=",
         "owner": "raklaptudirm",
         "repo": "Swiit",
-        "rev": "4ca09c260d4de350650011b145c5b9558648115e",
+        "rev": "f86d8dfbe6b4f8380a724d3c20d3dc8c652a849e",
         "type": "github"
       },
       "original": {
