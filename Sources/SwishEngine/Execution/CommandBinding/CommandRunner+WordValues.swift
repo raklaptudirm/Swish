@@ -19,7 +19,7 @@ extension CommandRunner {
         }
 
         guard let symbol = reference.symbol(in: interpreter) else { return nil }
-        if case .type(.enumeration) = symbol.kind {
+        if symbol.typeKind == .enumeration {
             return enumCase(from: text, of: type, reference: reference)
         }
 
@@ -49,7 +49,7 @@ extension CommandRunner {
         if reference == .optional, arguments.count == 1 { return acceptsWords(as: arguments[0]) }
 
         guard let symbol = reference.symbol(in: interpreter) else { return false }
-        if case .type(.enumeration) = symbol.kind { return true }
+        if symbol.typeKind == .enumeration { return true }
 
         return hasTextInitializer(type)
     }

@@ -179,7 +179,7 @@ extension Shell {
     /// A type as `--help` shows it: an enum as its choices.
     private func placeholder(_ type: TypeExpression) -> String {
         if case .named(let name, _) = type, let found = typeMembers(named: name.description),
-            case .type(.enumeration) = found.type.kind
+            found.type.typeKind == .enumeration
         {
             return Symbol.plainCaseNames(of: found.members).joined(separator: "|")
         }

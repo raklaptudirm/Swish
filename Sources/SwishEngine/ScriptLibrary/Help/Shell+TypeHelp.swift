@@ -17,11 +17,11 @@ enum MemberKind: String, CaseIterable {
 extension Symbol {
     /// The keyword a type is declared with, as `help` heads it: `struct`, `enum`, `protocol`.
     var declarationKeyword: String {
-        switch kind {
-        case .type(.structure): "struct"
-        case .type(.enumeration): "enum"
-        case .type(.class): "class"
-        case .type(.actor): "actor"
+        switch typeKind {
+        case .structure: "struct"
+        case .enumeration: "enum"
+        case .class: "class"
+        case .actor: "actor"
         default: "protocol"
         }
     }
