@@ -82,7 +82,7 @@ extension Job {
     func lines() -> ThrowingStream<String> { jobLines(self) }
 }
 
-func jobLines(_ job: Job) -> ThrowingStream<String>
+func jobLines(_ job: Job<Any>) -> ThrowingStream<String>
 
 /// How a command exited: `output.status`, and what `Command.run()` gives.
 /// A command statement is a `Status`, and `a && b || c` is
@@ -455,7 +455,7 @@ extension Sequence {
 // `latestJob()` for a bare `await`): waiting for a job is a blocking call, anywhere, typed by what the job was started
 // with, and anything else is itself, awaited as Swift would.
 func latestJob() -> Job<Output>
-func waitForJob(_ job: Job, _ throwing: Bool) -> Any
+func waitForJob(_ job: Job<Any>, _ throwing: Bool) -> Any
 @alreadyShown func waited<T>(_ job: Job<T>) -> T { waitForJob(job, false) }
 @alreadyShown func waited<T>(_ value: T) -> T { value }
 @alreadyShown func waitedFailing<T>(_ job: Job<T>) throws -> T { waitForJob(job, true) }

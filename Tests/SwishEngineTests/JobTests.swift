@@ -379,10 +379,10 @@ private func run(_ source: String) throws -> String {
     // checked.
     #expect(
         try run(
-            "func show(_ job: Job) { print(job.command) }\nlet t = async { 1 }\nshow(t)\nawait t"
+            "func show(_ job: Job<Int>) { print(job.command) }\nlet t = async { 1 }\nshow(t)\nawait t"
         ) == "{ 1 }\n"
     )
-    #expect(try run("let jobsNow: [Job] = jobs; print(jobsNow.count)") == "0\n")
+    #expect(try run("let jobsNow: [Job<Output>] = jobs; print(jobsNow.count)") == "0\n")
 }
 
 @Test func aJobHasTheMembersItsTypeRegistersAndTheLinesThePreludeDeclares() {
@@ -390,4 +390,15 @@ private func run(_ source: String) throws -> String {
     let declared = Shell().typeMembers(named: "Job")?.members.map(\.name) ?? []
     #expect(Set(declared) == Job.memberNames)
     #expect(declared.count == Job.memberNames.count)
+}
+
+@Test func aJobIsGenericOverWhatItGivesSoItIsNamedWithThat() {
+    // As in Swift, a generic type in a parameter needs its arguments.
+    #expect(
+        status("func show(_ job: Job) { print(job.command) }\nlet t = async { 1 }\nshow(t)") != 0
+    )
+    #expect(
+        status("func show(_ job: Job<Int>) { print(job.command) }\nlet t = async { 1 }\nshow(t)")
+            == 0
+    )
 }
