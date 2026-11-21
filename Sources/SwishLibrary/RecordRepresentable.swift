@@ -1,19 +1,21 @@
 import Foundation
 import Swiit
 
-/// A Swift struct scripts hold as data, as `ls` gives `FileEntry`s: its stored properties are its
-/// fields, in the order they are declared, wherever its fields are laid out (a table, `to json`,
-/// `select`), as a struct a script declares has. Its type registers the same properties for the
-/// checker.
-public protocol RecordRepresentable: BridgedValue, DynamicMembers, Sendable {}
+/// A Swift value scripts hold as data, as `ls` gives `FileEntry`s: it says its fields, in order,
+/// wherever its fields are laid out (a table, `to json`, `select`), as a struct a script declares has.
+/// The default reads the stored properties, in the order they are declared, which its type registers
+/// for the checker as members.
+public protocol RecordRepresentable: BridgedValue, Sendable {
+    /// The fields, in order, each with the value a script reads.
+    var fields: [(name: String, value: Value)] { get }
+}
 
 extension RecordRepresentable {
-    public var memberNames: [String] {
-        Mirror(reflecting: self).children.compactMap(\.label)
-    }
-
-    public func member(_ name: String) -> Value? {
-        let field = Mirror(reflecting: self).children.first { $0.label == name }
-        return field.map { ($0.value as? any BridgedValue)?.value ?? .nothing }
+    public var fields: [(name: String, value: Value)] {
+        Mirror(reflecting: self).children
+            .compactMap { child in
+                guard let name = child.label else { return nil }
+                return (name, (child.value as? any BridgedValue)?.value ?? .nothing)
+            }
     }
 }

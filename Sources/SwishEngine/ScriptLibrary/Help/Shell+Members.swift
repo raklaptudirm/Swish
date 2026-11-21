@@ -40,14 +40,8 @@ extension Shell {
             // it lists it.
             var held: [(name: String, value: Value)] = []
             switch item.kind {
-            case .structure, .tuple:
+            case .structure, .tuple, .object:
                 held = item.fields?.map { (name: $0.key, value: $0.value) } ?? []
-            case .object:
-                if let object = item.casting(toExistential: (any DynamicMembers).self) {
-                    held = object.memberNames.compactMap { name in
-                        object.member(name).map { (name, $0) }
-                    }
-                }
             default:
                 break
             }

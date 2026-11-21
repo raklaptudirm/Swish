@@ -2,32 +2,6 @@ import Foundation
 import Swiit
 import SwishLibrary
 
-/// A parsed JSON object: its fields in the order the text gave them, which a table lays out as
-/// columns. The language cannot write a tuple whose names the text decides, so it is a value that
-/// says its members at run time: shown, selected, filtered on and encoded as any record is, and a
-/// field is read by name. Two are equal when they hold the same fields in the same order, as a
-/// struct's are.
-struct JSONObject: BridgedValue, DynamicMembers, Hashable, Sendable, CustomStringConvertible,
-    CustomDebugStringConvertible
-{
-    let keys: [String]
-    let fields: [String: Value]
-
-    init(_ pairs: [(name: String, value: Value)]) {
-        keys = pairs.map(\.name)
-        fields = Dictionary(pairs.map { ($0.name, $0.value) }, uniquingKeysWith: { $1 })
-    }
-
-    var memberNames: [String] { keys }
-    func member(_ name: String) -> Value? { fields[name] }
-    var description: String { "JSONObject" }
-    var debugDescription: String {
-        "JSONObject("
-            + keys.map { "\($0): \(fields[$0]!.debugDescription)" }.joined(separator: ", ")
-            + ")"
-    }
-}
-
 /// Parsed JSON: whatever it parsed as, a `Value`, which Swish reads by field
 /// and element. Object keys are kept in order, which Foundation's parser
 /// doesn't do and which tables need: key order is column order.
@@ -219,7 +193,7 @@ private struct JSONParser {
 
         if index < bytes.count && bytes[index] == UInt8(ascii: "}") {
             index += 1
-            return Value(JSONObject(fields))
+            return Value(fields: fields, typeName: "JSONObject")
         }
 
         while true {
@@ -241,7 +215,7 @@ private struct JSONParser {
             guard index < bytes.count else { throw error("unterminated object") }
             if bytes[index] == UInt8(ascii: "}") {
                 index += 1
-                return Value(JSONObject(fields))
+                return Value(fields: fields, typeName: "JSONObject")
             }
             try expect(",")
         }

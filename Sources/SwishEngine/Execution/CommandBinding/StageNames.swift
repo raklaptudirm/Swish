@@ -85,7 +85,7 @@ extension CommandRunner {
     /// Whether some type has a member called `name` that a stage could call: a Swift type's, a
     /// struct's in scope, or a job's.
     func isMemberName(_ name: String) -> Bool {
-        if stageNames.all.contains(name) || Job.members.contains(where: { $0.name == name }) {
+        if stageNames.all.contains(name) || Job.memberNames.contains(name) {
             return true
         }
         return interpreter.types

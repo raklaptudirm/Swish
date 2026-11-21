@@ -69,17 +69,18 @@ private func inDirectory(_ body: (String) throws -> Void) throws {
     try inDirectory { directory in
         let entry = try #require(ls(FilePath(directory + "/a")).first)
         #expect(
-            entry.memberNames == [
+            entry.fields.map(\.name) == [
                 "name", "type", "size", "modified", "permissions", "owner", "created", "accessed",
                 "path", "target",
             ]
         )
-        #expect(entry.member("name")?.description == directory + "/a")
-        #expect(entry.member("nope") == nil)
+        #expect(entry.fields.first { $0.name == "name" }?.value.description == directory + "/a")
     }
     let process = ProcessEntry(pid: 1, ppid: 0, name: "init", user: "root")
     #expect(
-        process.memberNames == ["pid", "ppid", "name", "user", "memory", "cpuTime", "threads"]
+        process.fields.map(\.name) == [
+            "pid", "ppid", "name", "user", "memory", "cpuTime", "threads",
+        ]
     )
 }
 

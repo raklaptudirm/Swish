@@ -6,7 +6,7 @@ import SwishLibrary
 /// background (from `async` or ^Z), or Swish code running as a task of its
 /// own (`async f()`). Jobs in the background are values: `await` brings one
 /// to the foreground and waits for it, and `resume()` and `cancel()` act on it.
-final class Job: BridgedValue, DynamicMembers, Presentable, Tabular, CustomStringConvertible,
+final class Job: RecordRepresentable, Presentable, Tabular, CustomStringConvertible,
     CustomDebugStringConvertible, @unchecked Sendable
 {
     /// Where a job is in its life.
@@ -114,34 +114,64 @@ final class Job: BridgedValue, DynamicMembers, Presentable, Tabular, CustomStrin
         }
     }
 
-    /// The value of each of a job's members, which are what the prelude's `protocol Job` declares.
-    static let members: [(name: String, value: @Sendable (Job) -> Value)] = [
-        ("id", { Value($0.id) }),
-        ("command", { Value($0.source) }),
-        ("state", { $0.scriptState.value }),
-        ("pids", { Value($0.running.map { Value(Int($0)) }) }),
-        ("output", { $0.output.map { Value.output($0) } ?? .nothing }),
-        // A method, as it's not data: a table or `to json` of jobs can't read it.
-        ("lines", { job in method("lines") { [unowned job] in job.lines } }),
-        ("resume", { job in method("resume") { [unowned job] in job.runner.resume(job) } }),
-        ("cancel", { job in method("cancel") { [unowned job] in job.runner.cancel(job) } }),
-    ]
-
-    var memberNames: [String] { Job.members.map(\.name) }
-
-    func member(_ name: String) -> Value? {
-        Job.members.first { $0.name == name }?.value(self)
+    /// Its data, which a table of jobs and `to json` read: what its members `id`, `command`, `state`,
+    /// `pids` and `output` give.
+    var fields: [(name: String, value: Value)] {
+        [
+            ("id", Value(id)),
+            ("command", Value(source)),
+            ("state", scriptState.value),
+            ("pids", Value(running.map { Value(Int($0)) })),
+            ("output", output.map { Value.output($0) } ?? .nothing),
+        ]
     }
 
-    private static func method(_ name: String, _ body: @escaping @Sendable () -> Void) -> Value {
-        method(name) { () -> Value in
-            body()
-            return .nothing
-        }
-    }
+    /// The names of a job's members, `lines` too.
+    static let memberNames: Set<String> =
+        Set(typeImplementation.members.map(\.symbol.name)).union(["lines"])
 
-    private static func method(_ name: String, _ body: @escaping @Sendable () -> Value) -> Value {
-        Value(SymbolImplementation.function(name: name) { _ in body() })
+    /// What a script has of a job, as a type of the host's. A job's result is the type it is generic
+    /// over (`Job<Output>`, `Job<Int>`). `lines()` is in the prelude, which declares the stream it gives.
+    static var typeImplementation: TypeImplementation {
+        @Sendable func job(_ receiver: Value) throws -> Job { try receiver.unboxing(Job.self) }
+        var type = TypeImplementation(
+            name: "Job",
+            members: [
+                .property("id", summary: "Its number in `jobs`.", type: .int) {
+                    Value(try job($0).id)
+                },
+                .property("command", summary: "The command line it runs.", type: .string) {
+                    Value(try job($0).source)
+                },
+                .property("state", summary: "How it is going.", type: JobState.typeExpression) {
+                    try job($0).scriptState.value
+                },
+                .property("pids", summary: "Its processes not yet reaped.", type: .list(.int)) {
+                    Value(try job($0).running.map { Value(Int($0)) })
+                },
+                .property(
+                    "output",
+                    summary: "What it printed, for a job that keeps its output.",
+                    type: .optional(Output.typeExpression)
+                ) { receiver in
+                    try job(receiver).output.map { Value.output($0) } ?? .nothing
+                },
+                .method("resume", summary: "Continues it in the background, if it stopped.") {
+                    receiver,
+                    _ in
+                    let job = try job(receiver)
+                    job.runner.resume(job)
+                    return .nothing
+                },
+                .method("cancel", summary: "Asks it to stop.") { receiver, _ in
+                    let job = try job(receiver)
+                    job.runner.cancel(job)
+                    return .nothing
+                },
+            ]
+        )
+        type.genericParameters = [.genericParameter("Result")]
+        return type
     }
 
     /// `[1] running  make`, in pieces to color: the number dim, the state

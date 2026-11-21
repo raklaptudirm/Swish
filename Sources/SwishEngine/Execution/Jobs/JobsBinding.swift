@@ -26,6 +26,12 @@ extension CommandRunner {
                 }
                 return Value(latest)
             },
+            "jobLines": { arguments in
+                guard let job = arguments["job"]?.casting(to: Job.self) else {
+                    throw RuntimeError("lines needs a Job")
+                }
+                return job.lines
+            },
             "waitForJob": { [unowned self] arguments in
                 guard let job = arguments["job"]?.casting(to: Job.self) else {
                     throw RuntimeError(

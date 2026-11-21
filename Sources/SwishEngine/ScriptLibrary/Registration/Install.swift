@@ -21,6 +21,7 @@ extension Shell {
         interpreter.register(OutputFormat.self)
         interpreter.register(TextStyle.self)
         interpreter.register(JobState.self)
+        interpreter.register(Job.typeImplementation)
 
         do {
             try interpreter.declare(Shell.prelude, bodies: preludeBodies)

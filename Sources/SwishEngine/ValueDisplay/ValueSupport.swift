@@ -83,13 +83,18 @@ extension Value {
 
     /// A structured value's fields as ordered pairs: a dictionary's (in no particular order), the
     /// fields of a tuple or a struct by name (a tuple's unlabeled ones by position, "0", "1"), or
-    /// the data of a host's object. Nil for any other value.
+    /// the fields of a library value that says them. Nil for any other value.
     var entries: [(key: Value, value: Value)]? {
+        // A library value that says its fields (`RecordRepresentable`), which the interpreter does not
+        // see into.
+        if let record = casting(toExistential: (any RecordRepresentable).self) {
+            return record.fields.map { (key: Value($0.name), value: $0.value) }
+        }
         let mirror = self.mirror
         switch mirror.displayStyle {
         case .dictionary:
             return mirror.children.compactMap { $0.value as? (key: Value, value: Value) }
-        case .tuple, .struct, .class:
+        case .tuple, .struct:
             return mirror.children.enumerated()
                 .compactMap { index, child in
                     (child.value as? Value)

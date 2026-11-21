@@ -54,11 +54,11 @@ extension Symbol {
 }
 
 extension Symbol {
-    /// What the shell's own protocols ask of a library type: `RecordRepresentable` says where its
-    /// fields are (`memberNames`, `member(_:)`) and `Tabular` how a table lays it out (`columns`).
+    /// What the shell's own protocols ask of a library type: `Tabular` says how a table lays it out
+    /// (`columns`), and `RecordRepresentable` says its fields, which are not a bridged member.
     /// They are real members a script can call, and not part of what the type offers, so `help` and
     /// `members` leave them out of a library type's.
-    var isLayoutPlumbing: Bool { ["memberNames", "member", "columns"].contains(name) }
+    var isLayoutPlumbing: Bool { name == "columns" }
 }
 
 extension Shell {

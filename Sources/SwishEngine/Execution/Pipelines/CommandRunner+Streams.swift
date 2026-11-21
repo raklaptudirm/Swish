@@ -266,11 +266,21 @@ extension CommandRunner {
             )
         }
 
+        // A member the value has, or else a field it says it has (a parsed JSON object's).
+        func property(_ name: String, of value: Value) throws -> Value {
+            do {
+                return try interpreter.value(forMember: name, of: value)
+            } catch {
+                if let field = value.field(name) { return field }
+                throw error
+            }
+        }
+
         // A stage written as a call, with arguments, is a method.
         let isProperty = overload.function == nil && (call.written ?? []).isEmpty
         func apply(to value: Value) throws -> Value {
             isProperty
-                ? try interpreter.value(forMember: callee.name, of: value)
+                ? try property(callee.name, of: value)
                 : try invoke(callee, call.arguments(), on: value)
         }
 
