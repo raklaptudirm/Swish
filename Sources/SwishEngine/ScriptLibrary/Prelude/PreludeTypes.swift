@@ -70,7 +70,7 @@ extension PreludeTypes {
     /// What a value gives one at a time: a prelude stream's, or any sequence a script holds (a
     /// list, a set, a range, a command's output); nil for a value that isn't a sequence.
     func reader(of value: Value) -> (() throws -> Value?)? {
-        if value.isInstance(of: stream) {
+        if value.isInstance(of: .named(stream)) {
             if let held = try? interpreter.value(forMember: "source", of: value),
                 let source = held.casting(to: StreamSource.self)
             {

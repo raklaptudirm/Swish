@@ -151,7 +151,7 @@ extension CommandRunner {
     /// `Output` how its command ended; anything else succeeded.
     func status(of value: Value) -> Status {
         if let truth = value.casting(to: Bool.self) { return truth ? .success : .exited(1) }
-        if value.isInstance(of: preludeTypes.status) {
+        if value.isInstance(of: .named(preludeTypes.status)) {
             if let signal = value.field("signal")?.casting(to: Int.self) {
                 return .signaled(Int32(signal))
             }
@@ -191,7 +191,7 @@ extension CommandRunner {
 
     /// A word as a shell would show it: quoted when it has spaces or quotes.
     private func shellWord(_ value: Value) -> String {
-        if value.isInstance(of: preludeTypes.glob),
+        if value.isInstance(of: .named(preludeTypes.glob)),
             let pattern = value.field("pattern")?.casting(to: String.self)
         {
             return Glob.unescape(pattern)
@@ -271,10 +271,10 @@ extension CommandRunner {
             return [.text(word.description)]
         case .function:
             return [.value(word)]
-        case .structure where word.isInstance(of: preludeTypes.glob):
+        case .structure where word.isInstance(of: .named(preludeTypes.glob)):
             guard let pattern = word.field("pattern")?.casting(to: String.self) else { return [] }
             return try expand(pattern).map(CommandArgument.text)
-        case .structure where word.isInstance(of: preludeTypes.spread):
+        case .structure where word.isInstance(of: .named(preludeTypes.spread)):
             guard let items = word.field("value")?.casting(to: [Value].self) else {
                 return [.text(word.field("value")?.description ?? "")]
             }

@@ -121,7 +121,7 @@ extension Value {
     var typeName: String {
         if let reference = typeRef { return reference.name }
         if mirror.displayStyle == .tuple { return "Tuple" }
-        if isInstance(of: .function) { return "Function" }
+        if isInstance(of: .callable) { return "Function" }
         return "Object"
     }
 
@@ -137,7 +137,7 @@ extension Value {
     var kind: ValueKind {
         guard let reference = typeRef else {
             if mirror.displayStyle == .tuple { return .tuple }
-            return isInstance(of: .function) ? .function : .object
+            return isInstance(of: .callable) ? .function : .object
         }
         if reference == .int { return .int }
         if reference == .string { return .string }

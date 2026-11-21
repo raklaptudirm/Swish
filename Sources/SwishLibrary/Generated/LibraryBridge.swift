@@ -39,7 +39,7 @@ let result = DisplayColumn(stringLiteral: try String(arguments[0]))
     fileprivate static let type3: ImplementedType = {
         var type = ImplementedType(name: "DisplayColumn", members: [member0, member1, member2])
         type.genericParameters = []
-        type.conformances = ["ExpressibleByStringLiteral": []]
+        type.conformances = [TypeRef(nativeType: "ExpressibleByStringLiteral"): []]
         return type
     }()
 
@@ -130,7 +130,7 @@ let result: [DisplayColumn] = FileEntry.columns
     fileprivate static let type18: ImplementedType = {
         var type = ImplementedType(name: "FileEntry", members: [member7, member8, member9, member10, member11, member12, member13, member14, member15, member16, member17])
         type.genericParameters = []
-        type.conformances = ["Encodable": [], "Equatable": [], "Hashable": []]
+        type.conformances = [TypeRef(nativeType: "Encodable"): [], TypeRef(nativeType: "Equatable"): [], TypeRef(nativeType: "Hashable"): []]
         return type
     }()
 
@@ -247,7 +247,7 @@ let receiver: FileSize = try selfValue.unboxing(FileSize.self)
     fileprivate static let type40: ImplementedType = {
         var type = ImplementedType(name: "FileSize", members: [member19, member20, member21, member22, member23, member24, member25, member26, member27, member28, member29, member30, member31, member32, member33, member34, member35, member36, member37, member38, member39])
         type.genericParameters = []
-        type.conformances = ["Comparable": [], "CustomStringConvertible": [], "Encodable": [], "Equatable": [], "Hashable": []]
+        type.conformances = [TypeRef(nativeType: "Comparable"): [], TypeRef(nativeType: "CustomStringConvertible"): [], TypeRef(nativeType: "Encodable"): [], TypeRef(nativeType: "Equatable"): [], TypeRef(nativeType: "Hashable"): []]
         return type
     }()
 
@@ -265,7 +265,7 @@ let result = LibraryError(try String(arguments[0]))
     fileprivate static let type43: ImplementedType = {
         var type = ImplementedType(name: "LibraryError", members: [member41, member42])
         type.genericParameters = []
-        type.conformances = ["CustomStringConvertible": []]
+        type.conformances = [TypeRef(nativeType: "CustomStringConvertible"): []]
         return type
     }()
 
@@ -427,7 +427,7 @@ let receiver: Output = try selfValue.unboxing(Output.self)
     fileprivate static let type72: ImplementedType = {
         var type = ImplementedType(name: "Output", members: [member44, member45, member46, member47, member48, member49, member50, member51, member52, member53, member54, member55, member56, member57, member58, member59, member60, member61, member62, member63, member64, member65, member66, member67, member68, member69, member70, member71, .associatedType("Element", binding: .string), .associatedType("Index", binding: .int)])
         type.genericParameters = []
-        type.conformances = ["BidirectionalCollection": [], "Collection": [], "CustomStringConvertible": [], "Equatable": [], "Hashable": [], "RandomAccessCollection": [], "Sequence": []]
+        type.conformances = [TypeRef(nativeType: "BidirectionalCollection"): [], TypeRef(nativeType: "Collection"): [], TypeRef(nativeType: "CustomStringConvertible"): [], TypeRef(nativeType: "Equatable"): [], TypeRef(nativeType: "Hashable"): [], TypeRef(nativeType: "RandomAccessCollection"): [], TypeRef(nativeType: "Sequence"): []]
         return type
     }()
 
@@ -481,7 +481,7 @@ let result: [DisplayColumn] = ProcessEntry.columns
     fileprivate static let type81: ImplementedType = {
         var type = ImplementedType(name: "ProcessEntry", members: [member73, member74, member75, member76, member77, member78, member79, member80])
         type.genericParameters = []
-        type.conformances = ["Encodable": [], "Equatable": [], "Hashable": []]
+        type.conformances = [TypeRef(nativeType: "Encodable"): [], TypeRef(nativeType: "Equatable"): [], TypeRef(nativeType: "Hashable"): []]
         return type
     }()
 
@@ -494,7 +494,7 @@ let receiver: Segment = try selfValue.unboxing(Segment.self)
     fileprivate static let type83: ImplementedType = {
         var type = ImplementedType(name: "Segment", members: [member82])
         type.genericParameters = []
-        type.conformances = ["Equatable": [], "Hashable": []]
+        type.conformances = [TypeRef(nativeType: "Equatable"): [], TypeRef(nativeType: "Hashable"): []]
         return type
     }()
 
