@@ -75,7 +75,7 @@ struct ThrowingStream<Element> {
 }
 
 /// A command or task started in the background, which `await` joins and `jobs` lists. The type is the
-/// host's (Jobs.swift, `Job.typeImplementation`); this is the one member whose type the prelude
+/// host's (Jobs.swift, `Job.implementedType`); this is the one member whose type the prelude
 /// declares.
 extension Job {
     /// Its output's lines as they come, for a job that keeps its output.

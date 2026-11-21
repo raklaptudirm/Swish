@@ -32,7 +32,7 @@ extension Shell {
                 .property("debugDescription", \.plain)
                 .property("colored", \.colored)
         )
-        interpreter.register(Job.typeImplementation)
+        interpreter.register(Job.implementedType)
 
         do {
             try interpreter.declare(Shell.prelude, bodies: preludeBodies)
