@@ -74,7 +74,9 @@ extension CommandRunner {
         for symbol in preludeTypes.streamType.members(in: interpreter)
         where !reading.contains(symbol.name) {
             add(symbol)
-            if case .named(preludeTypes.stream, _)? = symbol.callable?.signature.returns {
+            if case .named(let returned)? = symbol.callable?.signature.returns,
+                returned.reference == preludeTypes.stream
+            {
                 names.streams.insert(symbol.name)
             }
         }

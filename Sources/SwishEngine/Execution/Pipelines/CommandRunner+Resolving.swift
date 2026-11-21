@@ -115,13 +115,14 @@ extension CommandRunner {
                     // `[K.a] | sorted` needs its Element to be Comparable.
                     if first != nil, !element.isUnknown,
                         let missing =
-                            (callee.overloads[binding.overload].callable?.signature.generics
+                            (callee.overloads[binding.overload].callable?.signature.generics ?? [])
                             .first(where: { $0.name == "Element" })?
-                            .constraints ?? [])
+                            .constraints
                             .compactMap({ constraint -> String? in
-                                guard case .conforms(.named(let proto, _)) = constraint else {
+                                guard case .conforms(.named(let named)) = constraint else {
                                     return nil
                                 }
+                                let proto = named.reference
                                 return element.conforms(to: proto, in: self.interpreter)
                                     ? nil : proto.description
                             })

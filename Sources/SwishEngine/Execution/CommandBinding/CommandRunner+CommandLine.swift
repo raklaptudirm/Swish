@@ -187,15 +187,13 @@ extension CommandRunner {
     static func collection(
         _ type: TypeExpression
     ) -> (element: TypeExpression, make: ([Value]) -> Value)? {
-        switch type {
-        case .named(.array, let arguments) where arguments.count == 1:
-            return (arguments[0], { Value($0) })
-        case .named(.arraySlice, let arguments) where arguments.count == 1:
-            return (arguments[0], { Value(ArraySlice($0)) })
-        case .named(.set, let arguments) where arguments.count == 1:
-            return (arguments[0], { Value(Set($0)) })
-        default:
-            return nil
+        guard case .named(let named) = type, named.arguments.count == 1 else { return nil }
+        let element = named.arguments[0]
+        switch named.reference {
+        case .array: return (element, { Value($0) })
+        case .arraySlice: return (element, { Value(ArraySlice($0)) })
+        case .set: return (element, { Value(Set($0)) })
+        default: return nil
         }
     }
 
@@ -208,8 +206,8 @@ extension CommandRunner {
     ) throws -> Value {
         // Checking a program before it runs: an enum it declares has no cases yet, so the word is
         // read against what was declared.
-        if case .named(let name, _) = type.optionalWrapped ?? type,
-            let declared = services.staticMembers[name.description],
+        if case .named(let named) = type.optionalWrapped ?? type,
+            let declared = services.staticMembers[named.reference.name],
             declared.contains(where: { $0.memberKind == .case })
         {
             let bare = text.hasPrefix(".") ? String(text.dropFirst()) : text

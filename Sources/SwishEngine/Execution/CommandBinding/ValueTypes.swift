@@ -8,8 +8,8 @@ extension TypeExpression {
 
     /// `T` for `[T]`.
     var listElement: TypeExpression? {
-        if case .named(.array, let arguments) = self, arguments.count == 1 {
-            arguments[0]
+        if case .named(let named) = self, named.reference == .array, named.arguments.count == 1 {
+            named.arguments[0]
         } else {
             nil
         }
@@ -19,8 +19,10 @@ extension TypeExpression {
 
     /// `T` for `T?`.
     var optionalWrapped: TypeExpression? {
-        if case .named(.optional, let arguments) = self, arguments.count == 1 {
-            arguments[0]
+        if case .named(let named) = self, named.reference == .optional,
+            named.arguments.count == 1
+        {
+            named.arguments[0]
         } else {
             nil
         }
@@ -30,7 +32,7 @@ extension TypeExpression {
     var acceptsFunction: Bool {
         switch self {
         case .function: true
-        case .named(.function, _), .named(.any, _): true
+        case .named(let named) where named.reference == .function || named.reference == .any: true
         default: optionalWrapped?.acceptsFunction ?? false
         }
     }

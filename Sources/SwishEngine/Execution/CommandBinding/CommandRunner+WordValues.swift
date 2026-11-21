@@ -8,7 +8,8 @@ extension CommandRunner {
     func value(forWord text: String, as type: TypeExpression) -> Value? {
         // A type parameter, which text satisfies.
         if case .parameter = type { return Value(text) }
-        guard case .named(let reference, let arguments) = type else { return nil }
+        guard case .named(let named) = type else { return nil }
+        let reference = named.reference, arguments = named.arguments
 
         if reference == .any { return Value(text) }
         if reference == .keyPath {
@@ -43,7 +44,8 @@ extension CommandRunner {
     /// path, or anything text satisfies. (`word(_:as:)` says whether one word is.)
     func acceptsWords(as type: TypeExpression) -> Bool {
         if case .parameter = type { return true }
-        guard case .named(let reference, let arguments) = type else { return false }
+        guard case .named(let named) = type else { return false }
+        let reference = named.reference, arguments = named.arguments
 
         if reference == .any || reference == .keyPath { return true }
         if reference == .optional, arguments.count == 1 { return acceptsWords(as: arguments[0]) }
@@ -63,11 +65,11 @@ extension CommandRunner {
             .filter { initializer, parameter in
                 if parameter.label == "stringLiteral" { return true }
                 guard parameter.label == nil,
-                    case .named(let result, _) = initializer.signature.returns
+                    case .named(let result) = initializer.signature.returns
                 else {
                     return false
                 }
-                return result == .optional
+                return result.reference == .optional
             }
 
         // `String` before `Substring`: a `String` has the last too, and `init(_: Any)` makes it
