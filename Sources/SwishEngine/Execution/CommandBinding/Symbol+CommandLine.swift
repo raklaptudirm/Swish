@@ -1,6 +1,6 @@
 import Swiit
 
-extension CallableSymbol {
+extension Symbol.Callable {
     /// A function as Swift declares it: `greet(_ name: String, times: Int) -> String`. What a pipe
     /// feeds is marked `@input`.
     var usage: String {
@@ -22,7 +22,7 @@ extension CallableSymbol {
 
 extension Symbol {
     /// What a command can call, if the symbol is a function, a method or an initializer.
-    var callable: (any CallableSymbol)? {
+    var callable: (any Symbol.Callable)? {
         switch self {
         case .function(let function): function
         case .method(let method): method
