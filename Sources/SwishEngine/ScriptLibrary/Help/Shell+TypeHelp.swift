@@ -34,7 +34,7 @@ extension Symbol {
         case .member(.property(let property)): property.isStatic ? .staticProperty : .property
         case .function: .method
         case .member(.method(let method)): method.isStatic ? .staticMethod : .method
-        case .type: nil
+        case .type, .genericParameter: nil
         }
     }
 
@@ -46,7 +46,7 @@ extension Symbol {
         case .member(.property(let property)): property.isStatic
         case .member(.initializer), .member(.enumCase): true
         case .function, .variable: false
-        case .type: false
+        case .type, .genericParameter: false
         }
     }
 }
@@ -65,7 +65,7 @@ extension Shell {
     private func heldType(named name: String) -> ScriptType {
         guard let reference = TypeRef(named: name, in: interpreter) else { return .any }
         return reference == .array
-            ? .list(Symbol.GenericParameter(name: "Element").type) : .named(reference)
+            ? .list(ScriptType.parameter("Element")) : .named(reference)
     }
 
     /// A member as Swift declares it, in pieces by what each is: `init(_ description: String)`,
@@ -177,7 +177,7 @@ extension Shell {
             if let raw { pieces += [.init(" = "), .init(raw.debugDescription)] }
             return AttributedString(joining: pieces)
 
-        case .type:
+        case .type, .genericParameter:
             return name
         }
     }

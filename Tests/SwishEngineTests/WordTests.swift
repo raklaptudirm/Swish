@@ -17,7 +17,7 @@ import Testing
     #expect(shell.runner.value(forWord: "x", as: .any) == "x")
     #expect(shell.runner.value(forWord: "x", as: .optional(.string)) == "x")
     #expect(
-        shell.runner.value(forWord: "x", as: Symbol.GenericParameter(name: "Element").type) == "x"
+        shell.runner.value(forWord: "x", as: ScriptType.parameter("Element")) == "x"
     )
 
     #expect(shell.runner.value(forWord: ".directory", as: kind)?.description == "directory")
