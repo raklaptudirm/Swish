@@ -17,8 +17,5 @@
   },
   "types": [
     "Date"
-  ],
-  "hostProtocols": [
-    "Tabular"
   ]
 }

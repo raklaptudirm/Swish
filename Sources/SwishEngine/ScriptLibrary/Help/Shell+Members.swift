@@ -33,6 +33,7 @@ extension Shell {
             let type = item.typeName
             let listed = interpreter.scriptType(of: item).members(in: interpreter)
                 .filter { $0.memberKind != nil && $0.memberKind != .initializer }
+                .filter { item.kind != .object || !$0.isLayoutPlumbing }
 
             // What the value holds comes first, in its own order: a struct's or a tuple's fields,
             // or the members of a value that says them itself. The type says what each is, where

@@ -53,6 +53,14 @@ extension Symbol {
     }
 }
 
+extension Symbol {
+    /// What the shell's own protocols ask of a library type: `RecordRepresentable` says where its
+    /// fields are (`memberNames`, `member(_:)`) and `Tabular` how a table lays it out (`columns`).
+    /// They are real members a script can call, and not part of what the type offers, so `help` and
+    /// `members` leave them out of a library type's.
+    var isLayoutPlumbing: Bool { ["memberNames", "member", "columns"].contains(name) }
+}
+
 extension Shell {
     /// What the type called `name` is and has: "struct", "enum", and its members as symbols. Nil
     /// when nothing by that name is a type.
@@ -60,7 +68,8 @@ extension Shell {
         // A type a script declared or the shell does, or one of Swift's that the core bridges.
         let named = interpreter.globals(named: name) + interpreter.types.filter { $0.name == name }
         guard let type = named.first(where: \.isType) else { return nil }
-        return (type, heldType(named: name).members(in: interpreter))
+        let members = heldType(named: name).members(in: interpreter)
+        return (type, type.isBuiltin ? members.filter { !$0.isLayoutPlumbing } : members)
     }
 
     /// The type a value of `name` is held as: a list is an `Array`.
