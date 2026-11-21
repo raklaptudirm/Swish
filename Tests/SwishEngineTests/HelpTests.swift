@@ -167,3 +167,13 @@ private func output(_ source: String, in shell: Shell = Shell()) throws -> Strin
             == "Doubles the x, fast.\n"
     )
 }
+
+@Test func aLibraryTypeShowsScriptsItsFieldsAndNotTheHostPlumbing() throws {
+    let help = try output("help FileEntry")
+
+    #expect(help.contains("  size: FileSize"))
+    // How the shell lays a type out and finds its fields is not for scripts.
+    #expect(!help.contains("memberNames"))
+    #expect(!help.contains("columns"))
+    #expect(!help.contains("member("))
+}
