@@ -544,7 +544,7 @@ let result = pwd()
 
     private static let member92: ImplementedSymbol = ImplementedSymbol.function(name: "with", summary: "Runs a closure with environment variables set, then puts them back.", signature: Symbol.Signature(parameters: [Symbol.Parameter(label: "env", name: "variables", type: .dictionary(.string, .string)), Symbol.Parameter(label: nil, name: "body", type: .function(parameters: [], returns: .parameter("T"), isThrowing: true, isAsync: false))], returns: .parameter("T"), throwing: .rethrowing, isAsync: false, generics: [Symbol.GenericParameter(name: "T")]), body: { arguments in
 let interpreter = Interpreter.running!
-let result = try with(env: try Dictionary(uniqueKeysWithValues: Value.Bridging.dictionary(arguments[0]).map { (try String($0.key), try String($0.value)) }), { () throws -> Value in try Value.Bridging.closure(for: arguments[1], in: interpreter)([]) })
+let result = try with(env: try Dictionary(uniqueKeysWithValues: Value.Bridging.dictionary(arguments[0]).map { (try String($0.key), try String($0.value)) }), ({ () -> () throws -> Value in let call = Value.Bridging.callback(for: arguments[1], in: interpreter); return { () throws -> Value in try call([] as [Value]) } })())
                 return result
 })
 
