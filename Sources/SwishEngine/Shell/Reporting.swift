@@ -15,15 +15,18 @@ extension Shell {
     /// a per-item error reported makes it a failure, and anything else, as a
     /// `let`, succeeds. An `if` or a loop is what ran in it last.
     func recordStatuses() {
-        interpreter.host.didFinishStatement = { [unowned self] value, caught in
+        // Told after every statement, loops and function bodies included: it takes what it needs
+        // from the runner once, and counts no references (the shell outlives its interpreter's host).
+        unowned(unsafe) let runner = self.runner
+        interpreter.host.didFinishStatement = { value, caught in
+            let state = runner.task
             var status = value.map(runner.status(of:)) ?? .success
             // A `try?` that caught an error failed; other nils, like a function that returns
             // nothing, didn't.
             if caught { status = .exited(1) }
-            let state = runner.task
             let itemErrors = state.itemErrors > state.itemErrorsSeen
             state.itemErrorsSeen = state.itemErrors
-            lastStatus = itemErrors && status.succeeded ? .exited(1) : status
+            state.lastStatus = itemErrors && status.succeeded ? .exited(1) : status
         }
     }
 }
